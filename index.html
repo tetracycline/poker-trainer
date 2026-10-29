@@ -11,7 +11,6 @@
 <meta name="apple-mobile-web-app-title" content="撲克練習">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="robots" content="noindex">
-
 <title>撲克訓練中心（NL2/NL5）｜我的弱點</title>
 <style>:root{--tx:#16181d;--tx2:#5b6270;--bg:#f6f7f9;--bg2:#ffffff;--bd:#dfe2e7;--bd2:#b9bec8;--ac:#2f6fed;--acbg:#e7efff;--ok:#16794a;--okbg:#e5f5ec;--bad:#c0362c;--badbg:#fdecea;--warnbg:#fff6e0;--warn:#8a5a00;--infobg:#eef3fb}
 @media (prefers-color-scheme:dark){:root{--tx:#e8eaee;--tx2:#9aa2b1;--bg:#111317;--bg2:#1b1e24;--bd:#2c313a;--bd2:#475061;--ac:#6b9bff;--acbg:#1d2a44;--ok:#5cd38f;--okbg:#14301f;--bad:#ff7b70;--badbg:#3a1a18;--warnbg:#33290f;--warn:#f0c060;--infobg:#18212f}}
@@ -81,6 +80,33 @@ html body .co-warning{border-left-color:#c99a2e}
 html body .badge.tent{color:#e3bf6a}
 html body .b4 .c3{background:#1f6b3c;color:#eef5ef}html body .b4 .c2{background:#4f9a58;color:#0a1f0d}html body .b4 .c1{background:#c9a43a;color:#231a00}html body .b4 .c0{background:#2a2f37;color:#9aa0a6}
 html body a{color:#8fb4f5}
+.dsum{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;width:100%;margin:8px 0 0;padding:8px 12px;border-radius:12px;border:1px solid var(--bd);background:var(--bg2);color:var(--tx2);font-size:13px;font-family:inherit;text-align:left;min-height:44px}
+.dsum .dsd{color:#e3bf6a;font-weight:700}.dsum .dsg{margin-left:auto;color:var(--ac);font-weight:600}
+.qcard{border:1px solid var(--bd);border-radius:14px;padding:12px;margin:8px 0;background:var(--bg2)}
+.qcard.rev{border-color:#8a6d2a}
+.qtag{display:flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--tx2);font-size:13px;margin-bottom:6px}
+.mbk{display:inline-block;font-size:12px;padding:2px 8px;border-radius:10px;font-weight:700}
+.mbk.rt{background:#3a1f1f;color:#f0a39b}.mbk.du{background:#33290f;color:#e3bf6a}
+.qctx{margin:4px 0;word-break:break-word}.qq{font-weight:700;margin:8px 0}
+.qrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0}.qlb{font-size:13px;color:var(--tx2)}
+.qcc .cd{font-size:18px;min-width:40px;padding:4px 6px}
+.qopts{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.qopts .btn{flex:1 1 40%}
+.btn.qo.right{border-color:var(--ok);background:var(--okbg);color:var(--ok);font-weight:700;opacity:1}
+.btn.qo.wrong{border-color:var(--bad);background:var(--badbg);color:var(--bad);font-weight:700}
+.qres{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--bg)}
+.qres.okb{background:var(--okbg)}.qres.badb{background:var(--badbg)}
+.qok{color:var(--ok);font-weight:700}.qbad{color:var(--bad);font-weight:700}
+.qwhy{margin-top:6px;line-height:1.6}.qprog{margin-top:8px;font-size:13px;color:var(--tx2)}
+.mbsum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;text-align:center;margin-bottom:8px}
+.mbsum .big{font-size:22px;font-weight:700}.mbsum .big.dsd{color:#e3bf6a}.mbsum .cap{margin:0;font-size:12px}
+.mbi{border:1px solid var(--bd);border-radius:10px;padding:10px;margin:8px 0;background:var(--bg)}
+.mbih{display:flex;gap:8px;align-items:flex-start;justify-content:space-between;font-size:14px}
+.mbdots{color:var(--ok);letter-spacing:2px;flex:0 0 auto}
+.mbans{display:flex;flex-direction:column;gap:2px;margin:6px 0;font-size:14px}
+.mbst{font-size:12px;color:var(--tx2);margin:6px 0}
+.mbgh{display:flex;align-items:center;gap:8px}.mbgh .sechead{margin:0;flex:1}
+.mbph{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.mbph .btn{white-space:nowrap;flex:0 0 auto}
+.topb .tbn{display:inline-block;margin-left:6px;min-width:20px;padding:0 6px;border-radius:10px;background:#b5483f;color:#fff;font-size:12px;line-height:20px}
 </style>
 </head>
 <body><div id="app"><noscript>請開啟 JavaScript。</noscript></div>
@@ -260,6 +286,136 @@ html body a{color:#8fb4f5}
   window.GC = { Page: Page, Section: Section, Text: Text, Table: Table, Callout: Callout, Button: Button, Segmented: Segmented, Select: Select, Grid: Grid, LinkCards: LinkCards, useGrokTheme: useGrokTheme, useState: useState, useEffect: useEffect, useMemo: useMemo };
   window.__mount = mount;
 })();
+// ---- 錯題本 core (localStorage, Leitner boxes) ----
+(function () {
+  var KEY = "pokerMistakes.v1", DAY = 864e5;
+  var SESSION = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  var CATS = [
+    ["L1", "盲注被偷時太容易放棄（BB／SB 防守）", 1],
+    ["L2", "後位太緊（CO／BTN 開池）", 2],
+    ["L3", "加注只加最小（開池、隔離、3-bet 尺寸）", 3],
+    ["L4", "大牌不敢下注或下太小", 4],
+    ["L5", "對手一下注就丟還不錯的牌", 5],
+    ["L6", "河牌：中等牌亂加注、詐唬時機", 6],
+    ["X3", "3-bet／4-bet", 0],
+    ["XF", "翻牌與轉牌主動下注", 0],
+    ["XO", "其他觀念（桌數、對手類型）", 0]
+  ];
+  var CATNAME = {}; CATS.forEach(function (c) { CATNAME[c[0]] = c[1]; });
+  var NCAT = { P1: "L2", P2: "L2", P3: "L3", P4: "L1", P5: "L1", P6: "L1", P7: "X3", P8: "X3", P9: "X3", P10: "X3",
+    F1: "XF", F2: "XF", F3: "XF", F5: "XF", F6: "XF", F7: "XF", F8: "XF", T1: "XF", T2: "XF", T3: "XF",
+    F4: "L5", T4: "L5", R4: "L5", R1: "L4", R2: "L6", R3: "L6", R5: "L6" };
+  var LEAKCAT = { tight: "L2", bbd: "L1", "3bet": "X3", size: "L3", sblimp: "L1", tables: "XO", value: "L4" };
+  var MODCAT = { 1: "L2", 2: "L1", 3: "L3", 4: "X3", 5: "XF", 6: "XF", 7: "L6", 8: "L6", 9: "L5", 10: "XO" };
+  var DRILLCAT = { open: "L2", "3b": "X3", bb: "L1", sb: "L1", size: "L3", value: "L4" };
+
+  var db = { items: {}, days: {} }, canSave = true;
+  try { var raw = window.localStorage.getItem(KEY); if (raw) { var p = JSON.parse(raw); if (p && p.items) db = { items: p.items || {}, days: p.days || {} }; } } catch (e) { canSave = false; }
+  function save() { try { window.localStorage.setItem(KEY, JSON.stringify(db)); canSave = true; } catch (e) { canSave = false; } }
+  var subs = [];
+  function notify() { subs.forEach(function (f) { try { f(); } catch (e) {} }); }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function dayKey(ts) { var d = new Date(ts); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function sod(ts) { var d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  function endToday() { return sod(Date.now()) + DAY - 1; }
+  function fmtTime(ts) { if (!ts) return "—"; var d = new Date(ts); return (d.getMonth() + 1) + "/" + d.getDate() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  function fmtDue(ts) { if (ts <= endToday()) return "今天"; var n = Math.round((sod(ts) - sod(Date.now())) / DAY); return n === 1 ? "明天" : n + " 天後（" + (new Date(ts).getMonth() + 1) + "/" + new Date(ts).getDate() + "）"; }
+  function labelOf(q, key) { for (var i = 0; i < (q.opts || []).length; i++) if (q.opts[i].key === key) return q.opts[i].label; return key; }
+  function correctText(q) { return q.self ? q.ansText : labelOf(q, q.ans); }
+
+  var retry = []; // in-session: wrong answers come back a few questions later
+  function record(q, ok, userKey, opt) {
+    opt = opt || {};
+    var now = Date.now(), dk = dayKey(now);
+    var day = db.days[dk] || (db.days[dk] = { n: 0, c: 0, cats: {} });
+    day.n++; if (ok) day.c++;
+    var cc = day.cats[q.cat] || (day.cats[q.cat] = { n: 0, c: 0 }); cc.n++; if (ok) cc.c++;
+    var it = db.items[q.id];
+    var store = { id: q.id, cat: q.cat, tag: q.tag, ctx: q.ctx, q: q.q, cards: q.cards || [], board: q.board || null, made: q.made || null, opts: q.opts, ans: q.ans, ansText: q.ansText || null, self: !!q.self, why: q.why };
+    if (!ok) {
+      if (!it) it = db.items[q.id] = { first: now, wrong: 0, right: 0 };
+      it.q = store; it.cat = q.cat; it.wrong++; it.box = 1; it.mastered = false; it.lastWrong = now; it.lastAns = q.self ? "自評答錯" : labelOf(q, userKey);
+      it.due = now; it.lastSess = SESSION;
+      if (!opt.noRetry) { retry = retry.filter(function (r) { return r.q.id !== q.id; }); retry.push({ q: store, wait: 3 }); }
+    } else if (it && !it.mastered) {
+      it.right++; it.lastRight = now;
+      if (now >= it.due && it.lastSess !== SESSION) {
+        it.box++; it.lastSess = SESSION;
+        if (it.box > 3) { it.mastered = true; it.masteredAt = now; }
+        else it.due = sod(now) + (it.box === 2 ? 1 : 3) * DAY;
+      }
+    }
+    save(); notify();
+  }
+  // Returns a review question for this id-prefix or null. Call only from event handlers / init.
+  function nextPick(prefix, weight) {
+    retry.forEach(function (r) { if (r.q.id.indexOf(prefix) === 0) r.wait--; });
+    for (var i = 0; i < retry.length; i++) if (retry[i].q.id.indexOf(prefix) === 0 && retry[i].wait <= 0) { var r = retry.splice(i, 1)[0]; return { q: r.q, kind: "retry" }; }
+    var due = open().filter(function (it) { return it.id.indexOf(prefix) === 0 && it.due <= Date.now() && it.lastSess !== SESSION; });
+    if (due.length && Math.random() < (weight || 0.35)) { var it = due[Math.floor(Math.random() * due.length)]; return { q: it.q, kind: "due" }; }
+    return null;
+  }
+  function all() { return Object.keys(db.items).map(function (k) { var it = db.items[k]; it.id = k; if (!it.cat && it.q) it.cat = it.q.cat; return it; }); }
+  function open() { return all().filter(function (it) { return !it.mastered; }); }
+  function dueToday() { var e = endToday(); return open().filter(function (it) { return it.due <= e; }); }
+  function item(id) { return db.items[id] || null; }
+  function progress(id) {
+    var it = db.items[id]; if (!it) return "";
+    if (it.mastered) return "這題已從錯題本畢業（連續 3 次分開答對）。";
+    var done = it.box - 1;
+    var s = "錯題進度 " + done + "/3（要在不同次練習連續答對 3 次才算學會）";
+    if (it.lastSess === SESSION && it.box === 1) return s + "。這次練習稍後會再考你一次，之後再排進錯題複習。";
+    return s + "，下次複習：" + fmtDue(it.due) + "。";
+  }
+  function setMastered(id, v) { var it = db.items[id]; if (!it) return; it.mastered = !!v; if (v) it.masteredAt = Date.now(); else { it.box = 1; it.due = Date.now(); it.lastSess = ""; } save(); notify(); }
+  function reset(id) { var it = db.items[id]; if (!it) return; it.box = 1; it.due = Date.now(); it.mastered = false; it.lastSess = ""; save(); notify(); }
+  function remove(id) { delete db.items[id]; save(); notify(); }
+  function clearAll() { db = { items: {}, days: {} }; retry = []; save(); notify(); }
+  function today() {
+    var d = db.days[dayKey(Date.now())] || { n: 0, c: 0, cats: {} };
+    var weak = null;
+    Object.keys(d.cats).forEach(function (k) {
+      var c = d.cats[k]; if (c.n - c.c <= 0) return;
+      var a = c.c / c.n, sc = (c.c + 1) / (c.n + 2); // smoothed so 1 wrong answer doesn't outrank 5
+      if (!weak || sc < weak.sc) weak = { cat: k, name: CATNAME[k] || k, acc: a, n: c.n, c: c.c, sc: sc };
+    });
+    if (!weak) { // fall back to the category with the most open mistakes
+      var cnt = {}; open().forEach(function (it) { cnt[it.cat] = (cnt[it.cat] || 0) + it.wrong; });
+      var best = null; Object.keys(cnt).forEach(function (k) { if (!best || cnt[k] > cnt[best]) best = k; });
+      if (best) weak = { cat: best, name: CATNAME[best] || best, acc: null, open: cnt[best] };
+    }
+    return { n: d.n, c: d.c, acc: d.n ? d.c / d.n : null, weak: weak, due: dueToday().length, open: open().length, mastered: all().length - open().length };
+  }
+  function countCat(cat) { return open().filter(function (it) { return it.cat === cat; }).length; }
+
+  // ---- question builders for each existing drill ----
+  function nQ(n, k) {
+    var d = n.dr[k];
+    return { id: "N:" + n.id + ":" + k, cat: NCAT[n.id] || LEAKCAT[n.leak] || "XO", tag: n.id + "｜" + n.nm, ctx: d.h, q: d.q,
+      opts: d.o.map(function (o, j) { return { key: String(j), label: o }; }), ans: String(d.a), why: d.w };
+  }
+  function qToD(q) { return { h: q.ctx, q: q.q, o: q.opts.map(function (o) { return o.label; }), a: Number(q.ans), w: q.why }; }
+  function cQ(x, MODS) {
+    return { id: "C:" + x[0], cat: LEAKCAT[x[9]] || MODCAT[x[1]] || "XO", tag: "課程第 " + x[0] + " 條｜" + MODS[x[1]], ctx: "", q: x[7], self: true,
+      opts: [{ key: "ok", label: "自評答對" }, { key: "bad", label: "自評答錯" }], ans: "ok", ansText: x[8], why: "做法：" + x[4] + "　數據：" + x[3] };
+  }
+  function handLabel(cards) {
+    if (!cards || cards.length !== 2) return "";
+    var R = "23456789TJQKA", a = cards[0], b = cards[1];
+    if (R.indexOf(a[0]) < R.indexOf(b[0])) { var t = a; a = b; b = t; }
+    return a[0] === b[0] ? a[0] + b[0] : a[0] + b[0] + (a[1] === b[1] ? "s" : "o");
+  }
+  function lQ(drill, q, name) {
+    return { id: "L:" + drill + ":" + q.ctx + "|" + handLabel(q.cards) + "|" + (q.board || []).join(""), cat: DRILLCAT[drill] || "XO", tag: "練習｜" + name,
+      ctx: q.ctx, q: "你怎麼做？", cards: q.cards, board: q.board || null, made: q.made || null, opts: q.opts, ans: q.ans, why: q.why };
+  }
+
+  window.MB = { SESSION: SESSION, CATS: CATS, CATNAME: CATNAME, record: record, nextPick: nextPick, all: all, open: open, dueToday: dueToday, item: item,
+    progress: progress, setMastered: setMastered, reset: reset, remove: remove, clearAll: clearAll, today: today, countCat: countCat,
+    nQ: nQ, qToD: qToD, cQ: cQ, lQ: lQ, labelOf: labelOf, correctText: correctText, fmtTime: fmtTime, fmtDue: fmtDue,
+    canSave: function () { return canSave; }, sub: function (f) { subs = [f]; } };
+})();
+
 
 window.__PAGES = window.__PAGES || {};
 window.__PAGES.P1 = (function() {
@@ -312,8 +468,9 @@ window.__PAGES.P1 = (function() {
     return /* @__PURE__ */ __h("div", { style: { border: `1px solid ${t.border.default}`, borderRadius: t.radius.xl, padding: 12, marginBottom: 12 } }, /* @__PURE__ */ __h("div", { style: { color: t.text.secondary, fontSize: t.font.label.fontSize, marginBottom: 4 } }, props.tag), /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginBottom: 6, wordBreak: "break-word" } }, d.h), /* @__PURE__ */ __h("div", { style: { fontWeight: t.weight.semibold, color: t.text.primary, marginBottom: 8 } }, d.q), /* @__PURE__ */ __h("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } }, d.o.map((o, k) => /* @__PURE__ */ __h(Button, { key: k, label: o, variant: picked === k ? "primary" : "quiet", disabled: picked !== null && picked !== k, onClick: () => {
       if (picked !== null) return;
       setPicked(k);
+      if (props.mq) window.MB.record(props.mq, k === d.a, String(k));
       props.onDone(k === d.a);
-    } }))), picked !== null ? /* @__PURE__ */ __h("div", { style: { marginTop: 12, padding: "10px 12px", borderRadius: t.radius.md, background: ok ? t.fill.successSubtle : t.fill.dangerSubtle } }, /* @__PURE__ */ __h("div", { style: { fontWeight: t.weight.semibold, color: ok ? t.text.success : t.text.danger } }, ok ? "答對了" : `答錯了，正確是：${d.o[d.a]}`), /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginTop: 4 } }, d.w), props.onNext ? /* @__PURE__ */ __h("div", { style: { marginTop: 10 } }, /* @__PURE__ */ __h(Button, { label: "下一題", variant: "primary", onClick: () => {
+    } }))), picked !== null ? /* @__PURE__ */ __h("div", { style: { marginTop: 12, padding: "10px 12px", borderRadius: t.radius.md, background: ok ? t.fill.successSubtle : t.fill.dangerSubtle } }, /* @__PURE__ */ __h("div", { style: { fontWeight: t.weight.semibold, color: ok ? t.text.success : t.text.danger } }, ok ? "答對了" : `答錯了，正確是：${d.o[d.a]}`), /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginTop: 4 } }, d.w), props.mq && window.MB.item(props.mq.id) ? __h("div", { className: "qprog" }, window.MB.progress(props.mq.id)) : null, props.onNext ? /* @__PURE__ */ __h("div", { style: { marginTop: 10 } }, /* @__PURE__ */ __h(Button, { label: "下一題", variant: "primary", onClick: () => {
       setPicked(null);
       if (props.onNext) props.onNext();
     } })) : null) : null);
@@ -327,24 +484,38 @@ window.__PAGES.P1 = (function() {
     const t = useGrokTheme();
     const [score, setScore] = useState({ ok: 0, bad: 0 });
     const h = { fontWeight: t.weight.semibold, color: t.text.primary, marginTop: 10, marginBottom: 4 };
-    return /* @__PURE__ */ __h(Section, { heading: `${n.id}｜${n.st}｜${n.nm}` }, /* @__PURE__ */ __h("div", { style: h }, "1. 節點定義"), /* @__PURE__ */ __h(Text, null, n.df), /* @__PURE__ */ __h("div", { style: h }, "2. 玩家池在這裡做什麼（鎖定頻率）"), /* @__PURE__ */ __h("div", { style: { overflowX: "auto" } }, /* @__PURE__ */ __h(Table, { columns: ["指標", "NL2", "NL5", "n"], rows: n.pool, align: ["start", "end", "end", "end"] })), /* @__PURE__ */ __h("div", { style: h }, "3. 要考慮的事情"), /* @__PURE__ */ __h(NBullets, { items: n.chk }), /* @__PURE__ */ __h("div", { style: h }, "4. 執行"), /* @__PURE__ */ __h(NBullets, { items: n.ex }), /* @__PURE__ */ __h(Callout, { tone: "info", lead: "GTO 基準 vs 剝削" }, n.gto), /* @__PURE__ */ __h("div", { style: { overflowX: "auto" } }, /* @__PURE__ */ __h(Table, { columns: ["對手類型", "調整"], rows: n.adj })), /* @__PURE__ */ __h("div", { style: h }, "5. 常見錯誤"), /* @__PURE__ */ __h(Callout, { tone: "warning", lead: n.leak ? `對應你的漏洞：${LEAK[n.leak] || "強牌下注太小"}` : "常見錯誤" }, n.err.join("；")), n.flag ? /* @__PURE__ */ __h(Callout, { tone: "warning", lead: "資料限制" }, n.flag) : null, /* @__PURE__ */ __h("div", { style: h }, `6. 練習（${n.dr.length} 題，答對 ${score.ok}，答錯 ${score.bad}）`), n.dr.map((d, k) => /* @__PURE__ */ __h(NQuiz, { key: `${n.id}-${k}`, d, tag: `${n.id} 第 ${k + 1} 題`, onDone: (g) => setScore((s) => ({ ok: s.ok + (g ? 1 : 0), bad: s.bad + (g ? 0 : 1) })) })));
+    return /* @__PURE__ */ __h(Section, { heading: `${n.id}｜${n.st}｜${n.nm}` }, /* @__PURE__ */ __h("div", { style: h }, "1. 節點定義"), /* @__PURE__ */ __h(Text, null, n.df), /* @__PURE__ */ __h("div", { style: h }, "2. 玩家池在這裡做什麼（鎖定頻率）"), /* @__PURE__ */ __h("div", { style: { overflowX: "auto" } }, /* @__PURE__ */ __h(Table, { columns: ["指標", "NL2", "NL5", "n"], rows: n.pool, align: ["start", "end", "end", "end"] })), /* @__PURE__ */ __h("div", { style: h }, "3. 要考慮的事情"), /* @__PURE__ */ __h(NBullets, { items: n.chk }), /* @__PURE__ */ __h("div", { style: h }, "4. 執行"), /* @__PURE__ */ __h(NBullets, { items: n.ex }), /* @__PURE__ */ __h(Callout, { tone: "info", lead: "GTO 基準 vs 剝削" }, n.gto), /* @__PURE__ */ __h("div", { style: { overflowX: "auto" } }, /* @__PURE__ */ __h(Table, { columns: ["對手類型", "調整"], rows: n.adj })), /* @__PURE__ */ __h("div", { style: h }, "5. 常見錯誤"), /* @__PURE__ */ __h(Callout, { tone: "warning", lead: n.leak ? `對應你的漏洞：${LEAK[n.leak] || "強牌下注太小"}` : "常見錯誤" }, n.err.join("；")), n.flag ? /* @__PURE__ */ __h(Callout, { tone: "warning", lead: "資料限制" }, n.flag) : null, /* @__PURE__ */ __h("div", { style: h }, `6. 練習（${n.dr.length} 題，答對 ${score.ok}，答錯 ${score.bad}）`), n.dr.map((d, k) => /* @__PURE__ */ __h(NQuiz, { key: `${n.id}-${k}`, d, mq: window.MB.nQ(n, k), tag: `${n.id} 第 ${k + 1} 題`, onDone: (g) => setScore((s) => ({ ok: s.ok + (g ? 1 : 0), bad: s.bad + (g ? 0 : 1) })) })));
   }
   function nShuffle() {
     return NALL.map((_x, k) => k).sort(() => Math.random() - 0.5);
   }
   function NodeMix() {
+    const MB = window.MB;
     const [order, setOrder] = useState(() => nShuffle());
     const [i, setI] = useState(0);
+    const [ov, setOv] = useState(() => MB.nextPick("N:"));
+    const [step, setStep] = useState(0);
     const [score, setScore] = useState({ ok: 0, bad: 0 });
     const [miss, setMiss] = useState([]);
     if (!order.length) return /* @__PURE__ */ __h(Text, null, "還沒有題目。");
-    const cur = NALL[order[i % order.length]];
-    return /* @__PURE__ */ __h(Section, { heading: `隨機混練：第 ${i % order.length + 1} / ${order.length} 題（答對 ${score.ok}，答錯 ${score.bad}）`, caption: "所有節點的題目打亂。答錯的節點會列在下面，回到那張卡片重讀。" }, /* @__PURE__ */ __h(NQuiz, { key: i, d: cur.d, tag: `${cur.n.id}｜${cur.n.nm}`, onDone: (g) => {
+    const base = NALL[order[i % order.length]];
+    const mq = ov ? ov.q : MB.nQ(base.n, base.n.dr.indexOf(base.d));
+    const d = ov ? MB.qToD(ov.q) : base.d;
+    const nid = mq.id.split(":")[1];
+    const pre = ov ? (ov.kind === "retry" ? "🔁 剛才答錯，再一次｜" : "📒 錯題複習｜") : "";
+    return /* @__PURE__ */ __h(Section, { heading: `隨機混練：第 ${i % order.length + 1} / ${order.length} 題（答對 ${score.ok}，答錯 ${score.bad}）`, caption: "所有節點的題目打亂。答錯的題目會進「錯題本」，隔 2 題再考一次；到期的錯題也會混進來。" }, /* @__PURE__ */ __h(NQuiz, { key: "s" + step, d, mq, tag: pre + mq.tag, onDone: (g) => {
       setScore((s) => ({ ok: s.ok + (g ? 1 : 0), bad: s.bad + (g ? 0 : 1) }));
-      if (!g) setMiss((m) => m.indexOf(cur.n.id) >= 0 ? m : m.concat([cur.n.id]));
-    }, onNext: () => setI(i + 1) }), /* @__PURE__ */ __h(Text, null, miss.length ? `要重讀的節點：${miss.join("、")}` : "目前沒有答錯的節點。"), /* @__PURE__ */ __h(Button, { label: "重新洗牌", variant: "quiet", onClick: () => {
+      if (!g) setMiss((m) => m.indexOf(nid) >= 0 ? m : m.concat([nid]));
+    }, onNext: () => {
+      const ni = ov ? i : i + 1;
+      setOv(MB.nextPick("N:"));
+      setI(ni);
+      setStep(step + 1);
+    } }), /* @__PURE__ */ __h(Text, null, miss.length ? `要重讀的節點：${miss.join("、")}` : "目前沒有答錯的節點。"), /* @__PURE__ */ __h(Button, { label: "重新洗牌", variant: "quiet", onClick: () => {
       setOrder(nShuffle());
       setI(0);
+      setOv(null);
+      setStep(step + 1);
       setScore({ ok: 0, bad: 0 });
       setMiss([]);
     } }));
@@ -554,15 +725,19 @@ window.__PAGES.P2 = (function() {
     const [show, setShow] = useState(false);
     const [score, setScore] = useState({ ok: 0, bad: 0 });
     const toggle = (id) => setOpen(__spreadProps(__spreadValues({}, open), { [id]: !open[id] }));
-    const q = DRILL.length ? DRILL[i % DRILL.length] : void 0;
+    const [ov, setOv] = useState(() => window.MB.nextPick("C:"));
+    const q = ov ? (D.find((x) => "C:" + x[0] === ov.q.id) || DRILL[i % DRILL.length]) : DRILL.length ? DRILL[i % DRILL.length] : void 0;
     const next = (good) => {
+      window.MB.record(window.MB.cQ(q, MODS), good, good ? "ok" : "bad");
       setScore({ ok: score.ok + (good ? 1 : 0), bad: score.bad + (good ? 0 : 1) });
       setShow(false);
-      setI(i + 1);
+      const ni = ov ? i : i + 1;
+      setOv(window.MB.nextPick("C:"));
+      setI(ni);
     };
     const m = Number(mod);
     const lesson = (x) => /* @__PURE__ */ __h(Section, { key: x[0], heading: `${x[0]}. ${x[2]}` }, /* @__PURE__ */ __h(Text, null, `做法：${x[4]}`), /* @__PURE__ */ __h(Text, null, `數據：${x[3]}`), /* @__PURE__ */ __h(Text, null, `為什麼有利：${x[5]}`), /* @__PURE__ */ __h(Text, null, `實例（匿名）：${x[6]}`), /* @__PURE__ */ __h(Text, null, `小測：${x[7]}`), /* @__PURE__ */ __h(Button, { label: open[x[0]] ? `答案：${x[8]}` : "看答案", variant: "quiet", onClick: () => toggle(x[0]) }), x[9] ? /* @__PURE__ */ __h(Text, null, `對應你的漏洞：${LEAK[x[9]]}`) : null);
-    return /* @__PURE__ */ __h(Page, { title: "撲克課程 100 條與河牌詐唬（NL2/NL5）", summary: "100 條從 HHDealer NL2/NL5 約 400 萬手算出的剝削課程與小測、河牌詐唬分析、ChakPoker 評估。入口是撲克訓練中心。", lang: "zh-Hant" }, /* @__PURE__ */ __h(LinkCards, { links: [{ title: "回到撲克訓練中心（節點訓練）", href: HUB }] }), /* @__PURE__ */ __h(Segmented, { options: TABS, value: tab, onChange: (v) => setTab(v) }), tab === "drill" && q ? /* @__PURE__ */ __h(Section, { heading: `小測模式：第 ${i % DRILL.length + 1} / ${DRILL.length} 題（答對 ${score.ok}，答錯 ${score.bad}）` }, /* @__PURE__ */ __h(Text, null, "題目順序：先練你的漏洞（太緊 → BB 防守 → 3-bet → 開池尺寸 → SB limp → 桌數），接著是河牌詐唬，最後是其他。每天 20 題。"), /* @__PURE__ */ __h(Text, null, `第 ${q[0]} 條｜${MODS[q[1]]}${q[9] ? `｜漏洞：${LEAK[q[9]]}` : ""}`), /* @__PURE__ */ __h(Callout, { tone: "info", lead: "題目" }, q[7]), show ? /* @__PURE__ */ __h(Section, { heading: `答案：${q[8]}` }, /* @__PURE__ */ __h(Text, null, `做法：${q[4]}`), /* @__PURE__ */ __h(Text, null, `數據：${q[3]}`), /* @__PURE__ */ __h(Text, null, `實例（匿名）：${q[6]}`), /* @__PURE__ */ __h(Grid, { columns: 2 }, /* @__PURE__ */ __h(Button, { label: "我答對了", variant: "primary", onClick: () => next(true) }), /* @__PURE__ */ __h(Button, { label: "我答錯了", variant: "quiet", onClick: () => next(false) }))) : /* @__PURE__ */ __h(Button, { label: "看答案", variant: "primary", onClick: () => setShow(true) })) : null, tab === "course" ? /* @__PURE__ */ __h(Section, { heading: MODS[m] }, /* @__PURE__ */ __h(Select, { label: "選單元", options: MOD_OPTS, value: mod, onChange: (v) => setMod(v) }), D.filter((x) => x[1] === m).map((x) => lesson(x))) : null, tab === "river" ? /* @__PURE__ */ __h(Section, { heading: "怎樣的行動線、河牌、手牌要勇敢詐唬" }, /* @__PURE__ */ __h(Callout, { tone: "success" }, "結論：最該詐唬的是「前兩條街沒人下注，或對手翻牌下注、轉牌放棄，而你在位置上」。IP 用 ¾–1 池，OOP 用 ½ 池。不要詐唬的是 OOP 連三槍，以及對手前面加注過的線。"), /* @__PURE__ */ __h(Text, null, "方法：HU 底池、河牌前沒人全下，取河牌第一個下注，共 403,892 次。純詐唬 EV ＝ 棄牌率 −（1 − 棄牌率）× 尺寸（單位：底池；被加注算輸）。對手看不到你的底牌，所以全池在同一條線、同一個尺寸的棄牌率可以當作你詐唬時的棄牌估計。手機上寬表格可左右滑動。"), /* @__PURE__ */ __h(
+    return /* @__PURE__ */ __h(Page, { title: "撲克課程 100 條與河牌詐唬（NL2/NL5）", summary: "100 條從 HHDealer NL2/NL5 約 400 萬手算出的剝削課程與小測、河牌詐唬分析、ChakPoker 評估。入口是撲克訓練中心。", lang: "zh-Hant" }, /* @__PURE__ */ __h(LinkCards, { links: [{ title: "回到撲克訓練中心（節點訓練）", href: HUB }] }), /* @__PURE__ */ __h(Segmented, { options: TABS, value: tab, onChange: (v) => setTab(v) }), tab === "drill" && q ? /* @__PURE__ */ __h(Section, { heading: `小測模式：第 ${i % DRILL.length + 1} / ${DRILL.length} 題（答對 ${score.ok}，答錯 ${score.bad}）` }, /* @__PURE__ */ __h(Text, null, "題目順序：先練你的漏洞（太緊 → BB 防守 → 3-bet → 開池尺寸 → SB limp → 桌數），接著是河牌詐唬，最後是其他。每天 20 題。按「我答錯了」的題目會進錯題本，隔 2 題再考一次。"), /* @__PURE__ */ __h(Text, null, `${ov ? (ov.kind === "retry" ? "🔁 剛才答錯，再一次｜" : "📒 錯題複習｜") : ""}第 ${q[0]} 條｜${MODS[q[1]]}${q[9] ? `｜漏洞：${LEAK[q[9]]}` : ""}`), /* @__PURE__ */ __h(Callout, { tone: "info", lead: "題目" }, q[7]), show ? /* @__PURE__ */ __h(Section, { heading: `答案：${q[8]}` }, /* @__PURE__ */ __h(Text, null, `做法：${q[4]}`), /* @__PURE__ */ __h(Text, null, `數據：${q[3]}`), /* @__PURE__ */ __h(Text, null, `實例（匿名）：${q[6]}`), /* @__PURE__ */ __h(Grid, { columns: 2 }, /* @__PURE__ */ __h(Button, { label: "我答對了", variant: "primary", onClick: () => next(true) }), /* @__PURE__ */ __h(Button, { label: "我答錯了", variant: "quiet", onClick: () => next(false) }))) : /* @__PURE__ */ __h(Button, { label: "看答案", variant: "primary", onClick: () => setShow(true) })) : null, tab === "course" ? /* @__PURE__ */ __h(Section, { heading: MODS[m] }, /* @__PURE__ */ __h(Select, { label: "選單元", options: MOD_OPTS, value: mod, onChange: (v) => setMod(v) }), D.filter((x) => x[1] === m).map((x) => lesson(x))) : null, tab === "river" ? /* @__PURE__ */ __h(Section, { heading: "怎樣的行動線、河牌、手牌要勇敢詐唬" }, /* @__PURE__ */ __h(Callout, { tone: "success" }, "結論：最該詐唬的是「前兩條街沒人下注，或對手翻牌下注、轉牌放棄，而你在位置上」。IP 用 ¾–1 池，OOP 用 ½ 池。不要詐唬的是 OOP 連三槍，以及對手前面加注過的線。"), /* @__PURE__ */ __h(Text, null, "方法：HU 底池、河牌前沒人全下，取河牌第一個下注，共 403,892 次。純詐唬 EV ＝ 棄牌率 −（1 − 棄牌率）× 尺寸（單位：底池；被加注算輸）。對手看不到你的底牌，所以全池在同一條線、同一個尺寸的棄牌率可以當作你詐唬時的棄牌估計。手機上寬表格可左右滑動。"), /* @__PURE__ */ __h(
       WT,
       {
         columns: ["尺寸", "n", "棄牌", "被加注", "保本", "純詐唬 EV"],
@@ -958,25 +1133,33 @@ window.__PAGES.P3 = (function() {
   }
   function Drill(props) {
     const t = useGrokTheme();
-    const [q, setQ] = useState(() => gen(props.drill));
+    const lPick = (dr) => {
+      const p = window.MB.nextPick("L:" + dr + ":");
+      return Object.assign({}, p ? p.q : gen(dr), { _d: dr, _kind: p ? p.kind : null });
+    };
+    const [q, setQ] = useState(() => lPick(props.drill));
     const [picked, setPicked] = useState(null);
     useEffect(() => {
-      setQ(gen(props.drill));
-      setPicked(null);
+      if (q._d !== props.drill) {
+        setQ(lPick(props.drill));
+        setPicked(null);
+      }
     }, [props.drill]);
     const ok = picked !== null && picked === q.ans;
     const ansLabel = (q.opts.filter((o) => o.key === q.ans)[0] || { label: q.ans }).label;
     const choose = (k) => {
       if (picked !== null) return;
       setPicked(k);
+      window.MB.record(window.MB.lQ(props.drill, q, DRILL_NAME[props.drill]), k === q.ans, k);
       props.onAnswer(props.drill, k === q.ans);
     };
     const next = () => {
-      setQ(gen(props.drill));
+      setQ(lPick(props.drill));
       setPicked(null);
     };
+    const lid = window.MB.lQ(props.drill, q, "").id;
     const label = { color: t.text.secondary, fontSize: t.font.label.fontSize };
-    return /* @__PURE__ */ __h("div", { style: { border: `1px solid ${t.border.default}`, borderRadius: t.radius.xl, padding: 14 } }, /* @__PURE__ */ __h("div", { style: { fontWeight: t.weight.semibold, color: t.text.primary, marginBottom: 6 } }, DRILL_NAME[props.drill]), /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginBottom: 4 } }, q.ctx), q.cards.length > 0 && /* @__PURE__ */ __h("div", { style: label }, "你的手牌"), q.cards.length > 0 && /* @__PURE__ */ __h(CardRow, { cards: q.cards }), q.board && /* @__PURE__ */ __h("div", { style: label }, "公共牌"), q.board && /* @__PURE__ */ __h(CardRow, { cards: q.board }), q.made && /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginBottom: 8 } }, `你有：${q.made}`), /* @__PURE__ */ __h("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } }, q.opts.map((o) => /* @__PURE__ */ __h(Button, { key: o.key, label: o.label, variant: picked === o.key ? "primary" : "quiet", disabled: picked !== null && picked !== o.key, onClick: () => choose(o.key) }))), picked !== null && /* @__PURE__ */ __h("div", { style: { marginTop: 12, padding: "10px 12px", borderRadius: t.radius.md, background: ok ? t.fill.successSubtle : t.fill.dangerSubtle } }, /* @__PURE__ */ __h("div", { style: { fontWeight: t.weight.semibold, color: ok ? t.text.success : t.text.danger } }, ok ? "答對了" : `答錯了，正確是：${ansLabel}`), /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginTop: 4 } }, q.why), /* @__PURE__ */ __h("div", { style: { marginTop: 10 } }, /* @__PURE__ */ __h(Button, { label: "下一題", variant: "primary", onClick: next }))));
+    return /* @__PURE__ */ __h("div", { style: { border: `1px solid ${t.border.default}`, borderRadius: t.radius.xl, padding: 14 } }, /* @__PURE__ */ __h("div", { style: { fontWeight: t.weight.semibold, color: t.text.primary, marginBottom: 6 } }, q._kind ? __h("span", { className: "mbk " + (q._kind === "retry" ? "rt" : "du"), style: { marginRight: 6 } }, q._kind === "retry" ? "🔁 剛才答錯，再一次" : "📒 錯題複習") : null, DRILL_NAME[props.drill]), /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginBottom: 4 } }, q.ctx), q.cards.length > 0 && /* @__PURE__ */ __h("div", { style: label }, "你的手牌"), q.cards.length > 0 && /* @__PURE__ */ __h(CardRow, { cards: q.cards }), q.board && /* @__PURE__ */ __h("div", { style: label }, "公共牌"), q.board && /* @__PURE__ */ __h(CardRow, { cards: q.board }), q.made && /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginBottom: 8 } }, `你有：${q.made}`), /* @__PURE__ */ __h("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } }, q.opts.map((o) => /* @__PURE__ */ __h(Button, { key: o.key, label: o.label, variant: picked === o.key ? "primary" : "quiet", disabled: picked !== null && picked !== o.key, onClick: () => choose(o.key) }))), picked !== null && /* @__PURE__ */ __h("div", { style: { marginTop: 12, padding: "10px 12px", borderRadius: t.radius.md, background: ok ? t.fill.successSubtle : t.fill.dangerSubtle } }, /* @__PURE__ */ __h("div", { style: { fontWeight: t.weight.semibold, color: ok ? t.text.success : t.text.danger } }, ok ? "答對了" : `答錯了，正確是：${ansLabel}`), /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginTop: 4 } }, q.why), window.MB.item(lid) ? __h("div", { className: "qprog" }, window.MB.progress(lid)) : null, /* @__PURE__ */ __h("div", { style: { marginTop: 10 } }, /* @__PURE__ */ __h(Button, { label: "下一題", variant: "primary", onClick: next }))));
   }
   function LeakTab() {
     const [drill, setDrill] = useState(() => { const d = window.__drillPreset; window.__drillPreset = null; return d || "open"; });
@@ -1240,7 +1423,9 @@ window.__PAGES.P0 = (function () {
       h("div", { className: "lbl" }, "⑤ 去練習"),
       h("div", { className: "pbtn" },
         L.drills.map(function (d) { return h("button", { key: d, className: "btn pri", onClick: function () { goDrill(d); } }, "練習：" + DN[d]); }),
-        L.nodes.map(function (id) { return h("button", { key: id, className: "btn", onClick: function () { goNode(id); } }, "卡片：" + NN[id]); })),
+        L.nodes.map(function (id) { return h("button", { key: id, className: "btn", onClick: function () { goNode(id); } }, "卡片：" + NN[id]); }),
+        L.id === "L2" ? h("button", { className: "btn pri", onClick: function () { window.__goTab("P4"); setTimeout(function () { var e = document.getElementById("btndrill"); if (e) e.scrollIntoView({ block: "start" }); }, 80); } }, "練習：BTN 開牌圖") : null,
+        window.MB.countCat(L.id) ? h("button", { className: "btn", onClick: function () { window.__goTab("P5"); } }, "📒 錯題本：這類 " + window.MB.countCat(L.id) + " 題") : null),
       h("div", { className: "stat" }, "數據（樣本小，只當參考）：" + L.stat));
   }
   function App() {
@@ -1263,16 +1448,221 @@ window.__PAGES = window.__PAGES || {};
 window.__PAGES.P4 = (function () {
   var h = window.h, useEffect = window.GC.useEffect;
   var HTML = "\n<div class=\"b4\">\n<style>\n.b4 .b4g{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;margin:10px 0;max-width:560px}\n.b4 .b4c{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,2.6vw,13px);font-weight:600;border-radius:3px;line-height:1;letter-spacing:-.3px}\n.b4 .c3{background:#17733a;color:#fff}.b4 .c2{background:#5dbb63;color:#08310f}.b4 .c1{background:#f2c94c;color:#3d2c00}.b4 .c0{background:#d9dce1;color:#6b7280}\n@media (prefers-color-scheme:dark){.b4 .c0{background:#2a2f37;color:#7d8594}}\n.b4 .lg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;margin:4px 0 8px}.b4 .lg span{display:inline-flex;align-items:center;gap:5px}\n.b4 .sw{width:16px;height:16px;border-radius:3px;display:inline-block}\n.b4 table{font-size:14px}.b4 td.r,.b4 th.r{text-align:right}\n.b4 .big{font-size:18px;font-weight:700}.b4 td:last-child{min-width:170px}\n</style>\n<div class=\"co co-success\"><div class=\"lead\">結論：BTN 前面全部棄牌時，開大約 45% 的牌，加注到 2.5BB</div>\n你目前只開約 18%（你自己的 33 次機會開 6 次），少開了一大半該開的牌。下面的圖照顏色開就好：<b>深綠＋綠＝標準開牌範圍（約 45%）</b>；黃色只在盲注很愛棄牌時才加開。</div>\n\n<div class=\"sec\"><div class=\"sechead\">BTN 開牌圖（13×13）</div>\n<div class=\"lg\"><span><i class=\"sw c3\"></i>深綠：一定開（約 30%）</span><span><i class=\"sw c2\"></i>綠：標準也開（累計約 45%）</span><span><i class=\"sw c1\"></i>黃：盲注很緊才開（累計約 55%）</span><span><i class=\"sw c0\"></i>灰：棄牌</span></div>\n<div class=\"b4g\"><div class=\"b4c c3\" title=\"AA：模型 EV +3.28BB\">AA</div><div class=\"b4c c3\" title=\"AKs：模型 EV +1.71BB\">AKs</div><div class=\"b4c c3\" title=\"AQs：模型 EV +1.47BB\">AQs</div><div class=\"b4c c3\" title=\"AJs：模型 EV +1.17BB\">AJs</div><div class=\"b4c c3\" title=\"ATs：模型 EV +1.03BB\">ATs</div><div class=\"b4c c3\" title=\"A9s：模型 EV +0.83BB\">A9s</div><div class=\"b4c c3\" title=\"A8s：模型 EV +0.71BB\">A8s</div><div class=\"b4c c3\" title=\"A7s：模型 EV +0.65BB\">A7s</div><div class=\"b4c c3\" title=\"A6s：模型 EV +0.57BB\">A6s</div><div class=\"b4c c3\" title=\"A5s：模型 EV +0.56BB\">A5s</div><div class=\"b4c c3\" title=\"A4s：模型 EV +0.53BB\">A4s</div><div class=\"b4c c3\" title=\"A3s：模型 EV +0.50BB\">A3s</div><div class=\"b4c c3\" title=\"A2s：模型 EV +0.48BB\">A2s</div><div class=\"b4c c3\" title=\"AKo：模型 EV +1.22BB\">AKo</div><div class=\"b4c c3\" title=\"KK：模型 EV +2.68BB\">KK</div><div class=\"b4c c3\" title=\"KQs：模型 EV +0.97BB\">KQs</div><div class=\"b4c c3\" title=\"KJs：模型 EV +0.83BB\">KJs</div><div class=\"b4c c3\" title=\"KTs：模型 EV +0.65BB\">KTs</div><div class=\"b4c c3\" title=\"K9s：模型 EV +0.48BB\">K9s</div><div class=\"b4c c3\" title=\"K8s：模型 EV +0.42BB\">K8s</div><div class=\"b4c c3\" title=\"K7s：模型 EV +0.38BB\">K7s</div><div class=\"b4c c3\" title=\"K6s：模型 EV +0.35BB\">K6s</div><div class=\"b4c c3\" title=\"K5s：模型 EV +0.33BB\">K5s</div><div class=\"b4c c3\" title=\"K4s：模型 EV +0.30BB\">K4s</div><div class=\"b4c c3\" title=\"K3s：模型 EV +0.28BB\">K3s</div><div class=\"b4c c3\" title=\"K2s：模型 EV +0.26BB\">K2s</div><div class=\"b4c c3\" title=\"AQo：模型 EV +0.99BB\">AQo</div><div class=\"b4c c3\" title=\"KQo：模型 EV +0.56BB\">KQo</div><div class=\"b4c c3\" title=\"QQ：模型 EV +2.27BB\">QQ</div><div class=\"b4c c3\" title=\"QJs：模型 EV +0.64BB\">QJs</div><div class=\"b4c c3\" title=\"QTs：模型 EV +0.57BB\">QTs</div><div class=\"b4c c3\" title=\"Q9s：模型 EV +0.43BB\">Q9s</div><div class=\"b4c c3\" title=\"Q8s：模型 EV +0.32BB\">Q8s</div><div class=\"b4c c3\" title=\"Q7s：模型 EV +0.27BB\">Q7s</div><div class=\"b4c c3\" title=\"Q6s：模型 EV +0.25BB\">Q6s</div><div class=\"b4c c2\" title=\"Q5s：模型 EV +0.23BB\">Q5s</div><div class=\"b4c c2\" title=\"Q4s：模型 EV +0.21BB\">Q4s</div><div class=\"b4c c2\" title=\"Q3s：模型 EV +0.19BB\">Q3s</div><div class=\"b4c c2\" title=\"Q2s：模型 EV +0.18BB\">Q2s</div><div class=\"b4c c3\" title=\"AJo：模型 EV +0.71BB\">AJo</div><div class=\"b4c c3\" title=\"KJo：模型 EV +0.50BB\">KJo</div><div class=\"b4c c3\" title=\"QJo：模型 EV +0.37BB\">QJo</div><div class=\"b4c c3\" title=\"JJ：模型 EV +1.94BB\">JJ</div><div class=\"b4c c3\" title=\"JTs：模型 EV +0.49BB\">JTs</div><div class=\"b4c c3\" title=\"J9s：模型 EV +0.42BB\">J9s</div><div class=\"b4c c3\" title=\"J8s：模型 EV +0.32BB\">J8s</div><div class=\"b4c c2\" title=\"J7s：模型 EV +0.23BB\">J7s</div><div class=\"b4c c2\" title=\"J6s：模型 EV +0.18BB\">J6s</div><div class=\"b4c c2\" title=\"J5s：模型 EV +0.17BB\">J5s</div><div class=\"b4c c2\" title=\"J4s：模型 EV +0.15BB\">J4s</div><div class=\"b4c c2\" title=\"J3s：模型 EV +0.13BB\">J3s</div><div class=\"b4c c2\" title=\"J2s：模型 EV +0.12BB\">J2s</div><div class=\"b4c c3\" title=\"ATo：模型 EV +0.61BB\">ATo</div><div class=\"b4c c3\" title=\"KTo：模型 EV +0.39BB\">KTo</div><div class=\"b4c c3\" title=\"QTo：模型 EV +0.33BB\">QTo</div><div class=\"b4c c3\" title=\"JTo：模型 EV +0.27BB\">JTo</div><div class=\"b4c c3\" title=\"TT：模型 EV +1.42BB\">TT</div><div class=\"b4c c3\" title=\"T9s：模型 EV +0.39BB\">T9s</div><div class=\"b4c c3\" title=\"T8s：模型 EV +0.34BB\">T8s</div><div class=\"b4c c3\" title=\"T7s：模型 EV +0.25BB\">T7s</div><div class=\"b4c c2\" title=\"T6s：模型 EV +0.16BB\">T6s</div><div class=\"b4c c2\" title=\"T5s：模型 EV +0.12BB\">T5s</div><div class=\"b4c c1\" title=\"T4s：模型 EV +0.11BB\">T4s</div><div class=\"b4c c1\" title=\"T3s：模型 EV +0.10BB\">T3s</div><div class=\"b4c c1\" title=\"T2s：模型 EV +0.08BB\">T2s</div><div class=\"b4c c3\" title=\"A9o：模型 EV +0.39BB\">A9o</div><div class=\"b4c c2\" title=\"K9o：模型 EV +0.20BB\">K9o</div><div class=\"b4c c1\" title=\"Q9o：模型 EV +0.12BB\">Q9o</div><div class=\"b4c c2\" title=\"J9o：模型 EV +0.19BB\">J9o</div><div class=\"b4c c2\" title=\"T9o：模型 EV +0.17BB\">T9o</div><div class=\"b4c c3\" title=\"99：模型 EV +1.18BB\">99</div><div class=\"b4c c3\" title=\"98s：模型 EV +0.32BB\">98s</div><div class=\"b4c c3\" title=\"97s：模型 EV +0.28BB\">97s</div><div class=\"b4c c2\" title=\"96s：模型 EV +0.20BB\">96s</div><div class=\"b4c c2\" title=\"95s：模型 EV +0.12BB\">95s</div><div class=\"b4c c1\" title=\"94s：模型 EV +0.08BB\">94s</div><div class=\"b4c c1\" title=\"93s：模型 EV +0.06BB\">93s</div><div class=\"b4c c0\" title=\"92s：模型 EV +0.05BB\">92s</div><div class=\"b4c c3\" title=\"A8o：模型 EV +0.33BB\">A8o</div><div class=\"b4c c2\" title=\"K8o：模型 EV +0.14BB\">K8o</div><div class=\"b4c c1\" title=\"Q8o：模型 EV +0.06BB\">Q8o</div><div class=\"b4c c0\" title=\"J8o：模型 EV +0.02BB\">J8o</div><div class=\"b4c c2\" title=\"T8o：模型 EV +0.12BB\">T8o</div><div class=\"b4c c1\" title=\"98o：模型 EV +0.11BB\">98o</div><div class=\"b4c c3\" title=\"88：模型 EV +1.00BB\">88</div><div class=\"b4c c3\" title=\"87s：模型 EV +0.28BB\">87s</div><div class=\"b4c c3\" title=\"86s：模型 EV +0.24BB\">86s</div><div class=\"b4c c2\" title=\"85s：模型 EV +0.15BB\">85s</div><div class=\"b4c c1\" title=\"84s：模型 EV +0.07BB\">84s</div><div class=\"b4c c0\" title=\"83s：模型 EV +0.03BB\">83s</div><div class=\"b4c c0\" title=\"82s：模型 EV +0.02BB\">82s</div><div class=\"b4c c3\" title=\"A7o：模型 EV +0.28BB\">A7o</div><div class=\"b4c c1\" title=\"K7o：模型 EV +0.11BB\">K7o</div><div class=\"b4c c0\" title=\"Q7o：模型 EV +0.01BB\">Q7o</div><div class=\"b4c c0\" title=\"J7o：模型 EV -0.02BB\">J7o</div><div class=\"b4c c0\" title=\"T7o：模型 EV -0.04BB\">T7o</div><div class=\"b4c c1\" title=\"97o：模型 EV +0.07BB\">97o</div><div class=\"b4c c1\" title=\"87o：模型 EV +0.07BB\">87o</div><div class=\"b4c c3\" title=\"77：模型 EV +0.84BB\">77</div><div class=\"b4c c2\" title=\"76s：模型 EV +0.23BB\">76s</div><div class=\"b4c c2\" title=\"75s：模型 EV +0.19BB\">75s</div><div class=\"b4c c2\" title=\"74s：模型 EV +0.12BB\">74s</div><div class=\"b4c c0\" title=\"73s：模型 EV +0.03BB\">73s</div><div class=\"b4c c0\" title=\"72s：模型 EV -0.01BB\">72s</div><div class=\"b4c c3\" title=\"A6o：模型 EV +0.24BB\">A6o</div><div class=\"b4c c1\" title=\"K6o：模型 EV +0.09BB\">K6o</div><div class=\"b4c c0\" title=\"Q6o：模型 EV +0.00BB\">Q6o</div><div class=\"b4c c0\" title=\"J6o：模型 EV -0.06BB\">J6o</div><div class=\"b4c c0\" title=\"T6o：模型 EV -0.07BB\">T6o</div><div class=\"b4c c0\" title=\"96o：模型 EV -0.08BB\">96o</div><div class=\"b4c c0\" title=\"86o：模型 EV +0.03BB\">86o</div><div class=\"b4c c0\" title=\"76o：模型 EV +0.03BB\">76o</div><div class=\"b4c c3\" title=\"66：模型 EV +0.56BB\">66</div><div class=\"b4c c2\" title=\"65s：模型 EV +0.20BB\">65s</div><div class=\"b4c c2\" title=\"64s：模型 EV +0.15BB\">64s</div><div class=\"b4c c1\" title=\"63s：模型 EV +0.07BB\">63s</div><div class=\"b4c c0\" title=\"62s：模型 EV -0.00BB\">62s</div><div class=\"b4c c2\" title=\"A5o：模型 EV +0.23BB\">A5o</div><div class=\"b4c c1\" title=\"K5o：模型 EV +0.06BB\">K5o</div><div class=\"b4c c0\" title=\"Q5o：模型 EV -0.02BB\">Q5o</div><div class=\"b4c c0\" title=\"J5o：模型 EV -0.07BB\">J5o</div><div class=\"b4c c0\" title=\"T5o：模型 EV -0.11BB\">T5o</div><div class=\"b4c c0\" title=\"95o：模型 EV -0.12BB\">95o</div><div class=\"b4c c0\" title=\"85o：模型 EV -0.12BB\">85o</div><div class=\"b4c c0\" title=\"75o：模型 EV -0.01BB\">75o</div><div class=\"b4c c0\" title=\"65o：模型 EV +0.00BB\">65o</div><div class=\"b4c c3\" title=\"55：模型 EV +0.47BB\">55</div><div class=\"b4c c2\" title=\"54s：模型 EV +0.17BB\">54s</div><div class=\"b4c c2\" title=\"53s：模型 EV +0.13BB\">53s</div><div class=\"b4c c0\" title=\"52s：模型 EV +0.05BB\">52s</div><div class=\"b4c c2\" title=\"A4o：模型 EV +0.19BB\">A4o</div><div class=\"b4c c0\" title=\"K4o：模型 EV +0.04BB\">K4o</div><div class=\"b4c c0\" title=\"Q4o：模型 EV -0.03BB\">Q4o</div><div class=\"b4c c0\" title=\"J4o：模型 EV -0.09BB\">J4o</div><div class=\"b4c c0\" title=\"T4o：模型 EV -0.12BB\">T4o</div><div class=\"b4c c0\" title=\"94o：模型 EV -0.15BB\">94o</div><div class=\"b4c c0\" title=\"84o：模型 EV -0.15BB\">84o</div><div class=\"b4c c0\" title=\"74o：模型 EV -0.15BB\">74o</div><div class=\"b4c c0\" title=\"64o：模型 EV -0.04BB\">64o</div><div class=\"b4c c0\" title=\"54o：模型 EV -0.03BB\">54o</div><div class=\"b4c c3\" title=\"44：模型 EV +0.38BB\">44</div><div class=\"b4c c1\" title=\"43s：模型 EV +0.11BB\">43s</div><div class=\"b4c c1\" title=\"42s：模型 EV +0.07BB\">42s</div><div class=\"b4c c2\" title=\"A3o：模型 EV +0.18BB\">A3o</div><div class=\"b4c c0\" title=\"K3o：模型 EV +0.02BB\">K3o</div><div class=\"b4c c0\" title=\"Q3o：模型 EV -0.05BB\">Q3o</div><div class=\"b4c c0\" title=\"J3o：模型 EV -0.10BB\">J3o</div><div class=\"b4c c0\" title=\"T3o：模型 EV -0.14BB\">T3o</div><div class=\"b4c c0\" title=\"93o：模型 EV -0.16BB\">93o</div><div class=\"b4c c0\" title=\"83o：模型 EV -0.19BB\">83o</div><div class=\"b4c c0\" title=\"73o：模型 EV -0.19BB\">73o</div><div class=\"b4c c0\" title=\"63o：模型 EV -0.18BB\">63o</div><div class=\"b4c c0\" title=\"53o：模型 EV -0.07BB\">53o</div><div class=\"b4c c0\" title=\"43o：模型 EV -0.08BB\">43o</div><div class=\"b4c c3\" title=\"33：模型 EV +0.32BB\">33</div><div class=\"b4c c0\" title=\"32s：模型 EV +0.05BB\">32s</div><div class=\"b4c c2\" title=\"A2o：模型 EV +0.16BB\">A2o</div><div class=\"b4c c0\" title=\"K2o：模型 EV +0.01BB\">K2o</div><div class=\"b4c c0\" title=\"Q2o：模型 EV -0.07BB\">Q2o</div><div class=\"b4c c0\" title=\"J2o：模型 EV -0.12BB\">J2o</div><div class=\"b4c c0\" title=\"T2o：模型 EV -0.15BB\">T2o</div><div class=\"b4c c0\" title=\"92o：模型 EV -0.18BB\">92o</div><div class=\"b4c c0\" title=\"82o：模型 EV -0.20BB\">82o</div><div class=\"b4c c0\" title=\"72o：模型 EV -0.22BB\">72o</div><div class=\"b4c c0\" title=\"62o：模型 EV -0.22BB\">62o</div><div class=\"b4c c0\" title=\"52o：模型 EV -0.20BB\">52o</div><div class=\"b4c c0\" title=\"42o：模型 EV -0.12BB\">42o</div><div class=\"b4c c0\" title=\"32o：模型 EV -0.14BB\">32o</div><div class=\"b4c c3\" title=\"22：模型 EV +0.25BB\">22</div></div>\n<div class=\"cap\">右上三角＝同花（s），左下三角＝不同花（o），對角線＝對子。只適用「前面所有人都棄牌、輪到你在 BTN」的情況；前面有人跛入或加注就不是這張圖。</div>\n<div class=\"txt\"><b>用文字講：</b>對子全開；A 開頭全開（同花、不同花都開）；同花的 K、Q、J 全開；同花 T5s 以上、95s、85s、74s 以上、64s、53s 以上；不同花 K8o 以上、QTo 以上、JTo、J9o、T9o、T8o。</div>\n<div class=\"txt\"><b>黃色加開：</b>T4s–T2s、94s、93s、84s、63s、43s、42s，以及 Q9o、Q8o、K7o–K5o、98o、97o、87o。</div>\n</div>\n\n<div class=\"sec\"><div class=\"sechead\">為什麼可以開這麼寬？三句白話</div>\n<ol class=\"ul\">\n<li><b>不是靠「盲注都會棄」賺錢。</b>400 萬手裡，你在 BTN 加注 2.1–2.5BB 後，兩個盲注都棄牌只有 <b>41%</b>（NL2，63,386 次）。純偷盲要 62.5% 的人棄牌才不虧，所以光偷是不夠的。（你自己那 127 次的 57% 是小樣本，偏高。）</li>\n<li><b>真正賺錢的是「被跟注之後你有位置」。</b>大盲跟注後，BTN 平均還是賺 <b>+0.62BB</b>（15,859 次）；盲注過牌給你時，玩家池在 BTN 持續下注 60%，大盲面對持續下注棄牌 <b>47%</b>（22,492 次）。所以邊緣牌只要能在翻牌後撿到這些棄牌，就值得開。</li>\n<li><b>開得寬的人在 BTN 賺得比較多。</b>把有 100 次以上 BTN 機會的 1,361 位 NL2 玩家照開牌率分組：開 25–35% 的人每 100 次機會賺 20BB；開 35–45% 賺 29BB；開 45–55% 賺 <b>38BB</b>；開超過 55% 反而降到 24BB。贏家（前 25%）中位數開 38%，輸家開 35%。</li>\n</ol></div>\n\n<div class=\"sec\"><div class=\"sechead\">開多大？2.5BB</div>\n<div class=\"tw\"><table>\n<tr><th>加注尺寸（NL2 6人）</th><th class=\"r\">開牌次數</th><th class=\"r\">兩盲都棄</th><th class=\"r\">大盲跟注</th><th class=\"r\">被3bet</th><th class=\"r\">每次開牌平均賺</th></tr>\n<tr><td>2BB（最小加注）</td><td class=\"r\">43,501</td><td class=\"r\">34%</td><td class=\"r\">29%</td><td class=\"r\">18%</td><td class=\"r\">+0.45BB</td></tr>\n<tr><td><b>2.1–2.5BB</b></td><td class=\"r\">63,386</td><td class=\"r\">41%</td><td class=\"r\">25%</td><td class=\"r\">16%</td><td class=\"r\"><b>+0.62BB</b></td></tr>\n<tr><td>2.6–3BB</td><td class=\"r\">52,035</td><td class=\"r\">46%</td><td class=\"r\">23%</td><td class=\"r\">15%</td><td class=\"r\">+0.62BB</td></tr>\n</table></div>\n<div class=\"txt\">2.5BB 和 3BB 賺得差不多（誤差約 ±0.05–0.06BB），但 2.5BB 被 3bet 時輸得少，所以用 2.5BB。<b>不要用 2BB 最小加注</b>：大盲會多防守 8 個百分點，每次少賺約 0.17BB。NL5 結果一樣（2BB +0.38、2.6–3BB +0.60BB）。</div>\n</div>\n\n<div class=\"sec\"><div class=\"sechead\">看盲注是哪種人再調整</div>\n<div class=\"txt\">用 GG 的 HUD 看大盲的「Fold to Steal（被偷盲時棄牌率）」和「3Bet」，至少要 30 次以上才準。</div>\n<div class=\"tw\"><table>\n<tr><th>大盲類型</th><th class=\"r\">人數</th><th class=\"r\">棄牌</th><th class=\"r\">跟注</th><th class=\"r\">3bet</th><th>你怎麼做</th></tr>\n<tr><td>很緊（棄 ≥65%）</td><td class=\"r\">214</td><td class=\"r\">70%</td><td class=\"r\">22%</td><td class=\"r\">8%</td><td>開到黃色（約 55%），用 2–2.5BB 小一點偷</td></tr>\n<tr><td>一般</td><td class=\"r\">146</td><td class=\"r\">59%</td><td class=\"r\">32%</td><td class=\"r\">9%</td><td>照圖：深綠＋綠（約 45%）</td></tr>\n<tr><td>很愛跟（棄 ≤45%）</td><td class=\"r\">21</td><td class=\"r\">40%</td><td class=\"r\">52%</td><td class=\"r\">8%</td><td>只開深綠（約 30%），拿好牌開 3BB 讓他付錢</td></tr>\n<tr><td>很愛 3bet（≥14%）</td><td class=\"r\">65</td><td class=\"r\">59%</td><td class=\"r\">24%</td><td class=\"r\">17%</td><td>深綠為主（約 30–35%），拿掉 A5o–A2o、K9o、J9o、T9o、小同花間隔牌；被 3bet 時綠色牌直接棄</td></tr>\n</table></div>\n<div class=\"cap\">NL2，2–3BB 開牌、小盲已棄的情況。類型用一半手牌判定、另一半手牌驗證（避免自己騙自己），所以這些比例是真的會重複出現的習慣。小盲很愛 3bet 時也照「很愛 3bet」那一列收緊。</div>\n<div class=\"txt\"><b>被 3bet 怎麼辦：</b>玩家池在 BTN 被 3bet 時大約棄牌 50–57%，3bet 尺寸多半是你開牌的 3–4 倍。綠色、黃色的牌被 3bet 一律棄掉；深綠裡的大牌和中對子再去跟或 4bet。</div>\n</div>\n\n<div class=\"sec\"><div class=\"sechead\">5 人桌</div>\n<div class=\"txt\">NL2 5 人桌（391,905 次機會）兩盲都棄 42%，每次開牌平均賺 +0.73BB，比 6 人桌好一點，可以再多開一點點（把黃色裡的同花牌加進來）。</div></div>\n\n<div class=\"sec\"><div class=\"sechead\">數據怎麼算的（和限制）</div>\n<ul class=\"ul\">\n<li>資料：HHDealer GG NL2/NL5 6-max，約 401 萬手（2024/10–2025/05）。輪到 BTN 開牌的機會共 1,536,341 次，其中加注 543,978 次。</li>\n<li><b>這份資料沒有任何人的底牌是一定看得到的</b>（每手都是匿名、只有攤牌才看得到），所以「每一種牌直接算實際輸贏」做不到，因為只看攤牌會高估好牌、低估被棄掉的牌。</li>\n<li>所以用三種方法互相對照：① 盲注對 BTN 開牌怎麼反應（全部手牌都看得到，沒有偏差）；② 模型：每種起手牌對盲注實際防守範圍（從攤牌估計）的勝率 × 位置實現率，再用玩家池實際賺賠校準；③ 不同開牌率玩家的實際 BTN 收益。三種都指向 40–50%。</li>\n<li>模型對「實現率」很敏感：假設你翻牌後打得比玩家池平均差，範圍就該縮小（本圖已經用偏保守的假設）；打得好可以再寬。第③點的玩家比較可能混有「開得寬的人本來就比較會打」的效果。</li>\n<li>研究整理，不保證獲利。</li>\n</ul></div>\n</div>\n";
+  window.__BTN_HTML = HTML;
   function BtnRange() {
     useEffect(function () { var el = document.getElementById("btn4m"); if (el && !el.firstChild) el.innerHTML = HTML; });
-    return h("div", null, h("h1", null, "BTN 要開到哪裡？（400 萬手數據）"), h("div", { id: "btn4m" }));
+    return h("div", null, h("h1", null, "BTN 要開到哪裡？（400 萬手數據）"),
+      h("button", { className: "linkc", onClick: function () { var e = document.getElementById("btndrill"); if (e) e.scrollIntoView({ block: "start" }); } }, "↓ 跳到 BTN 開牌練習（答錯會進錯題本）"),
+      h("div", { id: "btn4m" }), h(window.MB.BtnDrill, null));
   }
   return BtnRange;
 })();
 
+// ---- 錯題本 UI: shared question card, BTN 開牌練習, 錯題本 page, daily summary ----
+(function () {
+  var h = window.h, GC = window.GC, useState = GC.useState, MB = window.MB;
+  var SYM = { s: "♠", h: "♥", d: "♦", c: "♣" };
+  function cards(arr) {
+    return h("span", { className: "cc qcc" }, arr.map(function (c, i) {
+      var red = c[1] === "h" || c[1] === "d";
+      return h("span", { key: i, className: "cd" + (red ? " red" : "") }, (c[0] === "T" ? "10" : c[0]) + SYM[c[1]]);
+    }));
+  }
+  function kindBadge(kind) {
+    if (kind === "retry") return h("span", { className: "mbk rt" }, "🔁 剛才答錯，再一次");
+    if (kind === "due") return h("span", { className: "mbk du" }, "📒 錯題複習");
+    if (kind === "book") return h("span", { className: "mbk du" }, "📒 錯題本");
+    return null;
+  }
+  // props: q, kind, onNext, noRetry, onResult(ok)
+  function QCard(p) {
+    var st = useState(null), picked = st[0], setPicked = st[1];
+    var sh = useState(false), show = sh[0], setShow = sh[1];
+    var q = p.q;
+    var ok = picked !== null && picked === q.ans;
+    function choose(k) {
+      if (picked !== null) return;
+      setPicked(k);
+      MB.record(q, k === q.ans, k, { noRetry: p.noRetry });
+      if (p.onResult) p.onResult(k === q.ans);
+    }
+    var body = [];
+    body.push(h("div", { key: "t", className: "qtag" }, kindBadge(p.kind), h("span", null, q.tag)));
+    if (q.ctx) body.push(h("div", { key: "c", className: "qctx" }, q.ctx));
+    if (q.cards && q.cards.length) body.push(h("div", { key: "hc", className: "qrow" }, h("span", { className: "qlb" }, "你的手牌"), cards(q.cards)));
+    if (q.board && q.board.length) body.push(h("div", { key: "bd", className: "qrow" }, h("span", { className: "qlb" }, "公共牌"), cards(q.board)));
+    if (q.made) body.push(h("div", { key: "m", className: "qctx" }, "你有：" + q.made));
+    if (q.q) body.push(h("div", { key: "q", className: "qq" }, q.q));
+    if (!q.self) {
+      body.push(h("div", { key: "o", className: "qopts" }, q.opts.map(function (o) {
+        var cls = "btn qo";
+        if (picked !== null) { if (o.key === q.ans) cls += " right"; else if (o.key === picked) cls += " wrong"; }
+        return h("button", { key: o.key, className: cls, disabled: picked !== null && o.key !== picked && o.key !== q.ans, onClick: function () { choose(o.key); } }, o.label);
+      })));
+    } else if (picked === null) {
+      if (!show) body.push(h("button", { key: "sa", className: "btn pri", onClick: function () { setShow(true); } }, "先在心裡回答，再看答案"));
+      else body.push(h("div", { key: "ans", className: "qres" },
+        h("div", { className: "qok" }, "答案：" + q.ansText),
+        h("div", { className: "qwhy" }, q.why),
+        h("div", { className: "qopts" },
+          h("button", { className: "btn pri", onClick: function () { choose("ok"); } }, "我答對了"),
+          h("button", { className: "btn", onClick: function () { choose("bad"); } }, "我答錯了"))));
+    }
+    if (picked !== null) {
+      body.push(h("div", { key: "r", className: "qres " + (ok ? "okb" : "badb") },
+        h("div", { className: ok ? "qok" : "qbad" }, ok ? "✓ 答對了" : (q.self ? "✗ 答錯了，正確答案：" + q.ansText : "✗ 答錯了。你選「" + MB.labelOf(q, picked) + "」，正確是「" + MB.correctText(q) + "」")),
+        q.self ? null : h("div", { className: "qwhy" }, "為什麼：" + q.why),
+        MB.item(q.id) ? h("div", { className: "qprog" }, MB.progress(q.id)) : null,
+        p.onNext ? h("div", { style: { marginTop: 10 } }, h("button", { className: "btn pri", onClick: function () { p.onNext(ok); } }, "下一題")) : null));
+    }
+    return h("div", { className: "qcard" + (p.kind ? " rev" : "") }, body);
+  }
+
+  // ---- BTN 開牌練習 (uses the 13×13 grid on the BTN 開牌 tab) ----
+  var GRID = null;
+  function grid() {
+    if (GRID) return GRID;
+    GRID = []; var re = /class="b4c (c[0-3])" title="([^"]*)">([^<]+)</g, m, src = window.__BTN_HTML || "";
+    while ((m = re.exec(src))) GRID.push({ c: m[1], ev: (m[2].split("：")[1] || ""), hand: m[3] });
+    return GRID;
+  }
+  var COLOR = { c3: "深綠（一定開）", c2: "綠（標準範圍也開）", c1: "黃（只有盲注很緊時才加開）", c0: "灰（棄牌）" };
+  var PAST = { A8o: "你 10/28 在 BTN 實戰棄過 A8o（我的弱點 #2），這手要開。", K9s: "你 10/28 在 BTN 實戰棄過 K9s（我的弱點 #2），這手要開。" };
+  function cardsOf(l) {
+    var S = "shdc", ss = [0, 1, 2, 3].sort(function () { return Math.random() - 0.5; });
+    var s1 = S[ss[0]], s2 = l.length === 3 && l[2] === "s" ? s1 : S[ss[1]];
+    return [l[0] + s1, l[1] + s2];
+  }
+  function bQ(cell, tight) {
+    var open = cell.c === "c3" || cell.c === "c2" || (tight && cell.c === "c1");
+    var why = cell.hand + " 在 BTN 開牌圖是" + COLOR[cell.c] + (cell.ev ? "，" + cell.ev : "") + "。";
+    if (cell.c === "c1") why += tight ? "這次兩個盲注都很緊（常棄牌），黃色牌也可以開 2.5BB。" : "盲注是一般玩家時，黃色牌不開；要等盲注很緊才加開。";
+    else why += open ? "前面全部棄牌時，開 2.5BB（不要只加 2BB）。" : "就算在 BTN 也太弱，棄牌。";
+    if (PAST[cell.hand]) why += PAST[cell.hand];
+    return { id: "B:" + cell.hand + ":" + (tight ? "t" : "s"), cat: "L2", tag: "BTN 開牌｜" + (tight ? "盲注很緊" : "一般盲注"),
+      ctx: "6 人桌，前面全部棄牌，你在 BTN（100BB）。" + (tight ? "SB 和 BB 都是很緊的玩家，很常棄牌。" : "SB 和 BB 是一般玩家。"),
+      q: "開還是棄？", cards: cardsOf(cell.hand), opts: [{ key: "fold", label: "棄牌" }, { key: "open", label: "開 2.5BB" }], ans: open ? "open" : "fold", why: why };
+  }
+  function genB() {
+    var g = grid(); if (!g.length) return null;
+    var r = Math.random(), want = r < 0.25 ? "c3" : r < 0.55 ? "c2" : r < 0.8 ? "c1" : "c0";
+    var pool = g.filter(function (x) { return x.c === want; }); if (!pool.length) pool = g;
+    var cell = pool[Math.floor(Math.random() * pool.length)];
+    return bQ(cell, Math.random() < 0.3);
+  }
+  function pickB() { var p = MB.nextPick("B:", 0.4); return p ? { q: p.q, kind: p.kind } : { q: genB(), kind: null }; }
+  function BtnDrill() {
+    var st = useState(function () { return pickB(); }), cur = st[0], setCur = st[1];
+    var sc = useState({ ok: 0, bad: 0, n: 0 }), score = sc[0], setScore = sc[1];
+    if (!cur.q) return h("p", { className: "txt" }, "找不到開牌圖資料。");
+    return h("section", { className: "sec", id: "btndrill" },
+      h("h2", { className: "sechead" }, "BTN 開牌練習（答對 " + score.ok + "，答錯 " + score.bad + "）"),
+      h("div", { className: "cap" }, "隨機發一手牌，照上面的開牌圖決定開或棄。答錯的牌會進錯題本，這次練習稍後再出一次。"),
+      h(QCard, { key: "b" + score.n, q: cur.q, kind: cur.kind,
+        onResult: function (ok) { setScore({ ok: score.ok + (ok ? 1 : 0), bad: score.bad + (ok ? 0 : 1), n: score.n }); },
+        onNext: function () { setScore({ ok: score.ok, bad: score.bad, n: score.n + 1 }); setCur(pickB()); } }));
+  }
+  window.MB.QCard = QCard; window.MB.BtnDrill = BtnDrill; window.MB.cards = cards;
+
+  // ---- daily summary bar (top of every tab) ----
+  function pctS(a) { return a === null || a === undefined ? "—" : Math.round(a * 100) + "%"; }
+  function DaySum() {
+    var t = MB.today();
+    var parts = [];
+    parts.push(h("span", { key: "a" }, t.n ? "今天 " + t.n + " 題・答對 " + pctS(t.acc) : "今天還沒練習"));
+    if (t.weak) parts.push(h("span", { key: "w" }, "最弱：" + t.weak.name.replace(/（.*）/, "") + (t.weak.acc !== null ? "（" + pctS(t.weak.acc) + "）" : "")));
+    parts.push(h("span", { key: "d", className: t.due ? "dsd" : "" }, "待複習 " + t.due + " 題"));
+    return h("button", { className: "dsum", onClick: function () { window.__goTab("P5"); } }, parts, h("span", { className: "dsg" }, "錯題本 ›"));
+  }
+  window.MB.DaySum = DaySum;
+
+  // ---- 錯題本 page ----
+  function boxDots(it) { var d = it.mastered ? 3 : it.box - 1; return "●●●".slice(0, d) + "○○○".slice(0, 3 - d); }
+  function Item(p) {
+    var it = p.it, q = it.q;
+    return h("div", { className: "mbi" },
+      h("div", { className: "mbih" }, h("b", null, q.tag), h("span", { className: "mbdots", title: "連續答對進度" }, boxDots(it))),
+      q.ctx ? h("div", { className: "qctx" }, q.ctx) : null,
+      q.cards && q.cards.length ? h("div", { className: "qrow" }, cards(q.cards), q.board ? h("span", { className: "qlb" }, " 公共牌 ") : null, q.board ? cards(q.board) : null) : null,
+      q.q ? h("div", { className: "qq" }, q.q) : null,
+      h("div", { className: "mbans" }, h("span", { className: "qbad" }, "✗ 你答：" + (it.lastAns || "—")), h("span", { className: "qok" }, "✓ 正確：" + MB.correctText(q))),
+      h("div", { className: "qwhy" }, q.why),
+      h("div", { className: "mbst" }, "錯 " + it.wrong + " 次・最近一次錯：" + MB.fmtTime(it.lastWrong) + (it.mastered ? "・已掌握" : "・下次複習：" + MB.fmtDue(it.due))),
+      h("div", { className: "pbtn" },
+        it.mastered ? h("button", { className: "btn", onClick: function () { MB.setMastered(it.id, false); } }, "移回錯題本")
+          : [h("button", { key: "p", className: "btn pri", onClick: function () { p.onPractice([it.id]); } }, "練這題"),
+            h("button", { key: "m", className: "btn", onClick: function () { MB.setMastered(it.id, true); } }, "標為已掌握"),
+            h("button", { key: "r", className: "btn", onClick: function () { MB.reset(it.id); } }, "重設進度")]));
+  }
+  function Practice(p) {
+    var qs = useState(function () { return p.ids.slice(); }), queue = qs[0], setQueue = qs[1];
+    var is = useState(0), i = is[0], setI = is[1];
+    var ss = useState({ ok: 0, bad: 0 }), sc = ss[0], setSc = ss[1];
+    var rs = useState({}), re = rs[0], setRe = rs[1];
+    if (i >= queue.length) {
+      return h("section", { className: "sec" }, h("h2", { className: "sechead" }, "這輪錯題練完了"),
+        h("p", { className: "txt" }, "答對 " + sc.ok + "，答錯 " + sc.bad + "。答錯的題目已排回明天以前複習；答對的題目要在之後不同次練習再答對，才會畢業。"),
+        h("button", { className: "btn pri", onClick: p.onExit }, "回到錯題本"));
+    }
+    var id = queue[i], it = MB.item(id);
+    if (!it) { setI(i + 1); return null; }
+    return h("div", null,
+      h("section", { className: "sec" },
+        h("div", { className: "mbph" }, h("b", null, "只練錯題：第 " + (i + 1) + " / " + queue.length + " 題（答對 " + sc.ok + "，答錯 " + sc.bad + "）"), h("button", { className: "btn", onClick: p.onExit }, "結束")),
+        h(QCard, { key: "pq" + i, q: it.q, kind: re[i] ? "retry" : "book", noRetry: true,
+          onResult: function (ok) {
+            setSc({ ok: sc.ok + (ok ? 1 : 0), bad: sc.bad + (ok ? 0 : 1) });
+            if (!ok) { var nq = queue.slice(), at = Math.min(i + 3, nq.length); nq.splice(at, 0, id); var nr = Object.assign({}, re); nr[at] = 1; setQueue(nq); setRe(nr); }
+          },
+          onNext: function () { setI(i + 1); } })));
+  }
+  function shuffle(a) { return a.map(function (x) { return [Math.random(), x]; }).sort(function (x, y) { return x[0] - y[0]; }).map(function (x) { return x[1]; }); }
+  function BookPage() {
+    var ms = useState(null), prac = ms[0], setPrac = ms[1];
+    var os = useState(false), showM = os[0], setShowM = os[1];
+    if (prac) return h("div", null, h("h1", null, "錯題本"), h(Practice, { key: prac.k, ids: prac.ids, onExit: function () { setPrac(null); window.scrollTo(0, 0); } }));
+    var t = MB.today(), opn = MB.open(), due = MB.dueToday(), mastered = MB.all().filter(function (x) { return x.mastered; });
+    function go(ids) { if (!ids.length) return; setPrac({ ids: ids, k: Date.now() }); window.scrollTo(0, 0); }
+    var dueIds = shuffle(due.map(function (x) { return x.id; }));
+    var groups = MB.CATS.map(function (c) {
+      var items = opn.filter(function (x) { return x.cat === c[0]; }).sort(function (a, b) { return (a.due - b.due) || (b.wrong - a.wrong); });
+      return { c: c, items: items };
+    }).filter(function (g) { return g.items.length; });
+    return h("div", null,
+      h("h1", null, "錯題本"),
+      h("section", { className: "sec" },
+        h("div", { className: "mbsum" },
+          h("div", null, h("div", { className: "big" }, t.n ? pctS(t.acc) : "—"), h("div", { className: "cap" }, "今天答對率（" + t.c + "/" + t.n + "）")),
+          h("div", null, h("div", { className: "big" + (t.due ? " dsd" : "") }, String(t.due)), h("div", { className: "cap" }, "今天要複習")),
+          h("div", null, h("div", { className: "big" }, String(t.open)), h("div", { className: "cap" }, "錯題總數")),
+          h("div", null, h("div", { className: "big" }, String(t.mastered)), h("div", { className: "cap" }, "已掌握"))),
+        t.weak ? h("div", { className: "co co-warning" }, h("div", { className: "lead" }, "今天最弱：" + t.weak.name), t.weak.acc !== null ? "這類今天答對 " + t.weak.c + "/" + t.weak.n + "（" + pctS(t.weak.acc) + "）。" : "這類累積錯最多（" + t.weak.open + " 次）。", " 先練這類的錯題。") : null,
+        h("div", { className: "pbtn" },
+          h("button", { className: "btn pri", disabled: !due.length, onClick: function () { go(dueIds); } }, "只練錯題：今天到期 " + due.length + " 題"),
+          h("button", { className: "btn", disabled: !opn.length, onClick: function () { go(shuffle(opn.map(function (x) { return x.id; }))); } }, "練全部錯題（" + opn.length + "）"),
+          h("button", { className: "btn", onClick: function () { window.__goTab("P4"); setTimeout(function () { var e = document.getElementById("btndrill"); if (e) e.scrollIntoView({ block: "start" }); }, 80); } }, "BTN 開牌練習")),
+        h("div", { className: "cap", style: { marginTop: 8 } }, "規則：答錯 → 放進錯題本，同一次練習隔 2 題再考一次；之後在不同次練習（重新打開頁面算一次）連續答對 3 次才畢業，間隔是當次 → 隔天 → 再隔 3 天。中途答錯就從頭來。平常練習時，到期的錯題也會比較常混進來。紀錄只存在這台裝置的瀏覽器。" + (MB.canSave() ? "" : "（這個瀏覽器不允許儲存，關掉頁面就會消失。）"))),
+      opn.length ? null : h("div", { className: "co co-success" }, h("div", { className: "lead" }, "目前沒有錯題"), "去「節點訓練」混練、「課程・河牌」小測、「練習・數據」6 種練習或「BTN 開牌」練習，答錯的題目會自動出現在這裡。"),
+      groups.map(function (g) {
+        var dueN = g.items.filter(function (x) { return x.due <= Date.now() + 864e5 && MB.fmtDue(x.due) === "今天"; }).length;
+        return h("section", { key: g.c[0], className: "sec" },
+          h("div", { className: "mbgh" }, g.c[2] ? h("span", { className: "num" }, String(g.c[2])) : null, h("h2", { className: "sechead" }, g.c[1]), h("span", { className: "badge sm" }, g.items.length + " 題")),
+          h("div", { className: "cap" }, (g.c[2] ? "對應「我的弱點」第 " + g.c[2] + " 點。" : "") + "今天到期 " + dueN + " 題。"),
+          h("div", { className: "pbtn", style: { marginBottom: 8 } }, h("button", { className: "btn pri", onClick: function () { go(shuffle(g.items.map(function (x) { return x.id; }))); } }, "只練這類（" + g.items.length + "）")),
+          g.items.map(function (it) { return h(Item, { key: it.id, it: it, onPractice: go }); }));
+      }),
+      mastered.length ? h("section", { className: "sec" },
+        h("button", { className: "sechead coll", onClick: function () { setShowM(!showM); } }, (showM ? "▾ " : "▸ ") + "已掌握（" + mastered.length + "）"),
+        showM ? mastered.map(function (it) { return h(Item, { key: it.id, it: it, onPractice: go }); }) : null) : null,
+      MB.all().length ? h("button", { className: "btn", style: { marginTop: 12 }, onClick: function () { if (window.confirm("確定清空錯題本和今天的統計？")) MB.clearAll(); } }, "清空錯題本") : null);
+  }
+  window.__PAGES = window.__PAGES || {};
+  window.__PAGES.P5 = BookPage;
+})();
+
 (function () {
   var h = window.h, useState = window.GC.useState;
-  var TABS = [["P0", "我的弱點"], ["P1", "節點訓練"], ["P2", "課程・河牌"], ["P3", "練習・數據"], ["P4", "BTN 開牌"]];
+  var TABS = [["P0", "我的弱點"], ["P5", "錯題本"], ["P1", "節點訓練"], ["P2", "課程・河牌"], ["P3", "練習・數據"], ["P4", "BTN 開牌"]];
   var saved = null;
   try { saved = window.localStorage.getItem("pokerOffline.tab2"); } catch (e) {}
   var setTabRef = null;
@@ -1282,12 +1672,16 @@ window.__PAGES.P4 = (function () {
     var tab = st[0];
     setTabRef = function (t) { try { window.localStorage.setItem("pokerOffline.tab2", t); } catch (e) {} st[1](t); };
     var Cur = window.__PAGES[tab];
+    var vs = useState(0);
+    window.MB.sub(function () { vs[1](function (v) { return v + 1; }); });
+    var dueN = window.MB.dueToday().length;
     return h("div", null,
       h("nav", { className: "top" }, TABS.map(function (t) {
-        return h("button", { key: t[0], className: "topb" + (t[0] === tab ? " on" : ""), onClick: function () { window.__goTab(t[0]); } }, t[1]);
+        return h("button", { key: t[0], className: "topb" + (t[0] === tab ? " on" : ""), onClick: function () { window.__goTab(t[0]); } }, t[1], t[0] === "P5" && dueN ? h("span", { className: "tbn" }, String(dueN)) : null);
       })),
+      h(window.MB.DaySum, null),
       h("main", null, h(Cur, { key: tab })),
-      h("footer", null, "離線版（單一 HTML 檔，不需登入、不需網路）。第一頁是根據你 394 手手牌整理的弱點白話說明，其餘三頁與撲克訓練中心相同，資料：HHDealer GG 6-max NL2/NL5。研究模擬，非投資建議。"));
+      h("footer", null, "離線版（單一 HTML 檔，不需登入、不需網路）。第一頁是根據你 394 手手牌整理的弱點白話說明；「錯題本」收集你在各練習答錯的題目（存在這台裝置）；其餘頁與撲克訓練中心相同，資料：HHDealer GG 6-max NL2/NL5。研究模擬，非投資建議。"));
   }
   window.__mount(Shell, document.getElementById("app"));
 })();
