@@ -71,6 +71,33 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .stat{font-size:13px;color:var(--tx2);margin-top:12px;border-top:1px dashed var(--bd);padding-top:8px}
 .toc{display:flex;flex-direction:column;gap:6px}
 .tocb{display:flex;align-items:center;gap:8px;text-align:left;min-height:48px;padding:8px 10px;border-radius:10px;border:1px solid var(--bd);background:var(--bg2);color:var(--tx);font-size:15px;font-family:inherit}
+/* v6 */
+nav.top.t4{gap:4px}nav.top.t4 .topb{flex:1 1 0;padding:8px 6px;font-size:15px}
+.dsum{margin:6px 0 0;padding:4px 10px;font-size:13px;border-radius:8px;min-height:0}
+.subnav{margin:8px 0 0;display:flex;flex-direction:column;gap:4px}
+.sgrp{display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:6px;align-items:center;scrollbar-width:none}.sgrp::-webkit-scrollbar{display:none}.sgrp .chip{flex:0 0 auto;min-height:32px;padding:4px 10px;font-size:13px}
+.sgl{flex:0 0 auto;font-size:12px;color:var(--tx2);min-width:4.6em}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chip{min-height:36px;padding:6px 12px;border-radius:18px;border:1px solid var(--bd);background:var(--bg2);color:var(--tx);font-size:14px;font-family:inherit}
+.chip.on{background:var(--ac);border-color:var(--ac);color:#0b1020;font-weight:600}
+.sh1{font-size:19px;margin:14px 0 6px}
+.pfrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pflb{font-size:13px;color:var(--tx2);min-width:4.5em}
+.pfinfo{margin:0 0 8px;font-weight:600}
+.pfg{display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:2px;max-width:560px;width:100%}
+.pfc{aspect-ratio:1/1;min-height:0;min-width:0;height:auto;width:100%;max-width:none;overflow:hidden;padding:0;border:0;border-radius:3px;font-size:clamp(8px,2.6vw,13px);font-weight:600;letter-spacing:-.3px;line-height:1;color:#fff;font-family:inherit}
+.pfc.pfon{outline:2px solid #fff;outline-offset:-1px}
+.a-raise{background:#2e9e5a}.a-call{background:#3b78c4}.a-3bet{background:#c9483f}.a-fold{background:#26332b;color:#6f7a73}
+.pflg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;margin:4px 0 8px}.pflg span{display:inline-flex;align-items:center;gap:5px}
+.pfsw{width:16px;height:16px;border-radius:3px;display:inline-block}
+.pfsel{margin-top:8px;font-size:14px;color:var(--tx2);min-height:1.6em}
+details.dt>summary,details.a2hs>summary{cursor:pointer;font-weight:600;padding:4px 0}
+details.a2hs{margin:18px 0 4px;font-size:13px;color:var(--tx2)}details.a2hs>summary{font-weight:400}
+.a2u{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.a2u code{font-size:12px;word-break:break-all;background:var(--bg2);padding:4px 6px;border-radius:6px;border:1px solid var(--bd)}
+details.lk>summary{list-style:none;display:flex;gap:10px;align-items:flex-start;cursor:pointer}details.lk>summary::-webkit-details-marker{display:none}
+.lkt{display:flex;flex-direction:column;gap:2px}.lkt b{font-size:16px}.lkr{font-size:13px;color:var(--tx2)}
+details.lk[open]>summary{margin-bottom:8px}
+.bbt{margin:10px 0}.tlink{background:none;border:0;color:var(--ac);font:inherit;padding:0;text-decoration:underline}
+.mbk{font-size:12px}
 </style><style id="force-dark">
 :root{color-scheme:dark;--tx:#e6e6e6;--tx2:#9aa0a6;--bg:#121417;--bg2:#1c1f24;--bd:#2c3138;--bd2:#454c57;--ac:#7aa7f0;--acbg:#1d2a44;--ok:#6cc995;--okbg:#15291e;--bad:#ef8a80;--badbg:#341b19;--warnbg:#2e2614;--warn:#e3bf6a;--infobg:#18202b}
 html,body{background:#121417;color:#e6e6e6}
@@ -322,7 +349,8 @@ td.pg{border-radius:0;background:none!important;font-size:12px}
   var DRILLCAT = { open: "L2", "3b": "X3", bb: "L1", sb: "L1", size: "L3", value: "L4" };
 
   var db = { items: {}, days: {} }, canSave = true;
-  try { var raw = window.localStorage.getItem(KEY); if (raw) { var p = JSON.parse(raw); if (p && p.items) db = { items: p.items || {}, days: p.days || {} }; } } catch (e) { canSave = false; }
+  try { var raw = window.localStorage.getItem(KEY); if (raw) { var p = JSON.parse(raw); if (p && p.items) db = { items: p.items || {}, days: p.days || {}, seen: p.seen || {} }; } } catch (e) { canSave = false; }
+  if (!db.seen) db.seen = {};
   function save() { try { window.localStorage.setItem(KEY, JSON.stringify(db)); canSave = true; } catch (e) { canSave = false; } }
   var subs = [];
   function notify() { subs.forEach(function (f) { try { f(); } catch (e) {} }); }
@@ -348,24 +376,38 @@ td.pg{border-radius:0;background:none!important;font-size:12px}
       if (!it) it = db.items[q.id] = { first: now, wrong: 0, right: 0 };
       it.q = store; it.cat = q.cat; it.wrong++; it.box = 1; it.mastered = false; it.lastWrong = now; it.lastAns = q.self ? "自評答錯" : labelOf(q, userKey);
       it.due = now; it.lastSess = SESSION;
-      if (!opt.noRetry) { retry = retry.filter(function (r) { return r.q.id !== q.id; }); retry.push({ q: store, wait: 3 }); }
+      if (!opt.noRetry) { retry = retry.filter(function (r) { return r.q.id !== q.id; }); retry.push({ q: store, wait: 3, pre: lastPre }); }
     } else if (it && !it.mastered) {
-      it.right++; it.lastRight = now;
-      if (now >= it.due && it.lastSess !== SESSION) {
-        it.box++; it.lastSess = SESSION;
-        if (it.box > 3) { it.mastered = true; it.masteredAt = now; }
-        else it.due = sod(now) + (it.box === 2 ? 1 : 3) * DAY;
-      }
+      it.right++; it.lastRight = now; it.box++; it.lastSess = SESSION;
+      if (it.box > 3) { it.mastered = true; it.masteredAt = now; }
     }
+    if (RQMAP[q.id]) db.seen[q.id] = now;
     save(); notify();
   }
-  // Returns a review question for this id-prefix or null. Call only from event handlers / init.
+  // Missed questions come back more often. Returns a question for this id-prefix or null (then the drill makes a normal one).
+  // 1) a miss from this sitting comes back after 2 other questions; 2) past misses (not yet answered right 3 times) get extra
+  // weight 3/2/1 by how many times they have been answered right since; 3) your 10/29 real hands that belong to this drill.
+  var RQPRE = { "R:HD3112537453": "D:SB:", "R:HD3112503075": "D:CO:", "R:HD3112500262": "D:CO:", "R:HD3112297836": "D:BTN:",
+    "R:HD3112497897": "L:sb:", "R:HD3112538067": "L:sb:", "R:HD3112261094": "L:open:", "R:HD3112500958": "L:open:",
+    "R:HD3112243181": "B:", "R:HD3112474230": "B:", "R:HD3112498023": "B:", "R:HD3112463723": "L:size:",
+    "R:HD3112462575": "L:value:", "R:HD3112502394": "L:value:", "R:HD3112538489": "N:", "R:HD3112479510": "N:",
+    "R:HD3112500477": "N:", "R:HD3112497919": "N:", "R:HD3112502012": "N:", "R:HD3112499491": "L:3b:", "R:HD3112475126": "L:3b:" };
+  var INJ = { "D:SB:": 0, "D:CO:": 0, "D:BTN:": 0 }; // BB drills already ask these hands in order
+  var lastPre = null, lastId = {};
+  function inPre(prefix, id) { return id.indexOf(prefix) === 0 || RQPRE[id] === prefix; }
   function nextPick(prefix, weight) {
-    retry.forEach(function (r) { if (r.q.id.indexOf(prefix) === 0) r.wait--; });
-    for (var i = 0; i < retry.length; i++) if (retry[i].q.id.indexOf(prefix) === 0 && retry[i].wait <= 0) { var r = retry.splice(i, 1)[0]; return { q: r.q, kind: "retry" }; }
-    var due = open().filter(function (it) { return it.id.indexOf(prefix) === 0 && it.due <= Date.now() && it.lastSess !== SESSION; });
-    if (due.length && Math.random() < (weight || 0.35)) { var it = due[Math.floor(Math.random() * due.length)]; return { q: it.q, kind: "due" }; }
-    return null;
+    lastPre = prefix;
+    retry.forEach(function (r) { if (inPre(prefix, r.q.id)) r.wait--; });
+    for (var i = 0; i < retry.length; i++) if (inPre(prefix, retry[i].q.id) && retry[i].wait <= 0) { var r = retry.splice(i, 1)[0]; lastId[prefix] = r.q.id; return { q: r.q, kind: "retry" }; }
+    var cand = [];
+    open().forEach(function (it) { if (it.q && inPre(prefix, it.id) && it.id !== lastId[prefix] && !retry.some(function (r) { return r.q.id === it.id; })) cand.push({ q: it.q, w: Math.max(1, 4 - (it.box || 1)), kind: "due" }); });
+    if (INJ[prefix] !== 0) RQ.forEach(function (q) { if (RQPRE[q.id] === prefix && !db.items[q.id] && q.id !== lastId[prefix]) cand.push({ q: q, w: db.seen[q.id] ? 0.4 : 3, kind: "real" }); });
+    var tot = cand.reduce(function (a, c) { return a + c.w; }, 0);
+    if (!tot || Math.random() >= Math.min(0.5, 0.12 * tot)) { lastId[prefix] = null; return null; }
+    var x = Math.random() * tot;
+    for (var j = 0; j < cand.length; j++) { x -= cand[j].w; if (x <= 0) break; }
+    var c = cand[Math.min(j, cand.length - 1)]; lastId[prefix] = c.q.id;
+    return { q: c.q, kind: c.kind };
   }
   function all() { return Object.keys(db.items).map(function (k) { var it = db.items[k]; it.id = k; if (!it.cat && it.q) it.cat = it.q.cat; return it; }); }
   function open() { return all().filter(function (it) { return !it.mastered; }); }
@@ -373,16 +415,14 @@ td.pg{border-radius:0;background:none!important;font-size:12px}
   function item(id) { return db.items[id] || null; }
   function progress(id) {
     var it = db.items[id]; if (!it) return "";
-    if (it.mastered) return "這題已從錯題本畢業（連續 3 次分開答對）。";
-    var done = it.box - 1;
-    var s = "錯題進度 " + done + "/3（要在不同次練習連續答對 3 次才算學會）";
-    if (it.lastSess === SESSION && it.box === 1) return s + "。這次練習稍後會再考你一次，之後再排進錯題複習。";
-    return s + "，下次複習：" + fmtDue(it.due) + "。";
+    if (it.mastered) return "這題已答對 3 次，恢復一般出現頻率。";
+    var left = 4 - (it.box || 1);
+    return "這題答錯過：會比較常出現，再答對 " + left + " 次就恢復一般頻率。";
   }
   function setMastered(id, v) { var it = db.items[id]; if (!it) return; it.mastered = !!v; if (v) it.masteredAt = Date.now(); else { it.box = 1; it.due = Date.now(); it.lastSess = ""; } save(); notify(); }
   function reset(id) { var it = db.items[id]; if (!it) return; it.box = 1; it.due = Date.now(); it.mastered = false; it.lastSess = ""; save(); notify(); }
   function remove(id) { delete db.items[id]; save(); notify(); }
-  function clearAll() { db = { items: {}, days: {} }; retry = []; save(); notify(); }
+  function clearAll() { db = { items: {}, days: {}, seen: {} }; retry = []; save(); notify(); }
   function today() {
     var d = db.days[dayKey(Date.now())] || { n: 0, c: 0, cats: {} };
     var weak = null;
@@ -566,8 +606,9 @@ window.__PAGES.P1 = (function() {
     const mq = ov ? ov.q : MB.nQ(base.n, base.n.dr.indexOf(base.d));
     const d = ov ? MB.qToD(ov.q) : base.d;
     const nid = mq.id.split(":")[1];
-    const pre = ov ? (ov.kind === "retry" ? "🔁 剛才答錯，再一次｜" : "📒 錯題複習｜") : "";
-    return /* @__PURE__ */ __h(Section, { heading: `隨機混練：第 ${i % order.length + 1} / ${order.length} 題（答對 ${score.ok}，答錯 ${score.bad}）`, caption: "所有節點的題目打亂。答錯的題目會進「錯題本」，隔 2 題再考一次；到期的錯題也會混進來。" }, /* @__PURE__ */ __h(NQuiz, { key: "s" + step, d, mq, tag: pre + mq.tag, onDone: (g) => {
+    const pre = ov ? (ov.kind === "retry" ? "剛才答錯，再一次｜" : "之前答錯過｜") : "";
+    if (ov && ov.q.id.indexOf("R:") === 0) return __h(Section, { heading: `隨機混練（答對 ${score.ok}，答錯 ${score.bad}）` }, __h(MB.QCard, { key: "r" + step, q: ov.q, kind: ov.kind, onResult: (g) => setScore((s) => ({ ok: s.ok + (g ? 1 : 0), bad: s.bad + (g ? 0 : 1) })), onNext: () => { setOv(MB.nextPick("N:")); setStep(step + 1); } }));
+    return /* @__PURE__ */ __h(Section, { heading: `隨機混練：第 ${i % order.length + 1} / ${order.length} 題（答對 ${score.ok}，答錯 ${score.bad}）`, caption: "所有節點的題目打亂，也混入你 10/29 的真實手牌。答錯的題目隔 2 題再考一次，之後比較常出現，直到答對 3 次。" }, /* @__PURE__ */ __h(NQuiz, { key: "s" + step, d, mq, tag: pre + mq.tag, onDone: (g) => {
       setScore((s) => ({ ok: s.ok + (g ? 1 : 0), bad: s.bad + (g ? 0 : 1) }));
       if (!g) setMiss((m) => m.indexOf(nid) >= 0 ? m : m.concat([nid]));
     }, onNext: () => {
@@ -619,16 +660,13 @@ window.__PAGES.P1 = (function() {
   const STREET_OPTS = NSTREETS.map((s) => ({ value: s, label: s }));
   function App() {
     const t = useGrokTheme();
-    const [mode, setMode] = useState("node");
+    const [mode, setMode] = useState(window.__sub1 || "node");
     const __np = (function(){ var id = window.__nodePreset; window.__nodePreset = null; return id ? NODES.find((x) => x.id === id) : null; })();
     const [street, setStreet] = useState(__np ? __np.st : "翻前");
     const [sel, setSel] = useState(__np ? __np.id : "P4");
     const inStreet = NODES.filter((x) => x.st === street);
     const n = NODES.find((x) => x.id === sel) || NODES[0];
-    return /* @__PURE__ */ __h(Page, { title: "撲克訓練中心（NL2/NL5）", lang: "zh-Hant" }, /* @__PURE__ */ __h(Callout, { tone: "info" }, "資料：HHDealer GG 6-max NL2/NL5，2024-10-16 至 2025-05-28，約 400 萬手。所有數字都來自實際計算，每條都有樣本數。這是研究模擬，不是投資建議。內容分成三頁：這一頁是節點訓練；課程 100 條和弱點練習在下面兩個連結。"), /* @__PURE__ */ __h(LinkCards, { links: [
-      { title: "課程 100 條、100 條小測、河牌詐唬、ChakPoker 評估", href: P2 },
-      { title: "我的弱點與 6 種練習、玩家池數據", href: P3 }
-    ] }), /* @__PURE__ */ __h(Callout, { tone: "info", lead: "ChakPoker 的方法，套在這份資料上" }, `1. 用玩家池數據找出每個節點的真實頻率（卡片裡的「鎖定頻率」）。2. 把對手鎖在這個頻率，決定你的剝削動作。3. 一條線想到河牌（例如翻牌跟、轉牌對手放棄、河牌詐唬）。4. 用自己的手牌複盤，再回到數據。共 ${NODES.length} 個節點、${NALL.length} 題練習；題目的實例來自資料庫的真實手牌（只留位置，不留玩家 ID）。`), /* @__PURE__ */ __h(Segmented, { options: MODES, value: mode, onChange: (v) => setMode(v) }), mode === "node" ? /* @__PURE__ */ __h("div", null, /* @__PURE__ */ __h(Section, { heading: "決策樹：翻前 → 翻牌 → 轉牌 → 河牌", caption: "先選街，再點節點。標「★」的是你目前漏洞最大的節點。" }, /* @__PURE__ */ __h(Segmented, { options: STREET_OPTS, value: street, onChange: (v) => setStreet(v) }), /* @__PURE__ */ __h("div", { style: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 } }, inStreet.map((x) => /* @__PURE__ */ __h(Button, { key: x.id, label: `${NPRIORITY.indexOf(x.id) >= 0 ? "★ " : ""}${x.id} ${x.nm}`, variant: sel === x.id ? "primary" : "quiet", onClick: () => setSel(x.id) }))), /* @__PURE__ */ __h("div", { style: { color: t.text.secondary, marginTop: 6 } }, `目前打開：${n ? n.id + " " + n.nm : ""}`)), n ? /* @__PURE__ */ __h(NodeCard, { key: n.id, n }) : null) : null, mode === "mix" ? /* @__PURE__ */ __h(NodeMix, null) : null, mode === "plan" ? /* @__PURE__ */ __h(NodePlan, null) : null, mode === "about" ? /* @__PURE__ */ __h(About, null) : null);
+    return /* @__PURE__ */ __h(Page, { lang: "zh-Hant" }, mode === "plan" ? /* @__PURE__ */ __h(Callout, { tone: "info", lead: "ChakPoker 的方法，套在這份資料上" }, `1. 用玩家池數據找出每個節點的真實頻率（卡片裡的「鎖定頻率」）。2. 把對手鎖在這個頻率，決定你的剝削動作。3. 一條線想到河牌（例如翻牌跟、轉牌對手放棄、河牌詐唬）。4. 用自己的手牌複盤，再回到數據。共 ${NODES.length} 個節點、${NALL.length} 題練習；題目的實例來自資料庫的真實手牌（只留位置，不留玩家 ID）。`) : null, mode === "node" ? /* @__PURE__ */ __h("div", null, /* @__PURE__ */ __h(Section, { heading: "決策樹：翻前 → 翻牌 → 轉牌 → 河牌", caption: "先選街，再點節點。標「★」的是你目前漏洞最大的節點。" }, /* @__PURE__ */ __h(Segmented, { options: STREET_OPTS, value: street, onChange: (v) => setStreet(v) }), /* @__PURE__ */ __h("div", { style: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 } }, inStreet.map((x) => /* @__PURE__ */ __h(Button, { key: x.id, label: `${NPRIORITY.indexOf(x.id) >= 0 ? "★ " : ""}${x.id} ${x.nm}`, variant: sel === x.id ? "primary" : "quiet", onClick: () => setSel(x.id) }))), /* @__PURE__ */ __h("div", { style: { color: t.text.secondary, marginTop: 6 } }, `目前打開：${n ? n.id + " " + n.nm : ""}`)), n ? /* @__PURE__ */ __h(NodeCard, { key: n.id, n }) : null) : null, mode === "mix" ? /* @__PURE__ */ __h(NodeMix, null) : null, mode === "plan" ? /* @__PURE__ */ __h(NodePlan, null) : null, mode === "about" ? /* @__PURE__ */ __h(About, null) : null);
   }
   return App;
 })();
@@ -782,12 +820,12 @@ window.__PAGES.P2 = (function() {
   const MOD_OPTS = MODS.slice(1).map((m, k) => ({ value: String(k + 1), label: `${m}（${D.filter((x) => x[1] === k + 1).length}）` }));
   const TABS = [{ value: "drill", label: "100 條小測" }, { value: "course", label: "課程 100 條" }, { value: "river", label: "河牌詐唬" }, { value: "chak", label: "ChakPoker 評估" }];
   function App() {
-    const [tab, setTab] = useState("drill");
+    const [tab, setTab] = useState(window.__sub2 || "drill");
     const [mod, setMod] = useState("7");
     const [open, setOpen] = useState({});
-    const [i, setI] = useState(0);
+    const [i, setI0] = useState(() => window.UIS.get("quiz.i", 0)); const setI = (v) => { window.UIS.set("quiz.i", v); setI0(v); };
     const [show, setShow] = useState(false);
-    const [score, setScore] = useState({ ok: 0, bad: 0 });
+    const [score, setScore0] = useState(() => window.UIS.get("quiz.sc", { ok: 0, bad: 0 })); const setScore = (v) => { window.UIS.set("quiz.sc", v); setScore0(v); };
     const toggle = (id) => setOpen(__spreadProps(__spreadValues({}, open), { [id]: !open[id] }));
     const [ov, setOv] = useState(() => window.MB.nextPick("C:"));
     const q = ov ? (D.find((x) => "C:" + x[0] === ov.q.id) || DRILL[i % DRILL.length]) : DRILL.length ? DRILL[i % DRILL.length] : void 0;
@@ -801,7 +839,7 @@ window.__PAGES.P2 = (function() {
     };
     const m = Number(mod);
     const lesson = (x) => /* @__PURE__ */ __h(Section, { key: x[0], heading: `${x[0]}. ${x[2]}` }, /* @__PURE__ */ __h(Text, null, `做法：${x[4]}`), /* @__PURE__ */ __h(Text, null, `數據：${x[3]}`), /* @__PURE__ */ __h(Text, null, `為什麼有利：${x[5]}`), /* @__PURE__ */ __h(Text, null, `實例（匿名）：${x[6]}`), /* @__PURE__ */ __h(Text, null, `小測：${x[7]}`), /* @__PURE__ */ __h(Button, { label: open[x[0]] ? `答案：${x[8]}` : "看答案", variant: "quiet", onClick: () => toggle(x[0]) }), x[9] ? /* @__PURE__ */ __h(Text, null, `對應你的漏洞：${LEAK[x[9]]}`) : null);
-    return /* @__PURE__ */ __h(Page, { title: "撲克課程 100 條與河牌詐唬（NL2/NL5）", summary: "100 條從 HHDealer NL2/NL5 約 400 萬手算出的剝削課程與小測、河牌詐唬分析、ChakPoker 評估。入口是撲克訓練中心。", lang: "zh-Hant" }, /* @__PURE__ */ __h(LinkCards, { links: [{ title: "回到撲克訓練中心（節點訓練）", href: HUB }] }), /* @__PURE__ */ __h(Segmented, { options: TABS, value: tab, onChange: (v) => setTab(v) }), tab === "drill" && q ? /* @__PURE__ */ __h(Section, { heading: `小測模式：第 ${i % DRILL.length + 1} / ${DRILL.length} 題（答對 ${score.ok}，答錯 ${score.bad}）` }, /* @__PURE__ */ __h(Text, null, "題目順序：先練你的漏洞（太緊 → BB 防守 → 3-bet → 開池尺寸 → SB limp → 桌數），接著是河牌詐唬，最後是其他。每天 20 題。按「我答錯了」的題目會進錯題本，隔 2 題再考一次。"), /* @__PURE__ */ __h(Text, null, `${ov ? (ov.kind === "retry" ? "🔁 剛才答錯，再一次｜" : "📒 錯題複習｜") : ""}第 ${q[0]} 條｜${MODS[q[1]]}${q[9] ? `｜漏洞：${LEAK[q[9]]}` : ""}`), /* @__PURE__ */ __h(Callout, { tone: "info", lead: "題目" }, q[7]), show ? /* @__PURE__ */ __h(Section, { heading: `答案：${q[8]}` }, /* @__PURE__ */ __h(Text, null, `做法：${q[4]}`), /* @__PURE__ */ __h(Text, null, `數據：${q[3]}`), /* @__PURE__ */ __h(Text, null, `實例（匿名）：${q[6]}`), /* @__PURE__ */ __h(Grid, { columns: 2 }, /* @__PURE__ */ __h(Button, { label: "我答對了", variant: "primary", onClick: () => next(true) }), /* @__PURE__ */ __h(Button, { label: "我答錯了", variant: "quiet", onClick: () => next(false) }))) : /* @__PURE__ */ __h(Button, { label: "看答案", variant: "primary", onClick: () => setShow(true) })) : null, tab === "course" ? /* @__PURE__ */ __h(Section, { heading: MODS[m] }, /* @__PURE__ */ __h(Select, { label: "選單元", options: MOD_OPTS, value: mod, onChange: (v) => setMod(v) }), D.filter((x) => x[1] === m).map((x) => lesson(x))) : null, tab === "river" ? /* @__PURE__ */ __h(Section, { heading: "怎樣的行動線、河牌、手牌要勇敢詐唬" }, /* @__PURE__ */ __h(Callout, { tone: "success" }, "結論：最該詐唬的是「前兩條街沒人下注，或對手翻牌下注、轉牌放棄，而你在位置上」。IP 用 ¾–1 池，OOP 用 ½ 池。不要詐唬的是 OOP 連三槍，以及對手前面加注過的線。"), /* @__PURE__ */ __h(Text, null, "方法：HU 底池、河牌前沒人全下，取河牌第一個下注，共 403,892 次。純詐唬 EV ＝ 棄牌率 −（1 − 棄牌率）× 尺寸（單位：底池；被加注算輸）。對手看不到你的底牌，所以全池在同一條線、同一個尺寸的棄牌率可以當作你詐唬時的棄牌估計。手機上寬表格可左右滑動。"), /* @__PURE__ */ __h(
+    return /* @__PURE__ */ __h(Page, { lang: "zh-Hant" }, tab === "drill" && q ? /* @__PURE__ */ __h(Section, { heading: `小測模式：第 ${i % DRILL.length + 1} / ${DRILL.length} 題（答對 ${score.ok}，答錯 ${score.bad}）` }, /* @__PURE__ */ __h(Text, null, "題目順序：先練你的漏洞（太緊 → BB 防守 → 3-bet → 開池尺寸 → SB limp → 桌數），接著是河牌詐唬，最後是其他。每天 20 題。按「我答錯了」的題目隔 2 題再考一次，之後比較常出現，直到答對 3 次。"), /* @__PURE__ */ __h(Text, null, `${ov ? (ov.kind === "retry" ? "剛才答錯，再一次｜" : "錯題複習｜") : ""}第 ${q[0]} 條｜${MODS[q[1]]}${q[9] ? `｜漏洞：${LEAK[q[9]]}` : ""}`), /* @__PURE__ */ __h(Callout, { tone: "info", lead: "題目" }, q[7]), show ? /* @__PURE__ */ __h(Section, { heading: `答案：${q[8]}` }, /* @__PURE__ */ __h(Text, null, `做法：${q[4]}`), /* @__PURE__ */ __h(Text, null, `數據：${q[3]}`), /* @__PURE__ */ __h(Text, null, `實例（匿名）：${q[6]}`), /* @__PURE__ */ __h(Grid, { columns: 2 }, /* @__PURE__ */ __h(Button, { label: "我答對了", variant: "primary", onClick: () => next(true) }), /* @__PURE__ */ __h(Button, { label: "我答錯了", variant: "quiet", onClick: () => next(false) }))) : /* @__PURE__ */ __h(Button, { label: "看答案", variant: "primary", onClick: () => setShow(true) })) : null, tab === "course" ? /* @__PURE__ */ __h(Section, { heading: MODS[m] }, /* @__PURE__ */ __h(Select, { label: "選單元", options: MOD_OPTS, value: mod, onChange: (v) => setMod(v) }), D.filter((x) => x[1] === m).map((x) => lesson(x))) : null, tab === "river" ? /* @__PURE__ */ __h(Section, { heading: "怎樣的行動線、河牌、手牌要勇敢詐唬" }, /* @__PURE__ */ __h(Callout, { tone: "success" }, "結論：最該詐唬的是「前兩條街沒人下注，或對手翻牌下注、轉牌放棄，而你在位置上」。IP 用 ¾–1 池，OOP 用 ½ 池。不要詐唬的是 OOP 連三槍，以及對手前面加注過的線。"), /* @__PURE__ */ __h(Text, null, "方法：HU 底池、河牌前沒人全下，取河牌第一個下注，共 403,892 次。純詐唬 EV ＝ 棄牌率 −（1 − 棄牌率）× 尺寸（單位：底池；被加注算輸）。對手看不到你的底牌，所以全池在同一條線、同一個尺寸的棄牌率可以當作你詐唬時的棄牌估計。手機上寬表格可左右滑動。"), /* @__PURE__ */ __h(
       WT,
       {
         columns: ["尺寸", "n", "棄牌", "被加注", "保本", "純詐唬 EV"],
@@ -1201,8 +1239,10 @@ window.__PAGES.P3 = (function() {
       const p = window.MB.nextPick("L:" + dr + ":");
       return Object.assign({}, p ? p.q : gen(dr), { _d: dr, _kind: p ? p.kind : null });
     };
-    const [q, setQ] = useState(() => lPick(props.drill));
-    const [picked, setPicked] = useState(null);
+    const [q, setQ0] = useState(() => { const sv = window.UIS.get("drill.q." + props.drill, null); if (sv) return sv; const n = lPick(props.drill); window.UIS.set("drill.q." + props.drill, n); window.UIS.set("drill.p." + props.drill, null); return n; });
+    const [picked, setPicked0] = useState(() => window.UIS.get("drill.p." + props.drill, null));
+    const setQ = (v) => { window.UIS.set("drill.q." + v._d, v); window.UIS.set("drill.p." + v._d, null); setQ0(v); };
+    const setPicked = (v) => { window.UIS.set("drill.p." + props.drill, v); setPicked0(v); };
     useEffect(() => {
       if (q._d !== props.drill) {
         setQ(lPick(props.drill));
@@ -1221,9 +1261,10 @@ window.__PAGES.P3 = (function() {
       setQ(lPick(props.drill));
       setPicked(null);
     };
+    if (q.id && q.id.indexOf("R:") === 0) return __h(window.MB.QCard, { key: "rq" + q.id, q, kind: q._kind || "real", pk: "drill.qc." + props.drill, onResult: (g) => props.onAnswer(props.drill, g), onNext: next });
     const lid = window.MB.lQ(props.drill, q, "").id;
     const label = { color: t.text.secondary, fontSize: t.font.label.fontSize };
-    return /* @__PURE__ */ __h("div", { style: { border: `1px solid ${t.border.default}`, borderRadius: t.radius.xl, padding: 14 } }, /* @__PURE__ */ __h("div", { style: { fontWeight: t.weight.semibold, color: t.text.primary, marginBottom: 6 } }, q._kind ? __h("span", { className: "mbk " + (q._kind === "retry" ? "rt" : "du"), style: { marginRight: 6 } }, q._kind === "retry" ? "🔁 剛才答錯，再一次" : "📒 錯題複習") : null, DRILL_NAME[props.drill]), /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginBottom: 4 } }, q.ctx), q.cards.length > 0 && /* @__PURE__ */ __h("div", { style: label }, "你的手牌"), q.cards.length > 0 && /* @__PURE__ */ __h(CardRow, { cards: q.cards }), q.board && /* @__PURE__ */ __h("div", { style: label }, "公共牌"), q.board && /* @__PURE__ */ __h(CardRow, { cards: q.board }), q.made && /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginBottom: 8 } }, `你有：${q.made}`), /* @__PURE__ */ __h("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } }, q.opts.map((o) => /* @__PURE__ */ __h(Button, { key: o.key, label: o.label, variant: picked === o.key ? "primary" : "quiet", disabled: picked !== null && picked !== o.key, onClick: () => choose(o.key) }))), picked !== null && /* @__PURE__ */ __h("div", { style: { marginTop: 12, padding: "10px 12px", borderRadius: t.radius.md, background: ok ? t.fill.successSubtle : t.fill.dangerSubtle } }, /* @__PURE__ */ __h("div", { style: { fontWeight: t.weight.semibold, color: ok ? t.text.success : t.text.danger } }, ok ? "答對了" : `答錯了，正確是：${ansLabel}`), /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginTop: 4 } }, q.why), window.MB.item(lid) ? __h("div", { className: "qprog" }, window.MB.progress(lid)) : null, /* @__PURE__ */ __h("div", { style: { marginTop: 10 } }, /* @__PURE__ */ __h(Button, { label: "下一題", variant: "primary", onClick: next }))));
+    return /* @__PURE__ */ __h("div", { style: { border: `1px solid ${t.border.default}`, borderRadius: t.radius.xl, padding: 14 } }, /* @__PURE__ */ __h("div", { style: { fontWeight: t.weight.semibold, color: t.text.primary, marginBottom: 6 } }, q._kind ? __h("span", { className: "mbk " + (q._kind === "retry" ? "rt" : "du"), style: { marginRight: 6 } }, q._kind === "retry" ? "剛才答錯，再一次" : "錯題複習") : null, DRILL_NAME[props.drill]), /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginBottom: 4 } }, q.ctx), q.cards.length > 0 && /* @__PURE__ */ __h("div", { style: label }, "你的手牌"), q.cards.length > 0 && /* @__PURE__ */ __h(CardRow, { cards: q.cards }), q.board && /* @__PURE__ */ __h("div", { style: label }, "公共牌"), q.board && /* @__PURE__ */ __h(CardRow, { cards: q.board }), q.made && /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginBottom: 8 } }, `你有：${q.made}`), /* @__PURE__ */ __h("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } }, q.opts.map((o) => /* @__PURE__ */ __h(Button, { key: o.key, label: o.label, variant: picked === o.key ? "primary" : "quiet", disabled: picked !== null && picked !== o.key, onClick: () => choose(o.key) }))), picked !== null && /* @__PURE__ */ __h("div", { style: { marginTop: 12, padding: "10px 12px", borderRadius: t.radius.md, background: ok ? t.fill.successSubtle : t.fill.dangerSubtle } }, /* @__PURE__ */ __h("div", { style: { fontWeight: t.weight.semibold, color: ok ? t.text.success : t.text.danger } }, ok ? "答對了" : `答錯了，正確是：${ansLabel}`), /* @__PURE__ */ __h("div", { style: { color: t.text.primary, marginTop: 4 } }, q.why), window.MB.item(lid) ? __h("div", { className: "qprog" }, window.MB.progress(lid)) : null, /* @__PURE__ */ __h("div", { style: { marginTop: 10 } }, /* @__PURE__ */ __h(Button, { label: "下一題", variant: "primary", onClick: next }))));
   }
   function LeakTab() {
     const [drill, setDrill] = useState(() => { const d = window.__drillPreset; window.__drillPreset = null; return d || "open"; });
@@ -1243,29 +1284,11 @@ window.__PAGES.P3 = (function() {
       return [DRILL_NAME[d.value], s ? `${s.c}/${s.n}` : "0/0", a === null ? "—" : { text: `${a}%`, tone: a >= 90 ? "success" : a < 70 ? "danger" : void 0 }];
     }), [stats]);
     const bbDef = pct(CH["BB|BTN"].three) + pct(CH["BB|BTN"].call);
-    return /* @__PURE__ */ __h("div", null, /* @__PURE__ */ __h(Section, { heading: "數據摘要（白話說明在第一個分頁「我的弱點」）", caption: "來源：Natural8 NL2 6-max 394 手（10/28–29）。樣本小，只看方向；每 500 手對照一次。" }, /* @__PURE__ */ __h(
-      Table,
-      {
-        columns: ["項目", "目前", "目標"],
-        rows: [
-          ["VPIP（入池率）", { text: "15.0%", tone: "danger" }, "22–25%"],
-          ["PFR（翻前加注率）", { text: "11.6%", tone: "danger" }, "17–20%"],
-          ["3-bet", { text: "2.2%", tone: "danger" }, "6% 以上"],
-          ["BB 防守偷盲", { text: "22.2%", tone: "danger" }, "40% 以上"],
-          ["開池尺寸", { text: "2bb（31/31 次）", tone: "danger" }, "2.5bb"],
-          ["隔離 limper", { text: "2bb（10/10 次）", tone: "danger" }, "3bb + 每個 limper 1bb"],
-          ["3-bet 尺寸", { text: "約 2 倍", tone: "danger" }, "有位置 3 倍、沒位置 4 倍"],
-          ["SB 面對開池", { text: "進池 4 次全是平跟", tone: "danger" }, "只 3-bet 或棄牌"],
-          ["強牌下注", { text: "過牌或 1/3 池", tone: "danger" }, "2/3–3/4 池，對手短碼就全下"],
-          ["同時開桌", { text: "6 桌", tone: "danger" }, "先降到 2–4 桌"],
-          ["EV Cashout", { text: "有使用", tone: "danger" }, "不用"]
-        ]
-      }
-    ), /* @__PURE__ */ __h(Callout, { tone: "warning", lead: "最大的一手錯" }, "BB 拿 AKo 面對 BTN 開池直接棄牌。AK 在 BB 至少跟注，通常 3-bet。建議關掉預先動作。"), /* @__PURE__ */ __h(Text, null, "玩家池參考（NL2）：你的 15/11.6 和池中 Nit（14.3/9.9）幾乎一樣，Nit 扣抽水後只有 +0.3 bb/100；≥3000 手前 25% 贏家中位數是 22.7/17.1、3-bet 7.2%；全池 BB 防守 41.1%；BB 防守率在 2x 開池時 49.8%、2.6–3x 時 38.1%。")), __h("div", { id: "drills", style: { scrollMarginTop: 64 } }), /* @__PURE__ */ __h(Section, { heading: "6 種練習" }, /* @__PURE__ */ __h(Segmented, { options: DRILLS, value: drill, onChange: (v) => setDrill(v) }), /* @__PURE__ */ __h(Drill, { drill, onAnswer })), /* @__PURE__ */ __h(Section, { heading: "各練習準確率", caption: persist ? "記錄存在這台裝置的瀏覽器；目標每項 90% 以上。" : "這個環境不允許瀏覽器儲存，紀錄只保留到關閉頁面為止。" }, /* @__PURE__ */ __h(Table, { columns: ["練習", "答對/題數", "準確率"], rows: accRows, align: ["start", "end", "end"] }), /* @__PURE__ */ __h(Button, { label: "清除紀錄", onClick: () => {
+    return /* @__PURE__ */ __h("div", null, __h("div", { id: "drills", style: { scrollMarginTop: 64 } }), __h("div", null, /* @__PURE__ */ __h(Drill, { drill, onAnswer })), /* @__PURE__ */ __h(Section, { heading: "各練習準確率", collapsible: true, defaultOpen: false, caption: persist ? "記錄存在這台裝置的瀏覽器；目標每項 90% 以上。" : "這個環境不允許瀏覽器儲存，紀錄只保留到關閉頁面為止。" }, /* @__PURE__ */ __h(Table, { columns: ["練習", "答對/題數", "準確率"], rows: accRows, align: ["start", "end", "end"] }), /* @__PURE__ */ __h(Button, { label: "清除紀錄", onClick: () => {
       const e = {};
       setStats(e);
       saveStats(e);
-    } })), /* @__PURE__ */ __h(Section, { heading: "範圍說明" }, /* @__PURE__ */ __h(Text, null, `這些是簡化的學習用範圍表，不是 solver 輸出，假設 100bb、對手開 2.5bb。CO 開約 ${pct(RFI.CO).toFixed(0)}%，BTN 開約 ${pct(RFI.BTN).toFixed(0)}%；BB 對 BTN 防守約 ${bbDef.toFixed(0)}%（3-bet ${pct(CH["BB|BTN"].three).toFixed(0)}%）；SB 對任何位置都只 3-bet 或棄牌，對手位置越後面 3-bet 越寬。實戰要依對手調整。`), /* @__PURE__ */ __h(Text, null, "本頁只供學習，不保證獲利。")));
+    } })));
   }
   const POOL = {
     NL2: {
@@ -1343,8 +1366,8 @@ window.__PAGES.P3 = (function() {
   }
   const TABS = [{ value: "leak", label: "我的弱點與練習" }, { value: "pool", label: "玩家池數據" }];
   function App() {
-    const [tab, setTab] = useState("leak");
-    return /* @__PURE__ */ __h(Page, { title: "撲克弱點練習與玩家池數據（NL2/NL5）", summary: "6 種針對你漏洞的隨機練習，以及 HHDealer NL2/NL5 約 400 萬手的玩家池數據。入口是撲克訓練中心。", lang: "zh-Hant", width: "wide" }, /* @__PURE__ */ __h(LinkCards, { links: [{ title: "回到撲克訓練中心（節點訓練）", href: HUB }] }), /* @__PURE__ */ __h(Segmented, { options: TABS, value: tab, onChange: (v) => setTab(v) }), tab === "leak" ? /* @__PURE__ */ __h(LeakTab, null) : null, tab === "pool" ? /* @__PURE__ */ __h(PoolTab, null) : null);
+    const [tab, setTab] = useState(window.__sub3 || "leak");
+    return /* @__PURE__ */ __h(Page, { lang: "zh-Hant", width: "wide" }, tab === "leak" ? /* @__PURE__ */ __h(LeakTab, null) : null, tab === "pool" ? /* @__PURE__ */ __h(PoolTab, null) : null);
   }
   return App;
 })();
@@ -1508,8 +1531,8 @@ window.__PAGES.P0 = (function () {
   function stB(L, sm) { var s = ST[L.st]; return h("span", { className: "pg " + s[1] + (sm ? " sm" : "") }, s[0]); }
   function Leak(p) {
     var L = p.L, n = p.n, MB = window.MB, rn = MB.rqCat(L.id).length, bn = MB.countCat(L.id);
-    return h("section", { className: "sec lk", id: L.id },
-      h("div", { className: "lkh" }, h("span", { className: "num" }, String(n)), h("h2", { className: "sechead" }, L.title)),
+    return h("details", { className: "sec lk", id: L.id },
+      h("summary", null, h("span", { className: "num" }, String(n)), h("span", { className: "lkt" }, h("b", null, L.title), h("span", { className: "lkr" }, L.rule))),
       h("div", { className: "lkb" }, stB(L), h("span", { className: "badge" + (L.conf.indexOf("比較確定") === 0 ? "" : " tent") }, L.conf)),
       h("div", { className: "prog" }, h("b", null, "今天 vs 昨天："), L.prog),
       h("div", { className: "lbl" }, "① 你在做什麼"),
@@ -1518,16 +1541,14 @@ window.__PAGES.P0 = (function () {
       h("ul", { className: "ul" }, L.why.map(function (w, i) { return h("li", { key: i }, w); })),
       h("div", { className: "lbl" }, "③ 你今天的真實手牌"),
       L.ex.map(function (e, i) { return h(Ex, Object.assign({ key: i }, e)); }),
+      L.id === "L1" ? h(window.PF.BBTable, null) : null,
       L.old.length ? h("details", { className: "oldx" }, h("summary", null, "10/28 的例子（" + L.old.length + "）"), L.old.map(function (e, i) { return h(Ex, Object.assign({ key: i }, e)); })) : null,
-      h("div", { className: "lbl" }, "④ 下次照這句做"),
-      h("div", { className: "rule" }, L.rule),
-      h("div", { className: "lbl" }, "⑤ 去練習"),
+      h("div", { className: "lbl" }, "④ 去練習"),
       h("div", { className: "pbtn" },
-        rn ? h("button", { className: "btn pri", onClick: function () { goReal(L.id); } }, "🃏 實戰題：今天這類 " + rn + " 題") : null,
         L.drills.map(function (d) { return h("button", { key: d, className: "btn", onClick: function () { goDrill(d); } }, "練習：" + DN[d]); }),
         L.nodes.map(function (id) { return h("button", { key: id, className: "btn", onClick: function () { goNode(id); } }, "卡片：" + NN[id]); }),
         L.btn ? h("button", { className: "btn", onClick: goBtn }, "練習：BTN 開牌圖") : null,
-        bn ? h("button", { className: "btn", onClick: function () { window.__goTab("P5"); } }, "📒 錯題本：這類 " + bn + " 題") : null),
+        null),
       h("div", { className: "stat" }, "數據（樣本小，只當參考）：" + L.stat));
   }
   var CMP = [
@@ -1539,7 +1560,7 @@ window.__PAGES.P0 = (function () {
   var POS = [["UTG", 68, "−16.9", "±16"], ["HJ", 91, "+24.7", "±30"], ["CO", 100, "−16.5", "±24"], ["BTN", 96, "+23.4", "±47"], ["SB", 95, "−57.4", "±46"], ["BB", 94, "+79.8", "±93"]];
   var MK = { up: "↑ 進步", same: "＝ 沒變", down: "↓ 變差" };
   function App() {
-    return h(Page, { title: "我的弱點（白話版）" },
+    return h(Page, {},
       h(Callout, { tone: "info", lead: "10/29 晚（544 手）一句話" }, "結果比昨天差（+$0.75、+6.9 bb/100，昨天 +46.3），但兩天都在運氣誤差內；打法是進步的：開池全改成 2.5bb、BTN 開池翻倍、3-bet 變多。最該修 3 件事：① BB 被偷盲還是幾乎都棄 ② CO 還是太緊 ③ BTN 面對開池只會平跟。"),
       h("section", { className: "sec" },
         h("h2", { className: "sechead" }, "今天 vs 昨天"),
@@ -1547,21 +1568,15 @@ window.__PAGES.P0 = (function () {
           h("thead", null, h("tr", null, h("th", null, "項目"), h("th", null, "10/28"), h("th", null, "10/29 晚"), h("th", null, ""))),
           h("tbody", null, CMP.map(function (r) { return h("tr", { key: r[0] }, h("td", null, r[0]), h("td", null, r[1]), h("td", null, h("b", null, r[2])), h("td", { className: "pg " + (r[3] === "up" ? "up" : r[3] === "down" ? "down" : "same") }, MK[r[3]])); }))),
         h("div", { className: "cap", style: { marginTop: 6 } }, "bb/100 的「沒變」是指差距在誤差內。參考範圍：BB 守 35–50%、CO 開 25–30%、3-bet 6–9%。"),
-        h("h2", { className: "sechead", style: { marginTop: 14 } }, "今天各位置（bb/100，± 是誤差）"),
+        h("details", { className: "dt", style: { marginTop: 10 } }, h("summary", null, "今天各位置（bb/100，± 是誤差）"),
         h("table", { className: "pt" },
           h("thead", null, h("tr", null, h("th", null, "位置"), h("th", null, "手數"), h("th", null, "bb/100"), h("th", null, "誤差"))),
           h("tbody", null, POS.map(function (r) { return h("tr", { key: r[0] }, h("td", null, r[0]), h("td", null, String(r[1])), h("td", { className: r[2][0] === "+" ? "pos" : "neg" }, r[2]), h("td", null, r[3])); }))),
-        h("div", { className: "cap", style: { marginTop: 6 } }, "每個位置不到 100 手，誤差比數字本身還大，只看方向。BB 的 +79.8 幾乎全靠一手 K3s（+$1.61），扣掉後是 −5.9；SB 的 −$1.09 主要來自 3 手（AQs −$0.40、KQo −$0.40、AJo −$0.21）。")),
-      h("section", { className: "sec" },
-        h("h2", { className: "sechead" }, "7 個弱點一覽（點一下跳過去）"),
-        h("div", { className: "toc" }, LEAKS.map(function (L, i) {
-          return h("button", { key: L.id, className: "tocb", onClick: function () { var e = document.getElementById(L.id); if (e) e.scrollIntoView({ block: "start" }); } },
-            h("span", { className: "num" }, String(i + 1)), h("span", null, L.title), stB(L, true));
-        })),
-        h("div", { className: "pbtn", style: { marginTop: 10 } }, h("button", { className: "btn pri", onClick: function () { goReal("all"); } }, "🃏 練今天全部實戰錯題（" + window.MB.RQ.length + " 題）"))),
+        h("div", { className: "cap", style: { marginTop: 6 } }, "每個位置不到 100 手，誤差比數字本身還大，只看方向。BB 的 +79.8 幾乎全靠一手 K3s（+$1.61），扣掉後是 −5.9；SB 的 −$1.09 主要來自 3 手（AQs −$0.40、KQo −$0.40、AJo −$0.21）。"))),
+      h("div", { className: "cap", style: { marginTop: 12 } }, "點標題展開：你在做什麼、為什麼輸錢、你的真實手牌、去哪裡練。灰字是「下次照這句做」。"),
       LEAKS.map(function (L, i) { return h(Leak, { key: L.id, L: L, n: i + 1 }); }),
       h(Callout, { tone: "warning", lead: "其他小提醒：不要用 EV Cashout" }, "今天用了 3 次（HD3112502012、HD3112502352、HD3112260428）。用精算勝率推估，3 次合計多付約 $0.065（約 3bb），每次約 1–2%。NL2 金額很小，不需要買保險。"),
-      h(Callout, { tone: "info", lead: "樣本有多可靠？" }, "資料是 Natural8 NL2 6-max：10/28 共 394 手、10/29 晚 544 手，合計 938 手，還是很少。1–3 和 7 是每次都會發生的習慣（重複幾十次），方向比較確定；4–6 每項只有 2–5 手例子，先當提醒，累積到 2,000 手以上再重算確認。本頁的手牌和金額都來自你的手牌紀錄；勝率是電腦模擬。"));
+      h("details", { className: "sec dt" }, h("summary", null, "樣本有多可靠？"), "資料是 Natural8 NL2 6-max：10/28 共 394 手、10/29 晚 544 手，合計 938 手，還是很少。1–3 和 7 是每次都會發生的習慣（重複幾十次），方向比較確定；4–6 每項只有 2–5 手例子，先當提醒，累積到 2,000 手以上再重算確認。本頁的手牌和金額都來自你的手牌紀錄；勝率是電腦模擬。"));
   }
   return App;
 })();
@@ -1574,7 +1589,7 @@ window.__PAGES.P4 = (function () {
   function BtnRange() {
     useEffect(function () { var el = document.getElementById("btn4m"); if (el && !el.firstChild) el.innerHTML = HTML; });
     return h("div", null, h("h1", null, "BTN 要開到哪裡？（400 萬手數據）"),
-      h("button", { className: "linkc", onClick: function () { var e = document.getElementById("btndrill"); if (e) e.scrollIntoView({ block: "start" }); } }, "↓ 跳到 BTN 開牌練習（答錯會進錯題本）"),
+      h("button", { className: "linkc", onClick: function () { var e = document.getElementById("btndrill"); if (e) e.scrollIntoView({ block: "start" }); } }, "↓ 跳到 BTN 開牌練習（答錯的牌會多出現幾次）"),
       h("div", { id: "btn4m" }), h(window.MB.BtnDrill, null));
   }
   return BtnRange;
@@ -1591,15 +1606,15 @@ window.__PAGES.P4 = (function () {
     }));
   }
   function kindBadge(kind) {
-    if (kind === "retry") return h("span", { className: "mbk rt" }, "🔁 剛才答錯，再一次");
-    if (kind === "due") return h("span", { className: "mbk du" }, "📒 錯題複習");
-    if (kind === "book") return h("span", { className: "mbk du" }, "📒 錯題本");
-    if (kind === "real") return h("span", { className: "mbk rl" }, "🃏 實戰題");
+    if (kind === "retry") return h("span", { className: "mbk rt" }, "剛才答錯，再一次");
+    if (kind === "due") return h("span", { className: "mbk du" }, "之前答錯過");
+    if (kind === "book") return h("span", { className: "mbk du" }, "錯題本");
+    if (kind === "real") return h("span", { className: "mbk rl" }, "你的真實手牌");
     return null;
   }
   // props: q, kind, onNext, noRetry, onResult(ok)
   function QCard(p) {
-    var st = useState(null), picked = st[0], setPicked = st[1];
+    var st = useState(function () { var sv = p.pk ? window.UIS.get(p.pk, null) : null; return sv && sv.id === p.q.id ? sv.v : null; }), picked = st[0], setPicked = function (v) { if (p.pk) window.UIS.set(p.pk, { id: p.q.id, v: v }); st[1](v); };
     var sh = useState(false), show = sh[0], setShow = sh[1];
     var q = p.q;
     var ok = picked !== null && picked === q.ans;
@@ -1676,13 +1691,13 @@ window.__PAGES.P4 = (function () {
   }
   function pickB() { var p = MB.nextPick("B:", 0.4); return p ? { q: p.q, kind: p.kind } : { q: genB(), kind: null }; }
   function BtnDrill() {
-    var st = useState(function () { return pickB(); }), cur = st[0], setCur = st[1];
-    var sc = useState({ ok: 0, bad: 0, n: 0 }), score = sc[0], setScore = sc[1];
+    var st = useState(function () { var v = window.UIS.get("btn.cur", null); if (!v || !v.q) { v = pickB(); window.UIS.set("btn.cur", v); } return v; }), cur = st[0], setCur = function (v) { window.UIS.set("btn.cur", v); st[1](v); };
+    var sc = useState(function () { return window.UIS.get("btn.sc", { ok: 0, bad: 0, n: 0 }); }), score = sc[0], setScore = function (v) { window.UIS.set("btn.sc", v); sc[1](v); };
     if (!cur.q) return h("p", { className: "txt" }, "找不到開牌圖資料。");
     return h("section", { className: "sec", id: "btndrill" },
       h("h2", { className: "sechead" }, "BTN 開牌練習（答對 " + score.ok + "，答錯 " + score.bad + "）"),
-      h("div", { className: "cap" }, "隨機發一手牌，照上面的開牌圖決定開或棄。答錯的牌會進錯題本，這次練習稍後再出一次。"),
-      h(QCard, { key: "b" + score.n, q: cur.q, kind: cur.kind,
+      h("div", { className: "cap" }, "隨機發一手牌（也會出你 10/29 在 BTN 棄掉的真實手牌），照 BTN 開池圖決定開或棄。答錯的牌隔 2 題再出一次，之後比較常出現，直到答對 3 次。"),
+      h(QCard, { key: "b" + score.n, q: cur.q, kind: cur.kind, pk: "btn.qc",
         onResult: function (ok) { setScore({ ok: score.ok + (ok ? 1 : 0), bad: score.bad + (ok ? 0 : 1), n: score.n }); },
         onNext: function () { setScore({ ok: score.ok, bad: score.bad, n: score.n + 1 }); setCur(pickB()); } }));
   }
@@ -1719,10 +1734,13 @@ window.__PAGES.P4 = (function () {
             h("button", { key: "r", className: "btn", onClick: function () { MB.reset(it.id); } }, "重設進度")]));
   }
   function Practice(p) {
-    var qs = useState(function () { return p.ids.slice(); }), queue = qs[0], setQueue = qs[1];
-    var is = useState(0), i = is[0], setI = is[1];
-    var ss = useState({ ok: 0, bad: 0 }), sc = ss[0], setSc = ss[1];
-    var rs = useState({}), re = rs[0], setRe = rs[1];
+    var PS = window.UIS.get("prac.st", null); if (!PS || PS.k !== p.k) PS = null;
+    var qs = useState(function () { return PS ? PS.queue : p.ids.slice(); }), queue = qs[0];
+    var is = useState(PS ? PS.i : 0), i = is[0];
+    var ss = useState(PS ? PS.sc : { ok: 0, bad: 0 }), sc = ss[0];
+    var rs = useState(PS ? PS.re : {}), re = rs[0];
+    function sv() { window.UIS.set("prac.st", { k: p.k, queue: queue, i: i, sc: sc, re: re }); }
+    var setQueue = function (v) { queue = v; sv(); qs[1](v); }, setI = function (v) { i = v; sv(); is[1](v); }, setSc = function (v) { sc = v; sv(); ss[1](v); }, setRe = function (v) { re = v; sv(); rs[1](v); };
     if (i >= queue.length) {
       return h("section", { className: "sec" }, h("h2", { className: "sechead" }, "這輪錯題練完了"),
         h("p", { className: "txt" }, "答對 " + sc.ok + "，答錯 " + sc.bad + "。答錯的題目已排回明天以前複習；答對的題目要在之後不同次練習再答對，才會畢業。"),
@@ -1733,7 +1751,7 @@ window.__PAGES.P4 = (function () {
     return h("div", null,
       h("section", { className: "sec" },
         h("div", { className: "mbph" }, h("b", null, (p.title || "只練錯題") + "：第 " + (i + 1) + " / " + queue.length + " 題（答對 " + sc.ok + "，答錯 " + sc.bad + "）"), h("button", { className: "btn", onClick: p.onExit }, "結束")),
-        h(QCard, { key: "pq" + i, q: qq, kind: re[i] ? "retry" : (rq ? "real" : "book"), noRetry: true,
+        h(QCard, { key: "pq" + i, q: qq, pk: "prac.qc", kind: re[i] ? "retry" : (rq ? "real" : "book"), noRetry: true,
           onResult: function (ok) {
             setSc({ ok: sc.ok + (ok ? 1 : 0), bad: sc.bad + (ok ? 0 : 1) });
             if (!ok) { var nq = queue.slice(), at = Math.min(i + 3, nq.length); nq.splice(at, 0, id); var nr = Object.assign({}, re); nr[at] = 1; setQueue(nq); setRe(nr); }
@@ -1741,10 +1759,11 @@ window.__PAGES.P4 = (function () {
           onNext: function () { setI(i + 1); } })));
   }
   function shuffle(a) { return a.map(function (x) { return [Math.random(), x]; }).sort(function (x, y) { return x[0] - y[0]; }).map(function (x) { return x[1]; }); }
-  function BookPage() {
-    var ms = useState(function () { var r = window.__realPreset; window.__realPreset = null; return r ? { ids: shuffle(MB.rqCat(r === "all" ? null : r)), k: Date.now(), title: "實戰錯題" } : null; }), prac = ms[0], setPrac = ms[1];
+  function BookPage(pp) {
+    pp = pp || {}; var MODE = pp.mode || "book", PK = "book.prac." + MODE;
+    var ms = useState(function () { var r = window.__realPreset; window.__realPreset = null; var v = r ? { ids: shuffle(MB.rqCat(r === "all" ? null : r)), k: Date.now(), title: "實戰錯題" } : window.UIS.get(PK, null); window.UIS.set(PK, v); return v; }), prac = ms[0], setPrac = function (v) { window.UIS.set(PK, v); ms[1](v); };
     var os = useState(false), showM = os[0], setShowM = os[1];
-    if (prac) return h("div", null, h("h1", null, "錯題本"), h(Practice, { key: prac.k, ids: prac.ids, title: prac.title, onExit: function () { setPrac(null); window.scrollTo(0, 0); } }));
+    if (prac) return h("div", null, h(Practice, { key: prac.k, ids: prac.ids, title: prac.title, onExit: function () { setPrac(null); window.scrollTo(0, 0); } }));
     var t = MB.today(), opn = MB.open(), due = MB.dueToday(), mastered = MB.all().filter(function (x) { return x.mastered; });
     function go(ids, title) { if (!ids.length) return; setPrac({ ids: ids, k: Date.now(), title: title || null }); window.scrollTo(0, 0); }
     var realGroups = MB.CATS.map(function (c) { return { c: c, ids: MB.rqCat(c[0]) }; }).filter(function (g) { return g.ids.length; });
@@ -1756,8 +1775,7 @@ window.__PAGES.P4 = (function () {
       return { c: c, items: items };
     }).filter(function (g) { return g.items.length; });
     return h("div", null,
-      h("h1", null, "錯題本"),
-      h("section", { className: "sec" },
+      MODE === "real" ? null : h("section", { className: "sec" },
         h("div", { className: "mbsum" },
           h("div", null, h("div", { className: "big" }, t.n ? pctS(t.acc) : "—"), h("div", { className: "cap" }, "今天答對率（" + t.c + "/" + t.n + "）")),
           h("div", null, h("div", { className: "big" + (t.due ? " dsd" : "") }, String(t.due)), h("div", { className: "cap" }, "今天要複習")),
@@ -1769,15 +1787,15 @@ window.__PAGES.P4 = (function () {
           h("button", { className: "btn", disabled: !opn.length, onClick: function () { go(shuffle(opn.map(function (x) { return x.id; }))); } }, "練全部錯題（" + opn.length + "）"),
           h("button", { className: "btn", onClick: function () { window.__goTab("P4"); setTimeout(function () { var e = document.getElementById("btndrill"); if (e) e.scrollIntoView({ block: "start" }); }, 80); } }, "BTN 開牌練習")),
         h("div", { className: "cap", style: { marginTop: 8 } }, "規則：答錯 → 放進錯題本，同一次練習隔 2 題再考一次；之後在不同次練習（重新打開頁面算一次）連續答對 3 次才畢業，間隔是當次 → 隔天 → 再隔 3 天。中途答錯就從頭來。平常練習時，到期的錯題也會比較常混進來。紀錄只存在這台裝置的瀏覽器。" + (MB.canSave() ? "" : "（這個瀏覽器不允許儲存，關掉頁面就會消失。）"))),
-      h("section", { className: "sec mbreal" },
-        h("div", { className: "mbgh" }, h("h2", { className: "sechead" }, "🃏 實戰錯題（" + MB.RQSET + "，" + MB.RQ.length + " 題）"), h("span", { className: "badge sm" }, "你的真實手牌")),
+      MODE !== "real" ? null : h("section", { className: "sec mbreal" },
+        h("div", { className: "mbgh" }, h("h2", { className: "sechead" }, "實戰錯題（" + MB.RQSET + "，" + MB.RQ.length + " 題）"), h("span", { className: "badge sm" }, "你的真實手牌")),
         h("div", { className: "cap" }, "每題都是你 10/29 晚 544 手裡真的打過的一手（手牌編號可在 PokerCraft 查）。先想你會怎麼做，再看你當時怎麼打、為什麼要改。答錯的題目會進上面的錯題本，照間隔複習。" + (realOpen ? "目前錯題本裡有 " + realOpen + " 題實戰題。" : "")),
         h("div", { className: "pbtn" }, h("button", { className: "btn pri", onClick: function () { go(shuffle(MB.rqCat(null)), "實戰錯題"); } }, "全部練一次（" + MB.RQ.length + "）")),
         h("div", { className: "pbtn", style: { marginTop: 6 } }, realGroups.map(function (g) {
           return h("button", { key: g.c[0], className: "btn", onClick: function () { go(shuffle(g.ids), "實戰錯題"); } }, (g.c[2] ? "#" + g.c[2] + " " : "") + g.c[1].replace(/（.*）/, "") + "（" + g.ids.length + "）");
         }))),
-      opn.length ? null : h("div", { className: "co co-success" }, h("div", { className: "lead" }, "目前沒有錯題"), "去「節點訓練」混練、「課程・河牌」小測、「練習・數據」6 種練習或「BTN 開牌」練習，答錯的題目會自動出現在這裡。"),
-      groups.map(function (g) {
+      MODE === "real" || opn.length ? null : h("div", { className: "co co-success" }, h("div", { className: "lead" }, "目前沒有錯題"), "去「節點訓練」混練、「課程・河牌」小測、「練習・數據」6 種練習或「BTN 開牌」練習，答錯的題目會自動出現在這裡。"),
+      (MODE === "real" ? [] : groups).map(function (g) {
         var dueN = g.items.filter(function (x) { return x.due <= Date.now() + 864e5 && MB.fmtDue(x.due) === "今天"; }).length;
         return h("section", { key: g.c[0], className: "sec" },
           h("div", { className: "mbgh" }, g.c[2] ? h("span", { className: "num" }, String(g.c[2])) : null, h("h2", { className: "sechead" }, g.c[1]), h("span", { className: "badge sm" }, g.items.length + " 題")),
@@ -1785,38 +1803,329 @@ window.__PAGES.P4 = (function () {
           h("div", { className: "pbtn", style: { marginBottom: 8 } }, h("button", { className: "btn pri", onClick: function () { go(shuffle(g.items.map(function (x) { return x.id; }))); } }, "只練這類（" + g.items.length + "）")),
           g.items.map(function (it) { return h(Item, { key: it.id, it: it, onPractice: go }); }));
       }),
-      mastered.length ? h("section", { className: "sec" },
+      MODE !== "real" && mastered.length ? h("section", { className: "sec" },
         h("button", { className: "sechead coll", onClick: function () { setShowM(!showM); } }, (showM ? "▾ " : "▸ ") + "已掌握（" + mastered.length + "）"),
         showM ? mastered.map(function (it) { return h(Item, { key: it.id, it: it, onPractice: go }); }) : null) : null,
-      MB.all().length ? h("button", { className: "btn", style: { marginTop: 12 }, onClick: function () { if (window.confirm("確定清空錯題本和今天的統計？")) MB.clearAll(); } }, "清空錯題本") : null);
+      MODE !== "real" && MB.all().length ? h("button", { className: "btn", style: { marginTop: 12 }, onClick: function () { if (window.confirm("確定清空錯題本和今天的統計？")) MB.clearAll(); } }, "清空錯題本") : null);
   }
   window.__PAGES = window.__PAGES || {};
   window.__PAGES.P5 = BookPage;
 })();
 
+window.__BBC={"UTG":{"three":["AA","AKo","AKs","KK","QQ"],"call":["22","44","55","66","76s","77","86s","87s","88","94s","98s","99","A2o","A2s","A3s","A4o","A4s","A5s","A6o","A6s","A7s","A8o","A8s","A9o","A9s","AJo","AJs","AQo","AQs","ATo","ATs","J2s","J9s","JJ","JTs","K4s","K5s","K7s","K9s","KJo","KJs","KQo","KQs","KTo","KTs","Q2s","Q7s","Q9s","QJs","QTs","T5s","T6s","T8o","T9s","TT"],"pct3":2.6,"pctc":25.2,"eq":{"AA":0.846,"AKs":0.607,"AQs":0.543,"AJs":0.462,"ATs":0.525,"A9s":0.428,"A8s":0.437,"A7s":0.41,"A6s":0.396,"A5s":0.358,"A4s":0.379,"A3s":0.389,"A2s":0.375,"AKo":0.569,"KK":0.699,"KQs":0.441,"KJs":0.393,"KTs":0.38,"K9s":0.377,"K8s":0.327,"K7s":0.349,"K6s":0.322,"K5s":0.369,"K4s":0.353,"K3s":0.33,"K2s":0.338,"AQo":0.541,"KQo":0.412,"QQ":0.665,"QJs":0.411,"QTs":0.398,"Q9s":0.348,"Q8s":0.33,"Q7s":0.345,"Q6s":0.333,"Q5s":0.278,"Q4s":0.33,"Q3s":0.329,"Q2s":0.343,"AJo":0.462,"KJo":0.388,"QJo":0.354,"JJ":0.568,"JTs":0.383,"J9s":0.344,"J8s":0.307,"J7s":0.314,"J6s":0.339,"J5s":0.308,"J4s":0.312,"J3s":0.312,"J2s":0.347,"ATo":0.396,"KTo":0.379,"QTo":0.36,"JTo":0.367,"TT":0.555,"T9s":0.381,"T8s":0.322,"T7s":0.321,"T6s":0.343,"T5s":0.347,"T4s":0.337,"T3s":0.282,"T2s":0.297,"A9o":0.381,"K9o":0.321,"Q9o":0.338,"J9o":0.299,"T9o":0.298,"99":0.508,"98s":0.362,"97s":0.316,"96s":0.312,"95s":0.304,"94s":0.342,"93s":0.319,"92s":0.33,"A8o":0.396,"K8o":0.337,"Q8o":0.339,"J8o":0.32,"T8o":0.37,"98o":0.315,"88":0.458,"87s":0.342,"86s":0.359,"85s":0.304,"84s":0.284,"83s":0.295,"82s":0.273,"A7o":0.349,"K7o":0.33,"Q7o":0.281,"J7o":0.252,"T7o":0.292,"97o":0.304,"87o":0.313,"77":0.482,"76s":0.346,"75s":0.336,"74s":0.28,"73s":0.303,"72s":0.268,"A6o":0.387,"K6o":0.325,"Q6o":0.302,"J6o":0.28,"T6o":0.288,"96o":0.316,"86o":0.267,"76o":0.298,"66":0.431,"65s":0.322,"64s":0.306,"63s":0.338,"62s":0.281,"A5o":0.361,"K5o":0.29,"Q5o":0.307,"J5o":0.252,"T5o":0.284,"95o":0.278,"85o":0.339,"75o":0.258,"65o":0.353,"55":0.397,"54s":0.312,"53s":0.308,"52s":0.286,"A4o":0.386,"K4o":0.314,"Q4o":0.331,"J4o":0.31,"T4o":0.224,"94o":0.288,"84o":0.284,"74o":0.274,"64o":0.3,"54o":0.267,"44":0.433,"43s":0.33,"42s":0.277,"A3o":0.35,"K3o":0.324,"Q3o":0.293,"J3o":0.262,"T3o":0.286,"93o":0.285,"83o":0.278,"73o":0.289,"63o":0.315,"53o":0.295,"43o":0.285,"33":0.369,"32s":0.309,"A2o":0.391,"K2o":0.326,"Q2o":0.275,"J2o":0.303,"T2o":0.258,"92o":0.278,"82o":0.224,"72o":0.266,"62o":0.25,"52o":0.272,"42o":0.238,"32o":0.259,"22":0.386},"thr":34.2},"HJ":{"three":["A5s","AA","AKo","AKs","KK","QQ"],"call":["22","33","44","55","65s","66","75s","77","87s","88","97s","98s","99","A2s","A3o","A3s","A4s","A5o","A6s","A7o","A7s","A8o","A8s","A9o","A9s","AJo","AJs","AQo","AQs","ATo","ATs","J6s","J7s","J8s","J9s","JJ","JTs","K2s","K4s","K5s","K6s","K7s","K8s","K9o","K9s","KJo","KJs","KQo","KQs","KTs","Q4s","Q5s","Q6s","Q7s","Q8s","Q9s","QJs","QTs","T6s","T7s","T8s","T9s","TT"],"pct3":2.9,"pctc":27.1,"eq":{"AA":0.835,"AKs":0.6,"AQs":0.572,"AJs":0.567,"ATs":0.482,"A9s":0.489,"A8s":0.389,"A7s":0.449,"A6s":0.415,"A5s":0.445,"A4s":0.446,"A3s":0.407,"A2s":0.448,"AKo":0.624,"KK":0.786,"KQs":0.485,"KJs":0.483,"KTs":0.408,"K9s":0.402,"K8s":0.422,"K7s":0.361,"K6s":0.359,"K5s":0.382,"K4s":0.363,"K3s":0.348,"K2s":0.373,"AQo":0.542,"KQo":0.475,"QQ":0.68,"QJs":0.422,"QTs":0.39,"Q9s":0.396,"Q8s":0.378,"Q7s":0.406,"Q6s":0.361,"Q5s":0.362,"Q4s":0.355,"Q3s":0.304,"Q2s":0.328,"AJo":0.507,"KJo":0.407,"QJo":0.381,"JJ":0.684,"JTs":0.399,"J9s":0.355,"J8s":0.391,"J7s":0.367,"J6s":0.354,"J5s":0.341,"J4s":0.315,"J3s":0.33,"J2s":0.332,"ATo":0.428,"KTo":0.362,"QTo":0.342,"JTo":0.353,"TT":0.586,"T9s":0.403,"T8s":0.392,"T7s":0.357,"T6s":0.358,"T5s":0.347,"T4s":0.303,"T3s":0.328,"T2s":0.319,"A9o":0.45,"K9o":0.385,"Q9o":0.371,"J9o":0.364,"T9o":0.352,"99":0.584,"98s":0.395,"97s":0.359,"96s":0.311,"95s":0.317,"94s":0.351,"93s":0.324,"92s":0.304,"A8o":0.474,"K8o":0.343,"Q8o":0.339,"J8o":0.325,"T8o":0.337,"98o":0.31,"88":0.506,"87s":0.4,"86s":0.335,"85s":0.333,"84s":0.331,"83s":0.339,"82s":0.304,"A7o":0.438,"K7o":0.366,"Q7o":0.377,"J7o":0.323,"T7o":0.372,"97o":0.343,"87o":0.333,"77":0.513,"76s":0.352,"75s":0.375,"74s":0.29,"73s":0.298,"72s":0.303,"A6o":0.38,"K6o":0.347,"Q6o":0.318,"J6o":0.35,"T6o":0.325,"96o":0.277,"86o":0.331,"76o":0.331,"66":0.459,"65s":0.361,"64s":0.334,"63s":0.317,"62s":0.326,"A5o":0.409,"K5o":0.334,"Q5o":0.298,"J5o":0.298,"T5o":0.304,"95o":0.287,"85o":0.3,"75o":0.326,"65o":0.32,"55":0.453,"54s":0.34,"53s":0.348,"52s":0.313,"A4o":0.38,"K4o":0.343,"Q4o":0.313,"J4o":0.276,"T4o":0.324,"94o":0.271,"84o":0.285,"74o":0.313,"64o":0.293,"54o":0.312,"44":0.408,"43s":0.316,"42s":0.291,"A3o":0.398,"K3o":0.31,"Q3o":0.317,"J3o":0.292,"T3o":0.315,"93o":0.298,"83o":0.291,"73o":0.258,"63o":0.301,"53o":0.291,"43o":0.255,"33":0.435,"32s":0.325,"A2o":0.381,"K2o":0.329,"Q2o":0.301,"J2o":0.291,"T2o":0.284,"92o":0.287,"82o":0.267,"72o":0.265,"62o":0.272,"52o":0.255,"42o":0.279,"32o":0.299,"22":0.418},"thr":35.4},"CO":{"three":["A4s","A5s","AA","AKo","AKs","AQs","JJ","KK","QQ"],"call":["22","33","44","54s","55","66","74s","76s","77","85s","87s","88","96s","97s","98s","99","A2o","A2s","A3o","A3s","A4o","A6o","A6s","A7o","A7s","A8o","A8s","A9o","A9s","AJo","AJs","AQo","ATo","ATs","J3s","J7s","J8s","JTo","JTs","K2s","K3s","K4s","K5s","K6o","K6s","K7o","K7s","K8s","K9o","K9s","KJo","KJs","KQo","KQs","KTo","KTs","Q2s","Q3s","Q5s","Q7s","Q8s","Q9o","Q9s","QJo","QJs","QTo","QTs","T5s","T6s","T7s","TT"],"pct3":3.9,"pctc":34.8,"eq":{"AA":0.845,"AKs":0.631,"AQs":0.573,"AJs":0.624,"ATs":0.548,"A9s":0.511,"A8s":0.497,"A7s":0.461,"A6s":0.43,"A5s":0.453,"A4s":0.48,"A3s":0.489,"A2s":0.469,"AKo":0.565,"KK":0.773,"KQs":0.512,"KJs":0.523,"KTs":0.512,"K9s":0.429,"K8s":0.467,"K7s":0.382,"K6s":0.417,"K5s":0.417,"K4s":0.406,"K3s":0.416,"K2s":0.411,"AQo":0.604,"KQo":0.497,"QQ":0.733,"QJs":0.468,"QTs":0.41,"Q9s":0.394,"Q8s":0.411,"Q7s":0.38,"Q6s":0.367,"Q5s":0.428,"Q4s":0.359,"Q3s":0.39,"Q2s":0.4,"AJo":0.568,"KJo":0.511,"QJo":0.434,"JJ":0.694,"JTs":0.383,"J9s":0.37,"J8s":0.413,"J7s":0.383,"J6s":0.367,"J5s":0.322,"J4s":0.337,"J3s":0.383,"J2s":0.367,"ATo":0.565,"KTo":0.466,"QTo":0.421,"JTo":0.404,"TT":0.649,"T9s":0.359,"T8s":0.368,"T7s":0.403,"T6s":0.38,"T5s":0.383,"T4s":0.328,"T3s":0.357,"T2s":0.343,"A9o":0.506,"K9o":0.476,"Q9o":0.412,"J9o":0.368,"T9o":0.364,"99":0.547,"98s":0.393,"97s":0.385,"96s":0.398,"95s":0.357,"94s":0.36,"93s":0.296,"92s":0.341,"A8o":0.48,"K8o":0.402,"Q8o":0.318,"J8o":0.368,"T8o":0.34,"98o":0.394,"88":0.532,"87s":0.418,"86s":0.348,"85s":0.384,"84s":0.37,"83s":0.313,"82s":0.333,"A7o":0.452,"K7o":0.423,"Q7o":0.354,"J7o":0.349,"T7o":0.351,"97o":0.34,"87o":0.386,"77":0.499,"76s":0.406,"75s":0.324,"74s":0.404,"73s":0.367,"72s":0.348,"A6o":0.445,"K6o":0.414,"Q6o":0.354,"J6o":0.347,"T6o":0.323,"96o":0.362,"86o":0.315,"76o":0.332,"66":0.495,"65s":0.342,"64s":0.351,"63s":0.373,"62s":0.321,"A5o":0.399,"K5o":0.374,"Q5o":0.366,"J5o":0.327,"T5o":0.313,"95o":0.362,"85o":0.299,"75o":0.323,"65o":0.306,"55":0.517,"54s":0.386,"53s":0.374,"52s":0.324,"A4o":0.416,"K4o":0.334,"Q4o":0.327,"J4o":0.291,"T4o":0.32,"94o":0.298,"84o":0.284,"74o":0.305,"64o":0.294,"54o":0.319,"44":0.489,"43s":0.352,"42s":0.302,"A3o":0.446,"K3o":0.337,"Q3o":0.389,"J3o":0.349,"T3o":0.297,"93o":0.302,"83o":0.294,"73o":0.292,"63o":0.341,"53o":0.316,"43o":0.301,"33":0.449,"32s":0.3,"A2o":0.413,"K2o":0.351,"Q2o":0.31,"J2o":0.318,"T2o":0.348,"92o":0.277,"82o":0.282,"72o":0.283,"62o":0.275,"52o":0.344,"42o":0.262,"32o":0.308,"22":0.438},"thr":38.0},"SB":{"three":["A3s","A4s","A5s","AA","AJo","AJs","AKo","AKs","AQo","AQs","JJ","KK","KQo","KQs","QQ","TT"],"call":["22","33","42s","43s","44","53s","54s","55","64s","65s","66","72s","75s","76s","77","82s","83s","86s","87s","88","92s","93s","94s","95s","96s","97s","98o","98s","99","A2o","A2s","A3o","A4o","A5o","A6o","A6s","A7o","A7s","A8o","A8s","A9o","A9s","ATo","ATs","J3s","J4s","J6s","J7s","J8o","J8s","J9s","JTo","JTs","K2o","K2s","K3o","K3s","K4o","K4s","K5o","K5s","K6o","K6s","K7o","K7s","K8o","K8s","K9o","K9s","KJo","KJs","KTo","KTs","Q2s","Q3s","Q4s","Q5o","Q5s","Q6s","Q7o","Q7s","Q8s","Q9o","Q9s","QJo","QJs","QTo","QTs","T2s","T5s","T6s","T7o","T7s","T8o","T8s","T9s"],"pct3":8.0,"pctc":47.7,"eq":{"AA":0.835,"AKs":0.66,"AQs":0.632,"AJs":0.617,"ATs":0.643,"A9s":0.555,"A8s":0.529,"A7s":0.525,"A6s":0.505,"A5s":0.507,"A4s":0.499,"A3s":0.488,"A2s":0.492,"AKo":0.624,"KK":0.798,"KQs":0.544,"KJs":0.521,"KTs":0.511,"K9s":0.462,"K8s":0.398,"K7s":0.43,"K6s":0.427,"K5s":0.46,"K4s":0.45,"K3s":0.402,"K2s":0.429,"AQo":0.595,"KQo":0.544,"QQ":0.722,"QJs":0.482,"QTs":0.501,"Q9s":0.426,"Q8s":0.436,"Q7s":0.404,"Q6s":0.414,"Q5s":0.391,"Q4s":0.396,"Q3s":0.362,"Q2s":0.366,"AJo":0.616,"KJo":0.5,"QJo":0.464,"JJ":0.653,"JTs":0.435,"J9s":0.425,"J8s":0.382,"J7s":0.388,"J6s":0.375,"J5s":0.333,"J4s":0.363,"J3s":0.37,"J2s":0.348,"ATo":0.581,"KTo":0.449,"QTo":0.436,"JTo":0.426,"TT":0.689,"T9s":0.405,"T8s":0.419,"T7s":0.404,"T6s":0.397,"T5s":0.361,"T4s":0.328,"T3s":0.34,"T2s":0.389,"A9o":0.522,"K9o":0.449,"Q9o":0.404,"J9o":0.366,"T9o":0.375,"99":0.636,"98s":0.4,"97s":0.377,"96s":0.395,"95s":0.356,"94s":0.35,"93s":0.355,"92s":0.383,"A8o":0.483,"K8o":0.453,"Q8o":0.362,"J8o":0.387,"T8o":0.394,"98o":0.386,"88":0.559,"87s":0.426,"86s":0.387,"85s":0.338,"84s":0.316,"83s":0.384,"82s":0.375,"A7o":0.511,"K7o":0.391,"Q7o":0.391,"J7o":0.346,"T7o":0.4,"97o":0.371,"87o":0.342,"77":0.548,"76s":0.363,"75s":0.41,"74s":0.331,"73s":0.34,"72s":0.365,"A6o":0.465,"K6o":0.408,"Q6o":0.365,"J6o":0.359,"T6o":0.341,"96o":0.332,"86o":0.331,"76o":0.314,"66":0.512,"65s":0.4,"64s":0.35,"63s":0.316,"62s":0.309,"A5o":0.468,"K5o":0.418,"Q5o":0.38,"J5o":0.342,"T5o":0.31,"95o":0.299,"85o":0.33,"75o":0.308,"65o":0.318,"55":0.443,"54s":0.379,"53s":0.353,"52s":0.327,"A4o":0.486,"K4o":0.407,"Q4o":0.377,"J4o":0.337,"T4o":0.352,"94o":0.314,"84o":0.328,"74o":0.316,"64o":0.334,"54o":0.343,"44":0.479,"43s":0.352,"42s":0.359,"A3o":0.443,"K3o":0.407,"Q3o":0.343,"J3o":0.339,"T3o":0.302,"93o":0.303,"83o":0.299,"73o":0.312,"63o":0.307,"53o":0.278,"43o":0.342,"33":0.45,"32s":0.331,"A2o":0.462,"K2o":0.393,"Q2o":0.361,"J2o":0.319,"T2o":0.329,"92o":0.284,"82o":0.325,"72o":0.266,"62o":0.23,"52o":0.312,"42o":0.306,"32o":0.287,"22":0.429},"thr":35.0},"BTN":{"three":["A3s","A4s","A5s","AA","AJo","AJs","AKo","AKs","AQo","AQs","JJ","KK","KQo","KQs","QQ","TT"],"call":["22","33","43s","44","53s","54s","55","64s","65s","66","75s","76o","76s","77","85s","86s","87o","87s","88","96s","97s","98o","98s","99","A2o","A2s","A3o","A4o","A5o","A6o","A6s","A7o","A7s","A8o","A8s","A9o","A9s","ATo","ATs","J7s","J8o","J8s","J9o","J9s","JTo","JTs","K2s","K3s","K4s","K5s","K6s","K7s","K8o","K8s","K9o","K9s","KJo","KJs","KTo","KTs","Q5s","Q6s","Q7s","Q8o","Q8s","Q9o","Q9s","QJo","QJs","QTo","QTs","T7s","T8o","T8s","T9o","T9s"],"pct3":8.0,"pctc":39.2,"eq":{"AA":0.843,"AKs":0.645,"AQs":0.625,"AJs":0.622,"ATs":0.569,"A9s":0.56,"A8s":0.546,"A7s":0.507,"A6s":0.527,"A5s":0.523,"A4s":0.497,"A3s":0.51,"A2s":0.461,"AKo":0.64,"KK":0.776,"KQs":0.569,"KJs":0.528,"KTs":0.552,"K9s":0.502,"K8s":0.471,"K7s":0.453,"K6s":0.441,"K5s":0.421,"K4s":0.46,"K3s":0.404,"K2s":0.408,"AQo":0.573,"KQo":0.514,"QQ":0.728,"QJs":0.482,"QTs":0.516,"Q9s":0.488,"Q8s":0.462,"Q7s":0.396,"Q6s":0.447,"Q5s":0.442,"Q4s":0.448,"Q3s":0.384,"Q2s":0.429,"AJo":0.565,"KJo":0.48,"QJo":0.485,"JJ":0.674,"JTs":0.465,"J9s":0.44,"J8s":0.407,"J7s":0.427,"J6s":0.406,"J5s":0.337,"J4s":0.393,"J3s":0.396,"J2s":0.367,"ATo":0.581,"KTo":0.501,"QTo":0.48,"JTo":0.436,"TT":0.624,"T9s":0.437,"T8s":0.414,"T7s":0.408,"T6s":0.393,"T5s":0.383,"T4s":0.366,"T3s":0.372,"T2s":0.347,"A9o":0.559,"K9o":0.444,"Q9o":0.443,"J9o":0.431,"T9o":0.425,"99":0.634,"98s":0.41,"97s":0.4,"96s":0.371,"95s":0.382,"94s":0.339,"93s":0.362,"92s":0.298,"A8o":0.533,"K8o":0.434,"Q8o":0.393,"J8o":0.402,"T8o":0.362,"98o":0.363,"88":0.589,"87s":0.392,"86s":0.389,"85s":0.41,"84s":0.346,"83s":0.368,"82s":0.318,"A7o":0.51,"K7o":0.412,"Q7o":0.404,"J7o":0.445,"T7o":0.401,"97o":0.374,"87o":0.364,"77":0.529,"76s":0.39,"75s":0.414,"74s":0.375,"73s":0.35,"72s":0.337,"A6o":0.474,"K6o":0.423,"Q6o":0.372,"J6o":0.35,"T6o":0.363,"96o":0.327,"86o":0.371,"76o":0.332,"66":0.552,"65s":0.404,"64s":0.354,"63s":0.338,"62s":0.34,"A5o":0.447,"K5o":0.395,"Q5o":0.373,"J5o":0.389,"T5o":0.357,"95o":0.334,"85o":0.331,"75o":0.336,"65o":0.351,"55":0.549,"54s":0.368,"53s":0.366,"52s":0.364,"A4o":0.444,"K4o":0.448,"Q4o":0.354,"J4o":0.349,"T4o":0.372,"94o":0.296,"84o":0.338,"74o":0.325,"64o":0.309,"54o":0.348,"44":0.487,"43s":0.344,"42s":0.361,"A3o":0.422,"K3o":0.379,"Q3o":0.372,"J3o":0.315,"T3o":0.34,"93o":0.311,"83o":0.291,"73o":0.286,"63o":0.301,"53o":0.329,"43o":0.332,"33":0.483,"32s":0.323,"A2o":0.477,"K2o":0.406,"Q2o":0.369,"J2o":0.353,"T2o":0.326,"92o":0.304,"82o":0.295,"72o":0.281,"62o":0.294,"52o":0.316,"42o":0.306,"32o":0.279,"22":0.46},"thr":33.2}};
+window.__BBR=[{"id":"HD3110668883","d":"10/28","op":"BTN","cards":["7c","5c"],"lab":"75s","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":41.4,"chart":"call","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3110668924","d":"10/28","op":"HJ","cards":["7h","Qd"],"lab":"Q7o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":37.7,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110651136","d":"10/28","op":"UTG","cards":["8h","Qc"],"lab":"Q8o","to":4.0,"pot":5.5,"call":3.0,"need":35.3,"eq":33.9,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110669350","d":"10/28","op":"CO","cards":["8d","Ac"],"lab":"A8o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":48.0,"chart":"call","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110696153","d":"10/28","op":"SB","cards":["Js","Ah"],"lab":"AJo","to":3.0,"pot":4.0,"call":2.0,"need":33.3,"eq":61.6,"chart":"3bet","hero":"call","callers":0,"n":6,"net":4.5},{"id":"HD3110652026","d":"10/28","op":"SB","cards":["Qd","Kc"],"lab":"KQo","to":3.5,"pot":4.5,"call":2.5,"need":35.7,"eq":54.4,"chart":"3bet","hero":"call","callers":0,"n":6,"net":-3.5},{"id":"HD3110670337","d":"10/28","op":"BTN","cards":["7d","6c"],"lab":"76o","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":33.2,"chart":"call","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3110696768","d":"10/28","op":"CO","cards":["Ah","Kd"],"lab":"AKo","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":56.5,"chart":"3bet","hero":"3bet","callers":0,"n":6,"net":12.0},{"id":"HD3110652444","d":"10/28","op":"SB","cards":["Qh","8c"],"lab":"Q8o","to":3.0,"pot":4.0,"call":2.0,"need":33.3,"eq":36.2,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110670670","d":"10/28","op":"HJ","cards":["9h","5d"],"lab":"95o","to":3.0,"pot":4.5,"call":2.0,"need":30.8,"eq":28.7,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110697464","d":"10/28","op":"HJ","cards":["Jh","Ts"],"lab":"JTo","to":3.0,"pot":7.5,"call":2.0,"need":21.1,"eq":35.3,"chart":"fold","hero":"fold","callers":1,"n":5,"net":-1.0},{"id":"HD3110652981","d":"10/28","op":"SB","cards":["Th","6h"],"lab":"T6s","to":2.5,"pot":3.5,"call":1.5,"need":30.0,"eq":39.7,"chart":"call","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110671132","d":"10/28","op":"SB","cards":["2c","7d"],"lab":"72o","to":4.0,"pot":6.0,"call":3.0,"need":33.3,"eq":26.6,"chart":"fold","hero":"fold","callers":1,"n":5,"net":-1.0},{"id":"HD3110653354","d":"10/28","op":"BTN","cards":["Kc","6s"],"lab":"K6o","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":42.3,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110671465","d":"10/28","op":"CO","cards":["Qh","3d"],"lab":"Q3o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":38.9,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110671756","d":"10/28","op":"CO","cards":["2d","7c"],"lab":"72o","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":28.3,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3110672083","d":"10/28","op":"CO","cards":["8d","6d"],"lab":"86s","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":34.8,"chart":"fold","hero":"call","callers":0,"n":6,"net":-2.5},{"id":"HD3110698594","d":"10/28","op":"BTN","cards":["Jh","8c"],"lab":"J8o","to":3.0,"pot":4.5,"call":2.0,"need":30.8,"eq":40.2,"chart":"call","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110672459","d":"10/28","op":"BTN","cards":["Ks","Ah"],"lab":"AKo","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":64.0,"chart":"3bet","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3110699023","d":"10/28","op":"UTG","cards":["4d","7s"],"lab":"74o","to":3.0,"pot":4.5,"call":2.0,"need":30.8,"eq":27.4,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110907933","d":"10/28","op":"HJ","cards":["Td","8c"],"lab":"T8o","to":3.0,"pot":4.5,"call":2.0,"need":30.8,"eq":33.7,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3110871280","d":"10/28","op":"UTG","cards":["Jc","6d"],"lab":"J6o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":28.0,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110834986","d":"10/28","op":"HJ","cards":["5c","3c"],"lab":"53s","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":34.8,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110881026","d":"10/28","op":"SB","cards":["7h","4h"],"lab":"74s","to":2.0,"pot":3.0,"call":1.0,"need":25.0,"eq":33.1,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3110862815","d":"10/28","op":"CO","cards":["3d","Qh"],"lab":"Q3o","to":3.0,"pot":7.5,"call":2.0,"need":21.1,"eq":38.9,"chart":"fold","hero":"fold","callers":1,"n":4,"net":-1.0},{"id":"HD3110871698","d":"10/28","op":"SB","cards":["Qd","Qh"],"lab":"QQ","to":2.0,"pot":3.0,"call":1.0,"need":25.0,"eq":72.2,"chart":"3bet","hero":"3bet","callers":0,"n":5,"net":-4.0},{"id":"HD3110863346","d":"10/28","op":"CO","cards":["Jd","Tc"],"lab":"JTo","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":40.4,"chart":"call","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110853948","d":"10/28","op":"CO","cards":["Ts","5h"],"lab":"T5o","to":3.0,"pot":7.0,"call":2.0,"need":22.2,"eq":31.3,"chart":"fold","hero":"fold","callers":1,"n":6,"net":-1.0},{"id":"HD3110935913","d":"10/28","op":"CO","cards":["8c","Ts"],"lab":"T8o","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":34.0,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3110863891","d":"10/28","op":"UTG","cards":["As","Th"],"lab":"ATo","to":3.0,"pot":4.5,"call":2.0,"need":30.8,"eq":39.6,"chart":"call","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110909456","d":"10/28","op":"SB","cards":["9d","Jh"],"lab":"J9o","to":3.0,"pot":4.0,"call":2.0,"need":33.3,"eq":36.6,"chart":"fold","hero":"fold","callers":0,"n":3,"net":-1.0},{"id":"HD3110882121","d":"10/28","op":"BTN","cards":["4h","5s"],"lab":"54o","to":4.0,"pot":5.5,"call":3.0,"need":35.3,"eq":34.8,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3110864256","d":"10/28","op":"BTN","cards":["2h","Jd"],"lab":"J2o","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":35.3,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3110910074","d":"10/28","op":"UTG","cards":["6s","Th"],"lab":"T6o","to":2.5,"pot":6.0,"call":1.5,"need":20.0,"eq":28.8,"chart":"fold","hero":"fold","callers":1,"n":6,"net":-1.0},{"id":"HD3110864583","d":"10/28","op":"CO","cards":["5c","6s"],"lab":"65o","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":30.6,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110873087","d":"10/28","op":"CO","cards":["Qc","6d"],"lab":"Q6o","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":35.4,"chart":"fold","hero":"fold","callers":0,"n":4,"net":-1.0},{"id":"HD3110855202","d":"10/28","op":"CO","cards":["4s","Td"],"lab":"T4o","to":3.0,"pot":4.5,"call":2.0,"need":30.8,"eq":32.0,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3110865086","d":"10/28","op":"CO","cards":["5h","8d"],"lab":"85o","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":29.9,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110910647","d":"10/28","op":"HJ","cards":["6c","8s"],"lab":"86o","to":3.0,"pot":10.0,"call":2.0,"need":16.7,"eq":33.1,"chart":"fold","hero":"fold","callers":2,"n":6,"net":-1.0},{"id":"HD3110883228","d":"10/28","op":"BTN","cards":["4s","7c"],"lab":"74o","to":3.0,"pot":4.5,"call":2.0,"need":30.8,"eq":32.5,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3110937378","d":"10/28","op":"BTN","cards":["2s","2h"],"lab":"22","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":46.0,"chart":"call","hero":"call","callers":0,"n":5,"net":3.0},{"id":"HD3110873632","d":"10/28","op":"CO","cards":["7h","5s"],"lab":"75o","to":2.0,"pot":5.0,"call":1.0,"need":16.7,"eq":32.3,"chart":"fold","hero":"fold","callers":1,"n":4,"net":-1.0},{"id":"HD3112260556","d":"10/29 晚","op":"SB","cards":["6h","7c"],"lab":"76o","to":3.0,"pot":4.0,"call":2.0,"need":33.3,"eq":31.4,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3112295971","d":"10/29 晚","op":"CO","cards":["2h","4c"],"lab":"42o","to":3.0,"pot":4.5,"call":2.0,"need":30.8,"eq":26.2,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112260850","d":"10/29 晚","op":"CO","cards":["8d","5h"],"lab":"85o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":29.9,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112241857","d":"10/29 晚","op":"CO","cards":["7h","2h"],"lab":"72s","to":2.0,"pot":4.5,"call":1.0,"need":18.2,"eq":34.8,"chart":"fold","hero":"fold","callers":1,"n":5,"net":-1.0},{"id":"HD3112296629","d":"10/29 晚","op":"SB","cards":["3d","4c"],"lab":"43o","to":2.0,"pot":3.0,"call":1.0,"need":25.0,"eq":34.2,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112261213","d":"10/29 晚","op":"SB","cards":["8d","4h"],"lab":"84o","to":3.0,"pot":4.0,"call":2.0,"need":33.3,"eq":32.8,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3112261606","d":"10/29 晚","op":"CO","cards":["Th","5c"],"lab":"T5o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":31.3,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3112297096","d":"10/29 晚","op":"SB","cards":["7d","3d"],"lab":"73s","to":5.0,"pot":7.0,"call":4.0,"need":36.4,"eq":34.0,"chart":"fold","hero":"fold","callers":1,"n":6,"net":-1.0},{"id":"HD3112262202","d":"10/29 晚","op":"SB","cards":["7d","2c"],"lab":"72o","to":3.0,"pot":4.0,"call":2.0,"need":33.3,"eq":26.6,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3112297836","d":"10/29 晚","op":"BTN","cards":["9h","Tc"],"lab":"T9o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":42.5,"chart":"call","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112262675","d":"10/29 晚","op":"BTN","cards":["Qh","3h"],"lab":"Q3s","to":4.0,"pot":5.5,"call":3.0,"need":35.3,"eq":38.4,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112461680","d":"10/29 晚","op":"BTN","cards":["Js","8h"],"lab":"J8o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":40.2,"chart":"call","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3112497339","d":"10/29 晚","op":"HJ","cards":["2d","3c"],"lab":"32o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":29.9,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112461839","d":"10/29 晚","op":"BTN","cards":["4s","Jd"],"lab":"J4o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":34.9,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3112497561","d":"10/29 晚","op":"UTG","cards":["Jd","Qd"],"lab":"QJs","to":2.5,"pot":6.5,"call":1.5,"need":18.8,"eq":41.1,"chart":"call","hero":"call","callers":1,"n":6,"net":-2.5},{"id":"HD3112462064","d":"10/29 晚","op":"SB","cards":["8c","Ad"],"lab":"A8o","to":2.5,"pot":3.5,"call":1.5,"need":30.0,"eq":48.3,"chart":"call","hero":"call","callers":0,"n":5,"net":4.5},{"id":"HD3112479949","d":"10/29 晚","op":"BTN","cards":["2d","2c"],"lab":"22","to":3.0,"pot":7.0,"call":2.0,"need":22.2,"eq":46.0,"chart":"call","hero":"call","callers":1,"n":6,"net":-3.0},{"id":"HD3112462429","d":"10/29 晚","op":"CO","cards":["Qs","9s"],"lab":"Q9s","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":39.4,"chart":"call","hero":"call","callers":0,"n":5,"net":-2.0},{"id":"HD3112470820","d":"10/29 晚","op":"HJ","cards":["8h","Js"],"lab":"J8o","to":3.5,"pot":5.0,"call":2.5,"need":33.3,"eq":32.5,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112498159","d":"10/29 晚","op":"SB","cards":["5d","2h"],"lab":"52o","to":2.5,"pot":3.5,"call":1.5,"need":30.0,"eq":31.2,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3112480533","d":"10/29 晚","op":"BTN","cards":["Qh","9h"],"lab":"Q9s","to":3.0,"pot":4.5,"call":2.0,"need":30.8,"eq":48.8,"chart":"call","hero":"call","callers":0,"n":6,"net":9.0},{"id":"HD3112498300","d":"10/29 晚","op":"UTG","cards":["7d","4h"],"lab":"74o","to":2.5,"pot":6.5,"call":1.5,"need":18.8,"eq":27.4,"chart":"fold","hero":"fold","callers":1,"n":6,"net":-1.0},{"id":"HD3112471224","d":"10/29 晚","op":"CO","cards":["7d","Th"],"lab":"T7o","to":8.0,"pot":9.5,"call":7.0,"need":42.4,"eq":35.1,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112462971","d":"10/29 晚","op":"HJ","cards":["Js","6h"],"lab":"J6o","to":3.0,"pot":4.5,"call":2.0,"need":30.8,"eq":35.0,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3112498603","d":"10/29 晚","op":"BTN","cards":["As","2d"],"lab":"A2o","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":47.7,"chart":"call","hero":"call","callers":0,"n":6,"net":5.5},{"id":"HD3112463182","d":"10/29 晚","op":"CO","cards":["Ts","8c"],"lab":"T8o","to":2.5,"pot":6.0,"call":1.5,"need":20.0,"eq":34.0,"chart":"fold","hero":"fold","callers":1,"n":6,"net":-1.0},{"id":"HD3112463340","d":"10/29 晚","op":"SB","cards":["4c","9d"],"lab":"94o","to":3.0,"pot":4.0,"call":2.0,"need":33.3,"eq":31.4,"chart":"fold","hero":"fold","callers":0,"n":4,"net":-1.0},{"id":"HD3112499223","d":"10/29 晚","op":"HJ","cards":["As","Th"],"lab":"ATo","to":4.5,"pot":7.0,"call":3.5,"need":33.3,"eq":42.8,"chart":"call","hero":"fold","callers":1,"n":6,"net":-1.0},{"id":"HD3112499299","d":"10/29 晚","op":"SB","cards":["Qc","7h"],"lab":"Q7o","to":2.0,"pot":3.0,"call":1.0,"need":25.0,"eq":39.1,"chart":"call","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112463939","d":"10/29 晚","op":"BTN","cards":["4s","7c"],"lab":"74o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":32.5,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3112482055","d":"10/29 晚","op":"HJ","cards":["5d","6h"],"lab":"65o","to":3.0,"pot":7.0,"call":2.0,"need":22.2,"eq":32.0,"chart":"fold","hero":"fold","callers":1,"n":5,"net":-1.0},{"id":"HD3112464344","d":"10/29 晚","op":"BTN","cards":["Kd","5h"],"lab":"K5o","to":4.0,"pot":7.5,"call":3.0,"need":28.6,"eq":39.5,"chart":"fold","hero":"fold","callers":2,"n":6,"net":-1.0},{"id":"HD3112464478","d":"10/29 晚","op":"CO","cards":["8s","9c"],"lab":"98o","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":39.4,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112499958","d":"10/29 晚","op":"HJ","cards":["7s","6h"],"lab":"76o","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":33.1,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112464782","d":"10/29 晚","op":"CO","cards":["2c","4d"],"lab":"42o","to":3.0,"pot":4.5,"call":2.0,"need":30.8,"eq":26.2,"chart":"fold","hero":"fold","callers":0,"n":5,"net":-1.0},{"id":"HD3112500262","d":"10/29 晚","op":"CO","cards":["8h","9s"],"lab":"98o","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":39.4,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112464969","d":"10/29 晚","op":"SB","cards":["Jd","3d"],"lab":"J3s","to":2.0,"pot":3.0,"call":1.0,"need":25.0,"eq":37.0,"chart":"call","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112500363","d":"10/29 晚","op":"CO","cards":["Tc","8h"],"lab":"T8o","to":2.5,"pot":6.5,"call":1.5,"need":18.8,"eq":34.0,"chart":"fold","hero":"fold","callers":1,"n":6,"net":-1.0},{"id":"HD3112473049","d":"10/29 晚","op":"HJ","cards":["9c","9h"],"lab":"99","to":3.0,"pot":10.5,"call":2.0,"need":16.0,"eq":58.4,"chart":"call","hero":"call","callers":2,"n":6,"net":-3.0},{"id":"HD3112465112","d":"10/29 晚","op":"HJ","cards":["2d","9c"],"lab":"92o","to":2.5,"pot":6.5,"call":1.5,"need":18.8,"eq":28.7,"chart":"fold","hero":"fold","callers":1,"n":5,"net":-1.0},{"id":"HD3112465304","d":"10/29 晚","op":"SB","cards":["Js","2c"],"lab":"J2o","to":2.5,"pot":3.5,"call":1.5,"need":30.0,"eq":31.9,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112535821","d":"10/29 晚","op":"HJ","cards":["6c","Ts"],"lab":"T6o","to":2.0,"pot":5.0,"call":1.0,"need":16.7,"eq":32.5,"chart":"fold","hero":"fold","callers":1,"n":6,"net":-1.0},{"id":"HD3112535835","d":"10/29 晚","op":"UTG","cards":["As","3h"],"lab":"A3o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":35.0,"chart":"fold","hero":"call","callers":0,"n":6,"net":-2.5},{"id":"HD3112473711","d":"10/29 晚","op":"BTN","cards":["7d","8c"],"lab":"87o","to":4.5,"pot":7.0,"call":3.5,"need":33.3,"eq":36.4,"chart":"call","hero":"fold","callers":1,"n":6,"net":-1.0},{"id":"HD3112501100","d":"10/29 晚","op":"CO","cards":["Ts","Kh"],"lab":"KTo","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":46.6,"chart":"call","hero":"call","callers":0,"n":6,"net":3.0},{"id":"HD3112536313","d":"10/29 晚","op":"BTN","cards":["8c","6s"],"lab":"86o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":37.1,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112536520","d":"10/29 晚","op":"CO","cards":["Jd","7s"],"lab":"J7o","to":3.0,"pot":7.5,"call":2.0,"need":21.1,"eq":34.9,"chart":"fold","hero":"fold","callers":1,"n":6,"net":-1.0},{"id":"HD3112501695","d":"10/29 晚","op":"UTG","cards":["Ts","9h"],"lab":"T9o","to":2.5,"pot":6.5,"call":1.5,"need":18.8,"eq":29.8,"chart":"fold","hero":"fold","callers":1,"n":6,"net":-1.0},{"id":"HD3112501816","d":"10/29 晚","op":"HJ","cards":["2s","Js"],"lab":"J2s","to":2.0,"pot":3.5,"call":1.0,"need":22.2,"eq":33.2,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112536825","d":"10/29 晚","op":"CO","cards":["8c","4c"],"lab":"84s","to":4.0,"pot":6.5,"call":3.0,"need":31.6,"eq":37.0,"chart":"fold","hero":"fold","callers":1,"n":6,"net":-1.0},{"id":"HD3112537323","d":"10/29 晚","op":"SB","cards":["Qd","4s"],"lab":"Q4o","to":2.0,"pot":3.0,"call":1.0,"need":25.0,"eq":37.7,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112474983","d":"10/29 晚","op":"HJ","cards":["4s","9d"],"lab":"94o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":27.1,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112502352","d":"10/29 晚","op":"CO","cards":["Ks","Ad"],"lab":"AKo","to":2.0,"pot":7.0,"call":1.0,"need":12.5,"eq":56.5,"chart":"3bet","hero":"3bet","callers":2,"n":5,"net":27.5},{"id":"HD3112537453","d":"10/29 晚","op":"SB","cards":["Jd","Ts"],"lab":"JTo","to":2.0,"pot":3.0,"call":1.0,"need":25.0,"eq":42.6,"chart":"call","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112502775","d":"10/29 晚","op":"SB","cards":["2c","Th"],"lab":"T2o","to":2.0,"pot":3.0,"call":1.0,"need":25.0,"eq":32.9,"chart":"fold","hero":"fold","callers":0,"n":4,"net":-1.0},{"id":"HD3112502951","d":"10/29 晚","op":"BTN","cards":["Kc","7s"],"lab":"K7o","to":2.0,"pot":5.0,"call":1.0,"need":16.7,"eq":41.2,"chart":"fold","hero":"fold","callers":1,"n":6,"net":-1.0},{"id":"HD3112538024","d":"10/29 晚","op":"CO","cards":["6s","Jd"],"lab":"J6o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":34.7,"chart":"fold","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112503075","d":"10/29 晚","op":"CO","cards":["6c","Ad"],"lab":"A6o","to":2.5,"pot":4.0,"call":1.5,"need":27.3,"eq":44.5,"chart":"call","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112538141","d":"10/29 晚","op":"BTN","cards":["6h","6d"],"lab":"66","to":2.5,"pot":6.0,"call":1.5,"need":20.0,"eq":55.2,"chart":"call","hero":"call","callers":1,"n":6,"net":-5.0},{"id":"HD3112538365","d":"10/29 晚","op":"SB","cards":["As","9h"],"lab":"A9o","to":2.0,"pot":4.0,"call":1.0,"need":20.0,"eq":52.2,"chart":"call","hero":"call","callers":1,"n":6,"net":-4.0},{"id":"HD3112576064","d":"10/29 晚","op":"SB","cards":["Qc","Qs"],"lab":"QQ","to":2.5,"pot":3.5,"call":1.5,"need":30.0,"eq":72.2,"chart":"3bet","hero":"3bet","callers":0,"n":6,"net":2.5},{"id":"HD3112503556","d":"10/29 晚","op":"SB","cards":["Kd","4c"],"lab":"K4o","to":2.0,"pot":3.0,"call":1.0,"need":25.0,"eq":40.7,"chart":"call","hero":"fold","callers":0,"n":6,"net":-1.0},{"id":"HD3112538687","d":"10/29 晚","op":"UTG","cards":["Td","3c"],"lab":"T3o","to":2.5,"pot":6.5,"call":1.5,"need":18.8,"eq":28.6,"chart":"fold","hero":"fold","callers":1,"n":6,"net":-1.0},{"id":"HD3112538784","d":"10/29 晚","op":"BTN","cards":["4s","5d"],"lab":"54o","to":4.0,"pot":6.5,"call":3.0,"need":31.6,"eq":34.8,"chart":"fold","hero":"fold","callers":1,"n":6,"net":-1.0}];
+window.__BBT={"UTG":{"n":10,"d":2,"c":2,"t":0,"should":2,"missed":1,"chart":27.8},"HJ":{"n":17,"d":1,"c":1,"t":0,"should":3,"missed":2,"chart":30.0},"CO":{"n":31,"d":5,"c":3,"t":2,"should":11,"missed":7,"chart":38.7},"BTN":{"n":23,"d":5,"c":5,"t":0,"should":14,"missed":9,"chart":47.2},"SB":{"n":25,"d":6,"c":4,"t":2,"should":11,"missed":5,"chart":55.7}};
+// ---- v6: UI state store, 翻前表, BB 防守分位置練習, router shell ----
 (function () {
-  var h = window.h, useState = window.GC.useState;
-  var TABS = [["P0", "我的弱點"], ["P5", "錯題本"], ["P1", "節點訓練"], ["P2", "課程・河牌"], ["P3", "練習・數據"], ["P4", "BTN 開牌"]];
-  var saved = null;
-  try { saved = window.localStorage.getItem("pokerOffline.tab2"); } catch (e) {}
-  var setTabRef = null;
-  window.__goTab = function (t) { if (setTabRef) setTabRef(t); window.scrollTo(0, 0); };
-  function Shell() {
-    var st = useState(saved && window.__PAGES[saved] ? saved : "P0");
-    var tab = st[0];
-    setTabRef = function (t) { try { window.localStorage.setItem("pokerOffline.tab2", t); } catch (e) {} st[1](t); };
-    var Cur = window.__PAGES[tab];
-    var vs = useState(0);
-    window.MB.sub(function () { vs[1](function (v) { return v + 1; }); });
-    var dueN = window.MB.dueToday().length;
-    return h("div", null,
-      h("nav", { className: "top" }, TABS.map(function (t) {
-        return h("button", { key: t[0], className: "topb" + (t[0] === tab ? " on" : ""), onClick: function () { window.__goTab(t[0]); } }, t[1], t[0] === "P5" && dueN ? h("span", { className: "tbn" }, String(dueN)) : null);
-      })),
-      h(window.MB.DaySum, null),
-      h("main", null, h(Cur, { key: tab })),
-      h("footer", null, "離線版（單一 HTML 檔，不需登入、不需網路）。第一頁是根據你 394 手手牌整理的弱點白話說明；「錯題本」收集你在各練習答錯的題目（存在這台裝置）；其餘頁與撲克訓練中心相同，資料：HHDealer GG 6-max NL2/NL5。研究模擬，非投資建議。"));
+  var KEY = "pokerUI.v1", st = {};
+  try { st = JSON.parse(window.localStorage.getItem(KEY) || "{}") || {}; } catch (e) { st = {}; }
+  var tm = null;
+  function flush() { try { window.localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
+  window.UIS = {
+    get: function (k, d) { return Object.prototype.hasOwnProperty.call(st, k) ? JSON.parse(JSON.stringify(st[k])) : d; },
+    set: function (k, v) { if (v === undefined || v === null) delete st[k]; else st[k] = v; flush(); },
+    setLazy: function (k, v) { st[k] = v; clearTimeout(tm); tm = setTimeout(flush, 250); },
+    flush: flush
+  };
+})();
+
+(function () {
+  var h = window.h, GC = window.GC, useState = GC.useState, useEffect = GC.useEffect, MB = window.MB, UIS = window.UIS;
+  var R = "23456789TJQKA";
+  function ri(c) { return R.indexOf(c); }
+  function expand(t) {
+    t = t.trim(); var m, o = [], i, a, b;
+    if ((m = /^([2-9TJQKA])\1\+$/.exec(t))) { for (i = ri(m[1]); i < 13; i++) o.push(R[i] + R[i]); return o; }
+    if ((m = /^([2-9TJQKA])\1$/.exec(t))) return [t];
+    if ((m = /^([2-9TJQKA])\1-([2-9TJQKA])\2$/.exec(t))) { a = Math.min(ri(m[1]), ri(m[2])); b = Math.max(ri(m[1]), ri(m[2])); for (i = a; i <= b; i++) o.push(R[i] + R[i]); return o; }
+    if ((m = /^([2-9TJQKA])([2-9TJQKA])([so])\+$/.exec(t))) { for (i = ri(m[2]); i < ri(m[1]); i++) o.push(m[1] + R[i] + m[3]); return o; }
+    if ((m = /^([2-9TJQKA])([2-9TJQKA])([so])$/.exec(t))) return [t];
+    if ((m = /^([2-9TJQKA])([2-9TJQKA])([so])-([2-9TJQKA])([2-9TJQKA])([so])$/.exec(t))) { a = Math.min(ri(m[2]), ri(m[5])); b = Math.max(ri(m[2]), ri(m[5])); for (i = a; i <= b; i++) o.push(m[1] + R[i] + m[3]); return o; }
+    return [];
   }
+  function P(s) { var r = {}; s.split(",").forEach(function (t) { expand(t).forEach(function (x) { r[x] = 1; }); }); return r; }
+  function arr(a) { var r = {}; a.forEach(function (x) { r[x] = 1; }); return r; }
+  var ALL = []; for (var i = 12; i >= 0; i--) for (var j = 12; j >= 0; j--) ALL.push(i === j ? R[i] + R[i] : i > j ? R[i] + R[j] + "s" : R[j] + R[i] + "o");
+  function cmb(l) { return l.length === 2 ? 6 : l[2] === "s" ? 4 : 12; }
+  function pct(set) { var n = 0; for (var k in set) n += cmb(k); return n / 1326 * 100; }
+  var POS = ["UTG", "HJ", "CO", "BTN", "SB"];
+  var RFI_STR = { UTG: "66+, ATs+, A5s-A4s, KTs+, QTs+, JTs, T9s, AJo+, KQo", HJ: "44+, A9s+, A5s-A2s, K9s+, QTs+, J9s+, T9s, 98s, 87s, ATo+, KJo+",
+    CO: "22+, A2s+, K7s+, Q8s+, J8s+, T8s+, 97s+, 87s, 76s, 65s, 54s, A8o+, KTo+, QTo+, JTo",
+    BTN: "22+, A2s+, K2s+, Q5s+, J7s+, T7s+, 96s+, 86s+, 75s+, 64s+, 54s, A4o+, K8o+, Q9o+, J9o+, T8o+, 98o",
+    SB: "22+, A2s+, K4s+, Q7s+, J7s+, T7s+, 96s+, 86s+, 75s+, 65s, 54s, A5o+, K9o+, Q9o+, J9o+, T9o" };
+  var CALL_STR = { HJ: "88-JJ, AJs-AQs, KQs", CO: "77-JJ, ATs-AQs, KQs, KJs, QJs, JTs, AQo", BTN: "55-TT, ATs-AJs, KTs+, QTs+, JTs, T9s, 98s, 87s, AQo, KQo", SB: "77-TT, AJs, KQs, AQo" };
+  var LEAK_STR = {
+    "CO|HJ": ["TT+, AJs+, KQs, A5s-A4s, AQo+", "66-99, ATs, KJs, QJs, JTs"],
+    "BTN|HJ": ["JJ+, AQs+, KQs, A5s, AKo", "22-TT, ATs-AJs, KTs-KJs, QTs-QJs, JTs, T9s, 98s, AQo"],
+    "BTN|CO": ["TT+, AJs+, KQs, A5s-A4s, AQo+", "22-99, ATs, KTs-KJs, QTs-QJs, J9s-JTs, T9s, 98s, 87s, 76s, AJo, KQo"],
+    "SB|UTG": ["TT+, AQs+, AKo", ""], "SB|HJ": ["99+, AJs+, KQs, A5s, AQo+", ""], "SB|CO": ["77+, ATs+, A5s, KJs+, QJs, AJo+, KQo", ""],
+    "SB|BTN": ["55+, A8s+, A5s-A4s, KTs+, QTs+, JTs, T9s, ATo+, KJo+", ""] };
+  var RFI = {}; POS.forEach(function (p) { RFI[p] = P(RFI_STR[p]); });
+  var TIGHT3 = P("QQ+, AKs, AKo"), WIDE3 = P("JJ+, AQs+, AKo");
+  function facing(hero, op) {
+    if (hero === "BB") { var c = window.__BBC[op]; return { three: arr(c.three), call: arr(c.call) }; }
+    var L = LEAK_STR[hero + "|" + op];
+    if (L) { var t3 = P(L[0]), cl = L[1] ? P(L[1]) : {}; for (var k in t3) delete cl[k]; return { three: t3, call: cl }; }
+    var late = hero === "BTN" || hero === "SB", early = op === "UTG" || op === "HJ";
+    var three = late && !early ? WIDE3 : TIGHT3, call = P(CALL_STR[hero]), x;
+    if (late && early) for (x in WIDE3) if (!TIGHT3[x]) call[x] = 1;
+    if (early) for (x in call) if (!RFI[op][x]) delete call[x];
+    for (x in three) delete call[x];
+    return { three: three, call: call };
+  }
+  var BBTGT = { UTG: "25–30%", HJ: "30%", CO: "35–40%", BTN: "40–50%", SB: "50–60%" };
+  window.PF = { facing: facing, RFI: RFI, pct: pct, ALL: ALL, BBTGT: BBTGT };
+
+  // ---------- 13×13 grid ----------
+  var ACT = { raise: "開池加注", call: "跟注", "3bet": "3-bet", fold: "棄牌" };
+  function Grid(p) {
+    var ss = useState(null), sel = ss[0], setSel = ss[1];
+    var cells = ALL.map(function (l) {
+      var a = p.of(l);
+      return h("button", { key: l, className: "pfc a-" + a + (sel === l ? " pfon" : ""), onClick: function () { setSel(l); } }, l);
+    });
+    return h("div", null, h("div", { className: "pfg" }, cells),
+      h("div", { className: "pfsel" }, sel ? sel + "：" + ACT[p.of(sel)] + (p.extra ? p.extra(sel) : "") : "點任一格看這手牌怎麼打。"));
+  }
+  function Legend(p) {
+    return h("div", { className: "pflg" }, p.items.map(function (k) { return h("span", { key: k }, h("i", { className: "pfsw a-" + k }), ACT[k]); }));
+  }
+  function BtnChart() {
+    useEffect(function () { var e = document.getElementById("pfbtn"); if (e && !e.firstChild) e.innerHTML = window.__BTN_HTML || ""; }, []);
+    return h("div", { id: "pfbtn" });
+  }
+
+  function PFPage() {
+    var ss = useState(function () { return UIS.get("pf.sel", { m: "rfi", hero: "CO", op: "UTG" }); }), s = ss[0];
+    function set(o) { var n = Object.assign({}, s, o); if (n.m === "vs") { var ops = POS.slice(0, ["HJ", "CO", "BTN", "SB", "BB"].indexOf(n.hero) + 1); if (ops.indexOf(n.op) < 0) n.op = ops[ops.length - 1]; } UIS.set("pf.sel", n); ss[1](n); }
+    var heroes = s.m === "rfi" ? POS : ["HJ", "CO", "BTN", "SB", "BB"];
+    var hero = heroes.indexOf(s.hero) >= 0 ? s.hero : heroes[0];
+    var ops = s.m === "vs" ? POS.slice(0, ["HJ", "CO", "BTN", "SB", "BB"].indexOf(hero) + 1) : [];
+    var op = ops.indexOf(s.op) >= 0 ? s.op : ops[ops.length - 1];
+    function chips(list, cur, key, lab) { return h("div", { className: "chips" }, list.map(function (x) { var o = {}; o[key] = x; return h("button", { key: x, className: "chip" + (x === cur ? " on" : ""), onClick: function () { set(o); } }, lab ? lab(x) : x); })); }
+    var body;
+    if (s.m === "rfi" && hero === "BTN") {
+      body = h("div", null, h("div", { className: "cap" }, "BTN 開池用 400 萬手數據做的圖（顏色和其他表不同：深綠／綠開，黃色看盲注，灰棄）。"), h(BtnChart, null));
+    } else if (s.m === "rfi") {
+      var set1 = RFI[hero];
+      body = h("div", null,
+        h("div", { className: "pfinfo" }, hero + " 前面全部棄牌：開約 " + pct(set1).toFixed(0) + "% 的牌，加注到 " + (hero === "SB" ? "3bb" : "2.5bb") + "，其餘棄牌。"),
+        h(Legend, { items: ["raise", "fold"] }),
+        h(Grid, { key: "r" + hero, of: function (l) { return set1[l] ? "raise" : "fold"; } }));
+    } else {
+      var f = facing(hero, op), t3 = pct(f.three), cl = pct(f.call), bb = hero === "BB", eq = bb ? window.__BBC[op].eq : null;
+      body = h("div", null,
+        h("div", { className: "pfinfo" }, op + " 開池、你在 " + hero + "：3-bet 約 " + t3.toFixed(0) + "%，跟注約 " + cl.toFixed(0) + "%，其餘棄牌" + (bb ? "。合計防守 " + (t3 + cl).toFixed(0) + "%（目標 " + BBTGT[op] + "）。" : "。") + (hero === "SB" ? "SB 沒位置，只 3-bet 或棄牌，不平跟。" : "")),
+        h(Legend, { items: ["3bet", "call", "fold"] }),
+        h(Grid, { key: "v" + hero + op, of: function (l) { return f.three[l] ? "3bet" : f.call[l] ? "call" : "fold"; }, extra: bb ? function (l) { return "（對 " + op + " 開池範圍的勝率約 " + Math.round(eq[l] * 100) + "%）"; } : null }),
+        bb ? h("div", { className: "cap" }, "BB 這 5 張表：把 169 種手牌依「對該位置開池範圍的勝率」排序（電腦模擬；同花略加分，因為比較好打），取到目標防守比例；最強的一小群和 A5s 這類牌改成 3-bet。對 BTN 那張沿用原本練習用的表。") : null,
+        bb ? h("button", { className: "linkc", onClick: function () { window.__go("bb-" + op.toLowerCase()); } }, "練習：BB 對 " + op + "（含你的真實手牌）") : null);
+    }
+    return h("div", null,
+      h("div", { className: "chips" }, [["rfi", "前面都棄牌（開池）"], ["vs", "面對一個開池"]].map(function (x) { return h("button", { key: x[0], className: "chip" + (s.m === x[0] ? " on" : ""), onClick: function () { set({ m: x[0] }); } }, x[1]); })),
+      h("div", { className: "pfrow" }, h("span", { className: "pflb" }, "你的位置"), chips(heroes, hero, "hero")),
+      s.m === "vs" ? h("div", { className: "pfrow" }, h("span", { className: "pflb" }, "誰開池"), chips(ops, op, "op")) : null,
+      h("section", { className: "sec" }, body),
+      h("details", { className: "sec dt" }, h("summary", null, "怎麼看這張表"),
+        h("p", { className: "txt" }, "左上到右下的斜線是對子（AA…22）。斜線右上方是同花（s），左下方是不同花（o）。例如第一列從左到右是 AA、AKs、AQs…；第一欄從上到下是 AA、AKo、AQo…")),
+      h("details", { className: "sec dt" }, h("summary", null, "加注尺寸"),
+        h("ul", { className: "ul" }, h("li", null, "開池：2.5bb（SB 開 3bb）。"), h("li", null, "前面有人 limp：3bb＋每個 limper 再加 1bb。"), h("li", null, "3-bet：有位置約 3 倍、沒位置（SB、BB）約 4 倍。"), h("li", null, "SB 面對開池：只 3-bet 或棄牌。"))),
+      h("details", { className: "sec dt" }, h("summary", null, "範圍說明與限制"),
+        h("p", { className: "txt" }, "這些是簡化的學習用範圍表，不是 solver 輸出，假設 100bb、對手開 2.5bb。非 BB 的面對開池表沿用原本 NL5 訓練器；實戰要依對手調整。"),
+        h("p", { className: "txt" }, "目前沒有「被 3-bet 之後」的表（各版本都沒有做過）；BTN 被 3-bet 的處理寫在 BTN 開池圖下方。本頁只供學習，不保證獲利。")));
+  }
+
+  // ---------- BB 防守：依開池位置 ----------
+  var BBR = window.__BBR || [];
+  function thr(op, suited) { var c = window.__BBC[op], m = 1; c.call.forEach(function (l) { if ((l[2] === "s") === suited && c.eq[l] < m) m = c.eq[l]; }); return m * 100; }
+  function chartAct(op, l) { var c = window.__BBC[op]; return c.three.indexOf(l) >= 0 ? "3bet" : c.call.indexOf(l) >= 0 ? "call" : "fold"; }
+  var ALAB = { fold: "棄牌", call: "跟注", "3bet": "3-bet" };
+  function opNote(op) {
+    var r = op === "BTN" ? 45 : Math.round(pct(RFI[op]));
+    if (op === "UTG") return "UTG 開池範圍最緊（約 " + r + "%），所以 BB 守得最少（目標 " + BBTGT[op] + "）。";
+    if (op === "HJ") return "HJ 開約 " + r + "% 的牌，還是偏強，BB 守 " + BBTGT[op] + "。";
+    if (op === "CO") return "CO 開約 " + r + "% 的牌，比前面寬很多，BB 要守 " + BBTGT[op] + "。";
+    if (op === "BTN") return "BTN 開約 45% 的牌（很多是偷盲），BB 要守 " + BBTGT[op] + "。";
+    return "SB 開池範圍很寬，而且翻牌後 SB 先動、你有位置，BB 要守得最寬（" + BBTGT[op] + "）。";
+  }
+  function bbQ(op, x, real) {
+    var l = x.lab, a = chartAct(op, l), eq = window.__BBC[op].eq[l] * 100, need = x.need, mini = false;
+    if (a === "fold" && x.to <= 2.05 && eq - need >= 15) { a = "call"; mini = true; }
+    var why = mini ? l + " 在「BB 對 " + op + "」表上（假設開 2.5bb）是棄牌，但這次對手只加到 2bb（最小加注），所以改成【跟注】。" : l + " 在「BB 對 " + op + "」表上是【" + ALAB[a] + "】。";
+    why += "跟注要再付 " + x.call + "bb，跟完底池是 " + (Math.round((x.pot + x.call) * 10) / 10) + "bb，只要贏 " + need.toFixed(0) + "% 就不虧；" + l + " 對 " + op + " 開池範圍的勝率約 " + eq.toFixed(0) + "%（電腦模擬到河牌）。";
+    if (a === "3bet") why += (/^A[2-5]s$/.test(l) ? "這手不是最強，但有 A 擋住對手的大牌，被跟注時還能做成同花／順子，是好用的 3-bet 詐唬牌。" : "牌夠強，3-bet 到約 " + (Math.round(x.to * 4 * 2) / 2) + "bb（沒位置打 4 倍）拿價值，比只跟注賺得多。") + "跟注也不算大錯，但棄牌是大錯。";
+    else if (mini) why += "勝率比門檻高 15% 以上；對最小加注，BB 要守得比表更寬，這種牌不能棄。";
+    else if (a === "call") why += "勝率高於門檻；BB 沒位置、實際拿不到全部勝率，表上已經扣掉這個折扣，所以照表跟注。棄牌等於白白送掉已經放進去的 1bb。";
+    else why += eq < need ? "勝率連門檻都不到，棄牌。" : (eq < thr(op, l[2] === "s") ? "勝率只比門檻高一點；BB 沒位置，實際只拿得到一部分勝率，扣掉後不夠，棄牌。" : "勝率不差，但這類牌（小踢腳、不同花）常被對手更好的同類牌壓制、又沒位置，表上排在防守範圍外，棄牌。");
+    why += opNote(op);
+    if (real) {
+      why += "你當時：" + ALAB[x.hero] + (x.hero === a ? "（正確）。" : "（表上是" + ALAB[a] + "）。");
+      if (x.callers) why += "這手前面已有 " + x.callers + " 人跟注：底池更大、賠率更好，但多人底池要更重視同花、對子這類能做成大牌的手；答案仍照單挑表。";
+    }
+    var ctx = real ? x.d + " 實戰（" + x.id + "）：" + x.n + " 人桌，" + op + " 加注到 " + x.to + "bb" + (x.callers ? "，" + x.callers + " 人跟注" : "，其他人都棄牌") + "，輪到你（BB）。"
+      : "6 人桌，" + op + " 加注到 " + x.to + "bb，其他人都棄牌，輪到你（BB，100bb）。";
+    var qid = real && window.MB.RQMAP["R:" + x.id] ? "R:" + x.id : "D:" + op + ":" + (real ? x.id : l);
+    return { id: qid, cat: "L1", tag: "BB 防守｜對 " + op + (real ? "｜你的真實手牌" : ""), ctx: ctx, q: "棄牌、跟注，還是 3-bet？", cards: x.cards,
+      opts: [{ key: "fold", label: "棄牌" }, { key: "call", label: "跟注" }, { key: "3bet", label: "3-bet" }], ans: a, why: why };
+  }
+  function cardsOf(l) { var S = "shdc", a = Math.floor(Math.random() * 4), b = (a + 1 + Math.floor(Math.random() * 3)) % 4; return [l[0] + S[a], l[1] + S[l[2] === "s" ? a : b]]; }
+  function genBB(op) {
+    var c = window.__BBC[op], sc = function (l) { return c.eq[l] + (l[2] === "s" ? 0.03 : 0); };
+    var calls = c.call.slice().sort(function (x, y) { return sc(x) - sc(y); }).slice(0, 18);
+    var folds = ALL.filter(function (l) { return chartAct(op, l) === "fold"; }).sort(function (x, y) { return sc(y) - sc(x); }).slice(0, 18);
+    var r = Math.random(), pool = r < 0.35 ? calls : r < 0.7 ? folds : r < 0.85 ? c.three : ALL;
+    var l = pool[Math.floor(Math.random() * pool.length)], to = op === "SB" ? 3 : 2.5, pot = op === "SB" ? to + 1 : to + 1.5, call = to - 1;
+    return bbQ(op, { lab: l, cards: cardsOf(l), to: to, pot: pot, call: call, need: call / (pot + call) * 100 }, false);
+  }
+  function realList(op) {
+    var xs = BBR.filter(function (x) { return x.op === op; });
+    var ok = function (x) { return bbQ(op, x, true).ans === x.hero; };
+    var bad = xs.filter(function (x) { return !ok(x); }), good = xs.filter(ok);
+    return bad.concat(good);
+  }
+  function BBDrill(p) {
+    var op = p.op, K = "bb." + op, list = realList(op);
+    function ensure(n) {
+      if (n.g) return n;
+      var pk = MB.nextPick("D:" + op + ":", 0.35);
+      if (pk && (pk.kind === "retry" || n.i >= list.length)) return Object.assign({}, n, { g: pk.q, kind: pk.kind });
+      if (n.i >= list.length) return Object.assign({}, n, { g: genBB(op), kind: null });
+      return n;
+    }
+    var ss = useState(function () { var n = UIS.get(K, null) || ensure({ i: 0, ok: 0, bad: 0, n: 0, g: null, kind: null }); UIS.set(K, n); return n; }), s = ss[0];
+    function save(n, fresh) { if (fresh) n = ensure(n); UIS.set(K, n); ss[1](n); }
+    var real = !s.g, q = real ? bbQ(op, list[s.i], true) : s.g, kind = real ? "real" : s.kind;
+    var t = window.__BBT[op];
+    return h("div", null,
+      h("div", { className: "cap" }, "你的數據：BB 面對 " + op + " 開池 " + t.n + " 次，只守 " + t.d + " 次（" + Math.round(t.d / t.n * 100) + "%），目標 " + BBTGT[op] + "。前 " + list.length + " 題是你的真實手牌（當時做錯的排前面），之後照表隨機出題。答錯的題目隔 2 題會再出一次，之後也比較常出現，直到答對 3 次。"),
+      h("div", { className: "mbph" }, h("b", null, (s.i < list.length ? "真實手牌 " + Math.min(s.i + 1, list.length) + " / " + list.length : "隨機題") + "（答對 " + s.ok + "，答錯 " + s.bad + "）"),
+        h("button", { className: "btn", onClick: function () { save({ i: 0, ok: 0, bad: 0, n: s.n + 1, g: null, kind: null }, true); } }, "從頭開始")),
+      h(window.MB.QCard, { key: "bbq" + op + s.n + "_" + s.i, q: q, kind: kind, pk: K + ".qc",
+        onResult: function (ok) { save(Object.assign({}, s, { ok: s.ok + (ok ? 1 : 0), bad: s.bad + (ok ? 0 : 1) })); },
+        onNext: function () { var n = Object.assign({}, s, { n: s.n + 1, g: null, kind: null }); if (real) n.i = s.i + 1; save(n, true); } }),
+      h("button", { className: "linkc", style: { marginTop: 10 }, onClick: function () { UIS.set("pf.sel", { m: "vs", hero: "BB", op: op }); window.__go("preflop"); } }, "看「BB 對 " + op + "」防守表"));
+  }
+  window.PF.BBDrill = BBDrill;
+
+  function BBTable() {
+    var T = window.__BBT, rows = POS.map(function (op) { var t = T[op]; return h("tr", { key: op },
+      h("td", null, h("button", { className: "tlink", onClick: function () { window.__go("bb-" + op.toLowerCase()); } }, op)),
+      h("td", null, t.d + "/" + t.n), h("td", { className: "neg" }, Math.round(t.d / t.n * 100) + "%"), h("td", null, BBTGT[op]),
+      h("td", null, String(t.missed))); });
+    var tot = POS.reduce(function (a, op) { return a + T[op].n; }, 0);
+    return h("div", { className: "bbt" },
+      h("div", { className: "lbl" }, "BB 依開池位置（10/28＋10/29 晚，938 手）"),
+      h("div", { className: "tw" }, h("table", { className: "pt" },
+        h("thead", null, h("tr", null, h("th", null, "誰開池"), h("th", null, "你守"), h("th", null, "守率"), h("th", null, "目標"), h("th", null, "表上該守卻棄"))),
+        h("tbody", null, rows))),
+      h("div", { className: "cap" }, "共 " + tot + " 次：BB 面對一個人開池（前面可能有人跟注）。「你守」＝跟注或 3-bet。每格樣本都很小，只看方向；點位置可直接去練。"));
+  }
+  window.PF.BBTable = BBTable;
+  window.__PAGES = window.__PAGES || {};
+  window.__PAGES.PF = PFPage;
+})();
+
+// ---------- router shell ----------
+(function () {
+  var h = window.h, useState = window.GC.useState, useEffect = window.GC.useEffect, UIS = window.UIS, MB = window.MB;
+  function pg(n, pre) { return function () { if (pre) pre(); return h(window.__PAGES[n], null); }; }
+  function p1(m) { return pg("P1", function () { window.__sub1 = m; }); }
+  function p2(m) { return pg("P2", function () { window.__sub2 = m; }); }
+  function p3(d) { return pg("P3", function () { window.__sub3 = d ? "leak" : "pool"; if (d) window.__drillPreset = d; }); }
+  function bb(op) { return function () { return h(window.PF.BBDrill, { op: op }); }; }
+  // [id, top, label, short name (home screen), render]
+  var S = [
+    ["preflop", "pf", "翻前表", "翻前表", pg("PF")],
+    ["leaks", "leaks", "我的弱點", "我的弱點", pg("P0")],
+    ["bb-utg", "prac", "BB 對 UTG", "BB守UTG", bb("UTG")],
+    ["bb-hj", "prac", "BB 對 HJ", "BB守HJ", bb("HJ")],
+    ["bb-co", "prac", "BB 對 CO", "BB守CO", bb("CO")],
+    ["bb-btn", "prac", "BB 對 BTN", "BB守BTN", bb("BTN")],
+    ["bb-sb", "prac", "BB 對 SB", "BB守SB", bb("SB")],
+    ["btn", "prac", "BTN 開池", "BTN開池", function () { return h("div", null, h("button", { className: "linkc", onClick: function () { UIS.set("pf.sel", { m: "rfi", hero: "BTN", op: "UTG" }); window.__go("preflop"); } }, "看 BTN 開池圖（翻前表）"), h(window.MB.BtnDrill, null)); }],
+    ["open", "prac", "CO／BTN 開或棄", "開池練習", p3("open")],
+    ["3bet", "prac", "面對開池 3-bet", "3bet練習", p3("3b")],
+    ["sb", "prac", "SB 面對開池", "SB練習", p3("sb")],
+    ["size", "prac", "加注尺寸", "尺寸練習", p3("size")],
+    ["value", "prac", "大牌下注", "大牌下注", p3("value")],
+    ["nodes", "prac", "節點卡片", "節點卡片", p1("node")],
+    ["mix", "prac", "節點混練", "節點混練", p1("mix")],
+    ["quiz", "prac", "100 條小測", "100條小測", p2("drill")],
+    ["course", "learn", "課程 100 條", "撲克課程", p2("course")],
+    ["river", "learn", "河牌詐唬", "河牌詐唬", p2("river")],
+    ["chak", "learn", "ChakPoker 評估", "ChakPoker", p2("chak")],
+    ["pool", "learn", "玩家池數據", "玩家池", p3(null)],
+    ["plan", "learn", "訓練流程", "訓練流程", p1("plan")],
+    ["about", "learn", "數據限制", "數據限制", p1("about")]
+  ];
+  var BY = {}; S.forEach(function (x) { BY[x[0]] = x; });
+  var TOPS = [["pf", "翻前表", "preflop"], ["leaks", "我的弱點", "leaks"], ["prac", "練習", "bb-btn"], ["learn", "課程", "course"]];
+  var GROUPS = { prac: [["BB 防守", ["bb-utg", "bb-hj", "bb-co", "bb-btn", "bb-sb"]], ["翻前", ["btn", "open", "3bet", "sb", "size"]], ["翻後與綜合", ["value", "nodes", "mix", "quiz"]]],
+    learn: [["", ["course", "river", "chak", "pool", "plan", "about"]]] };
+  var D2S = { open: "open", "3b": "3bet", bb: "bb-btn", sb: "sb", size: "size", value: "value" };
+  var LEG = { P0: "leaks", P1: "nodes", P2: "quiz", P4: "btn" };
+  function resolve(t) {
+    if (BY[t]) return t;
+    if (t === "P3") { var d = window.__drillPreset || "open"; if (d === "bb") window.__drillPreset = null; return D2S[d] || "open"; }
+    if (t === "P5") { var c = window.__realPreset; window.__realPreset = null; return { L1: "bb-btn", L2: "open", L3: "size", L4: "value", L5: "mix", L6: "mix", L7: "3bet" }[c] || "bb-btn"; }
+    return LEG[t] || "leaks";
+  }
+  function qp() { var m = /[?&]p=([^&#]+)/.exec(location.search); return m ? decodeURIComponent(m[1]) : null; }
+  function initial() {
+    var q = qp(); if (q && BY[q]) return q;
+    var s = UIS.get("sec", null); if (s && BY[s]) return s;
+    var old = null; try { old = window.localStorage.getItem("pokerOffline.tab2"); } catch (e) {}
+    return old ? resolve(old) : "leaks";
+  }
+  function urlOf(id) { return location.origin + location.pathname + "?p=" + id; }
+  function applyMeta(id) {
+    var x = BY[id]; document.title = "撲克・" + x[2];
+    var m = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    if (!m) { m = document.createElement("meta"); m.setAttribute("name", "apple-mobile-web-app-title"); document.head.appendChild(m); }
+    m.setAttribute("content", x[3]);
+    try { if (location.protocol !== "file:" && qp() !== id) history.replaceState(null, "", location.pathname + "?p=" + id + location.hash); } catch (e) {}
+  }
+  var cur = initial(), setRef = null, navN = 0;
+  window.__go = function (id) { id = resolve(id); navN++; if (setRef) setRef(id); window.scrollTo(0, 0); };
+  window.__goTab = window.__go;
+  function saveScroll() { UIS.setLazy("scroll." + cur, Math.round(window.scrollY || 0)); }
+  window.addEventListener("scroll", saveScroll, { passive: true });
+  window.addEventListener("pagehide", function () { saveScroll(); UIS.flush(); });
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") { saveScroll(); UIS.flush(); } });
+  function restoreScroll() { var y = UIS.get("scroll." + cur, 0); if (y > 0) [30, 250, 700].forEach(function (t) { setTimeout(function () { if (Math.abs((window.scrollY || 0) - y) > 4) window.scrollTo(0, y); }, t); }); }
+  window.addEventListener("pageshow", function (e) { if (e.persisted) restoreScroll(); });
+  function Help(p) {
+    var u = urlOf(p.id), cs = useState(false);
+    return h("details", { className: "a2hs" }, h("summary", null, "加到主畫面（這一頁的捷徑）"),
+      h("div", { className: "cap" }, "iPhone：用 Safari 打開下面網址 → 分享 → 加入主畫面，名字會是「" + BY[p.id][3] + "」。Android：Chrome 打開 → ⋮ → 加到主畫面；或長按「撲克練習」圖示選捷徑。"),
+      h("div", { className: "a2u" }, h("code", null, u), h("button", { className: "btn", onClick: function () { try { navigator.clipboard.writeText(u); cs[1](true); } catch (e) {} } }, cs[0] ? "已複製" : "複製")));
+  }
+  function Shell() {
+    var st = useState(cur), id = st[0];
+    setRef = function (n) { cur = n; UIS.set("sec", n); UIS.set("last." + BY[n][1], n); st[1](n); };
+    var vs = useState(0);
+    MB.sub(function () { vs[1](function (v) { return v + 1; }); });
+    useEffect(function () { applyMeta(id); }, [id]);
+    useEffect(function () { UIS.set("sec", id); restoreScroll(); }, []);
+    var x = BY[id], top = x[1];
+    var groups = GROUPS[top];
+    return h("div", null,
+      h("nav", { className: "top t4" }, TOPS.map(function (t) {
+        return h("button", { key: t[0], className: "topb" + (t[0] === top ? " on" : ""), onClick: function () { if (t[0] !== top) window.__go(UIS.get("last." + t[0], t[2])); } }, t[1]);
+      })),
+      groups ? h("div", { className: "subnav" }, groups.map(function (g, gi) {
+        return h("div", { key: gi, className: "sgrp" }, g[0] ? h("span", { className: "sgl" }, g[0]) : null, g[1].map(function (sid) {
+          return h("button", { key: sid, className: "chip" + (sid === id ? " on" : ""), onClick: function () { UIS.set("last." + top, sid); window.__go(sid); } }, BY[sid][2]);
+        }));
+      })) : null,
+      h("h1", { className: "sh1" }, x[2]),
+      h("main", null, h(x[4], { key: id + ":" + navN })),
+      h(Help, { key: "hp" + id, id: id }),
+      h("details", { className: "a2hs" }, h("summary", null, "設定"),
+        h("button", { className: "btn", onClick: function () { if (window.confirm("確定清除所有答錯紀錄？清除後答錯過的題目會恢復一般出現頻率。")) MB.clearAll(); } }, "重設答錯紀錄")),
+      h("footer", null, "離線可用、不需登入。紀錄存在這台裝置。資料：你的 Natural8 手牌紀錄與 HHDealer NL2/NL5 玩家池。研究模擬，非投資建議。"));
+  }
+  window.__SECTIONS = S.map(function (x) { return [x[0], x[2], x[3], x[1]]; });
   window.__mount(Shell, document.getElementById("app"));
 })();
 
