@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1a14">
+<title>撲克・解算器</title>
+<style>
+:root{--bg:#0f1a14;--bg2:#16261d;--bg3:#1c3025;--bd:#2c4637;--bd2:#3b5a49;--ac:#3ecf7a;--tx:#e8f1ea;--tx2:#8fa69a;--bad:#e5484d;--ok:#3ecf7a;--mid:#e0a43a;
+--fold:#4a5a52;--call:#3b78c4;--b33:#e0a43a;--b75:#e06a3a;--b150:#c9483f;--ball:#8e2b3c;--raise:#c9483f}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:18px/1.5 -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:10px 12px 120px}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h1{font-size:20px;margin:4px 0;flex:1 1 auto;letter-spacing:.5px}h1 b{color:var(--ac)}
+.tabs{display:flex;gap:6px;margin:8px 0;overflow-x:auto}
+.tab{flex:1 0 auto;border:1px solid var(--bd2);background:var(--bg2);color:var(--tx2);border-radius:10px;padding:8px 12px;font:inherit;font-size:15px;font-weight:700}
+.tab.on{background:var(--ac);color:#06281a;border-color:var(--ac)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--bd2);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:var(--bg2);color:var(--tx2);padding:6px 12px;font:inherit;font-size:14px;font-weight:700}
+.seg button.on{background:#244a35;color:var(--ac)}
+select,input[type=text],input[type=number],textarea{background:var(--bg2);color:var(--tx);border:1px solid var(--bd2);border-radius:8px;padding:6px 8px;font:inherit;font-size:15px;max-width:100%}
+textarea{width:100%;min-height:64px;font-size:13px;font-family:ui-monospace,Menlo,monospace}
+.sec{background:var(--bg2);border:1px solid var(--bd);border-radius:14px;padding:12px;margin:10px 0}
+.muted{color:var(--tx2);font-size:14px}.small{font-size:13px}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;background:var(--bg3);border:1px solid var(--bd2);font-size:13px;color:var(--tx2);margin-right:4px}
+.cc{display:inline-flex;gap:4px;flex-wrap:wrap}
+.cd{display:inline-block;min-width:38px;text-align:center;padding:3px 6px;border-radius:7px;border:1px solid #3b5a49;background:#0b130e;font-weight:800;font-size:20px;color:var(--tx)}
+.cd.h{color:#ff6b6b}.cd.d{color:#5aa9ff}.cd.c{color:#5fd38d}.cd.s{color:#e8f1ea}
+.hero .cd{font-size:30px;min-width:54px;padding:6px 8px;border-width:2px;border-color:var(--ac)}
+.spotT{font-weight:800;font-size:17px}.line{color:var(--tx2);font-size:14px}
+.facing{margin-top:8px;font-size:17px}.facing b{color:var(--mid)}
+.abar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;gap:8px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:rgba(15,26,20,.97);border-top:1px solid var(--bd);box-shadow:0 -6px 18px rgba(0,0,0,.45);max-width:760px;margin:0 auto}
+.ab{flex:1 1 0;min-width:0;min-height:56px;border:0;border-radius:12px;font-size:18px;font-weight:800;color:#fff;font-family:inherit;line-height:1.15;padding:6px 4px;cursor:pointer}
+.ab small{display:block;font-size:11px;font-weight:600;opacity:.8}
+.k-fold{background:#26332b;color:#c3d2c9}.k-call{background:#3b78c4}.k-raise{background:#c9483f}.nx{background:var(--ac);color:#06281a}
+.ab:disabled{opacity:.35}
+.res{font-size:20px;font-weight:800;margin-bottom:6px}.res.ok{color:var(--ok)}.res.mid{color:var(--mid)}.res.bad{color:var(--bad)}
+.bars{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.bar{display:grid;grid-template-columns:1fr auto;grid-template-areas:'l v' 't t';gap:2px 8px;align-items:center;font-size:15px}.bar .lab{grid-area:l}.bar .ev{grid-area:v}.bar .tr{grid-area:t}
+.bar .tr{height:18px;background:#0b130e;border-radius:6px;overflow:hidden;border:1px solid var(--bd)}
+.bar .fi{height:100%}
+.bar .ev{font-size:14px;color:var(--tx2);text-align:right;white-space:nowrap}
+.bar.me .lab{color:var(--ac);font-weight:800}
+.mix{display:flex;height:22px;border-radius:7px;overflow:hidden;border:1px solid var(--bd);margin:6px 0}
+.mix div{height:100%}
+.grid{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;margin-top:8px;user-select:none}
+.gc{position:relative;aspect-ratio:1/1;border-radius:3px;overflow:hidden;background:#0b130e;font-size:10px;line-height:1}
+.gc .bg{position:absolute;inset:0;display:flex}.gc .bg div{height:100%}
+.gc span{position:absolute;left:2px;top:2px;font-weight:700;color:#fff;text-shadow:0 0 3px #000,0 0 2px #000;z-index:1}
+.gc.out span{color:#4b5d53;text-shadow:none}.gc.me{outline:2px solid #fff;z-index:2}
+@media(min-width:600px){.gc{font-size:12px}}
+.leg{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--tx2);margin-top:6px}.leg i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.expl p{margin:6px 0;font-size:16px}.expl b{color:var(--ac)}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cmp .sec{margin:0}
+.stat{display:flex;gap:14px;font-size:14px;color:var(--tx2)}.stat b{color:var(--tx)}
+.btn{border:1px solid var(--ac);background:transparent;color:var(--ac);border-radius:10px;padding:8px 14px;font:inherit;font-weight:800;font-size:15px;cursor:pointer}
+.btn.fill{background:var(--ac);color:#06281a}
+table.t{border-collapse:collapse;width:100%;font-size:14px}table.t td,table.t th{border-bottom:1px solid var(--bd);padding:4px 6px;text-align:left}
+.hide{display:none!important}
+.nx kbd{background:rgba(0,0,0,.12);color:#06281a;border-color:rgba(0,0,0,.25)}
+kbd{background:#0b130e;color:var(--tx2);border:1px solid var(--bd2);border-radius:4px;padding:0 4px;font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1><b>解算器</b>・河牌</h1><div class="stat" id="stat"></div></header>
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-m="riv">河牌練習</button><button class="tab" data-m="tool">自己解河牌</button>
+  </div>
+  <div class="row" id="ctl">
+    <div class="seg" id="modeSeg"><button data-v="exp">剝削 NL2 池</button><button data-v="gto">GTO</button></div>
+    <select id="famSel"></select>
+  </div>
+  <div id="drill">
+    <div class="sec" id="qbox"></div>
+    <div id="ans"></div>
+  </div>
+  <div id="tool" class="hide"></div>
+  <div id="about" class="hide"></div>
+</div>
+<div class="abar" id="abar"></div>
+<script src="river/river.js"></script>
+<script src="river/ranges.js"></script>
+<script src="pf_data.js?v=8b"></script>
+<script src="data/river_v8.js"></script>
+<script>(function(){var P=window.PF,D=window.SOLVER_DATA,pre={names:P.names,gto:{},exp:{},norake:{},pool:{},heroes:{}};
+Object.keys(P.nodes).forEach(function(k){var n=P.nodes[k];['gto','exp'].forEach(function(v){pre[v][k]={seat:n.seat,acts:n.acts,s:n[v].s,r:n[v].r,freq:n[v].freq};});pre.norake[k]={seat:n.seat,acts:n.acts,freq:n.norake};});
+D.pre=pre;})();</script>
+<script>
+'use strict';
+const D = window.SOLVER_DATA, RS = window.RiverSolver, RG = window.RiverRanges;
+const RK = '23456789TJQKA', SUITS = {s: '♠', h: '♥', d: '♦', c: '♣'};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+const fmt1 = x => (Math.round(x * 10) / 10).toFixed(1);
+// ---------- state ----------
+const LS = 'pk8.riv';
+let ST = {}; try { ST = JSON.parse(localStorage.getItem(LS) || '{}'); } catch (e) { ST = {}; }
+ST.items = ST.items || {}; ST.tot = ST.tot || {n: 0, ok: 0}; ST.queue = ST.queue || [];
+const save = () => { try { localStorage.setItem(LS, JSON.stringify(ST)); } catch (e) {} };
+let MODE = 'riv', VIEW = (function () { try { const v = localStorage.getItem('pk8.ver'); return v === 'gto' ? 'gto' : 'exp'; } catch (e) { return 'exp'; } })(), FAM = 'all', Q = null, ANSWERED = false, SESSION = {n: 0, ok: 0};
+// ---------- cards ----------
+function cardHTML(c) { return `<span class="cd ${c[1]}">${c[0] === 'T' ? '10' : c[0]}${SUITS[c[1]]}</span>`; }
+function cardsHTML(str) { return '<span class="cc">' + (str.match(/../g) || []).map(cardHTML).join('') + '</span>'; }
+function classOfCombo(cs) { let a = RK.indexOf(cs[0]), b = RK.indexOf(cs[2]); const suited = cs[1] === cs[3]; if (a < b) [a, b] = [b, a]; return a === b ? RK[a] + RK[a] : RK[a] + RK[b] + (suited ? 's' : 'o'); }
+function gridNames() { const out = []; for (let i = 12; i >= 0; i--) for (let j = 12; j >= 0; j--) out.push(i === j ? RK[i] + RK[i] : i > j ? RK[i] + RK[j] + 's' : RK[j] + RK[i] + 'o'); return out; }
+const GN = gridNames();
+function randCombo(cls) {
+  const S = 'shdc'; const r = () => S[Math.floor(Math.random() * 4)];
+  if (cls.length === 2) { const a = r(); let b; do b = r(); while (b === a); return cls[0] + a + cls[1] + b; }
+  if (cls[2] === 's') { const a = r(); return cls[0] + a + cls[1] + a; }
+  const a = r(); let b; do b = r(); while (b === a); return cls[0] + a + cls[1] + b;
+}
+// ---------- action helpers ----------
+const ZH = {fold: '棄牌', call: '跟注', check: '過牌', bet: '下注', raise: '加注', allin: '全下', open: '開池加注', '3bet': '3-bet', '4bet': '4-bet', jam: '全下'};
+function actKey(label) { const l = label.split(' ')[0].split('|')[0]; return l === 'fold' ? 'F' : (l === 'call' || l === 'check') ? 'C' : 'R'; }
+function actColor(label) {
+  const l = label.split('|')[0]; if (l.startsWith('fold')) return 'var(--fold)'; if (l.startsWith('call') || l.startsWith('check')) return 'var(--call)';
+  if (l.startsWith('allin') || l === 'jam') return 'var(--ball)'; if (l.startsWith('raise') || ['open', '3bet', '4bet'].includes(l)) return 'var(--raise)';
+  const m = l.match(/(\d+)%/); const p = m ? +m[1] : 75; return p <= 40 ? 'var(--b33)' : p <= 100 ? 'var(--b75)' : 'var(--b150)';
+}
+function actZh(label) { const [l, to] = label.split('|'); const [w, sz] = l.split(' '); let s = ZH[w] || w; if (sz) s += ' ' + sz; if (to && w !== 'fold' && w !== 'call' && w !== 'check') s += `（${fmt1(+to)}bb）`; return s; }
+// ---------- preflop ----------
+const PRE = D.pre, PIX = {}; PRE.names.forEach((n, i) => PIX[n] = i);
+const SEATZH = {UTG: 'UTG', HJ: 'HJ', CO: 'CO', BTN: 'BTN', SB: 'SB', BB: 'BB'};
+function preDesc(name) {
+  const p = name.split('>'); const seat = PRE.gto[name].seat;
+  if (name.endsWith('rfi')) return {fam: 'rfi', title: `${seat} 開池（前面全部棄牌）`, facing: '輪到你，前面玩家都棄牌。'};
+  const op = p[0].replace('open', '');
+  if (p.length === 2 && !p[1].endsWith('3b')) return {fam: p[1] === 'BB' ? 'bbdef' : 'vsopen', title: `${seat} 面對 ${op} 開池 ${op === 'SB' ? '3' : '2.5'}bb`, facing: `${op} 加注到 <b>${op === 'SB' ? '3' : '2.5'}bb</b>，中間玩家棄牌。`};
+  const y = p[1].replace('3b', '');
+  if (p.length === 2) return {fam: 'vs3b', title: `${seat} 開池後面對 ${y} 的 3-bet`, facing: `你開池 ${op === 'SB' ? '3' : '2.5'}bb，<b>${y} 3-bet</b>。`};
+  if (p.length === 3) return {fam: 'vs4b', title: `${seat} 3-bet 後面對 ${op} 的 4-bet`, facing: `你 3-bet，<b>${op} 4-bet</b>。`};
+  return {fam: 'vs4b', title: `${seat} 4-bet 後面對 ${y} 全下`, facing: `你 4-bet，<b>${y} 全下 100bb</b>。`};
+}
+const PRE_FAMS = [['all', '全部翻前'], ['bbdef', 'BB 防守（重點）'], ['rfi', '開池 RFI'], ['vsopen', '面對開池（非 BB）'], ['vs3b', '面對 3-bet'], ['vs4b', '面對 4-bet / 全下']];
+const RIV_FAMS = [['all', '全部河牌'], ['def', '防守：面對下注（重點）'], ['BTN_BB', 'BTN vs BB 單加注'], ['CO_BB', 'CO vs BB 單加注'], ['SB_BB', 'SB vs BB 單加注'], ['BB3', 'BB 3-bet vs BTN']];
+function preNodeWeight(name) { const f = preDesc(name).fam; return f === 'bbdef' ? 3 : f === 'rfi' ? 1.5 : f === 'vsopen' ? 1 : 0.8; }
+function pickWeighted(arr, wf) { let t = 0; const ws = arr.map(x => { const w = Math.max(0, wf(x)); t += w; return w; }); let r = Math.random() * t; for (let i = 0; i < arr.length; i++) { r -= ws[i]; if (r <= 0) return arr[i]; } return arr[arr.length - 1]; }
+function mixScore(s) { let m = 0; s.forEach(x => m = Math.max(m, x)); return 1 - m / 100; }
+function makePreQ(name, cls) {
+  const g = PRE.gto[name], i = PIX[cls]; return {kind: 'pre', name, cls, combo: randCombo(cls), key: 'pre|' + name + '|' + cls, acts: g.acts, desc: preDesc(name)};
+}
+function newPreQ() {
+  let names = Object.keys(PRE.gto).filter(n => !n.endsWith('jam') || Math.random() < 0.5);
+  if (FAM !== 'all') names = names.filter(n => preDesc(n).fam === FAM);
+  const name = pickWeighted(names, preNodeWeight); const g = PRE.gto[name];
+  const cls = pickWeighted(PRE.names, n => { const i = PIX[n]; const r = g.r[i] / 100; if (r < 0.05) return 0; const nc = n.length === 2 ? 6 : n[2] === 's' ? 4 : 12; const ms = mixScore(g.s[i]);
+    // boundary hands: neighbours with a different main action make good questions
+    return nc * r * (0.12 + ms * 2 + (g.s[i][0] > 95 && Math.random() < 0.6 ? 0 : 0.1)); });
+  return makePreQ(name, cls);
+}
+// ---------- river ----------
+const SPOTS = D.spots, SPI = {}; SPOTS.forEach((s, i) => SPI[s.id] = i);
+const PRETXT = {BTNvsBB: 'BTN 開池、BB 跟注（單加注底池）', COvsBB: 'CO 開池、BB 跟注（單加注底池）', SBvsBB: 'SB 開池 3bb、BB 跟注（單加注底池）', BB3vsBTN: 'BTN 開池、BB 3-bet、BTN 跟注（3-bet 底池）'};
+function nodeFacing(sp, nd) { // text describing what happened on the river before this node
+  const h = nd.hist; const P = sp.pos; const parts = [];
+  const re = /(x|B\d+|A\d+|R|A)/g; let m, who = 0; const toks = h.match(/x|B\d+|A\d+|R|A/g) || [];
+  toks.forEach(t => { const pz = P[who]; if (t === 'x') parts.push(`${pz} 過牌`); else if (t[0] === 'B') parts.push(`${pz} 下注 ${t.slice(1)}%`); else if (t[0] === 'A') parts.push(`${pz} 全下`); else parts.push(`${pz} 加注`); who = 1 - who; });
+  return parts;
+}
+function rivNodes(sp, view) {
+  if (view === 'exp') { const out = []; [0, 1].forEach(h => { const e = sp.exploit[h]; if (e) e.nodes.forEach(n => out.push(n)); }); return out; }
+  return sp.gto;
+}
+function newRivQ() {
+  let sps = SPOTS;
+  if (FAM !== 'all' && FAM !== 'def') sps = sps.filter(s => s.fam.startsWith(FAM));
+  const sp = sps[Math.floor(Math.random() * sps.length)];
+  let nodes = sp.gto.filter(n => n.h.length > 0);
+  if (FAM === 'def') nodes = nodes.filter(n => n.acts[0].startsWith('fold') && n.pl !== sp.agg);
+  if (!nodes.length) nodes = sp.gto;
+  const nd = pickWeighted(nodes, n => (n.acts[0].startsWith('fold') ? (n.pl !== sp.agg ? 3 : 1.5) : 1) * Math.sqrt(n.rw));
+  const k = pickWeighted(nd.h.map((_, j) => j), j => { const s = nd.S[j]; return nd.r[j] * (0.1 + 2 * mixScore(s) + (s[0] > 97 ? 0 : 0.3)); });
+  return makeRivQ(sp, nd.id, nd.h[k]);
+}
+function makeRivQ(sp, nodeId, hand) {
+  const nd = sp.gto.find(n => n.id === nodeId); return {kind: 'riv', sp, nodeId, hand, combo: sp.hands[nd.pl][hand], key: 'riv|' + sp.id + '|' + nodeId + '|' + hand, acts: nd.acts, nd};
+}
+// ---------- question flow ----------
+function nextQ() {
+  ANSWERED = false;
+  // spaced repetition: due misses come back first
+  ST.queue.forEach(q => q.due--); const due = ST.queue.findIndex(q => q.due <= 0 && q.mode === MODE && (FAM === 'all' || q.fam === FAM));
+  let q = null;
+  if (due >= 0) { const it = ST.queue.splice(due, 1)[0]; try { q = it.mode === 'pre' ? makePreQ(it.name, it.cls) : makeRivQ(SPOTS[SPI[it.sp]], it.node, it.hand); q.review = true; } catch (e) { q = null; } }
+  if (!q) q = MODE === 'pre' ? newPreQ() : newRivQ();
+  Q = q; save(); renderQ();
+}
+function heroStrat(q, view) { // returns {acts, s:[%], ev:[bb|null], reachOK}
+  if (q.kind === 'pre') { const src = view === 'exp' ? PRE.exp[q.name] : PRE.gto[q.name]; if (!src) return null; return {acts: src.acts, s: src.s[PIX[q.cls]], ev: null, freq: src.freq}; }
+  const sp = q.sp; let nd = q.nd;
+  if (view === 'exp') { const e = sp.exploit[nd.pl]; if (!e) return null; nd = e.nodes.find(n => n.id === q.nodeId); if (!nd) return null; }
+  const j = nd.h.indexOf(q.hand); if (j < 0) return {acts: nd.acts, s: nd.acts.map(() => 0), ev: null, freq: nd.freq, nd, missing: true};
+  return {acts: nd.acts, s: nd.S[j], ev: nd.ev[j], freq: nd.freq, nd};
+}
+function renderQ() {
+  const q = Q; let h = '';
+  if (q.kind === 'pre') {
+    h += `<div class="spotT">${esc(q.desc.title)}</div><div class="line">6 人桌・100bb・NL2 抽水模型${q.review ? '・<span style="color:var(--mid)">複習</span>' : ''}</div>`;
+    h += `<div class="facing">${q.desc.facing}</div>`;
+  } else {
+    const sp = q.sp, nd = q.nd, me = sp.pos[nd.pl], opp = sp.pos[1 - nd.pl];
+    h += `<div class="spotT">${esc(me)}（你）vs ${esc(opp)}・${sp.pt === '3BP' ? '3-bet 底池' : '單加注底池'}</div>`;
+    h += `<div class="line">${esc(PRETXT[sp.pre])}<br>${esc(sp.lineTxt)}・${esc(sp.tex)}${q.review ? '・<span style="color:var(--mid)">複習</span>' : ''}</div>`;
+    h += `<div style="margin-top:8px">${cardsHTML(sp.board)}</div>`;
+    const potNow = sp.pot + nd.c[0] + nd.c[1];
+    h += `<div class="muted" style="margin-top:6px">河牌開始底池 <b>${fmt1(sp.pot)}bb</b>・有效籌碼 ${fmt1(sp.stack)}bb・目前底池 ${fmt1(potNow)}bb</div>`;
+    const ev = nodeFacing(sp, nd); h += `<div class="facing">${ev.length ? '河牌：' + ev.map(esc).join(' → ') + '，<b>輪到你</b>' : '河牌：<b>你先行動</b>'}${nd.c[1 - nd.pl] > nd.c[nd.pl] ? `（要跟 ${fmt1(nd.c[1 - nd.pl] - nd.c[nd.pl])}bb）` : ''}</div>`;
+  }
+  h += `<div class="hero" style="margin-top:10px"><span class="muted">你的手牌</span><br>${cardsHTML(q.combo)}</div>`;
+  $('#qbox').innerHTML = h; $('#ans').innerHTML = '';
+  renderBar();
+}
+function grpActs(acts) { // group into F / C / R buttons
+  const g = {}; acts.forEach((a, i) => { const k = actKey(a); (g[k] = g[k] || []).push(i); }); return g;
+}
+function renderBar() {
+  const bar = $('#abar'); const q = Q;
+  if (!q || MODE === 'tool' || MODE === 'about') { bar.innerHTML = ''; bar.classList.add('hide'); return; }
+  bar.classList.remove('hide');
+  if (ANSWERED) { bar.innerHTML = `<button class="ab nx" id="bNext">下一題<small><kbd>Space</kbd> / <kbd>Enter</kbd></small></button>`; $('#bNext').onclick = nextQ; return; }
+  const g = grpActs(q.acts); const labF = '棄牌', labC = q.acts.some(a => a.startsWith('check')) ? '過牌' : '跟注';
+  let labR = '加注'; const ra = (g.R || []).map(i => q.acts[i].split(' ')[0].split('|')[0]);
+  if (ra.includes('bet')) labR = '下注'; else if (ra[0] === 'open') labR = '加注'; else if (ra[0] === '3bet') labR = '3-bet'; else if (ra[0] === '4bet') labR = '4-bet'; else if (ra[0] === 'jam' || (ra.length && ra.every(x => x === 'allin'))) labR = '全下';
+  let html = '';
+  if (g.F) html += `<button class="ab k-fold" data-k="F">${labF}<small><kbd>F</kbd></small></button>`;
+  if (g.C) html += `<button class="ab k-call" data-k="C">${labC}<small><kbd>C</kbd></small></button>`;
+  if (g.R) html += `<button class="ab k-raise" data-k="R">${labR}<small><kbd>R</kbd></small></button>`;
+  bar.innerHTML = html; bar.querySelectorAll('.ab').forEach(b => b.onclick = () => answer(b.dataset.k));
+}
+function answer(k) {
+  if (ANSWERED || !Q) return; const q = Q; const hs = heroStrat(q, VIEW) || heroStrat(q, 'gto');
+  const g = grpActs(hs.acts); if (!g[k]) return;
+  const tot = {}; Object.keys(g).forEach(K => tot[K] = g[K].reduce((s, i) => s + hs.s[i], 0));
+  const mine = tot[k], best = Math.max(...Object.values(tot));
+  const grade = mine >= best - 1e-9 || mine >= 60 ? 'ok' : mine >= 20 ? 'mid' : 'bad';
+  ANSWERED = true; SESSION.n++; ST.tot.n++; if (grade !== 'bad') { SESSION.ok++; ST.tot.ok++; }
+  const it = ST.items[q.key] = ST.items[q.key] || {n: 0, bad: 0}; it.n++; if (grade === 'bad') it.bad++;
+  if (grade === 'bad') { // repeat misses: soon, then later
+    const base = {mode: q.kind, fam: FAM, due: it.bad > 1 ? 2 : 3};
+    if (q.kind === 'pre') ST.queue.push(Object.assign(base, {name: q.name, cls: q.cls})); else ST.queue.push(Object.assign(base, {sp: q.sp.id, node: q.nodeId, hand: q.hand}));
+    if (q.kind === 'pre') ST.queue.push(Object.assign({}, base, {name: q.name, cls: q.cls, due: 9})); else ST.queue.push(Object.assign({}, base, {sp: q.sp.id, node: q.nodeId, hand: q.hand, due: 9}));
+  } else if (grade === 'mid') {
+    if (q.kind === 'pre') ST.queue.push({mode: 'pre', fam: FAM, due: 6, name: q.name, cls: q.cls}); else ST.queue.push({mode: 'riv', fam: FAM, due: 6, sp: q.sp.id, node: q.nodeId, hand: q.hand});
+  }
+  if (ST.queue.length > 60) ST.queue = ST.queue.slice(-60);
+  Q._k = k; Q._view = VIEW; Q._grade = grade; Q._tot = tot; save(); renderStat(); renderAnswer(k, grade, tot); renderBar();
+}
+function barsHTML(hs, myIdx) {
+  return '<div class="bars">' + hs.acts.map((a, i) => `<div class="bar${myIdx.includes(i) ? ' me' : ''}"><div class="lab">${esc(actZh(a))}</div><div class="tr"><div class="fi" style="width:${hs.s[i]}%;background:${actColor(a)}"></div></div><div class="ev">${hs.s[i]}%${hs.ev && hs.ev[i] != null ? '・EV ' + (hs.ev[i] >= 0 ? '+' : '') + fmt1(hs.ev[i]) : ''}</div></div>`).join('') + '</div>';
+}
+function renderAnswer(k, grade, tot) {
+  const q = Q; const hs = heroStrat(q, VIEW) || heroStrat(q, 'gto'); const g = grpActs(hs.acts);
+  const zhK = {F: '棄牌', C: q.acts.some(a => a.startsWith('check')) ? '過牌' : '跟注', R: '加注/下注'};
+  let h = `<div class="sec"><div class="res ${grade}">${grade === 'ok' ? '✓ 正確' : grade === 'mid' ? '△ 可接受（混合策略）' : '✗ 錯誤'}　<span class="muted">你選：${zhK[k]}（${(q._view || VIEW) === 'exp' ? '剝削解' : 'GTO'}頻率 ${Math.round(tot[k])}%）</span></div>`;
+  h += `<div class="muted">${esc(q.combo.replace(/(..)/g, '$1 '))} 的${VIEW === 'exp' ? '剝削' : ' GTO '}策略${hs.ev ? '（EV 以 bb 計，從河牌開始算，含已投入底池的份額）' : ''}</div>`;
+  h += barsHTML(hs, g[k] || []);
+  if (hs.missing) h += `<div class="muted">此手牌在剝削解中已不會到達這個節點。</div>`;
+  h += '</div>';
+  // side-by-side GTO vs exploit for this hand
+  const other = heroStrat(q, VIEW === 'gto' ? 'exp' : 'gto');
+  if (other && !other.missing) h += `<div class="sec"><div class="muted">${VIEW === 'gto' ? '對照：剝削 NL2 池的打法' : '對照：GTO 打法'}</div>${barsHTML(other, [])}</div>`;
+  h += `<div class="sec expl">${explain(q, hs)}</div>`;
+  h += `<div class="sec"><div class="row" style="justify-content:space-between"><b>${q.kind === 'pre' ? '整個範圍（13×13）' : '你在這個節點的整體範圍'}</b><span class="muted small">顏色＝動作比例；淡＝較少在範圍內</span></div>${gridHTML(q, VIEW)}${legendHTML(hs.acts)}<div class="muted small" style="margin-top:6px">範圍整體：${hs.acts.map((a, i) => actZh(a) + ' ' + (q.kind === 'pre' ? fmt1(hs.freq[a]) : Math.round(hs.freq[i] * 100)) + '%').join('・')}</div></div>`;
+  $('#ans').innerHTML = h;
+}
+function legendHTML(acts) { return '<div class="leg">' + acts.map(a => `<span><i style="background:${actColor(a)}"></i>${esc(actZh(a))}</span>`).join('') + '</div>'; }
+function gridHTML(q, view) {
+  const cells = {}; let acts;
+  if (q.kind === 'pre') {
+    const src = view === 'exp' ? (PRE.exp[q.name] || PRE.gto[q.name]) : PRE.gto[q.name]; acts = src.acts;
+    PRE.names.forEach((n, i) => cells[n] = {w: src.r[i] / 100, s: src.s[i]});
+  } else {
+    let nd = q.nd; if (view === 'exp' && q.sp.exploit[nd.pl]) nd = q.sp.exploit[nd.pl].nodes.find(n => n.id === q.nodeId) || nd; acts = nd.acts;
+    const H = q.sp.hands[nd.pl], W = q.sp.w[nd.pl]; const agg = {};
+    nd.h.forEach((hi, j) => { const c = classOfCombo(H[hi]); const a = agg[c] = agg[c] || {w: 0, s: acts.map(() => 0), full: 0}; a.w += nd.r[j]; nd.S[j].forEach((x, t) => a.s[t] += x * nd.r[j]); });
+    // normaliser: combos of the class (6/4/12)
+    Object.keys(agg).forEach(c => { const a = agg[c]; const nc = c.length === 2 ? 6 : c[2] === 's' ? 4 : 12; cells[c] = {w: Math.min(1, a.w / nc * 1.6), s: a.s.map(x => x / a.w)}; });
+  }
+  const me = q.kind === 'pre' ? q.cls : classOfCombo(q.combo);
+  return '<div class="grid">' + GN.map(n => { const c = cells[n]; const on = c && c.w > 0.02;
+    const bg = on ? '<div class="bg" style="opacity:' + (0.35 + 0.65 * Math.min(1, c.w)).toFixed(2) + '">' + acts.map((a, t) => `<div style="width:${c.s[t]}%;background:${actColor(a)}"></div>`).join('') + '</div>' : '';
+    return `<div class="gc${on ? '' : ' out'}${n === me ? ' me' : ''}">${bg}<span>${n}</span></div>`; }).join('') + '</div>';
+}
+// ---------- explanations (plain-language, zh-TW) ----------
+function pctTxt(x) { return Math.round(x) + '%'; }
+function explain(q, hs) {
+  const out = [];
+  const g = grpActs(hs.acts); const sumK = K => (g[K] || []).reduce((s, i) => s + hs.s[i], 0);
+  if (q.kind === 'pre') {
+    const name = q.name, gto = PRE.gto[name], nr = PRE.norake[name], d = q.desc;
+    const fr = gto.freq; const act = Object.keys(fr).map(a => `${ZH[a] || a} ${fmt1(fr[a])}%`).join('、');
+    out.push(`<p>這個位置整體 GTO：${act}（NL2 抽水模型）。不算抽水時：${Object.keys(nr.freq).map(a => `${ZH[a] || a} ${fmt1(nr.freq[a])}%`).join('、')}。</p>`);
+    const main = hs.acts[hs.s.indexOf(Math.max(...hs.s))];
+    out.push(`<p><b>${q.cls}</b>：${hs.acts.map((a, i) => `${ZH[a] || a} ${hs.s[i]}%`).join('、')}。${Math.max(...hs.s) < 80 ? '這手牌在邊界上，解算器混合使用多種動作——兩邊 EV 很接近，選哪個都不是大錯。' : `主要動作是「${ZH[main] || main}」。`}</p>`);
+    if (d.fam === 'bbdef') out.push(`<p>BB 已經投入 1bb，跟注只需補 ${name.startsWith('SB') ? '2' : '1.5'}bb，賠率很好，所以防守範圍很寬。但 NL2 抽水重（單加注底池翻牌後平均約 0.65bb），所以比無抽水的圖表緊一些。你的紀錄裡 BB 面對偷盲只防守約 20%——遠低於這裡的數字，這是主要漏洞。</p>`);
+    if (d.fam === 'vs3b') out.push(`<p>面對 3-bet：位置在後（IP）時可以多跟；在前（OOP）時邊緣牌更常棄牌或 4-bet 詐唬（A5s 這類有 A 阻擋牌的同花小 A 最常被選為 4-bet 詐唬）。</p>`);
+    const pi = PRE.pool[name];
+    if (pi) out.push(`<p class="muted">NL2 池在這裡：${Object.keys(pi.target).map(a => `${ZH[a] || a} ${pctTxt(100 * pi.target[a])}`).join('、')}（樣本 n=${pi.n.toLocaleString()}）。</p>`);
+    const ex = PRE.exp[name]; if (ex && VIEW === 'gto') { const ef = ex.freq; out.push(`<p class="muted">對 NL2 池的剝削解（只把對手鎖成池的頻率，自己最佳反應）：${Object.keys(ef).map(a => `${ZH[a] || a} ${fmt1(ef[a])}%`).join('、')}。</p>`); }
+    return out.join('');
+  }
+  const sp = q.sp, nd = hs.nd || q.nd; const potNow = sp.pot + nd.c[0] + nd.c[1]; const toCall = nd.c[1 - nd.pl] - nd.c[nd.pl];
+  const H = RS.card; const cs = q.combo.match(/../g).concat(sp.board.match(/../g)).map(H); const cat = RS.CAT[RS.eval7(cs) >> 20];
+  // hand's percentile in hero's node range
+  const all = nd.h.map((hi, j) => ({hi, r: nd.r[j], v: RS.eval7(sp.hands[nd.pl][hi].match(/../g).concat(sp.board.match(/../g)).map(H))}));
+  const myV = RS.eval7(cs); const tw = all.reduce((s, x) => s + x.r, 0); const better = all.filter(x => x.v > myV).reduce((s, x) => s + x.r, 0);
+  const topPct = Math.max(1, Math.round(100 * better / tw));
+  out.push(`<p>你的牌是 <b>${cat}</b>，在你此刻的範圍中大約是前 <b>${topPct}%</b>（越小越強）。</p>`);
+  if (toCall > 0) {
+    const s = toCall / (potNow - toCall); const need = toCall / (potNow + toCall); const mdf = 1 / (1 + s);
+    const st = (sp.stats || []).find(x => x.pl !== nd.pl && Math.abs(x.size - s) < 0.03 && nd.hist.startsWith(x.node === 'root' ? '' : x.node));
+    out.push(`<p>對手下注約 ${Math.round(s * 100)}% 底池，你要跟 ${fmt1(toCall)}bb 去贏 ${fmt1(potNow)}bb：需要 <b>${Math.round(need * 100)}%</b> 勝率（底池賠率）。MDF（最少防守頻率）是 <b>${Math.round(mdf * 100)}%</b>：防守太少，對手任何兩張牌詐唬都賺錢。</p>`);
+    const fi = hs.acts.findIndex(a => a.startsWith('fold')); const cont = 100 - Math.round(100 * (nd.freq[fi] || 0));
+    out.push(`<p>解算器這裡整體繼續（跟＋加）<b>${cont}%</b>${st ? `；對手在這個尺寸的下注裡詐唬約 ${Math.round(st.bluffRatio * 100)}%（理論值 s/(1+2s)=${Math.round(st.theoryBluff * 100)}%）` : ''}。</p>`);
+    if (hs.ev) { const ci = hs.acts.findIndex(a => a.startsWith('call')); if (ci >= 0 && hs.ev[ci] != null && hs.ev[fi] != null) { const d = hs.ev[ci] - hs.ev[fi]; out.push(`<p>這手牌跟注比棄牌 ${d >= 0 ? '多賺' : '少賺'} <b>${fmt1(Math.abs(d))}bb</b>${Math.abs(d) < 0.3 ? '——幾乎無差別，所以是混合' : ''}。</p>`); } }
+    if (sumK('C') + sumK('R') < 20 && topPct < 50) out.push(`<p>雖然牌不算差，但對手這條線的價值範圍太強：你的牌擋不到他的詐唬，或主要輸給他的價值牌。</p>`);
+    if (sumK('C') >= 50 && topPct >= 50) out.push(`<p>牌力不強也要跟——這就是「抓詐唬」：只要對手有足夠詐唬、而你有好的阻擋牌，棄牌會被剝削。</p>`);
+  } else {
+    const bet = sumK('R'); const chk = sumK('C');
+    const sts = (sp.stats || []).filter(x => x.pl === nd.pl && (x.node === (nd.hist || 'root')) && x.betFreq > 0.02);
+    if (sts.length) out.push(`<p>你的範圍在這裡的下注：${sts.map(x => `${Math.round(x.size * 100)}% 底池 ${Math.round(x.betFreq * 100)}%（其中詐唬 ${Math.round(x.bluffRatio * 100)}%，理論 ${Math.round(x.theoryBluff * 100)}%）`).join('；')}。</p>`);
+    if (bet >= 60 && topPct <= 35) out.push(`<p>強牌要下注拿價值——對手的跟注範圍裡有很多比你差的牌。</p>`);
+    else if (bet >= 50 && topPct > 60) out.push(`<p>這是詐唬：牌力攤牌贏不了，靠讓對手棄牌賺錢。好的詐唬牌通常沒有攤牌價值、而且阻擋對手的跟注牌。</p>`);
+    else if (chk >= 60 && topPct > 35 && topPct <= 70) out.push(`<p>中等牌力過牌：下注時更好的牌會跟、更差的牌會棄——下注沒賺頭，過牌攤牌更好。</p>`);
+    if (hs.ev) { const ci = hs.acts.findIndex(a => a.startsWith('check')); const bi = hs.acts.map((a, i) => i).filter(i => !hs.acts[i].startsWith('check')); if (ci >= 0 && bi.length) { const bb = bi.reduce((m, i) => hs.ev[i] != null && hs.ev[i] > (hs.ev[m] ?? -1e9) ? i : m, bi[0]); if (hs.ev[bb] != null) out.push(`<p>EV：過牌 ${fmt1(hs.ev[ci])}bb，最佳下注（${actZh(hs.acts[bb])}）${fmt1(hs.ev[bb])}bb。</p>`); } }
+  }
+  // exploit notes
+  const e = sp.exploit[nd.pl];
+  if (e) { out.push(`<p class="muted">剝削版本鎖定的 NL2 池數據：${e.locks.map(l => `${esc(l.node)}：${esc(l.what)}（n=${(l.n || 0).toLocaleString()}）`).join('；')}。在此模型下對池多賺約 ${fmt1(e.gainBB)}bb／此河牌局面（模型估計，見報告的限制）。</p>`); }
+  return out.join('');
+}
+// ---------- stats / UI ----------
+function renderStat() { $('#stat').innerHTML = `本次 <b>${SESSION.ok}/${SESSION.n}</b>・累計 <b>${ST.tot.n ? Math.round(100 * ST.tot.ok / ST.tot.n) : 0}%</b>・待複習 <b>${ST.queue.length}</b>`; }
+function setFamOptions() { const L = MODE === 'pre' ? PRE_FAMS : RIV_FAMS; $('#famSel').innerHTML = L.map(([v, t]) => `<option value="${v}">${t}</option>`).join(''); FAM = 'all'; }
+function setMode(m) {
+  MODE = m; document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.m === m));
+  $('#drill').classList.toggle('hide', !(m === 'pre' || m === 'riv')); $('#ctl').classList.toggle('hide', !(m === 'pre' || m === 'riv'));
+  $('#tool').classList.toggle('hide', m !== 'tool'); $('#about').classList.toggle('hide', m !== 'about');
+  if (m === 'pre' || m === 'riv') { setFamOptions(); nextQ(); } else { Q = null; renderBar(); if (m === 'tool') initTool(); if (m === 'about') renderAbout(); }
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => setMode(t.dataset.m));
+document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === VIEW));
+document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => { VIEW = b.dataset.v; try { localStorage.setItem('pk8.ver', VIEW); } catch (e) {} document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('on', x === b)); if (ANSWERED && Q) renderAnswer(Q._k, Q._grade, Q._tot); });
+$('#famSel').onchange = e => { FAM = e.target.value; nextQ(); };
+document.addEventListener('keydown', e => {
+  if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; if (MODE !== 'pre' && MODE !== 'riv') return;
+  const k = e.key.toUpperCase();
+  if (!ANSWERED && (k === 'F' || k === 'C' || k === 'R')) { e.preventDefault(); const b = document.querySelector(`.ab[data-k="${k}"]`); if (b) answer(k); }
+  else if (ANSWERED && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); nextQ(); }
+});
+// ---------- solve-your-own river ----------
+const PRESETS = {
+  BTN_BB_bb: {t: 'BTN vs BB 單加注・翻轉兩槍被跟', pre: 'BTNvsBB', line: 'bb'}, BTN_BB_bx: {t: 'BTN vs BB 單加注・翻牌 c-bet 被跟、轉牌過牌', pre: 'BTNvsBB', line: 'bx'},
+  BTN_BB_xx: {t: 'BTN vs BB 單加注・翻轉都過牌', pre: 'BTNvsBB', line: 'xx'}, CO_BB_bb: {t: 'CO vs BB 單加注・兩槍被跟', pre: 'COvsBB', line: 'bb'},
+  SB_BB_bb: {t: 'SB vs BB 單加注・SB 兩槍被跟', pre: 'SBvsBB', line: 'bb'}, SB_BB_bx: {t: 'SB vs BB・c-bet 被跟、轉牌過牌', pre: 'SBvsBB', line: 'bx'},
+  BB3_BTN_bx: {t: 'BB 3-bet vs BTN・c-bet 被跟、轉牌過牌', pre: 'BB3vsBTN', line: 'bx'}
+};
+const PREF = {BTNvsBB: {agg: 'BTN', def: 'BB', aggIP: true, P0: 5.5, S0: 97.5, agR: [['BTNrfi', 'open']], deR: [['BTNopen>BB', 'call']]}, COvsBB: {agg: 'CO', def: 'BB', aggIP: true, P0: 5.5, S0: 97.5, agR: [['COrfi', 'open']], deR: [['COopen>BB', 'call']]},
+  SBvsBB: {agg: 'SB', def: 'BB', aggIP: false, P0: 6, S0: 97, agR: [['SBrfi', 'open']], deR: [['SBopen>BB', 'call']]}, BB3vsBTN: {agg: 'BB', def: 'BTN', aggIP: false, P0: 20.5, S0: 90, agR: [['BTNopen>BB', '3bet']], deR: [['BTNrfi', 'open'], ['BTNopen>BB3b', 'call']]}};
+function pfObj() { const nodes = {}; for (const k in PRE.gto) nodes[k] = {acts: PRE.gto[k].acts, strat: PRE.gto[k].s.map(r => r.map(x => x / 100))}; return {names: PRE.names, nodes}; }
+let PFO = null;
+function toolRanges(pre, line, board) { // mirrors river/precompute.js buildRanges
+  PFO = PFO || pfObj(); const fl = board.slice(0, 3), tu = board.slice(0, 4);
+  let A = RG.removeDead(RG.fromPreflop(PFO, pre.agR), board), Dd = RG.removeDead(RG.fromPreflop(PFO, pre.deR), board); let pot = pre.P0, st = pre.S0;
+  if (line === 'xx') { A = RG.splitBarrel(A, fl, 0.45, 0.15)[1]; A = RG.splitBarrel(A, tu, 0.45, 0.15)[1]; Dd = RG.splitBarrel(Dd, tu, 0.55, 0.12)[1]; }
+  else { A = RG.splitBarrel(A, fl, 0.6, 0.2)[0]; Dd = RG.keepTop(Dd, fl, 0.72); const b = 0.33 * pot; pot += 2 * b; st -= b;
+    if (line === 'bb') { A = RG.splitBarrel(A, tu, 0.45, 0.12)[0]; Dd = RG.keepTop(Dd, tu, 0.58); const t = 0.75 * pot; pot += 2 * t; st -= t; }
+    else { A = RG.splitBarrel(A, tu, 0.45, 0.12)[1]; if (!pre.aggIP) Dd = RG.splitBarrel(Dd, tu, 0.55, 0.12)[1]; } }
+  return {A, D: Dd, pot: Math.round(pot * 100) / 100, stack: Math.round(st * 100) / 100};
+}
+function parseRange(txt) { // "AA,KK:0.5,AKs,T9s" class list with optional weights -> {cls: w}
+  const out = {}; (txt || '').split(/[\s,]+/).filter(Boolean).forEach(tok => { const [c, w] = tok.split(':'); const ww = w == null ? 1 : +w;
+    const m = c.match(/^([2-9TJQKA])([2-9TJQKA])([so]?)(\+?)$/); if (!m) return; const a = RK.indexOf(m[1]), b = RK.indexOf(m[2]);
+    if (a === b) { for (let r = a; r <= (m[4] ? 12 : a); r++) out[RK[r] + RK[r]] = ww; return; }
+    const hi = Math.max(a, b), lo = Math.min(a, b); const sfx = m[3] ? [m[3]] : ['s', 'o']; for (let r = lo; r <= (m[4] ? hi - 1 : lo); r++) sfx.forEach(s => out[RK[hi] + RK[r] + s] = ww); });
+  return out;
+}
+function rangeFromText(txt, board) { const map = parseRange(txt); const out = []; const dead = new Set(board);
+  Object.keys(map).forEach(c => RG.classCombos(c).forEach(([c1, c2]) => { if (!dead.has(c1) && !dead.has(c2)) out.push({c1, c2, w: map[c]}); })); return out; }
+function rangeToText(r) { const m = {}; r.forEach(h => { const c = RG.classOf(h.c1, h.c2); (m[c] = m[c] || []).push(h.w); }); return Object.keys(m).map(c => { const w = m[c].reduce((a, b) => a + b, 0) / RG.classCombos(c).length; return w > 0.97 ? c : w > 0.03 ? c + ':' + w.toFixed(2) : null; }).filter(Boolean).join(','); }
+let TOOL = null;
+function initTool() {
+  if ($('#tool').dataset.ready) return; $('#tool').dataset.ready = 1;
+  $('#tool').innerHTML = `<div class="sec"><b>自己解河牌</b><div class="muted small">單條街 DCFR 解算（瀏覽器內運算，含阻擋牌）。範圍由翻前解算＋翻轉牌行動線推出，可手動修改。</div>
+  <div class="row" style="margin-top:8px"><select id="tPre">${Object.keys(PRESETS).map(k => `<option value="${k}">${PRESETS[k].t}</option>`).join('')}</select></div>
+  <div class="row" style="margin-top:8px"><label>牌面 <input type="text" id="tBoard" value="Ks8h5c2d3s" size="12"></label><button class="btn" id="tLoad">載入範圍</button></div>
+  <div class="row" style="margin-top:8px"><label>底池 <input type="number" id="tPot" step="0.1" style="width:80px"></label><label>籌碼 <input type="number" id="tStk" step="0.1" style="width:80px"></label></div>
+  <div class="row" style="margin-top:8px"><label>下注尺寸 % <input type="text" id="tBets" value="33,75,150,allin" size="14"></label><label>加注 % <input type="text" id="tRz" value="100" size="4"></label></div>
+  <div style="margin-top:8px"><div class="muted small" id="tOopL">OOP 範圍</div><textarea id="tOop"></textarea><div class="muted small" id="tIpL">IP 範圍</div><textarea id="tIp"></textarea></div>
+  <div class="row" style="margin-top:8px"><button class="btn fill" id="tGo">求解</button><span class="muted" id="tProg"></span></div></div><div id="tOut"></div>`;
+  $('#tLoad').onclick = toolLoad; $('#tGo').onclick = toolSolve; $('#tPre').onchange = toolLoad; toolLoad();
+}
+function toolBoard() { const s = $('#tBoard').value.replace(/\s/g, ''); const cs = (s.match(/../g) || []).map(x => x[0].toUpperCase() + x[1].toLowerCase()); if (cs.length !== 5 || cs.some(c => RS.card(c) < 0 || RK.indexOf(c[0]) < 0 || 'cdhs'.indexOf(c[1]) < 0)) return null; const ids = cs.map(RS.card); if (new Set(ids).size !== 5) return null; return ids; }
+function toolLoad() {
+  const b = toolBoard(); if (!b) { $('#tProg').textContent = '牌面格式錯誤（例：Ks8h5c2d3s）'; return; }
+  const P = PRESETS[$('#tPre').value], pre = PREF[P.pre]; const R = toolRanges(pre, P.line, b);
+  const oopAgg = !pre.aggIP; $('#tPot').value = R.pot; $('#tStk').value = R.stack;
+  $('#tOop').value = rangeToText(oopAgg ? R.A : R.D); $('#tIp').value = rangeToText(oopAgg ? R.D : R.A);
+  $('#tOopL').textContent = 'OOP 範圍（' + (oopAgg ? pre.agg : pre.def) + '）'; $('#tIpL').textContent = 'IP 範圍（' + (oopAgg ? pre.def : pre.agg) + '）';
+  TOOL = {pos: oopAgg ? [pre.agg, pre.def] : [pre.def, pre.agg]}; $('#tProg').textContent = '範圍已載入';
+}
+function toolSolve() {
+  const b = toolBoard(); if (!b) { $('#tProg').textContent = '牌面格式錯誤'; return; }
+  const bets = $('#tBets').value.split(/[\s,]+/).filter(Boolean).map(x => x === 'allin' ? 'allin' : +x / 100).filter(x => x === 'allin' || x > 0);
+  const rz = $('#tRz').value.split(/[\s,]+/).filter(Boolean).map(x => +x / 100).filter(x => x > 0);
+  const spec = {board: b, pot: +$('#tPot').value, stack: +$('#tStk').value, oopBets: bets, ipBets: bets, raises: rz, maxRaises: 1, ranges: [rangeFromText($('#tOop').value, b), rangeFromText($('#tIp').value, b)]};
+  if (!spec.ranges[0].length || !spec.ranges[1].length || !(spec.pot > 0) || !(spec.stack > 0)) { $('#tProg').textContent = '輸入不完整'; return; }
+  const s = new RS.Solver(spec); const t0 = performance.now(); $('#tGo').disabled = true;
+  const step = () => { s.iterate(50); const e = s.exploitability(); $('#tProg').textContent = `迭代 ${s.it}・可剝削度 ${e.exploitPct.toFixed(2)}% 底池`;
+    if (e.exploitPct > 0.2 && s.it < 3000) setTimeout(step, 0); else { $('#tGo').disabled = false; toolShow(s, e, performance.now() - t0); } };
+  setTimeout(step, 0);
+}
+function toolShow(s, e, ms) {
+  const rep = s.report(); const ev = s.nodeEVs(); const pos = TOOL ? TOOL.pos : ['OOP', 'IP'];
+  const nodes = rep.filter(n => n.hist.replace(/\d+/g, '').length <= 2 && n.reachW > 1e-3 && n.reachOpp > 1e-3);
+  const sp = {hands: [0, 1].map(p => s.g.H[p].map(h => RS.cstr(h.c1) + RS.cstr(h.c2))), w: [0, 1].map(p => s.g.H[p].map(h => h.w))};
+  let h = `<div class="sec"><b>結果</b> <span class="muted small">${s.it} 次迭代・${Math.round(ms)}ms・可剝削度 ${e.exploitPct.toFixed(2)}% 底池・EV ${pos[0]} ${fmt1(e.ev[0])}bb / ${pos[1]} ${fmt1(e.ev[1])}bb</span>
+   <div class="row" style="margin-top:8px"><select id="tNode">${nodes.map((n, i) => `<option value="${i}">${n.hist ? esc(nodeFacingTxt(n.hist, pos)) : pos[0] + ' 先行動'}（${pos[n.pl]}）</option>`).join('')}</select></div><div id="tNodeOut"></div></div>`;
+  $('#tOut').innerHTML = h;
+  const show = i => { const n = nodes[i]; const acts = n.acts.map(a => a.label + (a.frac ? ' ' + Math.round(a.frac * 100) + '%' : '') + (a.to ? '|' + a.to : ''));
+    const hi = []; n.reach.forEach((r, j) => { if (r > 1e-6) hi.push(j); });
+    const nd = {id: n.id, pl: n.pl, acts, freq: n.freq, h: hi, r: hi.map(j => n.reach[j]), S: hi.map(j => n.acts.map((_, a) => Math.round(n.S[a][j] * 100)))};
+    const fake = {kind: 'riv', sp: Object.assign({exploit: {}}, sp), nd, nodeId: n.id, combo: 'xxxx'};
+    $('#tNodeOut').innerHTML = `<div class="mix">${acts.map((a, k) => `<div style="width:${n.freq[k] * 100}%;background:${actColor(a)}" title="${esc(actZh(a))}"></div>`).join('')}</div>
+      <div class="muted small">${acts.map((a, k) => actZh(a) + ' ' + Math.round(n.freq[k] * 100) + '%').join('・')}</div>${gridHTML(fake, 'gto')}${legendHTML(acts)}`; };
+  $('#tNode').onchange = e => show(+e.target.value); show(0);
+}
+function nodeFacingTxt(hist, pos) { const toks = hist.match(/x|B\d+|A\d+|R|A/g) || []; let who = 0; return toks.map(t => { const p = pos[who]; who = 1 - who; return t === 'x' ? p + ' 過牌' : t[0] === 'B' ? p + ' 下注 ' + t.slice(1) + '%' : t[0] === 'A' ? p + ' 全下' : p + ' 加注'; }).join(' → '); }
+// ---------- about ----------
+function renderAbout() {
+  const H = PRE.heroes; const rfi = ['UTG', 'HJ', 'CO', 'BTN', 'SB'];
+  $('#about').innerHTML = `<div class="sec"><b>這是什麼</b><p class="muted">翻前：6 人 100bb、NL2 抽水（約 5%、上限 10bb、無翻牌不抽）的 DCFR 解，65 個決策點、169 手牌混合策略。河牌：單條街 DCFR（含阻擋牌），${SPOTS.length} 個預先解好的局面，可剝削度都低於 0.1% 底池。剝削解：把對手鎖成 NL2 池（233 萬手）的實際頻率，再算自己的最佳反應。</p></div>
+  <div class="sec"><b>開池頻率（GTO・NL2 抽水）</b><table class="t"><tr><th>位置</th><th>GTO</th><th>無抽水</th><th>NL2 池</th></tr>${rfi.map(s => `<tr><td>${s}</td><td>${fmt1(PRE.gto[s + 'rfi'].freq.open)}%</td><td>${fmt1(PRE.norake[s + 'rfi'].freq.open)}%</td><td>${fmt1(100 * PRE.pool[s + 'rfi'].target.open)}%</td></tr>`).join('')}</table></div>
+  <div class="sec"><b>BB 防守（跟＋3-bet）</b><table class="t"><tr><th>對</th><th>GTO</th><th>無抽水</th><th>NL2 池</th></tr>${rfi.map(s => { const g = PRE.gto[s + 'open>BB'].freq, n = PRE.norake[s + 'open>BB'].freq, p = PRE.pool[s + 'open>BB'] ? PRE.pool[s + 'open>BB'].target : null; return `<tr><td>${s}</td><td>${fmt1(100 - g.fold)}%</td><td>${fmt1(100 - n.fold)}%</td><td>${p ? fmt1(100 * (1 - p.fold)) + '%' : '-'}</td></tr>`; }).join('')}</table></div>
+  <div class="sec"><b>剝削 NL2 池的模型收益</b><table class="t"><tr><th>位置</th><th>GTO 對池</th><th>剝削對池</th><th>多賺</th></tr>${Object.keys(H).map(s => `<tr><td>${s}</td><td>${fmt1(100 * H[s].ev_gto_vs_pool)}</td><td>${fmt1(100 * H[s].ev_exploit)}</td><td>+${fmt1(H[s].gain_bb100)}</td></tr>`).join('')}</table><div class="muted small">單位 bb/100（每 100 手、該位置），只算翻前＋翻後權益實現模型，不是真實勝率。</div></div>
+  <div class="sec"><b>快捷鍵</b><p class="muted">R＝加注/下注、C＝跟注/過牌、F＝棄牌、Space/Enter＝下一題。答錯的題目會在 2–3 題後、再在約 9 題後重出。</p><button class="btn" id="rst">清除練習紀錄</button></div>`;
+  $('#rst').onclick = () => { ST = {items: {}, tot: {n: 0, ok: 0}, queue: []}; save(); renderStat(); };
+}
+// ---------- boot ----------
+const hashM = (location.hash || '').replace('#', ''); renderStat(); setMode(['riv', 'tool'].includes(hashM) ? hashM : 'riv');
+window.addEventListener('hashchange', () => { const m = location.hash.slice(1); if (['riv', 'tool'].includes(m)) setMode(m); });
+</script>
+</body>
+</html>
