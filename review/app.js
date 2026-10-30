@@ -11,7 +11,7 @@ const cardHTML = c => `<span class="cd ${c[1]}">${c[0] === 'T' ? '10' : c[0]}<i>
 const LS = {get(k, d) { try { const v = localStorage.getItem('pk8.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('pk8.' + k, JSON.stringify(v)); } catch (e) {} }};
 let VER = 'exp'; try { const r = localStorage.getItem('pk8.ver'); if (r === 'gto' || r === 'exp') VER = r; } catch (e) {}
-const VERZH = {exp: '剝削 NL2 池', gto: 'GTO'};
+const VERZH = {exp: '穩健剝削', gto: 'GTO'};
 const PAGE = document.body.dataset.page;
 $('#topnav').innerHTML = '<a class="topb" href="../index.html" style="text-decoration:none;text-align:center">← 翻前</a>' +
   '<a class="topb" href="../postflop/index.html" style="text-decoration:none;text-align:center">翻後</a>' +
@@ -155,7 +155,7 @@ function dnext() { if (!CUR || !CUR.a) return; const k = S.q.shift();
   CUR = null; save(); render(); }
 
 const R = RV.result;
-$('#app').innerHTML = `<div class="row sp"><div class="rvh">覆盤 ${esc(RV.date)}</div><div class="seg ver" role="group" aria-label="版本"><button class="segb ${VER === 'exp' ? 'on' : ''}" data-ver="exp">剝削 NL2 池</button><button class="segb ${VER === 'gto' ? 'on' : ''}" data-ver="gto">GTO</button></div></div>
+$('#app').innerHTML = `<div class="row sp"><div class="rvh">覆盤 ${esc(RV.date)}</div><div class="seg ver" role="group" aria-label="版本"><button class="segb ${VER === 'exp' ? 'on' : ''}" data-ver="exp">穩健剝削</button><button class="segb ${VER === 'gto' ? 'on' : ''}" data-ver="gto">GTO</button></div></div>
   <div class="muted small">${esc(RV.title)}・${esc(RV.session)}</div>
   <div class="sec"><b>結論</b><div class="kpi" style="margin:8px 0">
     <div><span class="muted">實際結果</span><b>${sg(R.net_bb)}bb</b><span class="muted">${sg(R.bb100)} bb/100（±${R.se_bb100}）</span></div>

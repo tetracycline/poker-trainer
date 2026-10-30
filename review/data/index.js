@@ -7,7 +7,7 @@ window.RVI=[
 "bb100": 56.7,
 "adj_bb100": 7,
 "n_costly": 11,
-"n_drill": 64,
+"n_drill": 52,
 "top": [
 "1. 不會 3-bet / 4-bet，強牌只會平跟或棄（約 −21bb）",
 "2. 盲注防守太緊（約 −8bb）",

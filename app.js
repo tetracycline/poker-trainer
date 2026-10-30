@@ -16,7 +16,7 @@ let VER = LS.get('ver', 'exp'); if (VER !== 'gto' && VER !== 'exp') VER = 'exp';
 // pk8.ver is stored as raw string too so solver.html (iframe) can share it
 try { const raw = localStorage.getItem('pk8.ver'); if (raw === 'gto' || raw === 'exp') VER = raw; } catch (e) {}
 function setVer(v) { VER = v; try { localStorage.setItem('pk8.ver', v); } catch (e) {} }
-const VERZH = {exp: '剝削 NL2 池', gto: 'GTO'};
+const VERZH = {exp: '穩健剝削', gto: 'GTO'};
 const ST = Object.assign({cnt: 0, q: [], miss: {}, st: {}, flt: {}}, LS.get('st', {}));
 const save = () => LS.set('st', ST);
 // ---------- solver data helpers ----------
@@ -191,7 +191,7 @@ function answer(a) {
 // ---------- rendering pieces ----------
 const SU = {s: '♠', h: '♥', d: '♦', c: '♣'};
 function cardHTML(c) { return `<span class="cd ${c[1]}">${c[0] === 'T' ? '10' : c[0]}<i>${SU[c[1]]}</i></span>`; }
-function verSeg() { return `<div class="seg ver" role="group" aria-label="版本"><button class="segb ${VER === 'exp' ? 'on' : ''}" data-ver="exp">剝削 NL2 池</button><button class="segb ${VER === 'gto' ? 'on' : ''}" data-ver="gto">GTO</button></div>`; }
+function verSeg() { return `<div class="seg ver" role="group" aria-label="版本"><button class="segb ${VER === 'exp' ? 'on' : ''}" data-ver="exp">穩健剝削</button><button class="segb ${VER === 'gto' ? 'on' : ''}" data-ver="gto">GTO</button></div>`; }
 function gridHTML(n, v, hl) {
   const acts = node(n).acts; let h = '<div class="grid">';
   GRID.forEach(nm => {
@@ -229,7 +229,7 @@ function poolNote(n) {
   else if (p.fam === 'vs3b') { add(p.op + 'open>' + p.y, `池的 ${p.y} 面對 ${p.op} 開池`); add(p.op + 'open>' + p.y + '3b>4b', `池的 ${p.y} 面對 4-bet`); }
   else if (p.fam === 'vs4b') add(p.op + 'open>' + p.y + '3b', `池的 ${p.op} 面對 3-bet`);
   else if (p.fam === 'vsjam') add(p.op + 'open>' + p.y + '3b>4b', `池的 ${p.y} 面對 4-bet`);
-  return out.length ? `<p class="muted small">剝削版把對手鎖成 NL2 池的實際頻率，再解你的最佳回應。${out.join('；')}。</p>` : '';
+  return out.length ? `<p class="muted small">穩健剝削版：把對手鎖成 NL2 池的實際頻率，再解你的最佳回應；開池範圍另外用 9 種情境（對手比較會防守、會因你開寬而少棄牌、你翻後打得比模型差等）檢驗，只留大多數情境都賺的牌。${out.join('；')}。</p>` : '';
 }
 // ---------- page: drill ----------
 function drillNav() {
@@ -341,7 +341,7 @@ function renderLeaks() {
   ${row('VPIP / PFR', '18% / 14%', '—', null)}</div></div>
   <div class="sec"><b>1. BB 防守太少（最確定的漏洞）</b><p>你只防守 20%，連信賴區間上限 31% 都遠低於解算器（${bb}）。BB 已經投入 1bb，面對 BTN 2.5bb 只要補 1.5bb 去爭 4bb 的底池，大量同花牌、連張、帶 A 的牌都該跟。先把 BB 對 BTN、BB 對 SB 練到 90% 以上。</p>
    <div class="row"><a class="btn" href="#bb-btn" data-go="bb-btn">BB 對 BTN</a><a class="btn" href="#bb-sb" data-go="bb-sb">BB 對 SB</a><a class="btn" href="#bb-co" data-go="bb-co">BB 對 CO</a></div></div>
-  <div class="sec"><b>2. 偷盲太少</b><p>你從 CO–SB 只開 23%；解算器：${steal}。${v === 'exp' ? 'NL2 池的盲注棄牌太多，所以剝削版比 GTO 開得更寬（BTN、SB 尤其明顯）。' : ''}</p><div class="row"><a class="btn" href="#btn" data-go="btn">BTN 開池</a><a class="btn" href="#rfi-sb" data-go="rfi-sb">SB 開池</a><a class="btn" href="#rfi-co" data-go="rfi-co">CO 開池</a></div></div>
+  <div class="sec"><b>2. 偷盲太少</b><p>你從 CO–SB 只開 23%；解算器：${steal}。${v === 'exp' ? 'NL2 池的盲注棄牌太多，所以穩健剝削版的 BTN、SB 開得比 GTO 寬；但比純剝削解收斂，只留各種情境都賺的牌（CO 以前反而比 GTO 略緊）。' : ''}</p><div class="row"><a class="btn" href="#btn" data-go="btn">BTN 開池</a><a class="btn" href="#rfi-sb" data-go="rfi-sb">SB 開池</a><a class="btn" href="#rfi-co" data-go="rfi-co">CO 開池</a></div></div>
   <div class="sec"><b>3. SB 面對開池棄牌太多、3-bet 太少</b><p>你在 SB 棄牌 84%；解算器 vs BTN 棄牌 ${f1(F('BTNopen>SB', v, 'fold'))}%，3-bet ${f1(F('BTNopen>SB', v, '3bet'))}%、平跟 ${f1(F('BTNopen>SB', v, 'call'))}%。</p><div class="row"><a class="btn" href="#sb" data-go="sb">SB 面對開池</a><a class="btn" href="#3bet" data-go="3bet">有位置面對開池</a></div></div>
   <div class="sec"><b>4. 面對 3-bet</b><p>你棄牌 50%（只有 12 次，樣本太小）。${v === 'exp' ? `NL2 池的 3-bet 範圍很偏價值，剝削版 BTN 面對 BB 3-bet 棄牌 ${f1(F('BTNopen>BB3b', 'exp', 'fold'))}%（GTO ${f1(F('BTNopen>BB3b', 'gto', 'fold'))}%）。在這個池子，對 3-bet 多棄是對的。` : `GTO 下 BTN 面對 BB 3-bet 棄牌 ${f1(F('BTNopen>BB3b', 'gto', 'fold'))}%。`}</p><div class="row"><a class="btn" href="#vs3b" data-go="vs3b">開池後面對 3-bet</a></div></div>
   <div class="sec"><b>剝削版和 GTO 差最多的地方</b><table class="t"><tr><th>情況</th><th>GTO</th><th>剝削</th></tr>${shifts.map(([n, a, t]) => `<tr><td>${t}</td><td>${f1(F(n, 'gto', a))}%</td><td>${f1(F(n, 'exp', a))}%</td></tr>`).join('')}</table>
@@ -357,7 +357,8 @@ function renderAbout() {
   $('#main').innerHTML = `<div class="pg">
   <div class="sec"><b>資料從哪裡來（v8）</b><p>網站上每一張翻前表、每一題、答題後的表格和「我的弱點」數字，都來自同一份檔案 <code>pf_data.js</code>（版本 ${PF.ver}）。它由解算器輸出直接產生，沒有手寫範圍。</p>
   <ul><li><b>GTO</b>：6 人桌 100bb、NL2 抽水（5%、上限 10bb、沒有翻牌不抽），DCFR ${P.iters} 次迭代，NashConv ${P.nashconv_mbb} mbb/手；65 個決策點 × 169 手牌。</li>
-  <li><b>剝削 NL2 池</b>（練習預設）：用 ${P.hands_pool.toLocaleString()} 手 NL2 資料，把對手在 ${pl.length} 個節點鎖成池的實際頻率（每節點 n=${nmin.toLocaleString()}–${nmax.toLocaleString()}），再解你每個位置的最佳回應。</li>
+  <li><b>穩健剝削</b>（練習預設）：用 ${P.hands_pool.toLocaleString()} 手 NL2 資料，把對手在 ${pl.length} 個節點鎖成池的實際頻率（每節點 n=${nmin.toLocaleString()}–${nmax.toLocaleString()}），再解你每個位置的最佳回應。</li>
+  <li><b>開池範圍（穩健版，${PF.ver}）</b>：純剝削解只對「池子剛好是模型那樣」最好，會開到 BTN 60%、SB 84%。我們再用 9 種合理情境重算每手牌開池的 EV（對手防守的牌像 GTO、少棄一半、會因你開寬而調整、你翻後打折 5%，以及組合）。UTG／HJ／CO 只開至少 7 種情境都賺的牌，BTN／SB 只開 9 種都賺的牌：UTG ${f1(PF.nodes.UTGrfi.exp.freq.open)}%、HJ ${f1(PF.nodes.HJrfi.exp.freq.open)}%、CO ${f1(PF.nodes.COrfi.exp.freq.open)}%、BTN ${f1(PF.nodes.BTNrfi.exp.freq.open)}%、SB ${f1(PF.nodes.SBrfi.exp.freq.open)}%。開池題答案表的 EV 欄用其中偏悲觀的那一種情境（對手防守像 GTO、會調整、你翻後打折 5%）。如果池子真的跟模型一樣，這樣每 100 手約少賺 0.2–0.3bb；對手一調整就反過來多賺。</li>
   <li><b>尺寸</b>：開池 2.5bb（SB 3bb）；有位置 3-bet 3 倍、盲注 3-bet 4 倍（BB 對 SB 3 倍）；4-bet 2.2 倍；之後全下。</li>
   <li><b>簡化</b>：只算兩人對抗：沒有擠壓（squeeze）、多人跟注和 limp。翻後用勝率實現模型估算。</li></ul></div>
   <div class="sec"><b>評分規則（全站同一個函式）</b><p>答案＝表上頻率最高的動作；任何頻率 ≥25% 的動作也算對（顯示「正確（混合）」）。題目只從到達率 ≥25% 的手牌出，邊界牌和混合牌出現得比較多，答錯的牌約 3 題後重出、對了再約 8 題後確認一次。</p></div>

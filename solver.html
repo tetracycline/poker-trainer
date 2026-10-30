@@ -71,7 +71,7 @@ kbd{background:#0b130e;color:var(--tx2);border:1px solid var(--bd2);border-radiu
     <button class="tab on" data-m="riv">河牌練習</button><button class="tab" data-m="tool">自己解河牌</button>
   </div>
   <div class="row" id="ctl">
-    <div class="seg" id="modeSeg"><button data-v="exp">剝削 NL2 池</button><button data-v="gto">GTO</button></div>
+    <div class="seg" id="modeSeg"><button data-v="exp">穩健剝削</button><button data-v="gto">GTO</button></div>
     <select id="famSel"></select>
   </div>
   <div id="drill">
@@ -84,7 +84,7 @@ kbd{background:#0b130e;color:var(--tx2);border:1px solid var(--bd2);border-radiu
 <div class="abar" id="abar"></div>
 <script src="river/river.js"></script>
 <script src="river/ranges.js"></script>
-<script src="pf_data.js?v=8b"></script>
+<script src="pf_data.js?v=8r"></script>
 <script src="data/river_v8.js"></script>
 <script>(function(){var P=window.PF,D=window.SOLVER_DATA,pre={names:P.names,gto:{},exp:{},norake:{},pool:{},heroes:{}};
 Object.keys(P.nodes).forEach(function(k){var n=P.nodes[k];['gto','exp'].forEach(function(v){pre[v][k]={seat:n.seat,acts:n.acts,s:n[v].s,r:n[v].r,freq:n[v].freq};});pre.norake[k]={seat:n.seat,acts:n.acts,freq:n.norake};});
