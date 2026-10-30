@@ -73,7 +73,7 @@ function aTxt(a) { const [, , k, x, ai] = a;
 function logHTML(h, upto, reveal) {
   const end = reveal ? h.acts.length : upto; let html = '', st = null;
   for (let i = 0; i < end; i++) { const a = h.acts[i];
-    if (a[0] !== st) { st = a[0]; html += `<div class="st">${STZ[st]}${BN[st] ? '　' + h.board.slice(0, BN[st]).map(cardHTML).join('') .replace(/class="cd/g, 'style="width:30px;height:40px;font-size:15px" class="cd') : ''}　<span class="muted">底池 ${fbb(h.pots[i])}bb</span></div>`; }
+    if (a[0] !== st) { st = a[0]; html += `<div class="st">${STZ[st]}${BN[st] ? '　' + h.board.slice(0, BN[st]).map(cardHTML).join('') .replace(/class="cd/g, 'style="width:34px;height:46px;font-size:18px" class="cd') : ''}　<span class="muted">底池 ${fbb(h.pots[i])}bb</span></div>`; }
     html += `<span class="a ${a[1] === 'Hero' ? 'me' : ''}">${esc(who(a[1]))} ${aTxt(a)}</span>`; }
   if (!reveal) { const a = h.acts[upto];
     if (a[0] !== st) html += `<div class="st">${STZ[a[0]]}　<span class="muted">底池 ${fbb(h.pots[upto])}bb</span></div>`;
@@ -162,8 +162,8 @@ $('#app').innerHTML = `<div class="row sp"><div class="rvh">覆盤 ${esc(RV.date
     <div><span class="muted">運氣調整後</span><b>約 ${sg(R.adj_bb100)} bb/100</b><span class="muted">全下運氣約 ${sg(R.luck_bb)}bb</span></div>
     <div><span class="muted">翻前可量化損失</span><b>−${RV.loss_total}bb</b><span class="muted">${RV.n_decisions} 個翻前決定、錯 ${RV.n_bad} 個</span></div></div>
     <ul>${RV.conclusion.map(x => `<li>${x}</li>`).join('')}</ul></div>
-  <div class="sec"><b>數據 vs 目標</b><table class="t" style="margin-top:6px"><tr><th>項目</th><th>今天</th><th>累計</th><th>目標</th></tr>
-    ${RV.stats.map(r => `<tr><td>${esc(r[0])}</td><td class="${r[4] || ''}">${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td></tr>`).join('')}</table>
+  <div class="sec"><b>數據 vs 目標</b><div class="tw"><table class="t st" style="margin-top:6px"><tr><th>項目</th><th>今天</th><th>累計</th><th>目標</th></tr>
+    ${RV.stats.map(r => `<tr><td>${esc(r[0])}</td><td class="${r[4] || ''}">${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td></tr>`).join('')}</table></div>
     <div class="small muted" style="margin-top:6px">${esc(RV.stats_note)}</div></div>
   <div class="sec"><b>三大弱點與修正</b>${RV.leaks.map(l => `<div style="margin-top:10px"><b>${esc(l.t)}</b><div class="small">${esc(l.p)}</div><div class="note" style="margin-top:4px">修正：${esc(l.fix)}</div>
     <div class="tags" style="margin-top:6px">${l.go.map(([d, t]) => `<a class="chip sm" href="../index.html#${esc(d)}">練：${esc(t)} →</a>`).join('')}</div></div>`).join('')}</div>
