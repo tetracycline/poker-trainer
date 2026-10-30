@@ -1,9 +1,9 @@
-// v8: network-first for the app (new versions show right away); river data cache-first (versioned file name).
-const C='poker-v8-1030b';const F=['./','index.html','app.js','pf_data.js','solver.html','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png'];
+// v8 + postflop: network-first for the app (new versions show right away); river data cache-first (versioned file name).
+const C='poker-v8-1030c';const F=['./','index.html','app.js','pf_data.js','solver.html','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(F)));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{
-  const q=e.request,u=new URL(q.url);if(q.method!=='GET'||u.origin!==location.origin)return;
+  const q=e.request,u=new URL(q.url);if(q.method!=='GET'||u.origin!==location.origin)return;if(u.pathname.includes('/postflop/'))return;// postflop module: plain network (its gz data is fetched on demand)
   const nav=q.mode==='navigate';const key=nav?(u.pathname.endsWith('solver.html')?'solver.html':'./'):q;
   e.respondWith(caches.open(C).then(c=>{
     if(/\/data\/|\/river\//.test(u.pathname))return c.match(q,{ignoreSearch:true}).then(h=>h||fetch(q).then(r=>{if(r&&r.ok)c.put(q,r.clone());return r;}));

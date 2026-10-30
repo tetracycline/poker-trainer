@@ -386,8 +386,8 @@ function bindCommon() {
   $$('#main [data-flt]').forEach(b => b.onclick = () => { ST.flt[PAGE] = b.dataset.flt; save(); renderDrillShell(); nextQ(); });
 }
 function boot() {
-  $('#topnav').innerHTML = TOP.map(([k, t]) => `<button class="topb" data-top="${k}">${t}</button>`).join('');
-  $$('#topnav .topb').forEach(b => b.onclick = () => go(b.dataset.top === 'prac' ? LASTDRILL : b.dataset.top));
+  $('#topnav').innerHTML = TOP.map(([k, t]) => `<button class="topb" data-top="${k}">${t}</button>`).join('') + '<a class="topb" href="postflop/index.html" style="text-decoration:none;text-align:center">翻後</a>';
+  $$('#topnav .topb[data-top]').forEach(b => b.onclick = () => go(b.dataset.top === 'prac' ? LASTDRILL : b.dataset.top));
   document.addEventListener('keydown', e => {
     if (!DR[PAGE] || !Q || e.metaKey || e.ctrlKey || e.altKey) return; if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
     const k = e.key.toUpperCase(), m = node(Q.n);
