@@ -327,7 +327,10 @@ function renderLeaks() {
   const steal = ['CO', 'BTN', 'SB'].map(x => `${x} ${f1(F(x + 'rfi', v, 'open'))}%`).join('、');
   const b3 = `BB vs BTN ${f1(F('BTNopen>BB', v, '3bet'))}%、BTN vs CO ${f1(F('COopen>BTN', v, '3bet'))}%、SB vs BTN ${f1(F('BTNopen>SB', v, '3bet'))}%`;
   const shifts = [['BTNrfi', 'open', 'BTN 開池'], ['SBrfi', 'open', 'SB 開池'], ['COopen>BTN', '3bet', 'BTN 對 CO 3-bet'], ['BTNopen>BB3b', 'fold', 'BTN 面對 BB 3-bet 棄牌'], ['UTGopen>BB', 'call', 'BB 對 UTG 跟注'], ['SBopen>BB', 'fold', 'BB 對 SB 棄牌'], ['BTNopen>SB', '3bet', 'SB 對 BTN 3-bet'], ['BTNopen>SB', 'call', 'SB 對 BTN 平跟']];
-  $('#main').innerHTML = `<div class="pg"><div class="row ctl">${verSeg()}</div>
+  const RVL = window.RVI || [], rv0 = RVL[0];
+  const rvSec = rv0 ? `<div class="sec"><b>最新覆盤：${esc(rv0.date)}（${rv0.hands} 手）</b><p class="small">結果 ${rv0.net_bb > 0 ? '+' : ''}${rv0.net_bb}bb（${rv0.bb100 > 0 ? '+' : ''}${rv0.bb100} bb/100）${rv0.adj_bb100 != null ? `，運氣調整後約 ${rv0.adj_bb100 > 0 ? '+' : ''}${rv0.adj_bb100} bb/100` : ''}。<br>${(rv0.top || []).map(esc).join('<br>')}</p>
+   <div class="row"><a class="btn" href="review/${esc(rv0.date)}.html">打開覆盤（最貴的手 ${rv0.n_costly} 題、翻前錯題 ${rv0.n_drill} 題）</a><a class="btn" href="review/index.html">全部覆盤</a></div></div>` : '';
+  $('#main').innerHTML = `<div class="pg"><div class="row ctl">${verSeg()}</div>${rvSec}
   <div class="sec"><b>你的數據（938 手，10/29 匯入）對照解算器（${VERZH[v]}）</b><p class="muted small">右欄數字直接從翻前表計算，和練習題同一份資料。樣本很小，信賴區間寫在括號裡。</p>
   <div class="lt">
   ${row('BB 面對偷盲防守', '20%（12/61，12–31%）', bb, 'bb-btn')}
@@ -386,7 +389,7 @@ function bindCommon() {
   $$('#main [data-flt]').forEach(b => b.onclick = () => { ST.flt[PAGE] = b.dataset.flt; save(); renderDrillShell(); nextQ(); });
 }
 function boot() {
-  $('#topnav').innerHTML = TOP.map(([k, t]) => `<button class="topb" data-top="${k}">${t}</button>`).join('') + '<a class="topb" href="postflop/index.html" style="text-decoration:none;text-align:center">翻後</a>';
+  $('#topnav').innerHTML = TOP.map(([k, t]) => `<button class="topb" data-top="${k}">${t}</button>`).join('') + '<a class="topb" href="postflop/index.html" style="text-decoration:none;text-align:center">翻後</a><a class="topb" href="review/index.html" style="text-decoration:none;text-align:center">覆盤</a>';
   $$('#topnav .topb[data-top]').forEach(b => b.onclick = () => go(b.dataset.top === 'prac' ? LASTDRILL : b.dataset.top));
   document.addEventListener('keydown', e => {
     if (!DR[PAGE] || !Q || e.metaKey || e.ctrlKey || e.altKey) return; if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;

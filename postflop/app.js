@@ -364,7 +364,7 @@ async function boot() {
   try { IDX = await fetch('data/index.json').then(r => r.json()); } catch (e) { $('#main').innerHTML = '<div class="loading">資料載入失敗</div>'; return; }
   IDX.cats.forEach(([k, zh, st]) => { CATZH[k] = zh; CATST[k] = st; });
   buildDrills();
-  $('#topnav').innerHTML = TOP.map(([k, t]) => `<button class="topb" data-top="${k}">${t}</button>`).join('') + '<a class="topb" href="../index.html" style="text-decoration:none">← 翻前</a>';
+  $('#topnav').innerHTML = TOP.map(([k, t]) => `<button class="topb" data-top="${k}">${t}</button>`).join('') + '<a class="topb" href="../index.html" style="text-decoration:none">← 翻前</a><a class="topb" href="../review/index.html" style="text-decoration:none">覆盤</a>';
   $$('#topnav .topb[data-top]').forEach(b => b.onclick = () => go(b.dataset.top));
   document.addEventListener('keydown', e => {
     if (!DR[PAGE] || !Q || e.metaKey || e.ctrlKey || e.altKey) return; if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
