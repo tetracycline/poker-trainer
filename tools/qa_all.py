@@ -209,6 +209,15 @@ def check_q(d, it):
         if when == '答案' and m['kb'] > m['ih'] + 2: fail('5 版面', nm, f"答案（對錯＋按鈕）超出 1280×800（{m['kb']}px）：{tag}")
         if m['sw'] > m['iw'] + 2: fail('5 版面', nm, f"{when} 橫向溢出 {m['sw']}px")
 
+async def goto(pg, url):
+    # 本機伺服器偶爾卡住：重試，不讓整輪 QA 掛掉
+    for k in range(3):
+        try: return await pg.goto(url, timeout=60000)
+        except Exception:
+            if k == 2: raise
+            await pg.wait_for_timeout(2000)
+
+
 async def run():
     port = (lambda s: (s.bind(('127.0.0.1', 0)), s.getsockname()[1], s.close())[1])(socket.socket())
     srv = subprocess.Popen([sys.executable, '-m', 'http.server', str(port), '--bind', '127.0.0.1'], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -225,7 +234,7 @@ async def run():
             for d in drills():
                 if A.only and A.only not in d['name']: continue
                 pg, errs, ctx = await page(1280, 800)
-                await pg.goto(base + d['url']); await pg.wait_for_timeout(1500); await pg.evaluate(HARN)
+                await goto(pg, base + d['url']); await pg.wait_for_timeout(1500); await pg.evaluate(HARN)
                 tot = 0
                 for prep, n in d['runs']:
                     if prep: await pg.evaluate(prep); await pg.wait_for_timeout(50)
@@ -239,7 +248,7 @@ async def run():
                 for e in errs[:5]: fail('0 錯誤', d['name'], 'JS 錯誤：' + e[:160])
                 # mobile: larger text
                 mp, merr, mctx = await page(390, 844, True)
-                await mp.goto(base + d['url']); await mp.wait_for_timeout(1500)
+                await goto(mp, base + d['url']); await mp.wait_for_timeout(1500)
                 if d['runs'][0][0]: await mp.evaluate(d['runs'][0][0]); await mp.wait_for_timeout(300)
                 fs = await mp.evaluate("(()=>{const e=[...document.querySelectorAll('.qs,.eqq,.facing,.ral,.ctx,.line,.qcard,.spotT,.qtxt,#qbox,main p')].find(x=>x.offsetParent&&x.innerText.trim());return e?parseFloat(getComputedStyle(e).fontSize):0})()")
                 dfs = await pg.evaluate("(()=>{const e=[...document.querySelectorAll('.qs,.eqq,.facing,.ral,.ctx,.line,.qcard,.spotT,.qtxt,#qbox,main p')].find(x=>x.offsetParent&&x.innerText.trim());return e?parseFloat(getComputedStyle(e).fontSize):0})()")
@@ -252,7 +261,7 @@ async def run():
             for u in STATIC:
                 if A.only and A.only not in u: continue
                 pg, errs, ctx = await page(1280, 800); url, _, flag = u.partition('?')
-                await pg.goto(base + url); await pg.wait_for_timeout(1500); await pg.evaluate(HARN)
+                await goto(pg, base + url); await pg.wait_for_timeout(1500); await pg.evaluate(HARN)
                 if flag == 'sheet': await pg.evaluate("LQ.st.mode='sheet';LQ.st.rm='sheet';LQ.draw()"); await pg.wait_for_timeout(200)
                 m = await pg.evaluate("(async()=>{const r=await __QA(0,'x','x',1);return null})()")
                 mm = await pg.evaluate("""(()=>{PKKEYS&&PKKEYS.render();const L=PKKEYS&&PKKEYS.last(),cov=new Set();if(L)L.list.forEach(x=>{if(x.badge&&x.label)x.els.forEach(e=>cov.add(e))});
