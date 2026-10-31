@@ -501,9 +501,12 @@ async function preToFlop(k, nd) {
   const fls = IDX.spots[sp].flops.map(x => x[0]).filter(f => !cards(f).some(c => used.includes(c)));
   for (let t = 0; t < 12 && fls.length; t++) {
     const fl = fls.splice(Math.floor(Math.random() * fls.length), 1)[0]; let F; try { F = await loadFlop(sp, fl); } catch (e) { continue; }
-    const ns = (F.v[VER] || []).concat(F.v.gto || []).filter(n => n.p === hp && n.l.split('/').length === 1);
-    if (!ns.length || !ns.some(n => hIdx(n, H.h) >= 0)) continue;
-    const n0 = ns.find(n => hIdx(n, H.h) >= 0); H.h = combo(n0, hIdx(n0, H.h));
+    const has = n => { const k = hIdx(n, H.h); return k >= 0 && n.w[k] > 0 && row(n, k).some(x => x > 0); };
+    let ns = (F.v[VER] || []).filter(n => n.p === hp && n.l.split('/').length === 1);
+    if (VER === 'exp' && !ns.some(has) && H.pm) ns = ns.concat((F.v.gto || []).filter(n => n.p === hp && n.l.split('/').length === 1));
+    if (VER !== 'exp') ns = ns.concat((F.v.gto || []).filter(n => n.p === hp && n.l.split('/').length === 1));
+    ns = ns.filter(has); if (!ns.length) continue;
+    const n0 = ns[0]; H.h = combo(n0, hIdx(n0, H.h));
     Object.assign(H, {sp, fl, F, hp, w0: n0.w[hIdx(n0, H.h)], b: n0.b.slice(0, 6), line: '', log: [[]]}); return;
   }
   await preOff(k, 'norange', nd);
@@ -515,18 +518,34 @@ async function preOff(k, why, nd) {
   prePlog(why === 'norange' ? '（你這手不在翻後解的範圍內 → 直接發完到開牌，不評分）' : `（${allin ? '4-bet／全下底池' : '這個翻前線'}翻後沒解；只有 UTG/HJ/CO/BTN/SB vs BB 單挑、BB/SB 3-bet vs BTN 有解 → 直接發完到開牌，不評分）`, '');
   H.end = {sd: 1, pre: 1, pot, vk: k};
 }
+// 翻前：你每個動作之後，對手面對的那個點，池 vs GTO
+function prePoolWhy(k, nd) {
+  const out = [];
+  for (const a of nd.acts) { if (a === 'fold' || a === 'call') continue; const nk = preNextKey(k, a), vn = nk && pfNode(nk), pool = nk && PF.pool[nk]; if (!vn) continue;
+    const gF = vn.gto.freq.fold || 0;
+    if (!pool) { out.push(`你${preLbl(nd, a)}後 ${vn.seat} 棄牌 GTO ${f1(gF)}%（無池樣本 → 照 GTO）`); continue; }
+    const pF = pool.t.fold || 0, ci = wilson(pF / 100, pool.n), sig = pool.n >= 500 && (gF / 100 < ci[0] || gF / 100 > ci[1]);
+    out.push(`你${preLbl(nd, a)}後 ${vn.seat} 棄牌 池 ${f1(pF)}% vs GTO ${f1(gF)}%（n=${pool.n.toLocaleString()}，95% ${f1(100 * ci[0])}–${f1(100 * ci[1])}%）→ ${sig ? '顯著' : pool.n < 500 ? '樣本不足' : '不顯著'}`); }
+  return out;
+}
 function preAnswer(a) {
   const C = H.cur, nd = C.nd; if (!nd.acts.includes(a)) return;
-  const ci = PF.names.indexOf(classOf(H.h)), E = nd[VER] || nd.gto, G = nd.gto;
+  const ci = PF.names.indexOf(classOf(H.h)), G = nd.gto, E = nd.exp || nd.gto, sum = r => r.reduce((t, x) => t + x, 0);
   const mainOf = P => { const s = P.s[ci]; let m = 0; s.forEach((x, j) => { if (x > s[m]) m = j; }); return m; };
-  let P = E, why = VER === 'exp' ? '剝削解和 GTO 同動作' : 'GTO';
-  if (VER === 'exp') { const em = mainOf(E), gm = mainOf(G); if (em !== gm) { const gain = (E.ev[ci][em] - E.ev[ci][gm]) / 100; if (gain > 0.25) why = `剝削多賺 ${gain.toFixed(2)}bb > 0.25 → 用剝削解`; else { P = G; why = `剝削打法只多賺 ${gain.toFixed(2)}bb ≤ 0.25 → 照 GTO`; } } }
+  let P = G, why = 'GTO 整手：照 GTO 解評分', basis = 'GTO';
+  if (VER === 'exp') {
+    if (!sum(E.s[ci])) { why = '剝削解裡這手不會走到這裡 → 照 GTO 評分'; }
+    else { const em = mainOf(E), gm = mainOf(G), gain = (E.ev[ci][em] - E.ev[ci][gm]) / 100;
+      if (em === gm) { P = E; basis = '剝削'; why = '剝削解和 GTO 同動作'; }
+      else if (gain > 0.25) { P = E; basis = '剝削'; why = `剝削（${preLbl(nd, nd.acts[em])}）比 GTO（${preLbl(nd, nd.acts[gm])}）多賺 ${gain.toFixed(2)}bb > 0.25 → 用剝削解評分`; }
+      else why = `剝削（${preLbl(nd, nd.acts[em])}）只比 GTO 多賺 ${gain.toFixed(2)}bb ≤ 0.25 → 照 GTO 評分`; } }
   const s = P.s[ci], ev = P.ev[ci], j = nd.acts.indexOf(a), m = mainOf(P), best = Math.max(...ev);
-  const res = j === m || s[j] >= 50 ? 'ok' : s[j] >= 25 ? 'mix' : 'bad', loss = (best - ev[j]) / 100;
+  const res = s[j] <= 0 ? 'bad' : j === m || s[j] >= 50 ? 'ok' : s[j] >= 25 ? 'mix' : 'bad', loss = (best - ev[j]) / 100;
   const bestTxt = nd.acts.map((x, k) => [x, s[k]]).filter(x => x[1] >= 25 || nd.acts.indexOf(x[0]) === m).map(x => `${preLbl(nd, x[0])} ${x[1]}%`).join(' / ');
-  const ex = `EV：${nd.acts.map((x, k) => `${PREZH[x]} ${(ev[k] / 100).toFixed(2)}`).join('・')}bb`;
-  C.ans = {a, res, loss, best: bestTxt, vz: P === G ? 'GTO' : VERZH[VER], why, ex, st: -1};
-  H.dec.push(Object.assign({al: preLbl(nd, a)}, C.ans));
+  const evs = (Q, lb) => `${lb} EV：${nd.acts.map((x, k) => `${PREZH[x]} ${(Q.ev[ci][k] / 100).toFixed(2)}`).join('・')}bb`;
+  const ex = [`你選的頻率 ${s[j]}%`, VER === 'exp' ? evs(E, '剝削模型') : '', P === G ? evs(G, 'GTO') : '', ...(VER === 'exp' ? prePoolWhy(C.k, nd) : [])].filter(Boolean).map(esc).join('<br>');
+  C.ans = {a, res, loss, best: bestTxt, vz: basis === '剝削' ? VERZH.exp : 'GTO', basis, why, ex, st: -1};
+  H.dec.push(Object.assign({al: preLbl(nd, a)}, C.ans)); if (!GOOD(res) || (VER === 'exp' && !(E.s[ci][j] > 0))) H.pm = 1;   // pm：你離開了剝削解的線
   prePlog(`${H.me}（你）${preLbl(nd, a)}`, '');
   C.next = a; hRender();
 }
@@ -610,27 +629,43 @@ function hRun() {
     if (H.off) { const mx = Math.max(...S.b), a = S.b[p] < mx ? 'c' : 'x'; hLog(`${seats(H.sp)[p]} ${a === 'c' ? '跟注' : '過牌'}`, '解外：自動'); H.line = hAdd(H.line, a); continue; }
     if (!H.line && !hHas('', H.b)) { hLog(`${seats(H.sp)[0]}${H.hp === 0 ? '（你）' : ''} 過牌`, '解設定：翻牌由 ' + seats(H.sp)[0] + ' 先過牌（不出題）'); H.line = 'x'; continue; }
     if (p === H.hp) {
-      let n = findNode(H.F, VER, H.line, H.b), i = n ? hIdx(n, H.h) : -1;
+      let n = findNode(H.F, VER, H.line, H.b), i = n ? hIdx(n, H.h) : -1; const xmiss = VER === 'exp' && !!n && i < 0;
       if (i < 0) { n = findNode(H.F, VER === 'exp' ? 'gto' : 'exp', H.line, H.b); i = n ? hIdx(n, H.h) : -1; }
       if (!n || i < 0) { H.off = true; H.why = (n ? 'hand' : 'node') + '@' + H.line; hLog('（你這手在這條線上解裡沒有；之後自動到開牌，不評分）', ''); continue; }
-      H.cur = {n, i, fb: n !== findNode(H.F, VER, H.line, H.b)}; break;
+      H.cur = {n, i, fb: n !== findNode(H.F, VER, H.line, H.b), xmiss}; break;
     }
     const v = hVillain(); if (!v) { H.off = true; H.why = 'vil@' + H.line; continue; }
     hLog(v.txt, v.src); H.line = hAdd(H.line, v.a);
   }
   if (H.end) hFinish(); hRender();
 }
+// 翻後：你每個動作之後，對手面對的那個點，NL2 池（剝削解鎖的頻率）vs GTO
+function hPoolWhy(n) {
+  if (!n.nx) return ['剝削解：你這個決策之後的對手點 NL2 樣本不足（n<500）→ 對手照 GTO'];
+  const vs = seats(H.sp)[1 - H.hp];
+  return Object.keys(n.nx).filter(a => n.a.includes(a)).map(a => { const L = n.nx[a], gc = findNode(H.F, 'gto', hAdd(H.line, a), H.b);
+    const facing = AGG(a), pv = facing ? L.fold : L.bet; if (pv == null) return `你${actLabel(H.sp, n, a, true)}後 ${vs}：${lockTxt(L).replace(/<[^>]+>/g, '')}`;
+    let gv = null; if (gc && gc.p !== H.hp) { const gf = gc.a.map((x, j) => gc.f[j] / 100); gv = facing ? (gc.a.includes('f') ? gf[gc.a.indexOf('f')] : 0) : gf.reduce((t, x, j) => t + (AGG(gc.a[j]) ? x : 0), 0); }
+    const ci = wilson(pv, L.n), sig = gv != null && (gv < ci[0] || gv > ci[1]);
+    return `你${actLabel(H.sp, n, a, true)}後 ${vs} ${facing ? '棄牌' : '下注'} 池 ${pc(pv)}${gv != null ? ` vs GTO ${pc(gv)}` : ''}（n=${L.n.toLocaleString()}，95% ${pc(ci[0])}–${pc(ci[1])}）→ ${gv == null ? '解沒存 GTO 對照（剝削解照池鎖）' : sig ? '顯著' : '不顯著'}`; });
+}
 function hAnswer(a) {
   if (!H || !H.cur || H.cur.ans) return; if (H.cur.pre) return preAnswer(a); const {n, i} = H.cur; if (!n.a.includes(a)) return;
-  const q = {F: H.F, n, i, h: H.h}, gt = VER === 'exp' && !H.cur.fb ? gateExp(q) : {use: H.cur.fb ? 'gto' : VER, on: n, oi: i};
-  const gn = gt.use === 'gto' && gt.on ? gt.on : n, gi = gt.use === 'gto' && gt.on ? gt.oi : i;
-  const res = judge(gn, gi, a), ev = evRow(gn, gi), j = gn.a.indexOf(a), best = Math.max(...ev), loss = j >= 0 ? (best - ev[j]) / 100 : null, o = okActs(gn, gi);
-  const vz = gt.use === 'gto' ? 'GTO' : VERZH[VER];
-  const why = VER === 'exp' ? (H.cur.fb ? '剝削解沒存這個點 → 照 GTO' : gt.use === 'gto' ? `剝削打法只多賺 ${(gt.gain || 0).toFixed(2)}bb ≤ 0.25 → 照 GTO` : gt.gain > 0.25 ? `剝削多賺 ${gt.gain.toFixed(2)}bb > 0.25 → 用剝削解` : '剝削解和 GTO 同動作') : 'GTO';
+  const zero = !row(n, i).some(x => x > 0);
+  const q = {F: H.F, n, i, h: H.h}, ex0 = VER === 'exp' && !H.cur.fb && !zero, gt = ex0 ? gateExp(q) : {use: 'gto', on: H.cur.fb ? n : findNode(H.F, 'gto', H.line, H.b), oi: H.cur.fb ? i : -1};
+  if (gt.use === 'gto' && gt.on && gt.oi < 0) gt.oi = hIdx(gt.on, H.h);
+  if (gt.use === 'gto' && (!gt.on || gt.oi < 0)) { gt.on = n; gt.oi = i; }
+  const gn = gt.use === 'gto' ? gt.on : n, gi = gt.use === 'gto' ? gt.oi : i;
+  const res0 = judge(gn, gi, a), ev = evRow(gn, gi), j = gn.a.indexOf(a), sj = j >= 0 ? row(gn, gi)[j] : 0, res = sj <= 0 ? 'bad' : res0, best = Math.max(...ev), loss = j >= 0 ? (best - ev[j]) / 100 : null, o = okActs(gn, gi);
+  const basis = gt.use === 'gto' ? 'GTO' : '剝削', vz = basis === '剝削' ? VERZH.exp : 'GTO';
+  const why = VER !== 'exp' ? 'GTO 整手：照 GTO 解評分' : H.cur.xmiss ? '剝削解裡這手不會走到這裡（你前面偏離了剝削打法）→ 照 GTO 評分' : H.cur.fb ? '剝削解沒存這個點 → 照 GTO 評分' : zero ? '剝削解裡這手不會走到這裡（你前面偏離了剝削打法）→ 照 GTO 評分'
+    : gt.use === 'gto' ? `剝削打法只多賺 ${(gt.gain || 0).toFixed(2)}bb ≤ 0.25 → 照 GTO 評分` : gt.gain > 0.25 ? `剝削多賺 ${gt.gain.toFixed(2)}bb > 0.25 → 用剝削解評分` : '剝削解和 GTO 同動作 → 用剝削解評分';
   const S0 = hState(H.sp, H.line), cl = Math.max(...S0.b) - S0.b[H.hp], vsn = seats(H.sp)[1 - H.hp];
-  const ex = `你的勝率 ${gn.eq ? gn.eq[gi] : '—'}%（對 ${vsn} 走到這裡的範圍）${cl > 0 ? `・跟注需 ${Math.round(100 * cl / (S0.tot + cl))}%（跟 ${fbb(cl)}bb 進 ${fbb(S0.tot + cl)}bb）` : ''}・EV：${gn.a.map((x, k) => `${actLabel(H.sp, gn, x, true)} ${(ev[k] / 100).toFixed(2)}`).join('・')}bb`;
-  H.cur.ans = {a, res, loss, best: o.ok.map(x => actLabel(H.sp, gn, x, true) + ' ' + o.s[gn.a.indexOf(x)] + '%').join(' / '), vz, why, ex, st: streetOf(n)};
-  H.dec.push(Object.assign({l: H.line, al: actLabel(H.sp, n, a, true)}, H.cur.ans));
+  const evs = (N, I, lb) => `${lb} EV：${N.a.map((x, k) => `${actLabel(H.sp, N, x, true)} ${(evRow(N, I)[k] / 100).toFixed(2)}`).join('・')}bb`;
+  const ex = [`你選的頻率 ${sj}%`, `你的勝率 ${gn.eq ? gn.eq[gi] : '—'}%（對 ${vsn} 走到這裡的範圍）${cl > 0 ? `・跟注需 ${Math.round(100 * cl / (S0.tot + cl))}%（跟 ${fbb(cl)}bb 進 ${fbb(S0.tot + cl)}bb）` : ''}`,
+    ex0 ? evs(n, i, '剝削模型') : '', gt.use === 'gto' ? evs(gn, gi, 'GTO') : '', ...(VER === 'exp' && !H.cur.fb ? hPoolWhy(n) : [])].filter(Boolean).map(esc).join('<br>');
+  H.cur.ans = {a, res, loss, best: o.ok.map(x => actLabel(H.sp, gn, x, true) + ' ' + o.s[gn.a.indexOf(x)] + '%').join(' / '), vz, basis, why, ex, st: streetOf(n)};
+  H.dec.push(Object.assign({l: H.line, al: actLabel(H.sp, n, a, true)}, H.cur.ans)); if (!GOOD(res) || (VER === 'exp' && (H.cur.fb || !(row(n, i)[n.a.indexOf(a)] > 0)))) H.pm = 1;
   hLog(`${seats(H.sp)[H.hp]}（你）${actLabel(H.sp, n, a)}`, '');
   H.prev = n; H.prevA = a; H.line = hAdd(H.line, a); hRender();
 }
@@ -678,7 +713,7 @@ function hRender() {
   h += '</div>';
   const A = H.cur && H.cur.ans;
   let r = '';
-  if (A) r += `<div class="sec res ${A.res}"><div class="rh">${{ok: '✓ 正確', mix: '✓ 正確（混合）', size: '✗ 尺寸不對', bad: '✗ 錯誤'}[A.res]}${A.loss != null ? `<span class="small">　EV 少 ${A.loss.toFixed(2)}bb</span>` : ''}</div><div class="small">${A.vz}：<b>${esc(A.best)}</b>・${esc(A.why)}</div>${A.ex ? `<div class="small muted">${A.ex}</div>` : ''}</div>`;
+  if (A) r += `<div class="sec res ${A.res}"><div class="rh">${{ok: '✓ 正確', mix: '✓ 正確（混合）', size: '✗ 尺寸不對', bad: '✗ 錯誤'}[A.res]}${A.loss != null ? `<span class="small">　EV 少 ${A.loss.toFixed(2)}bb</span>` : ''}</div><div class="small">依 <b>${A.basis || A.vz}</b> 評分：<b>${esc(A.best)}</b>・${esc(A.why)}</div>${A.ex ? `<div class="small muted hex">${A.ex}</div>` : ''}</div>`;
   if (H.end && (!H.cur || A)) {
     const E = H.end, vh = H.vh;
     const res = E.win > 0 ? `你贏 ${E.pre ? f1(E.pot) : fbb(E.pot)}bb 底池` : E.win < 0 ? `${vs} 贏 ${E.pre ? f1(E.pot) : fbb(E.pot)}bb 底池` : '平分底池';
@@ -687,11 +722,11 @@ function hRender() {
     r += `<div class="sec hend"><div class="rh">整手回顧・${how}・${res}</div>
       ${vh ? `<div class="small">${vs} 的牌：<b>${cards(vh).map(cardTxt).join('')}</b>（依他的範圍＋他每個動作的 ${E.pre ? '翻前 GTO' : 'GTO'} 機率抽樣）</div>` : ''}
       <div class="small">你的決策 ${okn}/${H.dec.length} 對・整手 EV 共少 <b>${tl.toFixed(2)}bb</b></div>
-      <ol class="small hdl">${H.dec.map(d => `<li>${d.st < 0 ? '翻前' : STREETZH[d.st]}：你 ${esc(d.al)} ${GOOD(d.res) ? '✓' : '✗'}・最佳 ${esc(d.best)}・少 ${(d.loss || 0).toFixed(2)}bb</li>`).join('')}</ol></div>`;
+      <ol class="small hdl">${H.dec.map(d => `<li>${d.st < 0 ? '翻前' : STREETZH[d.st]}：你 ${esc(d.al)} ${GOOD(d.res) ? '✓' : '✗'}・最佳 ${esc(d.best)}・少 <b>${(d.loss || 0).toFixed(2)}bb</b>・<span class="muted">依 ${d.basis || d.vz}</span></li>`).join('')}</ol></div>`;
   }
   box.innerHTML = h; $('#ans').innerHTML = r; renderBar();
-  if (H.cur && !H.cur.ans) window.__Q = H.cur.pre ? {drill: 'hand', id: 'hand', hero: H.h, board: '', role: H.role0, line: 'pre:' + H.cur.k, w: 100, streets: 0, ver: VER}
-    : {drill: 'hand', id: 'hand', hero: H.h, board: H.b, role: H.role0 || hwRole(H.sp, H.hp), line: H.line, w: H.w0, pre: H.role0 ? 1 : 0, streets: 1 + streetOf(H.cur.n), ver: VER, sp: H.sp};
+  if (H.cur && !H.cur.ans) window.__Q = H.cur.pre ? {drill: 'hand', id: 'hand', hero: H.h, board: '', role: H.role0, line: 'pre:' + H.cur.k, w: 100, streets: 0, ver: VER, pm: H.pm || 0, xr: VER !== 'exp' || PF.nodes[H.cur.k].exp.s[PF.names.indexOf(classOf(H.h))].some(x => x > 0) ? 1 : 0}
+    : {drill: 'hand', id: 'hand', hero: H.h, board: H.b, role: H.role0 || hwRole(H.sp, H.hp), line: H.line, w: H.w0, pre: H.role0 ? 1 : 0, streets: 1 + streetOf(H.cur.n), ver: VER, sp: H.sp, pm: H.pm || 0, xr: H.cur.xmiss || (VER === 'exp' && !H.cur.fb && !row(H.cur.n, H.cur.i).some(x => x > 0)) ? 0 : 1};
 }
 function hBar(bar) {
   const K = hKeys();
@@ -705,7 +740,8 @@ function hBar(bar) {
   bar.querySelectorAll('[data-next]').forEach(b => b.onclick = () => { hNext(); });
 }
 function renderHand() {
-  $('#main').innerHTML = `<div class="pg"><div class="row ctl">${verSeg()}<span class="muted small">整手：翻前一路打到開牌・你的牌只發 HW 會玩的範圍・每步當場評分</span></div><div id="hbox"><div class="loading">發牌中…</div></div><div id="ans"></div></div>`;
+  const hv = VER === 'exp' ? '剝削整手：對手照 NL2 池頻率（顯著偏離 GTO 才照池）；你的每步用剝削解評分，但只在剝削多賺 &gt;0.25bb 時才偏離 GTO' : 'GTO 整手：對手照 GTO 頻率；你的每步用 GTO 解評分';
+  $('#main').innerHTML = `<div class="pg"><div class="row ctl"><div class="seg ver" role="group" aria-label="整手版本"><button class="segb ${VER === 'exp' ? 'on' : ''}" data-ver="exp">剝削整手</button><button class="segb ${VER === 'gto' ? 'on' : ''}" data-ver="gto">GTO 整手</button></div><span class="muted small">${hv}・翻前打到開牌・你的牌只發 HW 會玩的範圍</span></div><div id="hbox"><div class="loading">發牌中…</div></div><div id="ans"></div></div>`;
   bindCommon(); hNew();
 }
 // ---------- page: about ----------
@@ -725,20 +761,21 @@ function renderAbout() {
   bindCommon(); renderBar();
 }
 // ---------- routing ----------
-const TOP = [['prac', '練習'], ['hand', '整手'], ['charts', '翻後表'], ['about', '說明']];
+const TOP = [['prac', '練習'], ['handx', '剝削整手'], ['handg', 'GTO 整手'], ['charts', '翻後表'], ['about', '說明']];
 function go(id, push) {
   if (id === 'prac') id = LASTDRILL;
+  if (id === 'handx' || id === 'handg') { setVer(id === 'handx' ? 'exp' : 'gto'); id = 'hand'; }
   if (!DR[id] && !['charts', 'about', 'hand'].includes(id)) id = 'all';
   PAGE = id; Q = null; ANS = null;
-  const top = DR[id] ? 'prac' : id;
+  const top = DR[id] ? 'prac' : id === 'hand' ? (VER === 'exp' ? 'handx' : 'handg') : id;
   $$('#topnav .topb').forEach(b => b.classList.toggle('on', b.dataset.top === top));
-  if (location.hash !== '#' + id) history.replaceState(null, '', location.pathname + location.search + '#' + id);
+  const hs = id === 'hand' ? top : id; if (location.hash !== '#' + hs) history.replaceState(null, '', location.pathname + location.search + '#' + hs);
   if (DR[id]) { LASTDRILL = id; LS.set('last', id); renderDrillShell(); nextQ(); }
   else if (id === 'hand') renderHand(); else { renderBar(); if (id === 'charts') renderCharts(); else renderAbout(); }
   if (push !== false) window.scrollTo(0, 0);
 }
 function bindCommon() {
-  $$('#main [data-ver]').forEach(b => b.onclick = () => { setVer(b.dataset.ver); if (PAGE === 'hand') { renderHand(); return; } if (DR[PAGE]) { renderDrillShell(); nextQ(); } else go(PAGE, false); });
+  $$('#main [data-ver]').forEach(b => b.onclick = () => { setVer(b.dataset.ver); if (PAGE === 'hand') { go(VER === 'exp' ? 'handx' : 'handg', false); return; } if (DR[PAGE]) { renderDrillShell(); nextQ(); } else go(PAGE, false); });
   $$('#main [data-go]').forEach(a => a.onclick = e => { e.preventDefault(); window.__dpk = e.detail === 0 && !!a.closest('details.dpick[open]'); go(a.dataset.go); });
 }
 async function boot() {
@@ -755,10 +792,10 @@ async function boot() {
     if (!ANS) { const a = Q.n.a.find(x => keyOf(Q.n, x) === k); if (a) { e.preventDefault(); answer(a); } }
     else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); nextQ(); window.scrollTo(0, 0); }
   });
-  window.addEventListener('hashchange', () => { const id = location.hash.slice(1); if (id && id !== PAGE) go(id); });
+  window.addEventListener('hashchange', () => { const id = location.hash.slice(1); if (id && id !== PAGE && !(PAGE === 'hand' && id === (VER === 'exp' ? 'handx' : 'handg'))) go(id); });
   go(location.hash.slice(1) || 'prac', false);
 }
-window.__H = () => H; if (location.hash === '#hand') window.__QNUDGE = 1;
+window.__H = () => H; if (/^#hand/.test(location.hash)) window.__QNUDGE = 1;
 // test hooks
 window.PP = {classOf, okActs, judge, keyOf, classAgg, loadFlop, findNode, hidx, combo, row, version: () => VER, page: () => PAGE, drills: () => DRILLS,
   q: () => Q && {sp: Q.sp, fl: Q.fl, l: Q.n.l, b: Q.n.b, h: Q.h, i: Q.i}, ans: () => ANS, answer, go, nextQ,

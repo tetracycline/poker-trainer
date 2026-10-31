@@ -113,7 +113,8 @@ def drills():
     for p in pre: D.append(dict(name='pre:' + p, url=f'index.html#{p}', runs=[('', A.n)]))
     for c in ['', '.f_cbet', '.f_vs_cbet', '.barrel', '.vs_barrel', '.r_barrel', '.r_vs_bet']:
         D.append(dict(name='postflop:all' + c, url=f'postflop/index.html#all{c}', runs=[('', A.n)], settle=40))
-    D.append(dict(name='postflop:hand', url='postflop/index.html#hand', runs=[('', A.n)], settle=40))
+    D.append(dict(name='postflop:handx', url='postflop/index.html#handx', runs=[('', A.n)], settle=40))   # 剝削整手
+    D.append(dict(name='postflop:handg', url='postflop/index.html#handg', runs=[('', A.n)], settle=40))   # GTO 整手
     grps = ['SRP_IP', 'SRP_BB', '3BP_3bettor', '3BP_caller']
     D.append(dict(name='ln', url='learn.html#ln', runs=[(f"LQ.st.mode='drill';LQ.st.grp='{g}';LQ.st.cat='all';LQ.st.q=null;LQ.draw()", A.n // 4 + 1) for g in grps]))
     D.append(dict(name='rd', url='learn.html#rd', runs=[("LQ.st.rm='drill';LQ.st.rg='all';LQ.st.q=null;LQ.draw()", A.n)]))
@@ -127,7 +128,7 @@ def drills():
     D.append(dict(name='review:postflop', url='review/postflop.html#quiz', runs=[('', 100000)], finite=True))
     return D
 STATIC = ['index.html#home', 'index.html#prac', 'index.html#preflop', 'index.html#leaks', 'index.html#about', 'learn.html#ln?sheet', 'learn.html#rd?sheet',
-          'learn.html#eq', 'postflop/index.html#prac', 'postflop/index.html#charts', 'postflop/index.html#about', 'postflop/index.html#hand', 'solver.html#tool', 'review/index.html', 'review/2026-10-31.html', 'review/postflop.html']
+          'learn.html#eq', 'postflop/index.html#prac', 'postflop/index.html#charts', 'postflop/index.html#about', 'postflop/index.html#handx', 'postflop/index.html#handg', 'solver.html#tool', 'review/index.html', 'review/2026-10-31.html', 'review/postflop.html']
 
 POS = re.compile(r'UTG|HJ|CO|BTN|SB|BB')
 SIZE_OK = re.compile(r'\d|½|⅓|¼|⅔|¾|不分|全下|最小|all-?in', re.I)
@@ -153,6 +154,18 @@ def check_q(d, it):
         fail('1 範圍', nm, f"{c} 不在 HW {role[0]} {role[1]}：{tag}")
     if dr in ('postflop', 'hand') and not q.get('pre') and (q.get('w') or 0) < 50: fail('1 範圍', nm, f"w={q.get('w')} <50：{tag}")
     if dr == 'pre' and role[0] != 'pre' and (q.get('reach') or 0) < 50: fail('1 範圍', nm, f"到達率 {q.get('reach')} <50：{tag}")
+    if dr == 'hand':
+        if q.get('ver') == 'exp' and not q.get('pm') and not q.get('xr'): fail('1 範圍', nm, f"剝削整手出了剝削解走不到的手：{tag}")
+        if q.get('ver') != ('exp' if nm.endswith('handx') else 'gto'): fail('6 剝削規則', nm, f"版本不對（{q.get('ver')}）：{tag}")
+        if m2:
+            t2 = m2['txt']
+            if re.search(r'✓ 正確[\s\S]*你選的頻率 0%', t2): fail('6 剝削規則', nm, f"頻率 0% 卻判對：{tag}")
+            if '你選的頻率' not in t2: fail('6 剝削規則', nm, f"答案沒寫你選的頻率：{tag}")
+            if not re.search(r'依 (剝削 NL2 池|剝削|GTO) 評分', t2): fail('6 剝削規則', nm, f"沒寫依剝削或 GTO 評分：{tag}")
+            if q.get('ver') == 'exp':
+                if not re.search(r'0\.25|同動作|走不到|不會走到|沒存這個點', t2): fail('6 剝削規則', nm, f"剝削整手沒寫為什麼用剝削/GTO：{tag}")
+                if '依 剝削' in t2 and '剝削模型 EV' not in t2: fail('6 剝削規則', nm, f"剝削評分沒列剝削模型 EV：{tag}")
+                if '依 剝削' in t2 and not re.search(r'池 [\d.]+%[^\n]*n=[\d,]+|樣本不足', t2): fail('3 統計範圍', nm, f"剝削評分沒列池統計（n）：{tag}")
     if dr == 'solver-riv' and m2 and re.search(r'不會到達這個節點', m2['txt']): fail('1 範圍', nm, f"出了剝削解裡不會走到的手：{tag}")
     if dr == 'solver-riv' and m2 and re.search(r'✓ 正確[^\n]*頻率 0%', m2['txt']): fail('6 剝削規則', nm, f"頻率 0% 卻判對：{tag}")
     if dr == 'solver-riv' and not q.get('hwok'): fail('1 範圍', nm, f"河牌手牌非 HW 核心/到達率低：{tag}")
