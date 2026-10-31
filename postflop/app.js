@@ -668,7 +668,7 @@ function hAnswer(a) {
   const ex = [`你選的頻率 ${sj}%`, `你的勝率 ${gn.eq ? gn.eq[gi] : '—'}%（對 ${vsn} 走到這裡的範圍）${cl > 0 ? `・跟注需 ${Math.round(100 * cl / (S0.tot + cl))}%（跟 ${fbb(cl)}bb 進 ${fbb(S0.tot + cl)}bb）` : ''}`,
     ex0 ? evs(n, i, '剝削模型') : '', gt.use === 'gto' ? evs(gn, gi, 'GTO') : '', ...(VER === 'exp' && !H.cur.fb ? hPoolWhy(n) : [])].filter(Boolean).map(esc).join('<br>');
   H.cur.ans = {a, res, loss, best: o.ok.map(x => actLabel(H.sp, gn, x, true) + ' ' + o.s[gn.a.indexOf(x)] + '%').join(' / '), vz, basis, why, ex, st: streetOf(n)};
-  H.dec.push(Object.assign({l: H.line, al: actLabel(H.sp, n, a, true)}, H.cur.ans)); if (!GOOD(res) || (VER === 'exp' && (H.cur.fb || !(row(n, i)[n.a.indexOf(a)] >= 5)))) H.pm = 1;
+  H.dec.push(Object.assign({l: H.line, al: actLabel(H.sp, n, a, true)}, H.cur.ans)); if (!GOOD(res) || (VER === 'exp' && (H.cur.fb || !((n.w[i] || 0) * row(n, i)[n.a.indexOf(a)] / 100 >= 6)))) H.pm = 1;   // 剝削解裡這手走這步的到達率 <6% → 之後的點會被剪掉＝離開剝削線
   hLog(`${seats(H.sp)[H.hp]}（你）${actLabel(H.sp, n, a)}`, '');
   H.prev = n; H.prevA = a; H.line = hAdd(H.line, a); hRender();
 }
