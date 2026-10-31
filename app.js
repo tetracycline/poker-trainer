@@ -229,7 +229,9 @@ function poolNote(n) {
   else if (p.fam === 'vs3b') { add(p.op + 'open>' + p.y, `池的 ${p.y} 面對 ${p.op} 開池`); add(p.op + 'open>' + p.y + '3b>4b', `池的 ${p.y} 面對 4-bet`); }
   else if (p.fam === 'vs4b') add(p.op + 'open>' + p.y + '3b', `池的 ${p.op} 面對 3-bet`);
   else if (p.fam === 'vsjam') add(p.op + 'open>' + p.y + '3b>4b', `池的 ${p.y} 面對 4-bet`);
-  return out.length ? `<p class="muted small">穩健剝削版：把對手鎖成 NL2 池的實際頻率，再解你的最佳回應；開池範圍另外用 9 種情境（對手比較會防守、會因你開寬而少棄牌、你翻後打得比模型差等）檢驗，只留大多數情境都賺的牌。${out.join('；')}。</p>` : '';
+  const W = (PF.build.audit && PF.build.audit.why || {})[n];
+  const lead = p.fam === 'rfi' ? '穩健剝削版開池範圍：用 9 種情境（對手比較會防守、會因你開寬而少棄牌、你翻後打得比模型差等）檢驗，只留大多數情境都賺的牌。' : '穩健剝削版：只在 NL2 池明顯偏離 GTO 的地方調整（差 5 個百分點以上，或差 2 點以上且相對差 25% 以上），其他地方對手當 GTO；而且一手牌要比照 GTO 打多賺 0.25bb 以上才改，否則照 GTO。';
+  return (out.length || W) ? `<p class="muted small">${lead}${W ? '<br>' + W : ''}${out.length ? '<br>池的實際頻率：' + out.join('；') + '。' : ''}</p>` : '';
 }
 // ---------- page: drill ----------
 function drillNav() {
@@ -326,7 +328,7 @@ function renderLeaks() {
   const bb = ['BTN', 'SB', 'CO'].map(x => `vs ${x} ${f1(cont(x + 'open>BB', v))}%`).join('、');
   const steal = ['CO', 'BTN', 'SB'].map(x => `${x} ${f1(F(x + 'rfi', v, 'open'))}%`).join('、');
   const b3 = `BB vs BTN ${f1(F('BTNopen>BB', v, '3bet'))}%、BTN vs CO ${f1(F('COopen>BTN', v, '3bet'))}%、SB vs BTN ${f1(F('BTNopen>SB', v, '3bet'))}%`;
-  const shifts = [['BTNrfi', 'open', 'BTN 開池'], ['SBrfi', 'open', 'SB 開池'], ['COopen>BTN', '3bet', 'BTN 對 CO 3-bet'], ['BTNopen>BB3b', 'fold', 'BTN 面對 BB 3-bet 棄牌'], ['UTGopen>BB', 'call', 'BB 對 UTG 跟注'], ['SBopen>BB', 'fold', 'BB 對 SB 棄牌'], ['BTNopen>SB', '3bet', 'SB 對 BTN 3-bet'], ['BTNopen>SB', 'call', 'SB 對 BTN 平跟']];
+  const shifts = [['BTNrfi', 'open', 'BTN 開池'], ['SBrfi', 'open', 'SB 開池'], ['BTNopen>BB3b', 'fold', 'BTN 面對 BB 3-bet 棄牌'], ['BTNopen>BB3b', '4bet', 'BTN 面對 BB 3-bet 4-bet'], ['SBopen>BB3b', 'call', 'SB 面對 BB 3-bet 跟注'], ['COopen>BB3b', '4bet', 'CO 面對 BB 3-bet 4-bet'], ['UTGopen>BB3b', 'call', 'UTG 面對 BB 3-bet 跟注'], ['BTNopen>SB', '3bet', 'SB 對 BTN 3-bet'], ['COopen>BTN', '3bet', 'BTN 對 CO 3-bet（已改回 GTO）']];
   const RVL = window.RVI || [], rv0 = RVL[0];
   const rvSec = rv0 ? `<div class="sec"><b>最新覆盤：${esc(rv0.date)}（${rv0.hands} 手）</b><p class="small">結果 ${rv0.net_bb > 0 ? '+' : ''}${rv0.net_bb}bb（${rv0.bb100 > 0 ? '+' : ''}${rv0.bb100} bb/100）${rv0.adj_bb100 != null ? `，運氣調整後約 ${rv0.adj_bb100 > 0 ? '+' : ''}${rv0.adj_bb100} bb/100` : ''}。<br>${(rv0.top || []).map(esc).join('<br>')}</p>
    <div class="row"><a class="btn" href="review/${esc(rv0.date)}.html">打開覆盤（最貴的手 ${rv0.n_costly} 題、翻前錯題 ${rv0.n_drill} 題）</a><a class="btn" href="review/index.html">全部覆盤</a></div></div>` : '';
@@ -343,7 +345,7 @@ function renderLeaks() {
    <div class="row"><a class="btn" href="#bb-btn" data-go="bb-btn">BB 對 BTN</a><a class="btn" href="#bb-sb" data-go="bb-sb">BB 對 SB</a><a class="btn" href="#bb-co" data-go="bb-co">BB 對 CO</a></div></div>
   <div class="sec"><b>2. 偷盲太少</b><p>你從 CO–SB 只開 23%；解算器：${steal}。${v === 'exp' ? 'NL2 池的盲注棄牌太多，所以穩健剝削版的 BTN、SB 開得比 GTO 寬；但比純剝削解收斂，只留各種情境都賺的牌（CO 以前反而比 GTO 略緊）。' : ''}</p><div class="row"><a class="btn" href="#btn" data-go="btn">BTN 開池</a><a class="btn" href="#rfi-sb" data-go="rfi-sb">SB 開池</a><a class="btn" href="#rfi-co" data-go="rfi-co">CO 開池</a></div></div>
   <div class="sec"><b>3. SB 面對開池棄牌太多、3-bet 太少</b><p>你在 SB 棄牌 84%；解算器 vs BTN 棄牌 ${f1(F('BTNopen>SB', v, 'fold'))}%，3-bet ${f1(F('BTNopen>SB', v, '3bet'))}%、平跟 ${f1(F('BTNopen>SB', v, 'call'))}%。</p><div class="row"><a class="btn" href="#sb" data-go="sb">SB 面對開池</a><a class="btn" href="#3bet" data-go="3bet">有位置面對開池</a></div></div>
-  <div class="sec"><b>4. 面對 3-bet</b><p>你棄牌 50%（只有 12 次，樣本太小）。${v === 'exp' ? `NL2 池的 3-bet 範圍很偏價值，剝削版 BTN 面對 BB 3-bet 棄牌 ${f1(F('BTNopen>BB3b', 'exp', 'fold'))}%（GTO ${f1(F('BTNopen>BB3b', 'gto', 'fold'))}%）。在這個池子，對 3-bet 多棄是對的。` : `GTO 下 BTN 面對 BB 3-bet 棄牌 ${f1(F('BTNopen>BB3b', 'gto', 'fold'))}%。`}</p><div class="row"><a class="btn" href="#vs3b" data-go="vs3b">開池後面對 3-bet</a></div></div>
+  <div class="sec"><b>4. 面對 3-bet</b><p>你棄牌 50%（只有 12 次，樣本太小）。${v === 'exp' ? `NL2 池的 BB 對 BTN 3-bet 比 GTO 少（${f1(PF.pool['BTNopen>BB'].t['3bet'])}% vs GTO ${f1(F('BTNopen>BB', 'gto', '3bet'))}%），而且池子面對 4-bet 只棄 ${f1(PF.pool['BTNopen>BB3b>4b'].t.fold)}%（GTO 約 ${f1(F('BTNopen>BB3b>4b', 'gto', 'fold'))}%），4-bet 詐唬不划算。所以剝削版 BTN 面對 BB 3-bet 棄 ${f1(F('BTNopen>BB3b', 'exp', 'fold'))}%（GTO ${f1(F('BTNopen>BB3b', 'gto', 'fold'))}%）、4-bet ${f1(F('BTNopen>BB3b', 'exp', '4bet'))}%（GTO ${f1(F('BTNopen>BB3b', 'gto', '4bet'))}%）：A5s–A3s、KQ 這類原本 4-bet 詐唬的牌改跟注，JJ、TT 改 4-bet 拿價值。對 3-bet 稍微多棄一點，但不是大幅多棄。` : `GTO 下 BTN 面對 BB 3-bet 棄牌 ${f1(F('BTNopen>BB3b', 'gto', 'fold'))}%。`}</p><div class="row"><a class="btn" href="#vs3b" data-go="vs3b">開池後面對 3-bet</a></div></div>
   <div class="sec"><b>剝削版和 GTO 差最多的地方</b><table class="t"><tr><th>情況</th><th>GTO</th><th>剝削</th></tr>${shifts.map(([n, a, t]) => `<tr><td>${t}</td><td>${f1(F(n, 'gto', a))}%</td><td>${f1(F(n, 'exp', a))}%</td></tr>`).join('')}</table>
    <p class="muted small">模型收益（bb/100，對 NL2 池）：${Object.keys(PF.heroes).map(s => `${s} +${f1(PF.heroes[s].gain)}`).join('、')}。</p></div>
   <div class="sec"><b>實戰手牌</b><p>10/29 那場的 13 手翻前決策，已依解算器重新出題（翻後、limp、EV Cashout 題目已刪除，因為解算器沒有涵蓋）。</p><a class="btn" href="#real" data-go="real">開始練實戰手牌</a></div>
@@ -357,7 +359,7 @@ function renderAbout() {
   $('#main').innerHTML = `<div class="pg">
   <div class="sec"><b>資料從哪裡來（v8）</b><p>網站上每一張翻前表、每一題、答題後的表格和「我的弱點」數字，都來自同一份檔案 <code>pf_data.js</code>（版本 ${PF.ver}）。它由解算器輸出直接產生，沒有手寫範圍。</p>
   <ul><li><b>GTO</b>：6 人桌 100bb、NL2 抽水（5%、上限 10bb、沒有翻牌不抽），DCFR ${P.iters} 次迭代，NashConv ${P.nashconv_mbb} mbb/手；65 個決策點 × 169 手牌。</li>
-  <li><b>穩健剝削</b>（練習預設）：用 ${P.hands_pool.toLocaleString()} 手 NL2 資料，把對手在 ${pl.length} 個節點鎖成池的實際頻率（每節點 n=${nmin.toLocaleString()}–${nmax.toLocaleString()}），再解你每個位置的最佳回應。</li>
+  <li><b>穩健剝削</b>（練習預設）：用 ${P.hands_pool.toLocaleString()} 手 NL2 資料（${pl.length} 個節點，每節點 n=${nmin.toLocaleString()}–${nmax.toLocaleString()}）。只有池子明顯偏離 GTO 的 ${(PF.build.audit || {}).pool_material ? PF.build.audit.pool_material.length : '?'} 個節點照池的頻率（手牌組成仍照 GTO 的形狀），其他節點對手當 GTO；你的每手牌只有比照 GTO 打多賺 0.25bb 以上才改，否則照 GTO（${PF.ver} 檢查後，${Object.keys(PF.nodes).filter(k => !k.endsWith('rfi')).length} 個非開池節點裡 ${(PF.build.audit || {}).n_gto || '?'} 個完全照 GTO）。主要的剝削：池子面對 4-bet 只棄約 31%（GTO 約 63–72%）→ 少 4-bet 詐唬、多拿價值；池子面對 3-bet 棄得比 GTO 少 → 3-bet 少詐唬、多跟注。每個決策點的答案表下面都有這一格為什麼不同。</li>
   <li><b>開池範圍（穩健版，${PF.ver}）</b>：純剝削解只對「池子剛好是模型那樣」最好，會開到 BTN 60%、SB 84%。我們再用 9 種合理情境重算每手牌開池的 EV（對手防守的牌像 GTO、少棄一半、會因你開寬而調整、你翻後打折 5%，以及組合）。UTG／HJ／CO 只開至少 7 種情境都賺的牌，BTN／SB 只開 9 種都賺的牌：UTG ${f1(PF.nodes.UTGrfi.exp.freq.open)}%、HJ ${f1(PF.nodes.HJrfi.exp.freq.open)}%、CO ${f1(PF.nodes.COrfi.exp.freq.open)}%、BTN ${f1(PF.nodes.BTNrfi.exp.freq.open)}%、SB ${f1(PF.nodes.SBrfi.exp.freq.open)}%。開池題答案表的 EV 欄用其中偏悲觀的那一種情境（對手防守像 GTO、會調整、你翻後打折 5%）。如果池子真的跟模型一樣，這樣每 100 手約少賺 0.2–0.3bb；對手一調整就反過來多賺。</li>
   <li><b>尺寸</b>：開池 2.5bb（SB 3bb）；有位置 3-bet 3 倍、盲注 3-bet 4 倍（BB 對 SB 3 倍）；4-bet 2.2 倍；之後全下。</li>
   <li><b>簡化</b>：只算兩人對抗：沒有擠壓（squeeze）、多人跟注和 limp。翻後用勝率實現模型估算。</li></ul></div>
