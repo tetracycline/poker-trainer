@@ -331,26 +331,30 @@ function renderLeaks() {
   const b3 = `BB vs BTN ${f1(F('BTNopen>BB', v, '3bet'))}%、BTN vs CO ${f1(F('COopen>BTN', v, '3bet'))}%、SB vs BTN ${f1(F('BTNopen>SB', v, '3bet'))}%`;
   const shifts = [['BTNrfi', 'open', 'BTN 開池'], ['SBrfi', 'open', 'SB 開池'], ['BTNopen>BB3b', 'fold', 'BTN 面對 BB 3-bet 棄牌'], ['BTNopen>BB3b', '4bet', 'BTN 面對 BB 3-bet 4-bet'], ['SBopen>BB3b', 'call', 'SB 面對 BB 3-bet 跟注'], ['COopen>BB3b', '4bet', 'CO 面對 BB 3-bet 4-bet'], ['UTGopen>BB3b', 'call', 'UTG 面對 BB 3-bet 跟注'], ['BTNopen>SB', '3bet', 'SB 對 BTN 3-bet'], ['COopen>BTN', '3bet', 'BTN 對 CO 3-bet（已改回 GTO）']];
   const RVL = window.RVI || [], rv0 = RVL[0];
+  const HS = window.HWS || {hands: 938, span: '10/29', prev_date: '—', prev_hands: 0, r: {bbdef: {k: 12, n: 61, pct: 20, lo: 12, hi: 31}, sbfold: {k: 49, n: 58, pct: 84, lo: 73, hi: 92}, steal: {k: 52, n: 229, pct: 23, lo: 18, hi: 29}, b3: {k: 14, n: 344, pct: 4, lo: 2, hi: 7}, f3b: {k: 6, n: 12, pct: 50, lo: 25, hi: 75}, cbet: {k: 0, n: 0, pct: 0, lo: 0, hi: 0}, fcb: {k: 10, n: 17, pct: 59, lo: 36, hi: 78}, vpip: {pct: 18}, pfr: {pct: 14}, sco: {pct: 0}, sbtn: {pct: 0}, ssb: {pct: 0}}}, HR = HS.r;
+  const hs = k => { const x = HR[k]; return `${x.pct}%（${x.k}/${x.n}，${Math.round(x.lo)}–${Math.round(x.hi)}%）${x.prev != null ? `<span class="muted small"> ← ${x.prev}%</span>` : ''}`; };
   const rvSec = rv0 ? `<div class="sec"><b>最新覆盤：${esc(rv0.date)}（${rv0.hands} 手）</b><p class="small">結果 ${rv0.net_bb > 0 ? '+' : ''}${rv0.net_bb}bb（${rv0.bb100 > 0 ? '+' : ''}${rv0.bb100} bb/100）${rv0.adj_bb100 != null ? `，運氣調整後約 ${rv0.adj_bb100 > 0 ? '+' : ''}${rv0.adj_bb100} bb/100` : ''}。<br>${(rv0.top || []).map(esc).join('<br>')}</p>
    <div class="row"><a class="btn" href="review/${esc(rv0.date)}.html">打開覆盤（最貴的手 ${rv0.n_costly} 題、翻前錯題 ${rv0.n_drill} 題）</a><a class="btn" href="review/index.html">全部覆盤</a></div></div>` : '';
   $('#main').innerHTML = `<div class="pg"><div class="row ctl">${verSeg()}</div>${rvSec}
-  <div class="sec"><b>你的數據（938 手，10/29 匯入）對照解算器（${VERZH[v]}）</b><p class="muted small">右欄數字直接從翻前表計算，和練習題同一份資料。樣本很小，信賴區間寫在括號裡。</p>
+  <div class="sec"><b>你的數據（${HS.hands.toLocaleString()} 手，${HS.span}）對照解算器（${VERZH[v]}）</b><p class="muted small">括號＝95% 信賴區間（Wilson）；箭頭是 ${HS.prev_date} 累計（${HS.prev_hands.toLocaleString()} 手）時的數字。右欄直接從翻前表計算，和練習題同一份資料。</p>
   <div class="lt">
-  ${row('BB 面對偷盲防守', '20%（12/61，12–31%）', bb, 'bb-btn')}
-  ${row('SB 面對偷盲棄牌', '84%（49/58，73–92%）', `vs BTN ${f1(F('BTNopen>SB', v, 'fold'))}%、vs CO ${f1(F('COopen>SB', v, 'fold'))}%`, 'sb')}
-  ${row('偷盲（CO/BTN/SB 開池）', '23%（52/229，18–29%）', steal, 'open')}
-  ${row('3-bet', '4%（14/344，2–7%）', b3, '3bet')}
-  ${row('面對 3-bet 棄牌', '50%（6/12，25–75%）', `BTN vs BB ${f1(F('BTNopen>BB3b', v, 'fold'))}%、CO vs BTN ${f1(F('COopen>BTN3b', v, 'fold'))}%`, 'vs3b')}
-  ${row('VPIP / PFR', '18% / 14%', '—', null)}</div></div>
-  <div class="sec"><b>1. BB 防守太少（最確定的漏洞）</b><p>你只防守 20%，連信賴區間上限 31% 都遠低於解算器（${bb}）。BB 已經投入 1bb，面對 BTN 2.5bb 只要補 1.5bb 去爭 4bb 的底池，大量同花牌、連張、帶 A 的牌都該跟。先把 BB 對 BTN、BB 對 SB 練到 90% 以上。</p>
+  ${row('BB 面對偷盲防守', hs('bbdef'), bb, 'bb-btn')}
+  ${row('SB 面對偷盲棄牌', hs('sbfold'), `vs BTN ${f1(F('BTNopen>SB', v, 'fold'))}%、vs CO ${f1(F('COopen>SB', v, 'fold'))}%`, 'sb')}
+  ${row('偷盲（CO/BTN/SB 開池）', hs('steal') + `<br><span class="muted small">CO ${HR.sco.pct}%・BTN ${HR.sbtn.pct}%・SB ${HR.ssb.pct}%</span>`, steal, 'open')}
+  ${row('3-bet', hs('b3'), b3, '3bet')}
+  ${row('面對 3-bet 棄牌', hs('f3b'), `BTN vs BB ${f1(F('BTNopen>BB3b', v, 'fold'))}%、CO vs BTN ${f1(F('COopen>BTN3b', v, 'fold'))}%`, 'vs3b')}
+  ${row('翻牌 c-bet', hs('cbet'), '單挑約 55–65%', null)}
+  ${row('面對 c-bet 棄牌', hs('fcb'), '面對 1/3 池約 39–44%', null)}
+  ${row('VPIP / PFR', `${HR.vpip.pct}% / ${HR.pfr.pct}%`, '—', null)}</div></div>
+  <div class="sec"><b>1. BB 防守太少（最確定的漏洞）</b><p>你只防守 ${HR.bbdef.pct}%，連信賴區間上限 ${Math.round(HR.bbdef.hi)}% 都低於解算器（${bb}）。BB 已經投入 1bb，面對 BTN 2.5bb 只要補 1.5bb 去爭 4bb 的底池，大量同花牌、連張、帶 A 的牌都該跟。先把 BB 對 BTN、BB 對 SB 練到 90% 以上。</p>
    <div class="row"><a class="btn" href="#bb-btn" data-go="bb-btn">BB 對 BTN</a><a class="btn" href="#bb-sb" data-go="bb-sb">BB 對 SB</a><a class="btn" href="#bb-co" data-go="bb-co">BB 對 CO</a></div></div>
-  <div class="sec"><b>2. 偷盲太少</b><p>你從 CO–SB 只開 23%；解算器：${steal}。${v === 'exp' ? 'NL2 池的盲注棄牌太多，所以穩健剝削版的 BTN、SB 開得比 GTO 寬；但比純剝削解收斂，只留各種情境都賺的牌（CO 以前反而比 GTO 略緊）。' : ''}</p><div class="row"><a class="btn" href="#btn" data-go="btn">BTN 開池</a><a class="btn" href="#rfi-sb" data-go="rfi-sb">SB 開池</a><a class="btn" href="#rfi-co" data-go="rfi-co">CO 開池</a></div></div>
-  <div class="sec"><b>3. SB 面對開池棄牌太多、3-bet 太少</b><p>你在 SB 棄牌 84%；解算器 vs BTN 棄牌 ${f1(F('BTNopen>SB', v, 'fold'))}%，3-bet ${f1(F('BTNopen>SB', v, '3bet'))}%、平跟 ${f1(F('BTNopen>SB', v, 'call'))}%。</p><div class="row"><a class="btn" href="#sb" data-go="sb">SB 面對開池</a><a class="btn" href="#3bet" data-go="3bet">有位置面對開池</a></div></div>
-  <div class="sec"><b>4. 面對 3-bet</b><p>你棄牌 50%（只有 12 次，樣本太小）。${v === 'exp' ? `NL2 池的 BB 對 BTN 3-bet 比 GTO 少（${f1(PF.pool['BTNopen>BB'].t['3bet'])}% vs GTO ${f1(F('BTNopen>BB', 'gto', '3bet'))}%），而且池子面對 4-bet 只棄 ${f1(PF.pool['BTNopen>BB3b>4b'].t.fold)}%（GTO 約 ${f1(F('BTNopen>BB3b>4b', 'gto', 'fold'))}%），4-bet 詐唬不划算。所以剝削版 BTN 面對 BB 3-bet 棄 ${f1(F('BTNopen>BB3b', 'exp', 'fold'))}%（GTO ${f1(F('BTNopen>BB3b', 'gto', 'fold'))}%）、4-bet ${f1(F('BTNopen>BB3b', 'exp', '4bet'))}%（GTO ${f1(F('BTNopen>BB3b', 'gto', '4bet'))}%）：A5s–A3s、KQ 這類原本 4-bet 詐唬的牌改跟注，JJ、TT 改 4-bet 拿價值。對 3-bet 稍微多棄一點，但不是大幅多棄。` : `GTO 下 BTN 面對 BB 3-bet 棄牌 ${f1(F('BTNopen>BB3b', 'gto', 'fold'))}%。`}</p><div class="row"><a class="btn" href="#vs3b" data-go="vs3b">開池後面對 3-bet</a></div></div>
+  <div class="sec"><b>2. 偷盲太少</b><p>你從 CO–SB 只開 ${HR.steal.pct}%（SB ${HR.ssb.pct}%）；解算器：${steal}。${v === 'exp' ? 'NL2 池的盲注棄牌太多，所以穩健剝削版的 BTN、SB 開得比 GTO 寬；但比純剝削解收斂，只留各種情境都賺的牌（CO 以前反而比 GTO 略緊）。' : ''}</p><div class="row"><a class="btn" href="#btn" data-go="btn">BTN 開池</a><a class="btn" href="#rfi-sb" data-go="rfi-sb">SB 開池</a><a class="btn" href="#rfi-co" data-go="rfi-co">CO 開池</a></div></div>
+  <div class="sec"><b>3. SB 面對開池棄牌太多、3-bet 太少</b><p>你在 SB 棄牌 ${HR.sbfold.pct}%；解算器 vs BTN 棄牌 ${f1(F('BTNopen>SB', v, 'fold'))}%，3-bet ${f1(F('BTNopen>SB', v, '3bet'))}%、平跟 ${f1(F('BTNopen>SB', v, 'call'))}%。</p><div class="row"><a class="btn" href="#sb" data-go="sb">SB 面對開池</a><a class="btn" href="#3bet" data-go="3bet">有位置面對開池</a></div></div>
+  <div class="sec"><b>4. 面對 3-bet</b><p>你棄牌 ${HR.f3b.pct}%（${HR.f3b.k}/${HR.f3b.n}），而且幾乎從不 4-bet：JJ、KK、AK 被 3-bet 都只跟。QQ+ 一律 4-bet。${v === 'exp' ? `NL2 池的 BB 對 BTN 3-bet 比 GTO 少（${f1(PF.pool['BTNopen>BB'].t['3bet'])}% vs GTO ${f1(F('BTNopen>BB', 'gto', '3bet'))}%），而且池子面對 4-bet 只棄 ${f1(PF.pool['BTNopen>BB3b>4b'].t.fold)}%（GTO 約 ${f1(F('BTNopen>BB3b>4b', 'gto', 'fold'))}%），4-bet 詐唬不划算。所以剝削版 BTN 面對 BB 3-bet 棄 ${f1(F('BTNopen>BB3b', 'exp', 'fold'))}%（GTO ${f1(F('BTNopen>BB3b', 'gto', 'fold'))}%）、4-bet ${f1(F('BTNopen>BB3b', 'exp', '4bet'))}%（GTO ${f1(F('BTNopen>BB3b', 'gto', '4bet'))}%）：A5s–A3s、KQ 這類原本 4-bet 詐唬的牌改跟注，JJ、TT 改 4-bet 拿價值。對 3-bet 稍微多棄一點，但不是大幅多棄。` : `GTO 下 BTN 面對 BB 3-bet 棄牌 ${f1(F('BTNopen>BB3b', 'gto', 'fold'))}%。`}</p><div class="row"><a class="btn" href="#vs3b" data-go="vs3b">開池後面對 3-bet</a></div></div>
   <div class="sec"><b>剝削版和 GTO 差最多的地方</b><table class="t"><tr><th>情況</th><th>GTO</th><th>剝削</th></tr>${shifts.map(([n, a, t]) => `<tr><td>${t}</td><td>${f1(F(n, 'gto', a))}%</td><td>${f1(F(n, 'exp', a))}%</td></tr>`).join('')}</table>
    <p class="muted small">模型收益（bb/100，對 NL2 池）：${Object.keys(PF.heroes).map(s => `${s} +${f1(PF.heroes[s].gain)}`).join('、')}。</p></div>
   <div class="sec"><b>實戰手牌</b><p>10/29 那場的 13 手翻前決策，已依解算器重新出題（翻後、limp、EV Cashout 題目已刪除，因為解算器沒有涵蓋）。</p><a class="btn" href="#real" data-go="real">開始練實戰手牌</a></div>
-  <div class="sec"><b>翻牌面對 c-bet 棄牌 59%（10/17）</b><p class="muted">翻前解算器不含翻牌，所以這項沒有對應的翻前表；河牌防守可以到「解算器」分頁練。</p><a class="btn" href="#solver" data-go="solver">解算器</a></div></div>`;
+  <div class="sec"><b>翻牌面對 c-bet 棄牌 ${HR.fcb.pct}%（${HR.fcb.k}/${HR.fcb.n}）</b><p class="muted">翻前解算器不含翻牌，所以這項沒有對應的翻前表；河牌防守可以到「解算器」分頁練。</p><a class="btn" href="#solver" data-go="solver">解算器</a></div></div>`;
   bindCommon();
 }
 // ---------- page: about ----------

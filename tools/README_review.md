@@ -31,3 +31,8 @@
 範例：/workspace/poker_mb/review_20261030/review_config.json（在 box 上，不在 repo 裡）。
 
 練習 id 跟 ../index.html#<id> 一樣，例如 sb、3bet、vs3b、rfi-sb、rfi-co、bb-co、bb-btn。
+
+## Cumulative leak stats (leaks page)
+`review/data/hw_stats.js` sets `window.HWS` (hands, span, prev, and per-stat k/n/pct/Wilson lo–hi/prev).
+The leaks page (`app.js` renderLeaks) reads it; regenerate it after each review from the
+de-duplicated cumulative hand set (raw hands stay outside the repo; only counts are published).
