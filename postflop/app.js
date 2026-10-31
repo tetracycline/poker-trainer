@@ -491,6 +491,7 @@ async function preRun(k) {
     const a = preVillain(k);
     if (a === 'fold') { H.end = {fold: 1, pot: nd.pot, pre: 1}; return; }
     if (a === 'call') { await preToFlop(k, nd); return; }
+    H.pva = {k, a};
     const nk = preNextKey(k, a); if (!nk || !pfNode(nk)) { await preOff(k, 'node', nd); return; } k = nk;
   }
 }
@@ -520,7 +521,9 @@ async function preOff(k, why, nd) {
 }
 // 翻前：你每個動作之後，對手面對的那個點，池 vs GTO
 function prePoolWhy(k, nd) {
-  const out = [];
+  const out = [], pv = H.pva && pfNode(H.pva.k), pp = H.pva && PF.pool[H.pva.k];
+  if (pv && pp) { const a = H.pva.a, pF = pp.t[a] || 0, gF = pv.gto.freq[a] || 0, ci = wilson(pF / 100, pp.n), sig = pp.n >= 500 && (gF / 100 < ci[0] || gF / 100 > ci[1]);
+    out.push(`${pv.seat} 剛才${PREZH[a]}：池 ${f1(pF)}% vs GTO ${f1(gF)}%（n=${pp.n.toLocaleString()}，95% ${f1(100 * ci[0])}–${f1(100 * ci[1])}%）→ ${sig ? (pF < gF ? '顯著較緊（範圍更強）' : '顯著較鬆（範圍更弱）') : pp.n < 500 ? '樣本不足' : '不顯著'}`); }
   for (const a of nd.acts) { if (a === 'fold' || a === 'call') continue; const nk = preNextKey(k, a), vn = nk && pfNode(nk), pool = nk && PF.pool[nk]; if (!vn) continue;
     const gF = vn.gto.freq.fold || 0;
     if (!pool) { out.push(`你${preLbl(nd, a)}後 ${vn.seat} 棄牌 GTO ${f1(gF)}%（無池樣本 → 照 GTO）`); continue; }
