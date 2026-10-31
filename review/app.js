@@ -147,6 +147,7 @@ function render() {
         <div class="qcard" id="qc">${CUR && CUR.mode === 'drill' && CUR.k === k && CUR.a ? `<div class="qL">${itemHead(it)}<button class="btn dn-d" data-dnext="1" style="margin-top:8px">下一題 →</button></div><div class="qR">${revealHTML(it, CUR.a)}<button class="btn dn-m" data-dnext="1" style="margin-top:8px">下一題 →</button></div>` : itemHead(it) + optsHTML(it)}</div>`;
       if (!(CUR && CUR.mode === 'drill' && CUR.k === k)) CUR = {it, mode: 'drill', k}; }
   }
+  if (CUR) { const h = CUR.it.hand, up = CUR.it.at; window.__Q = {drill: 'rvday', id: h.id + '|' + up, hero: h.cards.join(''), board: boardAt(h, up).join(''), full: h.board.join(''), real: true, role: ['real', ''], st: h.acts[up][0], seen: [...new Set(h.acts.slice(0, up).filter(a => !(a[2] === 'fold' && a[0] === 'pre' && a[1] !== 'Hero')).map(a => a[0]))]}; }
   $('#quiz').innerHTML = `<div class="row ctl"><span class="seg"><button class="segb ${TAB === 'costly' ? 'on' : ''}" data-tab="costly">最貴的手（${nC}）</button><button class="segb ${TAB === 'drill' ? 'on' : ''}" data-tab="drill">翻前錯題練習（${nD}）</button></span></div>` + body;
 }
 function answer(a) {

@@ -88,6 +88,7 @@ nav.top.sub .topb.on{background:var(--ac);border-color:var(--ac);color:#06281a;f
   <div id="about" class="hide"></div>
 </div>
 <div class="abar" id="abar"></div>
+<script src="hwrange.js?v=1"></script>
 <script src="river/river.js"></script>
 <script src="river/ranges.js"></script>
 <script src="pf_data.js?v=8x"></script>
@@ -155,18 +156,24 @@ function newPreQ() {
   let names = Object.keys(PRE.gto).filter(n => !n.endsWith('jam') || Math.random() < 0.5);
   if (FAM !== 'all') names = names.filter(n => preDesc(n).fam === FAM);
   const name = pickWeighted(names, preNodeWeight); const g = PRE.gto[name];
-  const cls = pickWeighted(PRE.names, n => { const i = PIX[n]; const r = g.r[i] / 100; if (r < 0.05) return 0; const nc = n.length === 2 ? 6 : n[2] === 's' ? 4 : 12; const ms = mixScore(g.s[i]);
+  const cls = pickWeighted(PRE.names, n => { const i = PIX[n]; const r = g.r[i] / 100; if (r < 0.05 || !preHW(name, n)) return 0; const nc = n.length === 2 ? 6 : n[2] === 's' ? 4 : 12; const ms = mixScore(g.s[i]);
     // boundary hands: neighbours with a different main action make good questions
     return nc * r * (0.12 + ms * 2 + (g.s[i][0] > 95 && Math.random() < 0.6 ? 0 : 0.1)); });
   return makePreQ(name, cls);
 }
 // ---------- river ----------
 const SPOTS = D.spots, SPI = {}; SPOTS.forEach((s, i) => SPI[s.id] = i);
-const PRETXT = {BTNvsBB: 'BTN 開池、BB 跟注（單加注底池）', COvsBB: 'CO 開池、BB 跟注（單加注底池）', SBvsBB: 'SB 開池 3bb、BB 跟注（單加注底池）', BB3vsBTN: 'BTN 開池、BB 3-bet、BTN 跟注（3-bet 底池）'};
+const PRETXT = {BTNvsBB: '翻前 BTN 開 2.5bb → BB 跟', COvsBB: '翻前 CO 開 2.5bb → BB 跟', SBvsBB: '翻前 SB 開 3bb → BB 跟', BB3vsBTN: '翻前 BTN 開 2.5bb → BB 3-bet 到 10bb → BTN 跟'};
+// HW 會玩的牌（hwrange.js）：依位置角色檢查
+function rivRole(sp, pl) { const me = sp.pos[pl], op = sp.pos[1 - pl], tb = sp.pre === 'BB3vsBTN';
+  if (tb) return me === 'BB' ? ['tb', 'BTNopen>BB'] : ['c3', 'BTNopen>BB3b'];
+  return pl === sp.agg ? ['open', me] : ['call', op + 'open>' + me]; }
+function rivHW(sp, nd, j) { if (!window.HWR) return 1; const c = sp.hands[nd.pl][nd.h[j]], R = '23456789TJQKA'; let x = R.indexOf(c[0]), y = R.indexOf(c[2]); if (x < y) [x, y] = [y, x]; const k = x === y ? R[x] + R[x] : R[x] + R[y] + (c[1] === c[3] ? 's' : 'o'); return HWR.ok(...rivRole(sp, nd.pl), k) && nd.r[j] >= 0.5 ? 1 : 0; }
+function preHW(name, cls) { const d = preDesc(name), g = PRE.gto[name], r = g.r[PIX[cls]]; if (!window.HWR) return true; const m = name.match(/^(\w+?)open>(\w+?)3b(>4b)?$/); if (!m) return true; if (r < 50) return false; return m[3] ? HWR.ok('tb', m[1] + 'open>' + m[2], cls) : HWR.ok('open', m[1], cls); }
 function nodeFacing(sp, nd) { // text describing what happened on the river before this node
   const h = nd.hist; const P = sp.pos; const parts = [];
   const re = /(x|B\d+|A\d+|R|A)/g; let m, who = 0; const toks = h.match(/x|B\d+|A\d+|R|A/g) || [];
-  toks.forEach(t => { const pz = P[who]; if (t === 'x') parts.push(`${pz} 過牌`); else if (t[0] === 'B') parts.push(`${pz} 下注 ${t.slice(1)}%`); else if (t[0] === 'A') parts.push(`${pz} 全下`); else parts.push(`${pz} 加注`); who = 1 - who; });
+  let pre = ''; toks.forEach(t => { const pz = P[who]; if (t === 'x') parts.push(`${pz} 過牌`); else if (t[0] === 'B') parts.push(`${pz} 下注 ${t.slice(1)}%`); else if (t[0] === 'A') parts.push(`${pz} 全下`); else parts.push(`${pz} 加注到 ${rAmt(sp, pre)}`); pre += t; who = 1 - who; });
   return parts;
 }
 function rivNodes(sp, view) {
@@ -182,7 +189,7 @@ function newRivQ(d) {
   if (!nodes.length) nodes = sp.gto;
   for (let t = 0; t < 12; t++) {   // hero hand must be in the current preflop range (rivPfa = 0 -> would have folded / not in range)
     const nd = pickWeighted(nodes, n => (n.acts[0].startsWith('fold') ? (n.pl !== sp.agg ? 3 : 1.5) : 1) * Math.sqrt(n.rw));
-    const ws = nd.h.map((_, j) => { const s = nd.S[j]; return rivPfa(sp, nd, j) * nd.r[j] * (0.1 + 2 * mixScore(s) + (s[0] > 97 ? 0 : 0.3)); });
+    const ws = nd.h.map((_, j) => { const s = nd.S[j]; return rivPfa(sp, nd, j) * rivHW(sp, nd, j) * nd.r[j] * (0.1 + 2 * mixScore(s) + (s[0] > 97 ? 0 : 0.3)); });
     if (!ws.some(w => w > 0)) continue;
     const k = pickWeighted(nd.h.map((_, j) => j), j => ws[j]);
     return makeRivQ(sp, nd.id, nd.h[k]);
@@ -200,7 +207,7 @@ function nextQ() {
   // spaced repetition: due misses come back first
   ST.queue.forEach(q => q.due--); const due = ST.queue.findIndex(q => q.due <= 0 && q.mode === MODE && (FAM === 'all' || q.fam === FAM));
   let q = null;
-  if (due >= 0) { const it = ST.queue.splice(due, 1)[0]; try { q = it.mode === 'pre' ? makePreQ(it.name, it.cls) : makeRivQ(SPOTS[SPI[it.sp]], it.node, it.hand); if (q.kind === 'riv' && !(rivPfa(q.sp, q.nd, q.nd.h.indexOf(it.hand)) > 0)) q = null; else q.review = true; } catch (e) { q = null; } }
+  if (due >= 0) { const it = ST.queue.splice(due, 1)[0]; try { q = it.mode === 'pre' ? makePreQ(it.name, it.cls) : makeRivQ(SPOTS[SPI[it.sp]], it.node, it.hand); if (q.kind === 'riv' && !(rivPfa(q.sp, q.nd, q.nd.h.indexOf(it.hand)) * rivHW(q.sp, q.nd, q.nd.h.indexOf(it.hand)) > 0)) q = null; if (q && q.kind === 'pre' && !preHW(q.name, q.cls)) q = null; else q.review = true; } catch (e) { q = null; } }
   if (!q) q = MODE === 'pre' ? newPreQ() : newRivQ();
   Q = q; save(); renderQ();
 }
@@ -227,6 +234,7 @@ function renderQ() {
   }
   h += `<div class="hero" style="margin-top:10px"><span class="muted">你的手牌</span><br>${cardsHTML(q.combo)}</div>`;
   $('#qbox').innerHTML = h; $('#ans').innerHTML = '';
+  window.__Q = q.kind === 'pre' ? {drill: 'solver-pre', id: q.name, hero: q.combo.join ? q.combo.join('') : q.combo, board: '', cls: q.cls, reach: PRE.gto[q.name].r[PIX[q.cls]], hwok: preHW(q.name, q.cls), role: ['pre', '']} : {drill: 'solver-riv', id: q.sp.id + '|' + q.nodeId, hero: q.combo, board: q.sp.board, role: rivRole(q.sp, q.nd.pl), reach: q.nd.r[q.nd.h.indexOf(q.hand)], hwok: !!rivHW(q.sp, q.nd, q.nd.h.indexOf(q.hand)), rows: ['翻前', '翻牌', '轉牌', '河牌']};
   renderBar();
 }
 function grpActs(acts) { // group into F / C / R buttons
@@ -246,8 +254,10 @@ function renderBar() {
   if (g.R) html += `<button class="ab k-raise" data-k="R">${labR}<small><kbd>R</kbd></small></button>`;
   bar.innerHTML = html; bar.querySelectorAll('.ab').forEach(b => b.onclick = () => answer(b.dataset.k));
 }
+// 剝削規則：剝削解每手多賺 >0.25bb 才用，否則照 GTO
+function effView(q) { if (VIEW !== 'exp' || q.kind !== 'riv') return VIEW; const e = q.sp.exploit && q.sp.exploit[q.nd.pl]; return e && e.gainBB > 0.25 ? 'exp' : 'gto'; }
 function answer(k) {
-  if (ANSWERED || !Q) return; const q = Q; const hs = heroStrat(q, VIEW) || heroStrat(q, 'gto');
+  if (ANSWERED || !Q) return; const q = Q; const hs = heroStrat(q, effView(q)) || heroStrat(q, 'gto');
   const g = grpActs(hs.acts); if (!g[k]) return;
   const tot = {}; Object.keys(g).forEach(K => tot[K] = g[K].reduce((s, i) => s + hs.s[i], 0));
   const mine = tot[k], best = Math.max(...Object.values(tot));
@@ -262,22 +272,22 @@ function answer(k) {
     if (q.kind === 'pre') ST.queue.push({mode: 'pre', fam: FAM, due: 6, name: q.name, cls: q.cls}); else ST.queue.push({mode: 'riv', fam: FAM, due: 6, sp: q.sp.id, node: q.nodeId, hand: q.hand});
   }
   if (ST.queue.length > 60) ST.queue = ST.queue.slice(-60);
-  Q._k = k; Q._view = VIEW; Q._grade = grade; Q._tot = tot; save(); renderStat(); renderAnswer(k, grade, tot); renderBar();
+  Q._k = k; Q._view = effView(q); Q._grade = grade; Q._tot = tot; save(); renderStat(); renderAnswer(k, grade, tot); renderBar();
 }
 function barsHTML(hs, myIdx) {
   return '<div class="bars">' + hs.acts.map((a, i) => `<div class="bar${myIdx.includes(i) ? ' me' : ''}"><div class="lab">${esc(actZh(a))}</div><div class="tr"><div class="fi" style="width:${hs.s[i]}%;background:${actColor(a)}"></div></div><div class="ev">${hs.s[i]}%${hs.ev && hs.ev[i] != null ? '・EV ' + (hs.ev[i] >= 0 ? '+' : '') + fmt1(hs.ev[i]) : ''}</div></div>`).join('') + '</div>';
 }
 function renderAnswer(k, grade, tot) {
-  const q = Q; const hs = heroStrat(q, VIEW) || heroStrat(q, 'gto'); const g = grpActs(hs.acts);
+  const q = Q; const hs = heroStrat(q, effView(q)) || heroStrat(q, 'gto'); const g = grpActs(hs.acts);
   const zhK = {F: '棄牌', C: q.acts.some(a => a.startsWith('check')) ? '過牌' : '跟注', R: '加注/下注'};
   let h = `<div class="sec"><div class="res ${grade}">${grade === 'ok' ? '✓ 正確' : grade === 'mid' ? '△ 可接受（混合策略）' : '✗ 錯誤'}　<span class="muted">你選：${zhK[k]}（${(q._view || VIEW) === 'exp' ? '剝削解' : 'GTO'}頻率 ${Math.round(tot[k])}%）</span></div>`;
-  h += `<div class="muted">${esc(q.combo.replace(/(..)/g, '$1 '))} 的${VIEW === 'exp' ? '剝削' : ' GTO '}策略${hs.ev ? '（EV 以 bb 計，從河牌開始算，含已投入底池的份額）' : ''}</div>`;
+  h += `<div class="muted">${esc(q.combo.replace(/(..)/g, '$1 '))} 的${(q._view || VIEW) === 'exp' ? '剝削' : ' GTO '}策略${hs.ev ? '（EV 以 bb 計，從河牌開始算，含已投入底池的份額）' : ''}</div>`;
   h += barsHTML(hs, g[k] || []);
   if (hs.missing) h += `<div class="muted">此手牌在剝削解中已不會到達這個節點。</div>`;
   h += '</div>';
   // side-by-side GTO vs exploit for this hand
-  const other = heroStrat(q, VIEW === 'gto' ? 'exp' : 'gto');
-  if (other && !other.missing) h += `<div class="sec"><div class="muted">${VIEW === 'gto' ? '對照：剝削 NL2 池的打法' : '對照：GTO 打法'}</div>${barsHTML(other, [])}</div>`;
+  const other = heroStrat(q, (q._view || VIEW) === 'gto' ? 'exp' : 'gto');
+  if (other && !other.missing) h += `<div class="sec"><div class="muted">${(q._view || VIEW) === 'gto' ? '對照：剝削 NL2 池的打法' + (VIEW === 'exp' ? '（收益 ≤0.25bb，不採用）' : '') : '對照：GTO 打法'}</div>${barsHTML(other, [])}</div>`;
   h += `<div class="sec expl">${explain(q, hs)}</div>`;
   h += `<div class="sec"><div class="row" style="justify-content:space-between"><b>${q.kind === 'pre' ? '整個範圍（13×13）' : '你在這個節點的整體範圍'}</b><span class="muted small">顏色＝動作比例；淡＝較少在範圍內</span></div>${gridHTML(q, VIEW)}${legendHTML(hs.acts)}<div class="muted small" style="margin-top:6px">範圍整體：${hs.acts.map((a, i) => actZh(a) + ' ' + (q.kind === 'pre' ? fmt1(hs.freq[a]) : Math.round(hs.freq[i] * 100)) + '%').join('・')}</div></div>`;
   $('#ans').innerHTML = h;
@@ -345,7 +355,7 @@ function explain(q, hs) {
   }
   // exploit notes
   const e = sp.exploit[nd.pl];
-  if (e) { out.push(`<p class="muted">剝削版本鎖定的 NL2 池數據：${e.locks.map(l => `${esc(l.node)}：${esc(l.what)}（n=${(l.n || 0).toLocaleString()}）`).join('；')}。在此模型下對池多賺約 ${fmt1(e.gainBB)}bb／此河牌局面（模型估計，見報告的限制）。</p>`); }
+  if (e) { out.push(`<p class="muted">剝削版本鎖定的 NL2 池數據：${e.locks.map(l => `${esc(l.node)}：${esc(l.what)}（n=${(l.n || 0).toLocaleString()}）`).join('；')}。在此模型下對池多賺約 ${fmt1(e.gainBB)}bb／此河牌局面（模型估計）→ ${e.gainBB > 0.25 ? '>0.25bb，用剝削解評分' : '≤0.25bb，照 GTO 評分'}。鎖定頻率未逐項做顯著性檢定（樣本 n 見上）。</p>`); }
   return out.join('');
 }
 // ---------- stats / UI ----------
@@ -434,7 +444,7 @@ function toolShow(s, e, ms) {
   const nodes = rep.filter(n => n.hist.replace(/\d+/g, '').length <= 2 && n.reachW > 1e-3 && n.reachOpp > 1e-3);
   const sp = {hands: [0, 1].map(p => s.g.H[p].map(h => RS.cstr(h.c1) + RS.cstr(h.c2))), w: [0, 1].map(p => s.g.H[p].map(h => h.w))};
   let h = `<div class="sec"><b>結果</b> <span class="muted small">${s.it} 次迭代・${Math.round(ms)}ms・可剝削度 ${e.exploitPct.toFixed(2)}% 底池・EV ${pos[0]} ${fmt1(e.ev[0])}bb / ${pos[1]} ${fmt1(e.ev[1])}bb</span>
-   <div class="row" style="margin-top:8px"><select id="tNode">${nodes.map((n, i) => `<option value="${i}">${n.hist ? esc(nodeFacingTxt(n.hist, pos)) : pos[0] + ' 先行動'}（${pos[n.pl]}）</option>`).join('')}</select></div><div id="tNodeOut"></div></div>`;
+   <div class="row" style="margin-top:8px"><select id="tNode">${nodes.map((n, i) => `<option value="${i}">${n.hist ? esc(nodeFacingTxt(n.hist, pos, {gto: rep})) : pos[0] + ' 先行動'}（${pos[n.pl]}）</option>`).join('')}</select></div><div id="tNodeOut"></div></div>`;
   $('#tOut').innerHTML = h;
   const show = i => { const n = nodes[i]; const acts = n.acts.map(a => a.label + (a.frac ? ' ' + Math.round(a.frac * 100) + '%' : '') + (a.to ? '|' + a.to : ''));
     const hi = []; n.reach.forEach((r, j) => { if (r > 1e-6) hi.push(j); });
@@ -444,7 +454,8 @@ function toolShow(s, e, ms) {
       <div class="muted small">${acts.map((a, k) => actZh(a) + ' ' + Math.round(n.freq[k] * 100) + '%').join('・')}</div>${gridHTML(fake, 'gto')}${legendHTML(acts)}`; };
   $('#tNode').onchange = e => show(+e.target.value); show(0);
 }
-function nodeFacingTxt(hist, pos) { const toks = hist.match(/x|B\d+|A\d+|R|A/g) || []; let who = 0; return toks.map(t => { const p = pos[who]; who = 1 - who; return t === 'x' ? p + ' 過牌' : t[0] === 'B' ? p + ' 下注 ' + t.slice(1) + '%' : t[0] === 'A' ? p + ' 全下' : p + ' 加注'; }).join(' → '); }
+function nodeFacingTxt(hist, pos, sp) { const toks = hist.match(/x|B\d+|A\d+|R|A/g) || []; let who = 0, pre = ''; return toks.map(t => { const p = pos[who]; who = 1 - who; const o = t === 'x' ? p + ' 過牌' : t[0] === 'B' ? p + ' 下注 ' + t.slice(1) + '%' : t[0] === 'A' ? p + ' 全下' : p + ' 加注到 ' + (sp ? rAmt(sp, pre) : '設定的尺寸'); pre += t; return o; }).join(' → '); }
+function rAmt(sp, pre) { const L = (sp.gto || []).concat(sp.exp || []); const n = L.find(x => x && x.hist === pre); const a = n && n.acts.find(x => x.startsWith('raise|')); return a ? fmt1(+a.split('|')[1]) + 'bb' : '設定的尺寸'; }
 // ---------- about ----------
 function renderAbout() {
   const H = PRE.heroes; const rfi = ['UTG', 'HJ', 'CO', 'BTN', 'SB'];
@@ -458,6 +469,7 @@ function renderAbout() {
 // ---------- boot ----------
 const hashM = (location.hash || '').replace('#', ''); renderStat(); setMode(['riv', 'tool'].includes(hashM) ? hashM : 'riv');
 window.addEventListener('hashchange', () => { const m = location.hash.slice(1); if (['riv', 'tool'].includes(m)) setMode(m); });
+window.SVQ = {nextQ, setMode};
 </script>
 </body>
 </html>

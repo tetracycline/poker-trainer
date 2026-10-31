@@ -89,6 +89,7 @@ function render() {
     if (!(CUR && CUR.k === k)) CUR = {k, it};
     body = `<div class="row sp"><span class="prog">剩 ${S.q.length} / ${n} 題・對 ${S.right}・錯 ${S.wrong}</span><button class="btn sm" data-reset="1">重來</button></div>
       <div class="qcard" id="qc">${CUR.a ? head(it) + '<button class="btn dn-d" data-dnext="1" style="margin-top:8px">下一題 →</button></div>' + reveal(it, CUR.a) : head(it) + '</div>' + opts(it)}</div>`; }
+  if (CUR) { const h = CUR.it.hand, up = CUR.it.at; window.__Q = {drill: 'rvpost', id: h.id + '|' + up, hero: h.cards.join(''), board: h.board.slice(0, BN[h.acts[up][0]]).join(''), full: h.board.join(''), real: true, role: ['real', ''], st: h.acts[up][0], seen: [...new Set(h.acts.slice(0, up).filter(a => !(a[2] === 'fold' && a[0] === 'pre' && a[1] !== 'Hero')).map(a => a[0]))]}; }
   $('#quiz').innerHTML = body;
 }
 function answer(a) { if (!CUR || CUR.a) return; CUR.a = a; CUR.r = grade(CUR.it, a); if (CUR.r === 'bad') S.wrong++; else S.right++; save(); render(); }

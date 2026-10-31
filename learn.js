@@ -38,7 +38,7 @@ function drawTB(){const t=D.tb[st.tb],O=['UTG','HJ','CO','BTN','SB'];const heroe
  <div class="ln"><span class="lab">3-bet 價值</span><b>${comp(t.val)}</b></div>
  ${t.semi.length?`<div class="ln"><span class="lab">3-bet 偷</span><b>${comp(t.semi)}</b></div>`:''}
  <div class="ln"><span class="lab">被 4-bet</span>${comp(jam)} 全下${cal.length?'・'+comp(cal)+' 跟':''}・其他棄</div>
- <div class="why">${t.o} 被 3-bet 棄 ${t.pf3}%、4-bet 只 ${t.p4}% → 3-bet 收價值，不用純詐唬</div>${t.gl?`<div class="gl">${esc(t.gl)}</div>`:''}
+ <div class="why">${t.o} 被 3-bet 棄 ${t.pf3}%、4-bet 只 ${t.p4}% → ${t.gv==='small'?'差很小，範圍照 GTO':'3-bet 收價值，不用純詐唬'}</div>${t.sc?`<div class="rsc">${esc(t.sc)}</div>`:''}${t.gl?`<div class="gl">${esc(t.gl)}</div>`:''}
  <details><summary>跟注範圍（${t.pct.call}%）</summary><div class="small">${comp(t.call)}</div></details>`;
  if(st.gto){const g=Object.entries(t.gto).filter(([k,s])=>s[2]>=50).map(x=>x[0]);h+=`<div class="gto">GTO 3-bet（≥50% 頻率）：${comp(g)}</div>`}
  h+=`</div>`+tbDrill(t)+`</div>`;$('#main').innerHTML=h;
@@ -46,7 +46,7 @@ function drawTB(){const t=D.tb[st.tb],O=['UTG','HJ','CO','BTN','SB'];const heroe
 function tbDrill(t){if(!st.q||st.q.k!=='tb'){const pool=[...t.val,...t.semi,...t.call,...t.call,...D.tb[st.tb].call.map(x=>x)];
   const near=Object.keys(t.gto).filter(k=>!pool.includes(k)&&/^(A|K|Q|J|T)|s$|^(\d)\1$/.test(k));
   const all=[...t.val,...t.val,...t.semi,...t.semi,...t.call,...near.slice(0,40)];const hh=pick(all);st.q={k:'tb',h:hh,c:combo(hh),step:1,pick:null}}
- const q=st.q,h=q.h;let o=`<div class="qcard"><div class="qs">練習：${t.o} 開池，你在 ${t.h}，拿到</div><div class="cards">${cards(q.c)}</div>`;
+ const q=st.q,h=q.h;window.__Q={drill:'tb',id:st.tb,hero:q.c,board:'',role:['pre',''],step:q.step,sc:t.sc,gl:t.gl,gv:t.gv};let o=`<div class="qcard"><div class="qs">練習：${t.o} 開 ${t.open}bb，你在 ${t.h}，拿到</div><div class="cards">${cards(q.c)}</div>`;
  if(q.step===1){o+=`<div class="acts">${AB('fold','棄牌','k-fold')}${AB('call','跟注','k-call')}${AB('3bet','3-bet','k-3bet')}</div>`}
  else{const a=tbAns(t,h),ok=q.pick===a;o+=res(ok,`${h}：${{fold:'棄牌',call:'跟注','3bet':'3-bet 到 '+t.to+'bb'}[a]}`,tbWhyHand(t,h,a),st.gto&&t.gto[h]?`GTO：棄 ${t.gto[h][0]}%・跟 ${t.gto[h][1]}%・3-bet ${t.gto[h][2]}%`:'');
   if(a==='3bet'){if(q.step===2)o+=`<div class="qs" style="margin-top:10px">${t.o} 4-bet 回來！</div><div class="acts">${AB('fold','棄牌','k-fold')}${AB('call','跟注','k-call')}${AB('jam','全下','k-jam')}</div>`;
@@ -67,15 +67,15 @@ function drawISO(){const L=['UTG','HJ','CO','BTN','SB'];let key=isoKey();if(!D.i
  <div class="dg"><span class="dgl">跛入人數</span>${chips([['1','1 人'],['2','2 人']],st.two?'2':'1','in')}</div>
  <div class="sec"><div class="big">${t.two?'2 人':t.l}跛入 → 你 ${t.h} 加注到 ${t.size}bb</div>
  <div class="ln"><span class="lab">加注（${t.pct}%）</span><b>${comp(t.core)}</b></div><div class="ln small">${oth}</div>
- <div class="why">跛入者被加注還跟 ${t.lc}%、只再加注 ${t.lr}% → 用好牌加注，翻後打他的弱範圍</div>${t.gl?`<div class="gl">${esc(t.gl)}</div>`:''}
+ <div class="why">跛入者被加注還跟 ${t.lc}%、只再加注 ${t.lr}% → 用好牌加注，翻後打他的弱範圍</div>${t.sc?`<div class="rsc">${esc(t.sc)}</div>`:''}${t.gl?`<div class="gl">${esc(t.gl)}</div>`:''}
  ${t.other==='limp'?`<details><summary>補 0.5bb 的牌</summary><div class="small">${comp(t.limp)}</div></details>`:''}${t.adv.length?`<details><summary>進階也賺（EV 小於 1bb）</summary><div class="small">${comp(t.adv)}</div></details>`:''}
  ${st.gto?'<div class="gto">GTO 對照：解算器沒有跛入節點（GTO 不跛入），這裡只有剝削版</div>':''}</div>`;
  h+=isoDrill(t,key);
- h+=`<div class="sec"><div class="big">加注後怎麼打</div>${D.iso_post.map(r=>`<div class="rrow"><div>${esc(r.sit)}</div><div class="a">→ ${esc(r.ans)}</div><div class="w">${esc(r.why)}</div></div>`).join('')}</div></div>`;
+ h+=`<details class="sec"><summary class="big">加注後怎麼打（${D.iso_post.length} 條）</summary>${D.iso_post.map(r=>`<div class="rrow"><div>${esc(r.sit)}</div><div class="a">→ ${esc(r.ans)}</div><div class="w">${esc(r.why)}</div>${r.sc?`<div class="rsc">${esc(r.sc)}</div>`:''}</div>`).join('')}</details></div>`;
  $('#main').innerHTML=h;bind('il',l=>{st.iso=Object.keys(D.iso).find(k=>k.startsWith(l+'>')&&k.endsWith('>BTN'))||Object.keys(D.iso).find(k=>k.startsWith(l+'>'))});bind('ih',k=>st.iso=k);bind('in',n=>st.two=n==='2');bindDrill()}
 function isoDrill(t,key){if(!st.q||st.q.k!=='iso'||st.q.key!==key){const near=['K9o','QTo','JTo','Q9s','J9s','T8s','97s','86s','A9o','A8o','K8s','55','44','33','22','K5s','Q8s','A5o','KTo'];
   const hh=pick([...t.core,...t.adv,...near.filter(x=>!t.core.includes(x))]);st.q={k:'iso',key,h:hh,c:combo(hh),pick:null}}
- const q=st.q,h=q.h,oth=t.other,olab={fold:'棄牌',limp:'補 0.5bb',check:'過牌'}[oth];
+ window.__Q={drill:'iso',id:key,hero:st.q.c,board:'',role:['pre',''],sc:t.sc,gl:t.gl,gv:t.gv};const q=st.q,h=q.h,oth=t.other,olab={fold:'棄牌',limp:'補 0.5bb',check:'過牌'}[oth];
  let o=`<div class="qcard"><div class="qs">練習：${t.two?'2 人':t.l}跛入，你在 ${t.h}，拿到</div><div class="cards">${cards(q.c)}</div>`;
  if(!q.pick)o+=`<div class="acts">${AB(oth,olab,'k-fold')}${AB('iso','加注 '+t.size+'bb','k-3bet')}</div>`;
  else{const a=t.core.includes(h)?'iso':(oth==='limp'&&!t.limp.includes(h)?'fold':oth),adv=t.adv.includes(h);const ok=q.pick===a||(adv&&q.pick==='iso');
@@ -98,23 +98,40 @@ function drawLN(){const rs=D.rules.filter(r=>r.group===st.grp);const cats=[...ne
  ${st.mode==='sheet'?`<div class="dg">${chips(cats.map(c=>[c,CAT[c]||c]),st.cat,'c')}</div>`:''}`;
  h+=st.mode==='drill'?lnDrill(rs):lnSheet(rs);$('#main').innerHTML=h+`</div>`;
  bind('g',g=>{st.grp=g;st.cat='all'});bind('c',c=>st.cat=c);bind('m',m=>{st.mode=m;st.cat='all'});bind('x',x=>st.tx=x);bindDrill()}
+const SPM={BTN_BB:['BB','BTN',1,'SRP',5.5,97.5],CO_BB:['BB','CO',1,'SRP',5.5,97.5],HJ_BB:['BB','HJ',1,'SRP',5.5,97.5],UTG_BB:['BB','UTG',1,'SRP',5.5,97.5],SB_BB:['SB','BB',0,'SRP',6,97],SB3_BTN:['SB','BTN',0,'3BP',21,90],BB3_BTN:['BB','BTN',0,'3BP',20.5,90]};
+const f1=x=>(Math.round(x*10)/10).toString();
+function spRole(sp,p){const [oop,ip,pfr,kind]=SPM[sp],me=p?ip:oop,op=p?oop:ip;if(kind==='SRP')return pfr===p?['open',me]:['call',op+'open>'+me];return pfr===p?['tb',op+'open>'+me]:['c3',me+'open>'+op+'3b']}
+// 完整行動線：翻前（尺寸）＋每條街（尺寸）；回傳 [rows, 底池, 你剩]
+function lnRows(sp,l,p,b){const [oop,ip,pfr,kind,P0,stk]=SPM[sp],nm=[oop,ip].map((x,i)=>i===p?'你':x),pn=[oop,ip];
+ const o=kind==='SRP'?(pfr?ip:oop):(pfr?oop:ip),c=kind==='SRP'?(pfr?oop:ip):(pfr?ip:oop),me=x=>x===pn[p]?'你':x;
+ const pf=kind==='SRP'?`${me(o)} 開 ${o==='SB'?3:2.5}bb → ${me(c)} 跟`:`${me(o)} 開 2.5bb → ${me(c)} 3-bet 到 ${100-stk}bb → ${me(o)} 跟`;
+ const rows=[['翻前',pf]];let pot=P0*100,ct=0;const S=l.split('/').map(x=>x?x.split(' '):[]),nst=b.length/2-3;
+ for(let si=0;si<=nst;si++){const tk=S[si]||[],bt=[0,0],d=[];tk.forEach((t,k)=>{const q=k%2,mx=Math.max(bt[0],bt[1]);
+  if(t==='x')d.push(nm[q]+' 過牌');else if(t==='c'){bt[q]=mx;d.push(nm[q]+' 跟')}else if(t==='f')d.push(nm[q]+' 棄');
+  else if(t[0]==='b'){const pc=+t.slice(1);bt[q]=Math.round(pc/100*pot);d.push(`${nm[q]} 下注 ${pc}%（${f1(bt[q]/100)}bb）`)}
+  else if(t==='r'){bt[q]=3*mx;d.push(`${nm[q]} 加注到 ${f1(bt[q]/100)}bb`)}else if(t==='a'){bt[q]=stk*100-ct;d.push(`${nm[q]} 全下`)}});
+  const cs=si===0?b.slice(0,6):b.slice(4+2*si,6+2*si);
+  if(si<nst){pot+=bt[0]+bt[1];ct+=bt[p];rows.push([['翻牌','轉牌','河牌'][si],d.join(' → ')||'—',cs])}
+  else{rows.push([['翻牌','轉牌','河牌'][si],(d.length?d.join(' → ')+' → ':'')+'輪到你',cs]);ct+=0;var cur=pot+bt[0]+bt[1],left=stk*100-ct-bt[p]}}
+ return [rows,cur/100,left/100]}
+function actHTML(rows){return `<div class="ral">${rows.map(r=>`<div><b>${r[0]}</b>${r[2]?`<span class="rc">${cards(r[2],1)}</span>`:''}${esc(r[1])}</div>`).join('')}</div>`}
 function lnDrill(rs){if(!st.q||st.q.k!=='ln'||st.q.g!==st.grp||(st.cat!=='all'&&st.q.r.cat!==st.cat)){let pool=rs.filter(r=>(st.cat==='all'||r.cat===st.cat)&&r.ex.length);
   const r=pick(pool),e=pick(r.ex);st.q={k:'ln',g:st.grp,r,e,pick:null}}
- const {r,e}=st.q,b=e[1];let o=`<div class="qcard"><div class="small muted">${esc(spotTxt(r.group,e[2]))}・底池 ${(e[3]/100).toFixed(1)}bb</div>
- <div class="qs">${esc(r.sit)}</div>
- <div class="cards"><span class="lb">牌面</span>${cards(b.slice(0,6),1)}${b.length>6?'<span style="width:6px"></span>'+cards(b.slice(6),1):''}</div>
+ const {r,e}=st.q,b=e[1],[rows,pot,left]=lnRows(e[2],e[4]||'',e[5],b);
+ window.__Q={drill:'ln',id:r.id,hero:e[0],board:b,role:spRole(e[2],e[5]),line:e[4],spot:e[2],rows:rows.map(x=>x[0]),sc:r.sc,gl:r.gl||'',psc:r.psc||'',dev:r.dev,gv:r.gv};
+ let o=`<div class="qcard"><div class="rsc">統計範圍：${esc(r.sc)}</div>${actHTML(rows)}<div class="small muted">底池 <b>${f1(pot)}bb</b>・你剩 ${f1(left)}bb</div>
  <div class="cards" style="margin-top:6px"><span class="lb">你</span>${cards(e[0])}</div>`;
  if(!st.q.pick)o+=`<div class="acts">${r.choices.map(a=>AB(a,alab(a,r.street),a==='x'||a==='f'?'k-fold':a==='c'?'k-call':a==='small'?'k-open':'k-3bet')).join('')}</div>`;
  else{const ok=st.q.pick===r.ans,alt=!ok&&r.ok.includes(st.q.pick);
-  o+=`<div class="sec res ${ok?'ok':alt?'mix':'bad'}"><div class="rh">${ok?'✓ ':alt?'△ ':'✗ '}${alab(r.ans,r.street)}${r.dev?'<span class="dev">剝削</span>':''}</div>
+  o+=`<div class="sec res ${ok?'ok':alt?'mix':'bad'}"><div class="rh">${ok?'✓ ':alt?'△ ':'✗ '}${alab(r.ans,r.street)}${r.dev?'<span class="dev">剝削</span>':'<span class="dev g">GTO</span>'}</div>
   <div class="small muted">你的牌：${esc(r.hc_zh)}${r.tx_zh?'・'+esc(r.tx_zh):''}${alt?'・你的選擇也可以，但不是首選':''}</div>
-  <div class="why">${esc(r.why)}</div>${r.gl?`<div class="gl">${esc(r.gl)}</div>`:''}${r.dev?`<div class="gto">GTO 是：${alab(r.gto,r.street)}</div>`:''}${st.gto?`<div class="gto">GTO 頻率：${Object.entries(r.gf).map(([k,v])=>alab(k,r.street)+' '+Math.round(v*100)+'%').join('・')}</div>`:''}</div>
+  <div class="why">${esc(r.why)}</div>${r.gl?`${r.psc?`<div class="rsc">${esc(r.psc)}</div>`:''}<div class="gl">${esc(r.gl)}</div>`:''}${r.dev?`<div class="gto">GTO 是：${alab(r.gto,r.street)}</div>`:''}${st.gto?`<div class="gto">GTO 頻率：${Object.entries(r.gf).map(([k,v])=>alab(k,r.street)+' '+Math.round(v*100)+'%').join('・')}</div>`:''}</div>
   <div class="acts"><button class="ab nx" data-a="next">下一題</button></div>`}
  return o+`</div>`}
 function lnSheet(rs){const cat=st.cat==='all'?rs[0].cat:st.cat;let sub=rs.filter(r=>r.cat===cat);const txs=[...new Set(sub.map(r=>r.tx).filter(Boolean))];
  let h='';if(txs.length){if(!txs.includes(st.tx))st.tx=txs[0];h+=`<div class="dg"><span class="dgl">牌面</span>${chips(txs.map(x=>[x,sub.find(r=>r.tx===x).tx_zh]),st.tx,'x')}</div>`;sub=sub.filter(r=>r.tx===st.tx)}
  const keyf=r=>r.street+(r.tx||'');const parts={};sub.forEach(r=>(parts[keyf(r)]=parts[keyf(r)]||[]).push(r));
- for(const k in parts){const p=parts[k];h+=`<div class="sec"><div class="big">${esc(p[0].sit)}${p.length&&!p[0].tx?'（'+STZ[p[0].street]+'）':''}</div>`+p.map(r=>`<div class="rrow"><div>${esc(r.hc_zh)} <span class="a">→ ${alab(r.ans,r.street)}</span>${r.dev?'<span class="dev">剝削</span>':''}</div><div class="w">${esc(r.why)}</div>${r.gl?`<div class="gl">${esc(r.gl)}</div>`:''}${st.gto?`<div class="gto">GTO：${alab(r.gto,r.street)}</div>`:''}</div>`).join('')+`</div>`}
+ for(const k in parts){const p=parts[k];h+=`<div class="sec"><div class="big">${esc(p[0].sit)}${p.length&&!p[0].tx?'（'+STZ[p[0].street]+'）':''}</div>`+p.map(r=>`<div class="rrow"><div>${esc(r.hc_zh)} <span class="a">→ ${alab(r.ans,r.street)}</span>${r.dev?'<span class="dev">剝削</span>':''}</div><div class="w">${esc(r.why)}</div>${r.gl?`${r.psc?`<div class="rsc">${esc(r.psc)}</div>`:''}<div class="gl">${esc(r.gl)}</div>`:''}${st.gto?`<div class="gto">GTO：${alab(r.gto,r.street)}</div>`:''}</div>`).join('')+`</div>`}
  return h}
 /* ---------- 讀牌 ---------- */
 const BZ={S:'兩對以上',M:'頂對/超對',W:'弱對',D:'聽牌',A:'空氣',G:'之後棄牌'},STN={1:'翻牌',2:'轉牌',3:'河牌'};
@@ -136,7 +153,7 @@ function rdHIP(r,p){if(!p)return null;const O=['SB','BB','UTG','HJ','CO','BTN'],
  if(r.id.indexOf('3b_')===0)return x(a[1])>x(a[0]);if(r.grp==='3b')return x(a[0])>x(a[1]);return x(a[1])>x(a[0])}
 function rdLine(r,p){const L=r.lines||[];if(!L.length)return -1;const ip=rdHIP(r,p);let c=L.map((l,i)=>i).filter(i=>ip==null||L[i].ip===ip);if(!c.length)c=L.map((l,i)=>i);
  let t=0;c.forEach(i=>t+=L[i].w);let x=Math.random()*t;for(const i of c){x-=L[i].w;if(x<=0)return i}return c[c.length-1]}
-function rdAct(r,p,li){const l=(r.lines||[])[li];if(!l)return '';const pf=p&&D.rdSpot?D.rdSpot(r,p):r.spot;
+function rdAct(r,p,li){const l=(r.lines||[])[li];if(!l)return '';const pf=(p&&D.rdSpot?D.rdSpot(r,p):r.spot)+'（翻前尺寸不分）';
  return `<div class="ral"><div><b>翻前</b>${esc(pf)}</div>${l.st.map(x=>{const k=x.indexOf('：');return `<div><b>${esc(x.slice(0,k))}</b>${esc(x.slice(k+1))}</div>`}).join('')}</div>`}
 function rdLS(r,li){const L=r.lines||[],l=L[li];if(!l||L.length<2)return '';
  return `<div class="nn">本題這條線（占 ${l.sh}%）：${l.nsd>=60?`攤牌 ${l.nsd}・兩對+ ${l.bar.S}%・空氣 ${l.bar.A}%`:`攤牌僅 ${l.nsd} 手 → 用 ${L.length} 條線合併`}</div>`}
@@ -145,8 +162,15 @@ function rdRange(r){const t=r.tx;if(!t)return `<div class="small muted">他的�
 function rdGL(r){const t=r.tx;let o='';if(t&&t.on&&t.gl)o+=`<div class="gl">${esc(t.zh)}：${esc(t.gl)}</div>`;
  if(r.gp)o+=`<div class="gl">全部牌面：${esc(r.gp)}</div>`;else if(r.gl)o+=`<div class="gl">${esc(r.gl)}</div>`;
  if(r.ct&&r.ct.length)o+=`<div class="nn">${r.ct.map(esc).join('；')}</div>`;return o}
-function rdDrill(rs){if(!st.q||st.q.k!=='rd'||!rs.includes(st.q.r)){const r=pick(rs);const dl=D.rdDeal?D.rdDeal(r):{hd:pick(r.hands),c:r.hands[0].c};st.q={k:'rd',r,hd:dl.hd,c:dl.c,pos:dl.pos,pick:null}}
+function rdRole(r,p){if(r.grp==='ip')return ['open',p];if(r.grp==='bb')return ['call',p];if(r.grp==='iso')return ['iso',p];if(r.id.indexOf('3b_')===0)return ['tb',p.replace(/3b$/,'')];return ['c3',p]}
+// 只發 HW 會玩的牌：每個組合依它的位置檢查核心範圍
+function rdDealHW(r){const ok=c=>!window.HWR||HWR.ok(...rdRole(r,D.rdPos[c[1]]),hcls(c[0]));const H=r.hands.map(h=>({h,cs:h.cs.filter(ok)})).filter(x=>x.cs.length);
+ if(!H.length)return null;let t=0;const ws=H.map(x=>{const w=Math.max(x.h.sh,0.12);t+=w;return w});let z=Math.random()*t,k=H.length-1;for(let i=0;i<H.length;i++){z-=ws[i];if(z<=0){k=i;break}}
+ const cs=H[k].cs;let s2=0;cs.forEach(c=>s2+=c[2]);z=Math.random()*s2;let c=cs[cs.length-1];for(const x of cs){z-=x[2];if(z<=0){c=x;break}}return {hd:H[k].h,c:c[0],pos:D.rdPos[c[1]]}}
+function hcls(c){const a=c.slice(0,2),b=c.slice(2,4);let x=R.indexOf(a[0]),y=R.indexOf(b[0]);if(x>y)[x,y]=[y,x];return x===y?R[x]+R[x]:R[x]+R[y]+(a[1]===b[1]?'s':'o')}
+function rdDrill(rs){if(!st.q||st.q.k!=='rd'||!rs.includes(st.q.r)){let r,dl;for(let k=0;k<30;k++){r=pick(rs);dl=rdDealHW(r);if(dl)break}st.q={k:'rd',r,hd:dl.hd,c:dl.c,pos:dl.pos,pick:null}}
  if(st.q.li==null)st.q.li=rdLine(st.q.r,st.q.pos);
+ {const q=st.q,l=(q.r.lines||[])[q.li];window.__Q={drill:'rd',id:q.r.id,hero:q.c||q.hd.c,board:q.r.board,role:rdRole(q.r,q.pos),pos:q.pos,rows:['翻前',...(l?l.st.map(x=>x.slice(0,x.indexOf('：'))):[])],street:q.r.street,sc:q.r.sc,line:l&&l.st,act:q.hd.act,gv:q.hd.gv}}
  const {r,hd}=st.q;let o=`<div class="qcard">${rdHead(r,st.q.pos)}${rdAct(r,st.q.pos,st.q.li)}<div class="cards" style="margin-top:6px"><span class="lb">你</span>${cards(st.q.c||hd.c)}</div>
  <div class="qs" style="margin-top:8px">他拿什麼？你怎麼做？</div>`;
  const ch=r.kind==='dec'?[['x','過牌','k-fold'],['bet','下注','k-3bet']]:[['f','棄牌','k-fold'],['c','跟注','k-call'],['r','加注','k-3bet']];
@@ -164,5 +188,5 @@ function rdN0(r){return `<div class="nn">樣本：全部牌面 ${r.n.toLocaleStr
 function mbar(p){return `<div class="rb mb">${'SMWDAG'.split('').filter(k=>p[k]>0).map(k=>`<span class="${k}" style="flex:${p[k]} 0 0" title="${BZ[k]} ${p[k]}%">${p[k]>=10?p[k]:''}</span>`).join('')}</div>`}
 function draw(){nav();if(window.PKNAV)PKNAV.set(st.tab==='eq'?'eq':'exp');$('#topnav').style.display=st.tab==='eq'?'none':'';document.body.classList.toggle('eqpg',st.tab==='eq');if(st.tab==='eq'&&window.drawEQ)window.drawEQ();else if(st.tab==='tb')drawTB();else if(st.tab==='iso')drawISO();else if(st.tab==='rd')drawRD();else drawLN()}
 addEventListener('hashchange',()=>{const t=location.hash.slice(1);if(t&&t!==st.tab&&['tb','iso','ln','rd','eq'].includes(t)){st.tab=t;st.q=null;draw();scrollTo(0,0)}});
-draw();
+draw();window.LQ={st:st,draw:draw};
 })();

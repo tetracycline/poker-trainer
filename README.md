@@ -16,3 +16,29 @@
 - 對手範圍 `learn.html#eq`：查表｜測驗（`eq.js`、`eq_data.js`）
 - 覆盤 `review/`
 舊網址都保留：`?p=…`、`index.html#<練習>`、`#charts`→範圍表、`#solver`/`#river`/`?p=solver`→`solver.html`。
+
+## 部署前必跑：全站 QA（`tools/qa_all.py`）
+
+```
+python3 tools/qa_all.py            # 每個練習 500 題，約 30–40 分鐘；有任何失敗 exit 1
+python3 tools/qa_all.py -n 30 --only ln,eq   # 快速檢查部分練習
+python3 tools/qa_all.py --shots 50 --shotdir /tmp/qashots   # 另存 50 張截圖人工看
+```
+
+需要 playwright + Chrome、node。逐題檢查 7 類：
+1. 範圍：發給你的牌是 HW 實際會玩的（`hwrange.js` 核心範圍，頻率 ≥50%，再依 HW 實際頻率收緊）；翻後/河牌只發會走到這條線的牌（到達率 ≥50%）。
+2. 行動線：翻前到當前街每一條街的動作都要顯示，下注/加注都有尺寸。
+3. 統計範圍：每個池統計都寫位置、整條線、合併或分牌面、n／攤牌 n、GTO vs 池和顯著性；信賴區間和「顯著」字樣要一致。
+4. 快捷鍵：每個按鈕都有鍵。
+5. 版面：1280×800 題目不用捲動、答案（對錯＋按鈕）在 800px 內；手機字比桌機大（≥15px）。
+6. 剝削規則：池顯著偏離 **且** 每手多賺 >0.25bb 才剝削，否則照 GTO。
+7. 牌：手牌兩張、不重複。
+
+資料重建工具：
+- `tools/build_hwrange.py` → `hwrange.js`（HW 實際範圍，來源 `hw_stats_cumulative.json` ＋ 網站核心範圍）。
+- `lines_v1/apply_hw.py`（工作區）→ `learn_data.js`：行動線例牌、GTO vs 池文字、0.25bb 規則。
+- `read_tx/add_gto.py`（工作區）→ `reads_data.js`：讀牌每題的 GTO 動作與顯著性。
+
+## 整手模式（翻後 → 整手）
+
+一手牌從翻牌打到開牌：你的牌從 HW 範圍發；每個決策當場評分（EV 少多少）；對手動作照 NL2 池頻率（n≥500 且 GTO 在 95% 區間外），否則照 GTO，每個動作的依據都列在「對手動作依據」。解只存主要的線：離開解的線之後自動過牌/跟注到開牌（標示「不評分」）。開牌時對手的牌依他的範圍＋他每個動作的 GTO 機率抽樣。

@@ -149,9 +149,14 @@ function drillNodes(d) {
   if (d.id === 'real') return [...new Set(REAL.map(r => r.n))];
   const f = ST.flt[d.id]; return (f && d.nodes.includes(f)) ? [f] : d.nodes;
 }
-function eligible(n, v, h) { return cell(n, v, h).r >= 25; }
+// 前面有你自己的動作（開池→被 3-bet、3-bet→被 4-bet）時，只發 HW 真的會那樣玩的牌（hwrange.js）＋到達率 ≥50%
+function hwPrior(n, h) { if (!window.HWR) return true; const p = parse(n);
+  if (p.fam === 'vs3b') return HWR.ok('open', p.hero, h);
+  if (p.fam === 'vs4b') return HWR.ok('tb', p.op + 'open>' + p.y, h);
+  return true; }
+function eligible(n, v, h) { const r = cell(n, v, h).r; const p = parse(n).fam; return (p === 'vs3b' || p === 'vs4b' || p === 'vsjam') ? r >= 50 && hwPrior(n, h) : r >= 25; }
 function handWeight(n, v, h) {
-  const c = cell(n, v, h); if (c.r < 25) return 0;
+  const c = cell(n, v, h); if (!eligible(n, v, h)) return 0;
   const o = okActs(n, v, h), mx = Math.max(...c.s);
   const border = neighbours(h).some(x => cell(n, v, x).r >= 5 && okActs(n, v, x).main !== o.main);
   let w = NC[IX[h]] * c.r / 100 * (0.25 + 3 * (1 - mx / 100) + (border ? 1.5 : 0) + (c.fl ? 0.5 : 0));
@@ -258,6 +263,7 @@ function renderDrill() {
     <div class="hand">${q.c.map(cardHTML).join('')}<span class="hcls">${q.h}</span></div>
     <p class="muted small qhint">你要怎麼做？${m.acts.map(a => `<kbd>${KEY[a]}</kbd> ${actShort(a)}`).join('　')}</p></div>`;
   $('#ans').innerHTML = ''; renderBar();
+  const P = parse(q.n); window.__Q = {drill: 'pre', id: PAGE, n: q.n, fam: P.fam, hero: q.c.join(''), cls: q.h, board: '', reach: cell(q.n, VER, q.h).r, real: !!q.real, role: P.fam === 'vs3b' ? ['open', P.hero] : P.fam === 'vs4b' ? ['tb', P.op + 'open>' + P.y] : ['pre', ''], ctx: ctx(q.n)};
 }
 function renderAnswer() {
   const q = Q, a = ANS.a, v = ANS.ver, o = okActs(q.n, v, q.h), m = node(q.n);
@@ -423,6 +429,6 @@ function boot() {
 }
 // test hooks (read-only helpers + forcing a question)
 window.PK = {okActs, judge, DRILLS, REAL, parse, drillNodes, cell, version: () => VER, page: () => PAGE, q: () => Q && {n: Q.n, h: Q.h, d: Q.d},
-  ask(n, h) { Q = {d: PAGE, n, h, c: randCards(h)}; ANS = null; renderDrill(); }, answer, go};
+  nextQ, ask(n, h) { Q = {d: PAGE, n, h, c: randCards(h)}; ANS = null; renderDrill(); }, answer, go};
 boot();
 })();

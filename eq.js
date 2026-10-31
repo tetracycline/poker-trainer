@@ -13,30 +13,33 @@ const TEXZ=Object.fromEntries(TEX);
 const CLS=[['S','兩對以上'],['OP','超對'],['TP','頂對'],['MP','中對'],['DR','聽牌']];
 const CLZ=Object.fromEntries(CLS);
 const ACT={x:'過牌',b:'下注',c:'跟注',r:'加注'};
+const PFZ={'SRP|OOP':'翻前 你 UTG/HJ/CO/BTN 開（尺寸不分）→ BB 跟','SRP|IP':'翻前 UTG/HJ/CO/BTN 開（尺寸不分）→ 你 BB 跟','3BP|OOP':'翻前 你開 → 對手 3-bet → 你跟（尺寸不分）','3BP|IP':'翻前 對手開 → 你 3-bet → 他跟（尺寸不分）'};
 const STR=['翻牌','轉牌','河牌'];
-const NOTE=`<div class="note eqnote">勝率只看方向（他比 GTO 強還是弱），不是 EV。亮色＝明顯偏離，其餘照 GTO 打。</div>`;
+const NOTE=`<div class="note eqnote">只看他的範圍偏強或偏弱（勝率 95% 區間 vs GTO），沒算 EV → 不改動作；動作看「行動線」「讀牌」（偏離要顯著且 >0.25bb/手）。</div>`;
 const E={pot:null,tex:null,line:[],quiz:false,q:null,score:[0,0]};
 // lines available for a pot (any texture)
 function lines(pot){const s=new Set();for(const k in D){const p=k.split('|');if(p[0]+'|'+p[1]===pot)s.add(p[2])}return [...s]}
 function toks(l){return l.split('/').map(s=>s.split(' '))}
 function actor(oppRole,si,ti){const role=ti%2===0?'OOP':'IP';return role===oppRole?'opp':'me'}
 function oppName(pot){return ({'SRP|OOP':'BB','SRP|IP':'開池者','3BP|OOP':'3bettor','3BP|IP':'跟注者'})[pot]}
-function lineStr(pot,l){const opp=pot.split('|')[1];return toks(l).map((ts,si)=>STR[si]+' '+ts.map((t,ti)=>(actor(opp,si,ti)==='opp'?'他':'你')+ACT[t]).join('→')).join('・')}
+function lineStr(pot,l){const opp=pot.split('|')[1];return PFZ[pot]+'・'+toks(l).map((ts,si)=>STR[si]+' '+ts.map((t,ti)=>(actor(opp,si,ti)==='opp'?'他':'你')+ACT[t]+(t==='b'||t==='r'?'（尺寸不分）':'')).join('→')).join('・')}
 // what to do vs this line for a class, given direction (d>0 = 你勝率比 GTO 高 = 他偏弱)
 function ctx(pot,l){const opp=pot.split('|')[1];const st=toks(l);const si=st.length-1;const ts=st[si];const t=ts[ts.length-1];
  const closes=(t==='c')||(t==='x'&&opp==='IP'&&ts.length>=2&&ts[ts.length-2]==='x');
  if(t==='b'||t==='r')return {k:'cf',s:si};
  if(!closes)return {k:'bx',s:si};
  return {k:'next',s:si,t}}
-function advice(pot,l,d){const c=ctx(pot,l);const w=d>0;
+function advice(pot,l,d){return d>0?'他偏弱（參考；未算 EV，動作照 GTO）':'他偏強（參考；未算 EV，動作照 GTO）'}
+function advice0(pot,l,d){const c=ctx(pot,l);const w=d>0;
  if(c.k==='cf')return w?'多跟注（他偏弱）':'多棄牌（他偏強）';
  if(c.k==='bx')return w?STR[c.s]+'下注拿價值':STR[c.s]+'多過牌、別亂打';
  if(c.s<2)return w?STR[c.s+1]+'下注拿價值':STR[c.s+1]+'多過牌、控池';
  if(c.t==='c')return w?'他河牌跟得偏弱 → 河牌多下注拿價值':'他河牌跟注偏強 → 河牌少薄價值';
  return w?'他河牌過牌偏弱 → 河牌你多下注拿價值':'他河牌過牌不弱 → 河牌多過牌';}
-function qopts(pot,l){return ctx(pot,l).k==='cf'?[['c','跟注'],['f','棄牌']]:[['b','下注'],['x','過牌']]}
-function qans(pot,l,d){return ctx(pot,l).k==='cf'?(d>0?'c':'f'):(d>0?'b':'x')}
-function qask(pot,l){const c=ctx(pot,l);if(c.k==='cf')return '他下注，你跟還是棄？';if(c.k==='bx')return '輪到你，下注還是過牌？';return c.s<2?STR[c.s+1]+'你先動，下注還是過牌？':'這條線，河牌你該下注還是過牌？'}
+function qopts(pot,l){return [['w','他偏弱'],['s','他偏強']]}
+function qans(pot,l,d){return d>0?'w':'s'}
+function qask(pot,l){return '他這條線的範圍比 GTO 強還是弱？'}
+function qask0(pot,l){const c=ctx(pot,l);if(c.k==='cf')return '他下注，你跟還是棄？';if(c.k==='bx')return '輪到你，下注還是過牌？';return c.s<2?STR[c.s+1]+'你先動，下注還是過牌？':'這條線，河牌你該下注還是過牌？'}
 function pct(e){return e[0]===e[1]?e[0]+'%':e[0]+'–'+e[1]+'%'}
 function dir(e){return e[3]?(e[0]>e[2]?1:-1):0}
 function btns(arr,cur,attr){return '<div class="eqb">'+arr.map(([k,t,s])=>`<button class="eqbtn${k===cur?' on':''}" data-${attr}="${esc(k)}">${esc(t)}${s?`<small>${esc(s)}</small>`:''}</button>`).join('')+'</div>'}
@@ -47,14 +50,15 @@ function card(pot,l,tex){const c=D[`${pot}|${l}|${tex}`];if(!c)return '';
  else if(c.s==='nocmp')o+=`<div class="eqgrey">GTO 不走這條線<small>解算器這裡只有全下加注・沒得比</small></div>`;
  else{for(const [k,z] of CLS){const e=c.e[k];if(!e)continue;const d=dir(e);
    o+=`<div class="eqrow${d?' sig '+(d>0?'up':'dn'):''}"><div class="eqt">你的${z} 勝率 <b>${pct(e)}</b>（GTO ${e[2]}%）${d?'→ '+esc(advice(pot,l,d)):'<span class="muted">→ 照 GTO 打</span>'}</div></div>`}
-  o+=`<div class="eqsd">${c.sd} 次攤牌</div>`}
+  o+=`<div class="eqsd">統計範圍：${esc(POTS.find(p=>p[0]===pot)[2])}｜這條線｜${esc(TEXZ[tex])}｜n=${(c.n||0).toLocaleString()}・攤牌 ${c.sd}｜GTO vs 池：95% 區間不含 GTO＝亮色（顯著）</div>`}
  return o+'</div>'}
 function sigList(){const r=[];for(const k in D){const c=D[k];if(c.s!=='ok')continue;const [sp,pl,l,tex]=k.split('|');for(const cl in c.e){const e=c.e[cl];if(e[3])r.push({pot:sp+'|'+pl,l,tex,cl,e})}}return r}
 function quizHtml(){const L=sigList();if(!E.q)E.q=L[Math.floor(Math.random()*L.length)];const q=E.q;const pz=POTS.find(p=>p[0]===q.pot);
- let o=`<div class="sec eqcard"><div class="eqln">${esc(pz[1])}・${esc(pz[2])}・${esc(TEXZ[q.tex])}</div><div class="eqq">${esc(lineStr(q.pot,q.l))}</div><div class="eqq">你拿 <b>${CLZ[q.cl]}</b>・${esc(qask(q.pot,q.l))}</div>`;
+ const cq=D[`${q.pot}|${q.l}|${q.tex}`]||{};window.__Q={drill:'eq',id:q.pot+'|'+q.l+'|'+q.tex+'|'+q.cl,hero:'',board:'',role:['pre',''],line:lineStr(q.pot,q.l),n:cq.n,sd:cq.sd,sig:q.e[3]};
+ let o=`<div class="sec eqcard"><div class="eqln">${esc(pz[1])}・${esc(pz[2])}・${esc(TEXZ[q.tex])}・n=${(cq.n||0).toLocaleString()}・攤牌 ${cq.sd}・95% 區間顯著</div><div class="eqq">${esc(lineStr(q.pot,q.l))}</div><div class="eqq">你拿 <b>${CLZ[q.cl]}</b>・${esc(qask(q.pot,q.l))}</div>`;
  if(!q.a)o+='<div class="eqb">'+qopts(q.pot,q.l).map(([k,t])=>`<button class="eqbtn big" data-qa="${k}">${t}</button>`).join('')+'</div>';
  else{const d=dir(q.e);const ok=q.a===qans(q.pot,q.l,d);
-  o+=`<div class="res ${ok?'ok':'bad'}"><div class="rh">${ok?'✓ 對':'✗ 錯'}：${esc(advice(q.pot,q.l,d))}</div><div class="eqt">你勝率 ${pct(q.e)}（GTO ${q.e[2]}%）→ 池子這條線${d>0?'比 GTO 弱':'比 GTO 強'}</div></div><div class="eqb"><button class="eqbtn big" data-qn="1">下一題</button></div>`}
+  o+=`<div class="res ${ok?'ok':'bad'}"><div class="rh">${ok?'✓ 對':'✗ 錯'}：${esc(advice(q.pot,q.l,d))}</div><div class="eqt">你勝率 ${pct(q.e)}（GTO ${q.e[2]}%）→ 池子這條線${d>0?'比 GTO 弱':'比 GTO 強'}・動作照 GTO（未算 EV）</div></div><div class="eqb"><button class="eqbtn big" data-qn="1">下一題</button></div>`}
  o+=`<div class="eqsd">${E.score[0]}/${E.score[1]} 對・題庫 ${L.length} 題（只出明顯偏離的）</div></div>`;
  return o}
 function bindQuiz(m){const q=E.q;

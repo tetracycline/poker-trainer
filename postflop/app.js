@@ -85,7 +85,7 @@ function actLabel(sp, n, a, short) {
 function aggIndex(n) { return n.a.filter(AGG); }
 function keyOf(n, a) {
   if (a === 'f') return 'F'; if (a === 'x' || a === 'c') return 'C'; if (a === 'a') return 'A';
-  const ag = aggIndex(n).filter(x => x !== 'a'); const k = ag.indexOf(a); return k === 0 ? 'R' : String(k + 1);
+  const ag = aggIndex(n).filter(x => x !== 'a'); const k = ag.indexOf(a); return k === 0 ? 'R' : k === 1 ? 'B' : 'N';
 }
 function btnClass(n, a) { if (a === 'f' || a === 'x' || a === 'c' || a === 'a' || a === 'r') return 'k-' + a; const ag = aggIndex(n).filter(x => x !== 'a'); return 'k-b' + Math.min(3, ag.indexOf(a) + 1); }
 const COLS = {f: '#26332b', x: '#3b78c4', c: '#3b78c4', a: '#8e44ad', r: '#c9483f'};
@@ -94,7 +94,7 @@ const STREETZH = ['翻牌', '轉牌', '河牌'];
 function streetOf(n) { return n.l.split('/').length - 1; }
 function lineHTML(sp, n) {
   const r = replay(sp, n.l), bd = cards(n.b);
-  return r.out.map((d, si) => {
+  return `<div><span class="st">翻前</span>${pfLine(sp)}</div>` + r.out.map((d, si) => {
     const bc = si === 0 ? bd.slice(0, 3).sort((x, y) => RK.indexOf(y[0]) - RK.indexOf(x[0])) : [bd[si + 2]];
     const txt = d.length ? d.join(' → ') : '<span class="muted">（輪到你先行動）</span>';
     return `<div><span class="st">${STREETZH[si]} ${bc.map(cardTxt).join('')}</span>${txt}</div>`;
@@ -145,8 +145,16 @@ function unrel(n, i) { if (!n.u && !n.uc) return false; if (!n._u) n._u = new Se
 function conflict(n, i) { return !!(n.uc && n.uc.includes(i)); }
 // hero hand must be in the CURRENT preflop range (pf_data v8-1031x); solves used older ranges -> per-class multiplier, 0 = no longer reaches here
 function pfa(sp, n, i) { const t = IDX && IDX.pfadj && IDX.pfadj[sp + '|' + VER + '|' + n.p]; if (!t) return 1; if (!IDX._pfi) { IDX._pfi = {}; IDX.pfnames.forEach((x, k) => IDX._pfi[x] = k); } return t[IDX._pfi[classOf(combo(n, i))]]; }
+// HW 實際會玩：翻前核心範圍（hwrange.js）＋這條線至少 50% 會走到這裡
+function hwRole(sp, p) { const S = spotOf(sp), me = p ? S.ip : S.oop, op = p ? S.oop : S.ip;
+  if (S.kind === 'SRP') return S.pfr === p ? ['open', me] : ['call', op + 'open>' + me];
+  return S.pfr === p ? ['tb', op + 'open>' + me] : ['c3', me + 'open>' + op + '3b']; }
+function hwOK(sp, n, i) { if (!window.HWR) return true; const r = hwRole(sp, n.p); return HWR.ok(r[0], r[1], classOf(combo(n, i))); }
+function pfLine(sp) { const S = spotOf(sp);
+  if (S.kind === 'SRP') { const o = S.pfr ? S.ip : S.oop, c = S.pfr ? S.oop : S.ip, sz = o === 'SB' ? 3 : 2.5; return `${o} 開 <b>${sz}bb</b> → ${c} 跟注`; }
+  const ag = S.pfr ? S.ip : S.oop, o = S.pfr ? S.oop : S.ip, to = (100 - S.stack); return `${o} 開 <b>2.5bb</b> → ${ag} 3-bet 到 <b>${to}bb</b> → ${o} 跟注`; }
 function handWeight(n, i, mk) {
-  const w = n.w[i]; if (w < 10 || unrel(n, i)) return 0;
+  const w = n.w[i]; if (w < 50 || unrel(n, i)) return 0;
   const s = row(n, i), mx = Math.max(...s);
   const miss = ST.miss[mk(i)] || 0;
   return w * (0.3 + 3 * (1 - mx / 100)) * Math.min(7, 1 + 2 * miss);
@@ -161,16 +169,16 @@ async function nextQ() {
     const di = ST.q.findIndex(x => x.due <= ST.cnt && (!d.sp || d.sp === x.sp) && (!d.cat || d.cat === x.c) && !(prev && prev.key === x.key));
     if (di >= 0) {
       const it = ST.q.splice(di, 1)[0]; save();
-      try { const F = await loadFlop(it.sp, it.fl), n = findNode(F, VER, it.l, it.b), i = n ? hidx(n, it.h) : -1; if (n && i >= 0 && n.w[i] >= 5 && !unrel(n, i) && pfa(it.sp, n, i) > 0) q = {sp: it.sp, fl: it.fl, F, n, i, review: it.stage || 1}; } catch (e) {}
+      try { const F = await loadFlop(it.sp, it.fl), n = findNode(F, VER, it.l, it.b), i = n ? hidx(n, it.h) : -1; if (n && i >= 0 && n.w[i] >= 50 && !unrel(n, i) && pfa(it.sp, n, i) > 0 && hwOK(it.sp, n, i)) q = {sp: it.sp, fl: it.fl, F, n, i, review: it.stage || 1}; } catch (e) {}
     }
-    for (let tries = 0; !q && tries < 6; tries++) {
+    for (let tries = 0; !q && tries < 12; tries++) {
       const cf = pick(candFlops(d), x => x.w); if (!cf) break;
       const F = await loadFlop(cf.sp, cf.fl);
       const nodes = (F.v[VER] || []).filter(n => !d.cat || n.c === d.cat);
       const n = pick(nodes, x => (x.pr < MIN_PR_Q ? 0 : Math.sqrt(x.pr)) * (x.c === 'vs_raise' && d.cat !== 'vs_raise' ? 0.3 : 1)); if (!n) continue;
       const mk = i => qkey(cf.sp, cf.fl, n.l, n.b, combo(n, i));
       const idx = []; for (let i = 0; i < nh(n); i++) idx.push(i);
-      const i = pick(idx, k => (prev && prev.n === n && prev.i === k) ? 0 : handWeight(n, k, mk) * pfa(cf.sp, n, k)); if (i == null) continue;
+      const i = pick(idx, k => (prev && prev.n === n && prev.i === k) ? 0 : handWeight(n, k, mk) * pfa(cf.sp, n, k) * (hwOK(cf.sp, n, k) ? 1 : 0)); if (i == null) continue;
       q = {sp: cf.sp, fl: cf.fl, F, n, i};
     }
     if (stale()) return;
@@ -178,10 +186,18 @@ async function nextQ() {
     q.h = combo(q.n, q.i); q.key = qkey(q.sp, q.fl, q.n.l, q.n.b, q.h); Q = q; renderDrill();
   } catch (e) { if (!stale()) $('#qbox').innerHTML = `<div class="qcard">載入失敗：${esc(e.message)}</div>`; console.warn(e); }
 }
+// 剝削規則：剝削版的主動作比 GTO 主動作多賺 >0.25bb 才照剝削版，否則照 GTO
+function gateExp(q) {
+  const n = q.n, i = q.i; if (VER !== 'exp') return {use: VER};
+  const on = findNode(q.F, 'gto', n.l, n.b), oi = on ? hidx(on, q.h) : -1; if (!on || oi < 0) return {use: 'exp', why: 'nogto'};
+  const em = okActs(n, i).main, gm = okActs(on, oi).main; if (em === gm || !n.a.includes(gm) || !on.a.includes(em) && false) return {use: 'exp', gain: 0, on, oi};
+  const ev = evRow(n, i), gain = (ev[n.a.indexOf(em)] - ev[n.a.indexOf(gm)]) / 100;
+  return gain > 0.25 ? {use: 'exp', gain, on, oi} : {use: 'gto', gain, on, oi};
+}
 function answer(a) {
   if (!Q || ANS) return; const n = Q.n; if (!n.a.includes(a)) return;
-  const res = judge(n, Q.i, a), good = GOOD(res), k = Q.key;
-  ANS = {a, res, ver: VER}; SES.n++; if (good) SES.ok++; ST.cnt++;
+  const gt = gateExp(Q), res = gt.use === 'gto' ? judge(gt.on, gt.oi, a) : judge(n, Q.i, a), good = GOOD(res), k = Q.key;
+  ANS = {a, res, ver: gt.use === 'gto' ? 'gto' : VER, gn: gt.use === 'gto' ? gt.on : null, gi: gt.oi, gain: gt.gain}; SES.n++; if (good) SES.ok++; ST.cnt++;
   const sk = PAGE, s = ST.st[sk] = ST.st[sk] || {n: 0, ok: 0}; s.n++; if (good) s.ok++;
   const item = {sp: Q.sp, fl: Q.fl, l: n.l, b: n.b, h: Q.h, c: n.c, key: k};
   if (!good) { ST.miss[k] = Math.min(5, (ST.miss[k] || 0) + 1); ST.q = ST.q.filter(x => x.key !== k); ST.q.push(Object.assign(item, {due: ST.cnt + 3, stage: 1})); }
@@ -221,6 +237,7 @@ function renderDrill() {
     <div class="hand">${cards(q.h).map(c => cardHTML(c)).join('')}<span class="hcls">${classOf(q.h)}</span></div>
     <p class="muted small qhint">你要怎麼做？${n.a.map(a => `<kbd>${keyOf(n, a)}</kbd> ${actLabel(q.sp, n, a, true)}`).join('　')}</p></div>`;
   ANS = null; $('#ans').innerHTML = ''; renderBar();
+  const R = hwRole(q.sp, n.p); window.__Q = {drill: 'postflop', id: PAGE, hero: q.h, board: n.b, role: R, line: n.l, w: n.w[q.i], streets: 1 + streetOf(n), ver: VER};
 }
 function evTable(sp, n, i, chosen) {
   const o = okActs(n, i), ev = evRow(n, i), best = Math.max(...ev);
@@ -279,7 +296,7 @@ function bindGrid(sp, n, me) {
   });
 }
 function renderAnswer() {
-  const q = Q, n = q.n, a = ANS.a, v = ANS.ver, o = okActs(n, q.i);
+  const q = ANS.gn ? Object.assign({}, Q, {n: ANS.gn, i: ANS.gi}) : Q, n = q.n, a = ANS.a, v = ANS.ver, o = okActs(n, q.i);
   const head = {ok: '✓ 正確', mix: '✓ 正確（混合）', size: '✗ 方向對，尺寸不對', bad: '✗ 錯誤'}[ANS.res];
   const mainTxt = o.ok.map(x => actLabel(q.sp, n, x, true) + ' ' + o.s[n.a.indexOf(x)] + '%').join(' / ');
   let h = `<div class="sec res ${ANS.res}"><div class="rh">${head}</div><div>你選 <b>${esc(actLabel(q.sp, n, a, true))}</b>；${VERZH[v]}解在這手 ${cards(q.h).map(cardTxt).join('')}：<b>${esc(mainTxt)}</b>${ANS.res === 'mix' ? '（低頻但 ≥25%，算對）' : ''}</div></div>`;
@@ -288,6 +305,8 @@ function renderAnswer() {
   const ov = v === 'exp' ? 'gto' : 'exp', on = findNode(q.F, ov, n.l, n.b), oi = on ? hidx(on, q.h) : -1;
   if (on && oi >= 0) { const oo = okActs(on, oi); h += `<p class="muted small">${VERZH[ov]}版：${oo.ok.map(x => actLabel(q.sp, on, x, true) + ' ' + oo.s[on.a.indexOf(x)] + '%').join(' / ')}</p>`; }
   else h += `<p class="muted small">${VERZH[ov]}版：那個版本的解不會走到這條線（尺寸或範圍不同），或這手牌不在範圍內。</p>`;
+  if (ANS.gn) h += `<p class="small"><b>照 GTO</b>：剝削版的打法只多賺 ${ANS.gain.toFixed(2)}bb ≤ 0.25bb／手 → 這題以 GTO 評分。</p>`;
+  else if (VER === 'exp' && ANS.gain > 0.25) h += `<p class="small"><b>用剝削版</b>：比 GTO 打法多賺 ${ANS.gain.toFixed(2)}bb > 0.25bb／手（鎖定的池頻率 n≥500）。</p>`;
   if (v === 'exp') h += poolNote(q.sp, n);
   h += `</div><div class="sec"><div class="row sp"><b>${CATZH[n.c]}・${VERZH[v]}</b><span class="muted small">整個範圍：${n.a.map((x, j) => esc(actLabel(q.sp, n, x, true)) + ' ' + f1(n.f[j]) + '%').join('・')}</span></div>${gridHTML(q.sp, n, classOf(q.h))}${legendHTML(q.sp, n)}<div class="cdet"></div></div>`;
   $('#ans').innerHTML = h; bindGrid(q.sp, n, q.h);
@@ -295,6 +314,7 @@ function renderAnswer() {
 }
 function renderBar() {
   const bar = $('#abar'); if (!bar) return;
+  if (PAGE === 'hand') { bar.classList.remove('hide'); document.body.classList.add('hasbar'); hBar(bar); return; }
   if (!DR[PAGE] || !Q) { bar.innerHTML = ''; bar.classList.add('hide'); document.body.classList.remove('hasbar'); return; }
   bar.classList.remove('hide'); document.body.classList.add('hasbar');
   const n = Q.n;
@@ -330,6 +350,228 @@ async function renderCharts() {
     <p class="muted small">收斂：${VER === 'gto' ? `可剝削度 ${f1(info.gto_expl_pct || 0)}% 底池` : `英雄最佳回應差距 ${f1(info.hero_gap_pct || 0)}% 底池（對手已鎖池頻率）`}</p>${VER === 'exp' ? poolNote(C.sp, n) : ''}</div>`;
   bindGrid(C.sp, n, null);
 }
+// ---------- page: 整手（翻牌一路打到開牌） ----------
+// 你：從 HW 實際會玩的範圍發牌；對手：池頻率（n≥500 且和 GTO 有顯著差）否則照 GTO；每個決策當場評分（剝削版多賺 >0.25bb 才照剝削版）。
+let H = null, HGEN = 0;
+const HZH = ['高牌', '一對', '兩對', '三條', '順子', '同花', '葫蘆', '四條', '同花順'];
+function hEval(cs) {
+  const r = cs.map(c => RK.indexOf(c[0])), cnt = Array(13).fill(0), bs = {}; r.forEach(x => cnt[x]++);
+  cs.forEach((c, k) => (bs[c[1]] = bs[c[1]] || []).push(r[k]));
+  const sHi = rs => { const S = new Set(rs); if (S.has(12)) S.add(-1); for (let h = 12; h >= 3; h--) { let ok = true; for (let k = 0; k < 5; k++) if (!S.has(h - k)) { ok = false; break; } if (ok) return h; } return -1; };
+  for (const s in bs) if (bs[s].length >= 5) { const h = sHi(bs[s]); if (h >= 0) return [8, h]; }
+  const g = []; for (let x = 12; x >= 0; x--) if (cnt[x]) g.push([cnt[x], x]); g.sort((a, b) => b[0] - a[0] || b[1] - a[1]);
+  const rest = skip => r.filter(x => !skip.includes(x)).sort((a, b) => b - a);
+  if (g[0][0] === 4) return [7, g[0][1], rest([g[0][1]])[0]];
+  if (g[0][0] === 3 && g[1] && g[1][0] >= 2) return [6, g[0][1], g[1][1]];
+  for (const s in bs) if (bs[s].length >= 5) return [5, ...bs[s].sort((a, b) => b - a).slice(0, 5)];
+  const st = sHi(r); if (st >= 0) return [4, st];
+  if (g[0][0] === 3) return [3, g[0][1], ...rest([g[0][1]]).slice(0, 2)];
+  if (g[0][0] === 2 && g[1] && g[1][0] === 2) return [2, g[0][1], g[1][1], rest([g[0][1], g[1][1]])[0]];
+  if (g[0][0] === 2) return [1, g[0][1], ...rest([g[0][1]]).slice(0, 3)];
+  return [0, ...rest([]).slice(0, 5)];
+}
+const hCmp = (a, b) => { for (let k = 0; k < Math.max(a.length, b.length); k++) { const d = (a[k] || 0) - (b[k] || 0); if (d) return d; } return 0; };
+function hState(sp, line) {
+  const S = spotOf(sp), STK = Math.round(S.stack * 100), sts = line.split('/'); let pot = Math.round(S.pot * 100), con = 0, b = [0, 0];
+  sts.forEach((s, si) => { b = [0, 0]; (s ? s.split(' ') : []).forEach((t, k) => { const p = k % 2, mx = Math.max(b[0], b[1]);
+    if (t === 'c') b[p] = mx; else if (t[0] === 'b') b[p] = Math.round(+t.slice(1) / 100 * pot); else if (t === 'r') b[p] = Math.min(3 * mx, STK - con); else if (t === 'a') b[p] = STK - con; });
+    if (si < sts.length - 1) { pot += b[0] + b[1]; con += Math.max(b[0], b[1]); b = [0, 0]; } });
+  return {pot, b, con, STK, tot: pot + b[0] + b[1], left: [STK - con - b[0], STK - con - b[1]]};
+}
+const hToks = l => { const s = l.split('/'); const t = s[s.length - 1]; return t ? t.split(' ') : []; };
+const hClosed = tk => tk.length >= 2 && (tk[tk.length - 1] === 'c' || (tk.length === 2 && tk[0] === 'x' && tk[1] === 'x'));
+const hAdd = (l, a) => l + (hToks(l).length ? ' ' : '') + a;
+const hNodes = () => (H.F.v.gto || []).concat(H.F.v.exp || []);
+function hHas(l, b) { return hNodes().some(n => n.l === l && n.b === b); }
+// 這個動作之後，解裡還有沒有後續（下一個決策點或下一條街）
+function hCont(l, b) {
+  const tk = hToks(l); if (tk[tk.length - 1] === 'f') return true;
+  if (hClosed(tk)) { if (l.split('/').length === 3) return true; const st = hState(H.sp, l); if (Math.min(...st.left) <= 0) return true;
+    return hNodes().some(n => n.l.startsWith(l + '/') && n.b.length === b.length + 2 && n.b.startsWith(b)); }
+  return hHas(l, b);
+}
+function hLock(l) {
+  if (VER !== 'exp') return null; const inf = H.F.info[H.hp === 0 ? 'exp_oop' : 'exp_ip']; if (!inf || !inf.locks) return null;
+  return inf.locks.find(L => { try { return new RegExp(L.pat).test(l); } catch (e) { return false; } }) || null;
+}
+function hPick(ws) { const t = ws.reduce((a, b) => a + b, 0); if (t <= 0) return -1; let r = Math.random() * t; for (let k = 0; k < ws.length; k++) { r -= ws[k]; if (r <= 0) return k; } return ws.length - 1; }
+const pc = x => f1(100 * x) + '%';
+// 對手動作：池（n≥500 且 GTO 落在 95% 信賴區間外）→ 照池；否則照 GTO
+function hVillain() {
+  const l = H.line, n = findNode(H.F, 'gto', l, H.b), who = seats(H.sp)[1 - H.hp];
+  if (!n) return hVillainNoNode(l, who);
+  const facing = n.a.includes('f'), gf = n.a.map((a, j) => n.f[j] / 100), agg = n.a.map(AGG);
+  let w = gf.slice(), src = 'GTO（GTO 模式）';
+  const L = hLock(l);
+  if (VER === 'exp') {
+    if (!L) src = '池樣本不足（n<500）→ 照 GTO';
+    else {
+      const gA = gf.reduce((t, x, j) => t + (agg[j] ? x : 0), 0), gF = facing ? gf[n.a.indexOf('f')] : 0;
+      const pv = facing ? L.fold : L.bet, gv = facing ? gF : gA, ci = pv != null ? wilson(pv, L.n) : null;
+      const stat = `${facing ? '棄牌' : '下注'} 池 ${pv != null ? pc(pv) : '—'} vs GTO ${pc(gv)}（n=${L.n.toLocaleString()}${ci ? `，95% ${pc(ci[0])}–${pc(ci[1])}` : ''}；${esc(L.src)}）`;
+      const sig = ci && (gv < ci[0] || gv > ci[1]);
+      if (sig) {
+        if (facing) { const pr = L.raise_ != null ? L.raise_ : gA, pcall = Math.max(0, 1 - pv - pr);
+          const gC = gf.reduce((t, x, j) => t + (n.a[j] === 'c' ? x : 0), 0);
+          w = n.a.map((a, j) => a === 'f' ? pv : agg[j] ? (gA ? pr * gf[j] / gA : 0) : (gC ? pcall * gf[j] / gC : pcall)); }
+        else w = n.a.map((a, j) => agg[j] ? (gA ? pv * gf[j] / gA : 0) : 1 - pv);
+        src = stat + ' → 顯著，照池抽';
+      } else src = stat + ' → 不顯著 → 照 GTO';
+    }
+  }
+  // 只抽解裡有後續的動作
+  const ok = n.a.map(a => hCont(hAdd(l, a), H.b)); let w2 = w.map((x, j) => ok[j] ? x : 0), cut = false;
+  if (w2.some(x => x > 0) && w2.some((x, j) => !ok[j] && w[j] > 0.005)) cut = true; else if (!w2.some(x => x > 0)) w2 = w;
+  const j = hPick(w2); const a = n.a[j];
+  H.vn.push({n, a});
+  return {a, txt: `${who} ${actLabel(H.sp, n, a)}`, src: src + (cut ? '（解裡沒後續的動作不抽）' : '')};
+}
+// 解沒存他這個點：剝削版有池鎖（你上一個動作之後的 NL2 頻率）就照池；否則只能走解裡有的後續線
+function hVillainNoNode(l, who) {
+  const tk = hToks(l), S = hState(H.sp, l), facing = S.b[1 - H.hp] < Math.max(...S.b);
+  const cand = facing ? ['f', 'c', 'r', 'a'] : ['x', 'b33', 'b50', 'b75', 'b100', 'a'];
+  const ok = cand.filter(a => a === 'f' || hCont(hAdd(l, a), H.b)); if (!ok.filter(a => a !== 'f').length) return null;
+  const hn = H.prev, L = hn && hn.nx && hn.nx[H.prevA];
+  let w = ok.map(() => 1), src = '解沒存他這個點的頻率 → 在解裡有後續的線中平均抽（不代表真實頻率）';
+  if (L && L.n) {
+    const pv = facing ? L.fold : L.bet;
+    if (pv != null) { const ci = wilson(pv, L.n), ag = ok.filter(a => AGG(a)).length || 1;
+      w = ok.map(a => facing ? (a === 'f' ? pv : AGG(a) ? (L.raise_ || 0) / ag : Math.max(0, 1 - pv - (L.raise_ || 0))) : (AGG(a) ? pv / ag : 1 - pv));
+      src = `${facing ? '棄牌' : '下注'} 池 ${pc(pv)}（n=${L.n.toLocaleString()}，95% ${pc(ci[0])}–${pc(ci[1])}；${esc(L.src || '')}）→ 無 GTO 對照（解沒存 GTO 這點）→ 照池抽`; }
+  }
+  else if (facing) { const bet = Math.max(...S.b) - S.b[1 - H.hp], al = bet / (S.tot + bet), cn = ok.filter(a => a !== 'f').length;
+    w = ok.map(a => a === 'f' ? al : (1 - al) / cn); src = `解沒存他這點的頻率、也無池樣本 → 用最低防守頻率（棄 ${pc(al)}），其餘平均分到解裡有後續的線（不代表真實頻率）`; }
+  if (!w.some(x => x > 0)) w = ok.map(() => 1);
+  const j = hPick(w); if (j < 0) return null; const a = ok[j];
+  const fake = {a: ok, bt: S.b, pot: S.pot, l}; let t;
+  if (a === 'x') t = '過牌'; else if (a === 'f') t = '棄牌'; else if (a === 'c') t = `跟注 ${fbb(Math.max(...S.b) - S.b[1 - H.hp])}bb`; else if (a[0] === 'b') t = `下注 ${a.slice(1)}%（${fbb(+a.slice(1) / 100 * S.pot)}bb）`; else if (a === 'r') t = `加注到 ${fbb(3 * Math.max(...S.b))}bb`; else t = `全下 ${fbb(S.left[1 - H.hp])}bb`;
+  return {a, txt: `${who} ${t}`, src};
+}
+async function hDeal() {
+  for (let tries = 0; tries < 40; tries++) {
+    const cf = pick(candFlops({}), x => x.w); if (!cf) return null;
+    let F; try { F = await loadFlop(cf.sp, cf.fl); } catch (e) { continue; }
+    const hp = Math.random() < 0.5 ? 0 : 1;
+    const n0 = (F.v[VER] || []).concat(F.v.gto || []).find(n => n.p === hp && n.l.split('/').length === 1); if (!n0) continue;
+    const idx = []; for (let i = 0; i < nh(n0); i++) idx.push(i);
+    const i = pick(idx, k => (n0.w[k] >= 50 && !unrel(n0, k) && hwOK(cf.sp, n0, k) ? n0.w[k] * pfa(cf.sp, n0, k) : 0)); if (i == null) continue;
+    const b0 = n0.b.slice(0, 6);
+    return {sp: cf.sp, fl: cf.fl, F, hp, h: combo(n0, i), w0: n0.w[i], b: b0, line: '', log: [[]], dec: [], vn: [], off: false, end: null, cur: null};
+  }
+  return null;
+}
+async function hNew() {
+  const g = ++HGEN; H = null; renderBar();
+  const d = await hDeal();
+  if (g !== HGEN || !$('#hbox')) return;
+  if (!d) { $('#hbox').innerHTML = '<div class="qcard">發牌失敗，再按一次。</div>'; return; }
+  H = d; hRun();
+}
+function hLog(t, src) { H.log[H.log.length - 1].push({t, src}); }
+function hRun() {
+  for (let guard = 0; guard < 40; guard++) {
+    const tk = hToks(H.line), last = tk[tk.length - 1], st = H.line.split('/').length - 1;
+    if (last === 'f') { H.end = {fold: (tk.length - 1) % 2}; break; }
+    const S = hState(H.sp, H.line);
+    if (hClosed(tk)) {
+      if (st === 2) { H.end = {sd: 1}; break; }
+      const allin = Math.min(...S.left) <= 0;
+      const used = cards(H.h).concat(cards(H.b));
+      let nb = [...new Set(hNodes().filter(n => n.l.startsWith(H.line + '/') && n.b.length === H.b.length + 2 && n.b.startsWith(H.b)).map(n => n.b))].filter(b => !used.includes(b.slice(-2)));
+      if (allin || H.off || !nb.length) { if (!allin && !H.off) { H.off = true; H.why = 'card@' + H.line; hLog('（解只存主要的線；之後自動過牌/跟注到開牌，不評分）', ''); }
+        const dk = []; for (const r of RK) for (const s of 'shdc') if (!used.includes(r + s)) dk.push(r + s); nb = [H.b + dk[Math.floor(Math.random() * dk.length)]]; }
+      H.b = nb[Math.floor(Math.random() * nb.length)]; H.line += '/'; H.log.push([]);
+      if (allin) continue;
+      continue;
+    }
+    const p = tk.length % 2;
+    if (Math.min(...S.left) <= 0 && tk.length === 0) { H.line = hAdd(H.line, 'x'); H.line = hAdd(H.line, 'x'); continue; }
+    if (H.off) { const mx = Math.max(...S.b), a = S.b[p] < mx ? 'c' : 'x'; hLog(`${seats(H.sp)[p]} ${a === 'c' ? '跟注' : '過牌'}`, '解外：自動'); H.line = hAdd(H.line, a); continue; }
+    if (!H.line && !hHas('', H.b)) { hLog(`${seats(H.sp)[0]}${H.hp === 0 ? '（你）' : ''} 過牌`, '解設定：翻牌由 ' + seats(H.sp)[0] + ' 先過牌（不出題）'); H.line = 'x'; continue; }
+    if (p === H.hp) {
+      let n = findNode(H.F, VER, H.line, H.b), i = n ? hidx(n, H.h) : -1;
+      if (i < 0) { n = findNode(H.F, VER === 'exp' ? 'gto' : 'exp', H.line, H.b); i = n ? hidx(n, H.h) : -1; }
+      if (!n || i < 0) { H.off = true; H.why = (n ? 'hand' : 'node') + '@' + H.line; hLog('（你這手在這條線上解裡沒有；之後自動到開牌，不評分）', ''); continue; }
+      H.cur = {n, i, fb: n !== findNode(H.F, VER, H.line, H.b)}; break;
+    }
+    const v = hVillain(); if (!v) { H.off = true; H.why = 'vil@' + H.line; continue; }
+    hLog(v.txt, v.src); H.line = hAdd(H.line, v.a);
+  }
+  if (H.end) hFinish(); hRender();
+}
+function hAnswer(a) {
+  if (!H || !H.cur || H.cur.ans) return; const {n, i} = H.cur; if (!n.a.includes(a)) return;
+  const q = {F: H.F, n, i, h: H.h}, gt = VER === 'exp' && !H.cur.fb ? gateExp(q) : {use: H.cur.fb ? 'gto' : VER, on: n, oi: i};
+  const gn = gt.use === 'gto' && gt.on ? gt.on : n, gi = gt.use === 'gto' && gt.on ? gt.oi : i;
+  const res = judge(gn, gi, a), ev = evRow(gn, gi), j = gn.a.indexOf(a), best = Math.max(...ev), loss = j >= 0 ? (best - ev[j]) / 100 : null, o = okActs(gn, gi);
+  const vz = gt.use === 'gto' ? 'GTO' : VERZH[VER];
+  const why = VER === 'exp' ? (H.cur.fb ? '剝削解沒存這個點 → 照 GTO' : gt.use === 'gto' ? `剝削打法只多賺 ${(gt.gain || 0).toFixed(2)}bb ≤ 0.25 → 照 GTO` : gt.gain > 0.25 ? `剝削多賺 ${gt.gain.toFixed(2)}bb > 0.25 → 用剝削解` : '剝削解和 GTO 同動作') : 'GTO';
+  H.cur.ans = {a, res, loss, best: o.ok.map(x => actLabel(H.sp, gn, x, true) + ' ' + o.s[gn.a.indexOf(x)] + '%').join(' / '), vz, why, st: streetOf(n)};
+  H.dec.push(Object.assign({l: H.line, al: actLabel(H.sp, n, a, true)}, H.cur.ans));
+  hLog(`${seats(H.sp)[H.hp]}（你）${actLabel(H.sp, n, a)}`, '');
+  H.prev = n; H.prevA = a; H.line = hAdd(H.line, a); hRender();
+}
+function hNext() { if (!H) return hNew(); if (H.end && !H.cur) return hNew(); if (H.cur && H.cur.ans) { H.cur = null; hRun(); } }
+function hFinish() {
+  const used = cards(H.h).concat(cards(H.b)), vp = 1 - H.hp;
+  // 對手的牌：他的範圍 × 他這手每個動作的 GTO 機率，抽一手
+  const first = H.vn.length ? H.vn[0].n : (H.F.v.gto || []).find(n => n.p === vp);
+  let vh = null;
+  if (first) { const ws = []; for (let k = 0; k < nh(first); k++) { const c = combo(first, k), cc = cards(c); if (cc.some(x => used.includes(x))) { ws.push(0); continue; }
+      let w = first.w[k] * pfa(H.sp, first, k); for (const {n, a} of H.vn) { const ii = hidx(n, c); w *= ii < 0 ? 0 : row(n, ii)[n.a.indexOf(a)] / 100; } ws.push(w); }
+    const k = hPick(ws); if (k >= 0) vh = combo(first, k); }
+  H.vh = vh; const S = hState(H.sp, H.line);
+  while (H.end.sd && cards(H.b).length < 5) { const u = used.concat(vh ? cards(vh) : []); const dk = []; for (const r of RK) for (const s of 'shdc') if (!u.includes(r + s) && !cards(H.b).includes(r + s)) dk.push(r + s); H.b += dk[Math.floor(Math.random() * dk.length)]; }
+  if (H.end.fold != null) { H.end.win = H.end.fold === H.hp ? -1 : 1; H.end.pot = S.tot; return; }
+  const me = hEval(cards(H.h).concat(cards(H.b))), op = vh ? hEval(cards(vh).concat(cards(H.b))) : null, c = op ? hCmp(me, op) : 0;
+  Object.assign(H.end, {me, op, win: c > 0 ? 1 : c < 0 ? -1 : 0, pot: S.tot});
+}
+function hBoard() { const bd = cards(H.b); const fl = bd.slice(0, 3).sort((x, y) => RK.indexOf(y[0]) - RK.indexOf(x[0])); bd.splice(0, 3, ...fl); return bd.map((c, k) => (k === 3 || k === 4 ? '<span class="bsep"></span>' : '') + cardHTML(c)).join(''); }
+function hLine() {
+  const bd = cards(H.b); const fl = bd.slice(0, 3).sort((x, y) => RK.indexOf(y[0]) - RK.indexOf(x[0]));
+  return `<div><span class="st">翻前</span>${pfLine(H.sp)}</div>` + H.log.map((L, si) => {
+    const bc = si === 0 ? fl : [bd[si + 2]]; if (!bc[0]) return '';
+    const t = L.length ? L.map(x => x.t.replace(/(\d+)%/, '<b>$1%</b>')).join(' → ') : '<span class="muted">（輪到你先行動）</span>';
+    return `<div><span class="st">${STREETZH[si]} ${bc.map(cardTxt).join('')}</span>${t}</div>`; }).join('');
+}
+function hSrc() { const v = H.log.flat().filter(x => x.src); return v.length ? `<details class="hsrc"><summary class="small muted">對手動作依據（${v.length}）</summary><ul class="small">${v.map(x => `<li><b>${x.t}</b>：${x.src}</li>`).join('')}</ul></details>` : ''; }
+function hRender() {
+  const box = $('#hbox'); if (!box || !H) return;
+  const S = hState(H.sp, H.line), me = seats(H.sp)[H.hp], spk = spotOf(H.sp).kind === 'SRP' ? '單次加注' : '3-bet 底池';
+  let h = `<div class="qcard"><div class="tags"><span class="tag">${SPZH[H.sp]}</span><span class="tag v-${VER}">${VERZH[VER]}</span><span class="tag">你是 ${me}（${H.hp ? '有位置' : '沒位置'}）</span></div>
+    <div class="board">${hBoard()}</div><div class="line">${hLine()}</div>${hSrc()}
+    <div class="pinfo">底池 <b>${fbb(S.tot)}bb</b>・你剩 ${fbb(S.left[H.hp])}bb・他剩 ${fbb(S.left[1 - H.hp])}bb・${spk}・100bb</div>
+    <div class="hand">${cards(H.h).map(c => cardHTML(c)).join('')}<span class="hcls">${classOf(H.h)}</span></div>`;
+  if (H.cur && !H.cur.ans) h += `<p class="muted small qhint">你要怎麼做？${H.cur.n.a.map(a => `<kbd>${keyOf(H.cur.n, a)}</kbd> ${actLabel(H.sp, H.cur.n, a, true)}`).join('　')}</p>`;
+  h += '</div>';
+  const A = H.cur && H.cur.ans;
+  let r = '';
+  if (A) r += `<div class="sec res ${A.res}"><div class="rh">${{ok: '✓ 正確', mix: '✓ 正確（混合）', size: '✗ 尺寸不對', bad: '✗ 錯誤'}[A.res]}${A.loss != null ? `<span class="small">　EV 少 ${A.loss.toFixed(2)}bb</span>` : ''}</div><div class="small">${A.vz}：<b>${esc(A.best)}</b>・${esc(A.why)}</div></div>`;
+  if (H.end) {
+    const E = H.end, vh = H.vh, vs = seats(H.sp)[1 - H.hp];
+    const res = E.win > 0 ? `你贏 ${fbb(E.pot)}bb 底池` : E.win < 0 ? `${vs} 贏 ${fbb(E.pot)}bb 底池` : '平分底池';
+    const how = E.fold != null ? (E.fold === H.hp ? '你棄牌' : `${vs} 棄牌`) : `開牌：你 ${HZH[E.me[0]]}${E.op ? ` vs ${vs} ${HZH[E.op[0]]}` : ''}`;
+    const tl = H.dec.reduce((t, d) => t + (d.loss || 0), 0), okn = H.dec.filter(d => GOOD(d.res)).length;
+    r += `<div class="sec hend"><div class="rh">${how}・${res}</div>
+      <div class="small">${vs} 的牌：${vh ? `<b>${cards(vh).map(cardTxt).join('')}</b>（依他的範圍＋他每個動作的 GTO 機率抽樣）` : '—'}</div>
+      <div class="small">你的決策 ${okn}/${H.dec.length} 對・EV 共少 <b>${tl.toFixed(2)}bb</b></div>
+      <ol class="small hdl">${H.dec.map(d => `<li>${STREETZH[d.st]}：你 ${esc(d.al)} ${GOOD(d.res) ? '✓' : '✗'}・最佳 ${esc(d.best)}・少 ${(d.loss || 0).toFixed(2)}bb</li>`).join('')}</ol></div>`;
+  }
+  box.innerHTML = h; $('#ans').innerHTML = r; renderBar();
+  if (H.cur && !H.cur.ans) window.__Q = {drill: 'hand', id: 'hand', hero: H.h, board: H.b, role: hwRole(H.sp, H.hp), line: H.line, w: H.w0, streets: 1 + streetOf(H.cur.n), ver: VER, sp: H.sp};
+}
+function hBar(bar) {
+  if (H && H.cur && !H.cur.ans) { const n = H.cur.n;
+    bar.innerHTML = n.a.map(a => { const L = actLabel(H.sp, n, a), m = L.match(/^(.*?)(（.*）| [\d.]+bb)?$/); return `<button class="ab ${btnClass(n, a)}" data-a="${a}"><kbd>${keyOf(n, a)}</kbd> ${esc(actLabel(H.sp, n, a, true))}${m && m[2] ? `<small>${esc(m[2].replace(/[（）]/g, ''))}</small>` : ''}</button>`; }).join('');
+    bar.querySelectorAll('[data-a]').forEach(b => b.onclick = () => hAnswer(b.dataset.a)); return; }
+  const A = H && H.cur && H.cur.ans, end = H && H.end && (!H.cur || A);
+  bar.innerHTML = `${A ? `<span class="abr ${A.res}">${{ok: '✓ 正確', mix: '✓ 混合', size: '✗ 尺寸', bad: '✗ 錯誤'}[A.res]}</span>` : ''}<button class="ab nx" data-next="1">${H && !H.end ? '繼續' : '下一手'} <kbd>Space</kbd></button>`;
+  bar.querySelectorAll('[data-next]').forEach(b => b.onclick = () => { hNext(); });
+}
+function renderHand() {
+  $('#main').innerHTML = `<div class="pg"><div class="row ctl">${verSeg()}<span class="muted small">整手：翻牌一路打到開牌・你的牌只發 HW 會玩的範圍</span></div><div id="hbox"><div class="loading">發牌中…</div></div><div id="ans"></div></div>`;
+  bindCommon(); hNew();
+}
 // ---------- page: about ----------
 function renderAbout() {
   const sm = IDX.summary || {};
@@ -347,20 +589,20 @@ function renderAbout() {
   bindCommon(); renderBar();
 }
 // ---------- routing ----------
-const TOP = [['prac', '練習'], ['charts', '翻後表'], ['about', '說明']];
+const TOP = [['prac', '練習'], ['hand', '整手'], ['charts', '翻後表'], ['about', '說明']];
 function go(id, push) {
   if (id === 'prac') id = LASTDRILL;
-  if (!DR[id] && !['charts', 'about'].includes(id)) id = 'all';
+  if (!DR[id] && !['charts', 'about', 'hand'].includes(id)) id = 'all';
   PAGE = id; Q = null; ANS = null;
   const top = DR[id] ? 'prac' : id;
   $$('#topnav .topb').forEach(b => b.classList.toggle('on', b.dataset.top === top));
   if (location.hash !== '#' + id) history.replaceState(null, '', location.pathname + location.search + '#' + id);
   if (DR[id]) { LASTDRILL = id; LS.set('last', id); renderDrillShell(); nextQ(); }
-  else { renderBar(); if (id === 'charts') renderCharts(); else renderAbout(); }
+  else if (id === 'hand') renderHand(); else { renderBar(); if (id === 'charts') renderCharts(); else renderAbout(); }
   if (push !== false) window.scrollTo(0, 0);
 }
 function bindCommon() {
-  $$('#main [data-ver]').forEach(b => b.onclick = () => { setVer(b.dataset.ver); if (DR[PAGE]) { renderDrillShell(); nextQ(); } else go(PAGE, false); });
+  $$('#main [data-ver]').forEach(b => b.onclick = () => { setVer(b.dataset.ver); if (PAGE === 'hand') { renderHand(); return; } if (DR[PAGE]) { renderDrillShell(); nextQ(); } else go(PAGE, false); });
   $$('#main [data-go]').forEach(a => a.onclick = e => { e.preventDefault(); window.__dpk = e.detail === 0 && !!a.closest('details.dpick[open]'); go(a.dataset.go); });
 }
 async function boot() {
@@ -370,14 +612,17 @@ async function boot() {
   $('#topnav').innerHTML = TOP.map(([k, t]) => `<button class="topb" data-top="${k}">${t}</button>`).join('').replace('<button class="topb" data-top="about">', '<a class="topb" href="../solver.html" style="text-decoration:none;text-align:center">河牌解算器</a><button class="topb" data-top="about">');
   $$('#topnav .topb[data-top]').forEach(b => b.onclick = () => go(b.dataset.top));
   document.addEventListener('keydown', e => {
-    if (!DR[PAGE] || !Q || e.metaKey || e.ctrlKey || e.altKey) return; if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return; if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
     const k = e.key.toUpperCase();
+    if (PAGE === 'hand') { if (H && H.cur && !H.cur.ans) { const a = H.cur.n.a.find(x => keyOf(H.cur.n, x) === k); if (a) { e.preventDefault(); hAnswer(a); } } else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); hNext(); } return; }
+    if (!DR[PAGE] || !Q) return;
     if (!ANS) { const a = Q.n.a.find(x => keyOf(Q.n, x) === k); if (a) { e.preventDefault(); answer(a); } }
     else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); nextQ(); window.scrollTo(0, 0); }
   });
   window.addEventListener('hashchange', () => { const id = location.hash.slice(1); if (id && id !== PAGE) go(id); });
   go(location.hash.slice(1) || 'prac', false);
 }
+window.__H = () => H; if (location.hash === '#hand') window.__QNUDGE = 1;
 // test hooks
 window.PP = {okActs, judge, keyOf, classAgg, loadFlop, findNode, hidx, combo, row, version: () => VER, page: () => PAGE, drills: () => DRILLS,
   q: () => Q && {sp: Q.sp, fl: Q.fl, l: Q.n.l, b: Q.n.b, h: Q.h, i: Q.i}, ans: () => ANS, answer, go, nextQ,
