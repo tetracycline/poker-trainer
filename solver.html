@@ -62,9 +62,15 @@ table.t{border-collapse:collapse;width:100%;font-size:17px}table.t td,table.t th
 .nx kbd{background:rgba(0,0,0,.12);color:#06281a;border-color:rgba(0,0,0,.25)}
 kbd{background:#0b130e;color:var(--tx2);border:1px solid var(--bd2);border-radius:4px;padding:0 4px;font-size:13px}
 @media (min-width:1024px){html{zoom:1.18}.wrap{max-width:1050px}.abar{max-width:1050px}}
+nav.top.sub{position:sticky;top:0;z-index:20;display:flex;gap:6px;padding:8px 10px;border-bottom:1px solid var(--bd);overflow-x:auto;background:var(--bg)}
+nav.top.sub .topb{flex:1 0 auto;border:1px solid var(--bd);border-radius:10px;padding:7px 12px;font-size:18px;text-align:center;text-decoration:none;color:var(--tx);background:var(--bg2)}
+nav.top.sub .topb.on{background:var(--ac);border-color:var(--ac);color:#06281a;font-weight:700}
 </style>
 </head>
 <body>
+<script src="nav.js" data-sec="post"></script>
+<nav class="top sub" id="subnav"><a class="topb" href="postflop/index.html#prac">練習</a><a class="topb" href="postflop/index.html#charts">翻後表</a><a class="topb on" href="solver.html">河牌解算器</a><a class="topb" href="postflop/index.html#about">說明</a></nav>
+<script>if(window.self!==window.top)document.getElementById('subnav').style.display='none'</script>
 <div class="wrap">
   <header><h1><b>解算器</b>・河牌</h1><div class="stat" id="stat"></div></header>
   <div class="tabs" id="tabs">

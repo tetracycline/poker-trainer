@@ -370,17 +370,28 @@ function renderAbout() {
   <div class="sec"><b>快捷鍵</b><p>R＝加注／3-bet／4-bet／全下、C＝跟注、F＝棄牌、Space 或 Enter＝下一題。手機用畫面下方的按鈕。</p><button class="btn" id="rst">清除練習紀錄</button></div></div>`;
   bindCommon(); $('#rst').onclick = () => { if (!confirm('清除所有練習紀錄？')) return; ST.cnt = 0; ST.q = []; ST.miss = {}; ST.st = {}; save(); SES = {n: 0, ok: 0}; };
 }
+// ---------- page: home (全站首頁：5 個大按鈕) ----------
+function renderHome() {
+  const H = [['index.html#prac', '翻前', '開池・防守・3-bet 練習＋範圍表'], ['postflop/index.html#prac', '翻後', '翻牌到河牌練習・河牌解算器'],
+    ['learn.html#tb', '剝削', '對 NL2 池怎麼打：3-bet・Iso・行動線・讀牌'], ['learn.html#eq', '對手範圍', '他走這條線，你的牌還有多少勝率'], ['review/index.html', '覆盤', '每天的實戰手牌檢討']];
+  $('#main').innerHTML = `<div class="home">${H.map(([h, t, d]) => `<a class="hb" href="${h}"><b>${t}</b><span>${d}</span></a>`).join('')}
+  <div class="hm">更多：<a href="#leaks">我的弱點</a>・<a href="#real">我的實戰手牌</a>・<a href="solver.html#tool">自己解河牌</a>・<a href="#about">說明</a></div></div>`;
+}
 // ---------- routing ----------
 const ALIAS = {size: 'open', value: 'solver', nodes: 'mix', quiz: 'mix', course: 'leaks', chak: 'about', pool: 'about', plan: 'about', river: 'solver', charts: 'preflop', prac: null};
-const TOP = [['prac', '練習'], ['preflop', '翻前表'], ['solver', '解算器'], ['leaks', '我的弱點'], ['about', '說明']];
-function resolve(id) { if (id in ALIAS) id = ALIAS[id] || LASTDRILL; if (DR[id] || ['preflop', 'solver', 'leaks', 'about'].includes(id)) return id; return null; }
+const TOP = [['prac', '練習'], ['preflop', '範圍表'], ['leaks', '我的弱點'], ['about', '說明']];
+function resolve(id) { if (id in ALIAS) id = ALIAS[id] || LASTDRILL; if (DR[id] || ['home', 'preflop', 'solver', 'leaks', 'about'].includes(id)) return id; return null; }
 function go(id, push) {
-  id = resolve(id) || LASTDRILL; PAGE = id; Q = null; ANS = null;
+  id = resolve(id) || LASTDRILL;
+  if (id === 'solver') { location.replace('solver.html'); return; }
+  if (window.PKNAV) PKNAV.set(id === 'home' ? 'home' : 'pre');
+  PAGE = id; Q = null; ANS = null;
   document.body.dataset.page = id; document.body.classList.toggle('solverpg', id === 'solver');
   const top = DR[id] ? 'prac' : id;
   $$('#topnav .topb').forEach(b => b.classList.toggle('on', b.dataset.top === top));
   if (location.hash !== '#' + id) history.replaceState(null, '', location.pathname + location.search.replace(/([?&])p=[^&#]*&?/, '$1').replace(/[?&]$/, '') + '#' + id);
   if (DR[id]) { LASTDRILL = id; LS.set('last', id); renderDrillShell(); nextQ(); }
+  else if (id === 'home') renderHome();
   else { renderBar(); if (id === 'preflop') renderCharts(); else if (id === 'solver') renderSolver(); else if (id === 'leaks') renderLeaks(); else renderAbout(); }
   if (push !== false) window.scrollTo(0, 0);
 }
@@ -390,7 +401,7 @@ function bindCommon() {
   $$('#main [data-flt]').forEach(b => b.onclick = () => { ST.flt[PAGE] = b.dataset.flt; save(); renderDrillShell(); nextQ(); });
 }
 function boot() {
-  $('#topnav').innerHTML = TOP.map(([k, t], i) => `<button class="topb" data-top="${k}">${t}</button>` + (i === 0 ? '<a class="topb" href="learn.html#tb" style="text-decoration:none;text-align:center">剝削</a>' : '')).join('') + '<a class="topb" href="postflop/index.html" style="text-decoration:none;text-align:center">翻後</a><a class="topb" href="review/index.html" style="text-decoration:none;text-align:center">覆盤</a>';
+  $('#topnav').innerHTML = TOP.map(([k, t]) => `<button class="topb" data-top="${k}">${t}</button>`).join('');
   $$('#topnav .topb[data-top]').forEach(b => b.onclick = () => go(b.dataset.top === 'prac' ? LASTDRILL : b.dataset.top));
   document.addEventListener('keydown', e => {
     if (!DR[PAGE] || !Q || e.metaKey || e.ctrlKey || e.altKey) return; if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
@@ -401,7 +412,7 @@ function boot() {
   window.addEventListener('hashchange', () => { const id = location.hash.slice(1); if (id && id !== PAGE) go(id); });
   window.addEventListener('storage', e => { if (e.key === 'pk8.ver' && (e.newValue === 'gto' || e.newValue === 'exp')) VER = e.newValue; });
   const hp = location.hash.slice(1), qp = (/[?&]p=([^&#]+)/.exec(location.search) || [])[1];
-  go(hp || (qp ? decodeURIComponent(qp) : '') || 'prac', false);
+  go(hp || (qp ? decodeURIComponent(qp) : '') || 'home', false);
 }
 // test hooks (read-only helpers + forcing a question)
 window.PK = {okActs, judge, DRILLS, REAL, parse, drillNodes, cell, version: () => VER, page: () => PAGE, q: () => Q && {n: Q.n, h: Q.h, d: Q.d},

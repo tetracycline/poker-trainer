@@ -13,9 +13,8 @@ const LS = {get(k, d) { try { const v = localStorage.getItem('pk8.' + k); return
 let VER = 'exp'; try { const r = localStorage.getItem('pk8.ver'); if (r === 'gto' || r === 'exp') VER = r; } catch (e) {}
 const VERZH = {exp: '穩健剝削', gto: 'GTO'};
 const PAGE = document.body.dataset.page;
-$('#topnav').innerHTML = '<a class="topb" href="../index.html" style="text-decoration:none;text-align:center">← 翻前</a>' +
-  '<a class="topb" href="../postflop/index.html" style="text-decoration:none;text-align:center">翻後</a>' +
-  `<a class="topb ${PAGE === 'index' ? 'on' : ''}" href="index.html" style="text-decoration:none;text-align:center">覆盤${PAGE === 'day' ? '列表' : ''}</a>`;
+$('#topnav').innerHTML = PAGE === 'day' ? '<a class="topb" href="index.html" style="text-decoration:none;text-align:center">← 覆盤列表</a>' : '';
+if (PAGE !== 'day') $('#topnav').style.display = 'none';
 
 // ---------------- index page ----------------
 if (PAGE === 'index') {
