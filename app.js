@@ -367,7 +367,7 @@ function renderAbout() {
   <li><b>≈ 平滑</b>：同一條踢腳鏈（A2s→AKs…）或對子鏈上，較弱的牌繼續（不棄牌）的頻率不能比較強的牌高超過 ${B.thr_pp} 個百分點；高牌鏈上不能有比兩側都低 ${B.thr_pp} 點以上的「洞」。違反時，只在相關格子 EV 差 ≤${B.tol_bb}bb（接近無差異）時才把它們平滑成混合頻率。GTO ${B.counts.gto.mix} 格、剝削 ${B.counts.exp.mix} 格；保留未修的違規 ${B.kept} 處。</li>
   <li>修正後的頻率、整體百分比都重新計算，表和題目永遠一致。</li></ul></div>
   <div class="sec"><b>v8 刪除了什麼</b><p>舊版手寫的「簡化／非 solver」範圍表、100 條小測、100 條課程、節點卡片、尺寸題、翻後與 limp 實戰題全部移除（它們和解算器不一致，例如舊題 BB 對最小加注 K6o 的答案和表不同）。舊網址會自動導到對應的新頁。</p></div>
-  <div class="sec"><b>快捷鍵</b><p>R＝加注／3-bet／4-bet／全下、C＝跟注、F＝棄牌、Space 或 Enter＝下一題。手機用畫面下方的按鈕。</p><button class="btn" id="rst">清除練習紀錄</button></div></div>`;
+  <div class="sec"><b>快捷鍵</b><p>每個按鈕上的小方塊就是它的鍵（全站同一套）：<b>1–9</b> 依畫面順序選答案（也可用 <b>F</b> 棄牌／<b>C</b> 跟注・過牌／<b>R</b> 加注・下注・3-bet／<b>A</b> 全下）、<b>空白</b>或 <b>Enter</b> 下一題、<b>⌫</b> 或 <b>Esc</b> 退一步、<b>← →</b> 換分頁、<b>字母</b> 換那一排的選項（<b>⇧</b> 反向）、<b>⇧1–6</b> 主選單、<b>H</b> 或 <b>?</b> 看全部快捷鍵。手機用畫面下方的按鈕。</p><button class="btn" id="rst">清除練習紀錄</button></div></div>`;
   bindCommon(); $('#rst').onclick = () => { if (!confirm('清除所有練習紀錄？')) return; ST.cnt = 0; ST.q = []; ST.miss = {}; ST.st = {}; save(); SES = {n: 0, ok: 0}; };
 }
 // ---------- page: home (全站首頁：5 個大按鈕) ----------

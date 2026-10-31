@@ -22,4 +22,5 @@ function set(v){sec=v;var c=document.documentElement.classList;S.forEach(functio
  Array.prototype.forEach.call(n.querySelectorAll('a'),function(a){a.classList.toggle('on',a.getAttribute('data-s')===v)})}
 set(sec);
 window.PKNAV={set:set,base:base};
+var ks=document.createElement('script');ks.src=base+'keys.js?v=3';document.head.appendChild(ks);
 })();
