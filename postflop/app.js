@@ -194,7 +194,8 @@ function answer(a) {
 // ---------- rendering ----------
 function verSeg() { return `<div class="seg ver" role="group" aria-label="版本"><button class="segb ${VER === 'exp' ? 'on' : ''}" data-ver="exp">剝削 NL2 池</button><button class="segb ${VER === 'gto' ? 'on' : ''}" data-ver="gto">GTO</button></div>`; }
 function drillNav() {
-  let h = `<details class="dpick" ${window.innerWidth >= 900 ? 'open' : ''}><summary>練習項目：<b>${DR[PAGE].g}・${DR[PAGE].name}</b><span class="muted small">（點這裡換）</span></summary><div class="dnav">`; let g = '';
+  const dpk = window.__dpk; window.__dpk = false;
+  let h = `<details class="dpick" ${dpk ? 'open' : ''}><summary>練習項目：<b>${DR[PAGE].g}・${DR[PAGE].name}</b><span class="muted small">（點這裡換）</span></summary><div class="dnav">`; let g = '';
   DRILLS.forEach(d => { if (d.g !== g) { if (g) h += '</div>'; g = d.g; h += `<div class="dg"><span class="dgl">${g}</span>`; } h += `<a class="chip sm ${d.id === PAGE ? 'on' : ''}" href="#${d.id}" data-go="${d.id}">${d.name}</a>`; });
   return h + '</div></div></details>';
 }
@@ -360,7 +361,7 @@ function go(id, push) {
 }
 function bindCommon() {
   $$('#main [data-ver]').forEach(b => b.onclick = () => { setVer(b.dataset.ver); if (DR[PAGE]) { renderDrillShell(); nextQ(); } else go(PAGE, false); });
-  $$('#main [data-go]').forEach(a => a.onclick = e => { e.preventDefault(); go(a.dataset.go); });
+  $$('#main [data-go]').forEach(a => a.onclick = e => { e.preventDefault(); window.__dpk = e.detail === 0 && !!a.closest('details.dpick[open]'); go(a.dataset.go); });
 }
 async function boot() {
   try { IDX = await fetch('data/index.json').then(r => r.json()); } catch (e) { $('#main').innerHTML = '<div class="loading">資料載入失敗</div>'; return; }

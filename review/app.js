@@ -13,7 +13,12 @@ const LS = {get(k, d) { try { const v = localStorage.getItem('pk8.' + k); return
 let VER = 'exp'; try { const r = localStorage.getItem('pk8.ver'); if (r === 'gto' || r === 'exp') VER = r; } catch (e) {}
 const VERZH = {exp: '穩健剝削', gto: 'GTO'};
 const PAGE = document.body.dataset.page;
-$('#topnav').innerHTML = PAGE === 'day' ? '<a class="topb" href="index.html" style="text-decoration:none;text-align:center">← 覆盤列表</a>' : '';
+$('#topnav').innerHTML = PAGE === 'day' ? '<a class="topb" href="index.html" style="text-decoration:none;text-align:center">← 覆盤列表</a><a class="topb" data-view="rep" href="#rep" style="text-decoration:none;text-align:center">報告</a><a class="topb" data-view="quiz" href="#quiz" style="text-decoration:none;text-align:center">測驗</a>' : '';
+// day page: 報告 / 測驗 views (測驗 alone so the question fits on a laptop screen without scrolling)
+if (PAGE === 'day') { const st = document.createElement('style'); st.textContent = '.dn-d{display:none}@media (min-width:1024px){#qc .dn-d{display:inline-block}#qc .dn-m{display:none}}html.rv-quiz #app>*:not(#quizsec):not(.row){display:none!important}html.rv-quiz #quizsec>b,html.rv-quiz #quizsec>.small{display:none}html.rv-quiz #quizsec{border:0;padding:0;background:none;margin:0}html.rv-rep #quizsec{display:none}'; document.head.appendChild(st); }
+function view() { if (PAGE !== 'day') return; const q = location.hash === '#quiz'; const c = document.documentElement.classList; c.toggle('rv-quiz', q); c.toggle('rv-rep', !q);
+  document.querySelectorAll('#topnav [data-view]').forEach(a => a.classList.toggle('on', a.dataset.view === (q ? 'quiz' : 'rep'))); }
+view(); window.addEventListener('hashchange', () => { view(); window.scrollTo(0, 0); });
 if (PAGE !== 'day') $('#topnav').style.display = 'none';
 
 // ---------------- index page ----------------
@@ -130,13 +135,13 @@ function render() {
   if (TAB === 'costly') {
     const i = Math.min(S.ci, nC - 1), it = RV.costly[i], a = S.cans[i];
     body = `<div class="row sp"><span class="prog">最貴的手 第 ${i + 1} / ${nC} 題</span><span><button class="btn sm" data-nav="-1" ${i ? '' : 'disabled'}>← 上一題</button> <button class="btn sm" data-nav="1" ${i < nC - 1 ? '' : 'disabled'}>下一題 →</button></span></div>
-      <div class="qcard" id="qc">${itemHead(it)}${a ? revealHTML(it, a) + '<button class="btn sm" data-redo="1" style="margin-top:8px">重答這題</button>' : optsHTML(it)}</div>`;
+      <div class="qcard" id="qc">${a ? `<div class="qL">${itemHead(it)}</div><div class="qR">${revealHTML(it, a)}<button class="btn sm" data-redo="1" style="margin-top:8px">重答這題</button></div>` : itemHead(it) + optsHTML(it)}</div>`;
     CUR = {it, mode: 'costly', i};
   } else {
     if (!S.q.length) { body = `<div class="qcard"><div class="rh big">全部答對 🎉</div><p>答對 ${S.right}、答錯 ${S.wrong}（答錯的題會排回後面再考）。</p><button class="btn" data-reset="1">重新開始</button></div>`; CUR = null; }
     else { const k = S.q[0], it = RV.drill[k];
       body = `<div class="row sp"><span class="prog">剩 ${S.q.length} / ${nD} 題・答對 ${S.right}・答錯 ${S.wrong}</span><button class="btn sm" data-reset="1">重來</button></div>
-        <div class="qcard" id="qc">${itemHead(it)}${CUR && CUR.mode === 'drill' && CUR.k === k && CUR.a ? revealHTML(it, CUR.a) + '<button class="btn" data-dnext="1" style="margin-top:8px">下一題 →</button>' : optsHTML(it)}</div>`;
+        <div class="qcard" id="qc">${CUR && CUR.mode === 'drill' && CUR.k === k && CUR.a ? `<div class="qL">${itemHead(it)}<button class="btn dn-d" data-dnext="1" style="margin-top:8px">下一題 →</button></div><div class="qR">${revealHTML(it, CUR.a)}<button class="btn dn-m" data-dnext="1" style="margin-top:8px">下一題 →</button></div>` : itemHead(it) + optsHTML(it)}</div>`;
       if (!(CUR && CUR.mode === 'drill' && CUR.k === k)) CUR = {it, mode: 'drill', k}; }
   }
   $('#quiz').innerHTML = `<div class="row ctl"><span class="seg"><button class="segb ${TAB === 'costly' ? 'on' : ''}" data-tab="costly">最貴的手（${nC}）</button><button class="segb ${TAB === 'drill' ? 'on' : ''}" data-tab="drill">翻前錯題練習（${nD}）</button></span></div>` + body;
@@ -167,6 +172,7 @@ $('#app').innerHTML = `<div class="row sp"><div class="rvh">覆盤 ${esc(RV.date
   <div class="sec"><b>三大弱點與修正</b>${RV.leaks.map(l => `<div style="margin-top:10px"><b>${esc(l.t)}</b><div class="small">${esc(l.p)}</div><div class="note" style="margin-top:4px">修正：${esc(l.fix)}</div>
     <div class="tags" style="margin-top:6px">${l.go.map(([d, t]) => `<a class="chip sm" href="../index.html#${esc(d)}">練：${esc(t)} →</a>`).join('')}</div></div>`).join('')}</div>
   <div class="sec"><b>翻後</b><ul>${RV.post_notes.map(x => `<li class="small">${x}</li>`).join('')}</ul></div>
+  <div class="sec"><a class="btn" href="#quiz">去測驗（最貴的手 ${RV.costly.length} 題・翻前錯題 ${RV.drill.length} 題）→</a></div>
   <div class="sec" id="quizsec"><b>測驗</b><div class="small muted">先看到你當時的位置、手牌和動作，選完才揭曉你實戰怎麼打、solver／剝削答案和原因。翻前用跟翻前練習一樣的評分（最高頻率或 ≥25% 都算對）；錯題練習答錯會排回去再考。</div><div id="quiz"></div></div>`;
 render();
 document.addEventListener('click', e => {

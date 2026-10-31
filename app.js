@@ -235,7 +235,8 @@ function poolNote(n) {
 }
 // ---------- page: drill ----------
 function drillNav() {
-  let h = `<details class="dpick" ${window.innerWidth >= 900 ? 'open' : ''}><summary>練習項目：<b>${DR[PAGE].g}・${DR[PAGE].name}</b><span class="muted small">（點這裡換）</span></summary><div class="dnav">`; let g = '';
+  const dpk = window.__dpk; window.__dpk = false;
+  let h = `<details class="dpick" ${dpk ? 'open' : ''}><summary>練習項目：<b>${DR[PAGE].g}・${DR[PAGE].name}</b><span class="muted small">（點這裡換）</span></summary><div class="dnav">`; let g = '';
   DRILLS.forEach(d => { if (d.g !== g) { if (g) h += '</div>'; g = d.g; h += `<div class="dg"><span class="dgl">${g}</span>`; } h += `<a class="chip ${d.id === PAGE ? 'on' : ''}" href="#${d.id}" data-go="${d.id}">${d.name}</a>`; });
   h += '</div></div></details>';
   const d = DR[PAGE];
@@ -399,7 +400,7 @@ function go(id, push) {
 }
 function bindCommon() {
   $$('#main [data-ver]').forEach(b => b.onclick = () => { setVer(b.dataset.ver); if (DR[PAGE]) { renderDrillShell(); nextQ(); } else go(PAGE, false); });
-  $$('#main [data-go]').forEach(a => a.onclick = e => { e.preventDefault(); if (a.dataset.pre) { const d = DR[a.dataset.go]; if (d && d.nodes.length > 1) { ST.flt[d.id] = a.dataset.pre; save(); } } go(a.dataset.go); });
+  $$('#main [data-go]').forEach(a => a.onclick = e => { e.preventDefault(); window.__dpk = e.detail === 0 && !!a.closest('details.dpick[open]'); if (a.dataset.pre) { const d = DR[a.dataset.go]; if (d && d.nodes.length > 1) { ST.flt[d.id] = a.dataset.pre; save(); } } go(a.dataset.go); });
   $$('#main [data-flt]').forEach(b => b.onclick = () => { ST.flt[PAGE] = b.dataset.flt; save(); renderDrillShell(); nextQ(); });
 }
 function boot() {
