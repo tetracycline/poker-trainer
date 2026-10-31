@@ -548,7 +548,7 @@ function preAnswer(a) {
   const evs = (Q, lb) => `${lb} EV：${nd.acts.map((x, k) => `${PREZH[x]} ${(Q.ev[ci][k] / 100).toFixed(2)}`).join('・')}bb`;
   const ex = [`你選的頻率 ${s[j]}%`, VER === 'exp' ? evs(E, '剝削模型') : '', P === G ? evs(G, 'GTO') : '', ...(VER === 'exp' ? prePoolWhy(C.k, nd) : [])].filter(Boolean).map(esc).join('<br>');
   C.ans = {a, res, loss, best: bestTxt, vz: basis === '剝削' ? VERZH.exp : 'GTO', basis, why, ex, st: -1};
-  H.dec.push(Object.assign({al: preLbl(nd, a)}, C.ans)); if (!GOOD(res) || (VER === 'exp' && !(E.s[ci][j] > 0))) H.pm = 1;   // pm：你離開了剝削解的線
+  H.dec.push(Object.assign({al: preLbl(nd, a)}, C.ans)); if (!GOOD(res) || (VER === 'exp' && !(E.s[ci][j] >= 5))) H.pm = 1;   // pm：你離開了剝削解的線（剝削解 <5% 走這步，之後的點會把這手剪掉）
   prePlog(`${H.me}（你）${preLbl(nd, a)}`, '');
   C.next = a; hRender();
 }
@@ -668,7 +668,7 @@ function hAnswer(a) {
   const ex = [`你選的頻率 ${sj}%`, `你的勝率 ${gn.eq ? gn.eq[gi] : '—'}%（對 ${vsn} 走到這裡的範圍）${cl > 0 ? `・跟注需 ${Math.round(100 * cl / (S0.tot + cl))}%（跟 ${fbb(cl)}bb 進 ${fbb(S0.tot + cl)}bb）` : ''}`,
     ex0 ? evs(n, i, '剝削模型') : '', gt.use === 'gto' ? evs(gn, gi, 'GTO') : '', ...(VER === 'exp' && !H.cur.fb ? hPoolWhy(n) : [])].filter(Boolean).map(esc).join('<br>');
   H.cur.ans = {a, res, loss, best: o.ok.map(x => actLabel(H.sp, gn, x, true) + ' ' + o.s[gn.a.indexOf(x)] + '%').join(' / '), vz, basis, why, ex, st: streetOf(n)};
-  H.dec.push(Object.assign({l: H.line, al: actLabel(H.sp, n, a, true)}, H.cur.ans)); if (!GOOD(res) || (VER === 'exp' && (H.cur.fb || !(row(n, i)[n.a.indexOf(a)] > 0)))) H.pm = 1;
+  H.dec.push(Object.assign({l: H.line, al: actLabel(H.sp, n, a, true)}, H.cur.ans)); if (!GOOD(res) || (VER === 'exp' && (H.cur.fb || !(row(n, i)[n.a.indexOf(a)] >= 5)))) H.pm = 1;
   hLog(`${seats(H.sp)[H.hp]}（你）${actLabel(H.sp, n, a)}`, '');
   H.prev = n; H.prevA = a; H.line = hAdd(H.line, a); hRender();
 }
