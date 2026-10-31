@@ -153,6 +153,8 @@ def check_q(d, it):
         fail('1 範圍', nm, f"{c} 不在 HW {role[0]} {role[1]}：{tag}")
     if dr in ('postflop', 'hand') and not q.get('pre') and (q.get('w') or 0) < 50: fail('1 範圍', nm, f"w={q.get('w')} <50：{tag}")
     if dr == 'pre' and role[0] != 'pre' and (q.get('reach') or 0) < 50: fail('1 範圍', nm, f"到達率 {q.get('reach')} <50：{tag}")
+    if dr == 'solver-riv' and m2 and re.search(r'不會到達這個節點', m2['txt']): fail('1 範圍', nm, f"出了剝削解裡不會走到的手：{tag}")
+    if dr == 'solver-riv' and m2 and re.search(r'✓ 正確[^\n]*頻率 0%', m2['txt']): fail('6 剝削規則', nm, f"頻率 0% 卻判對：{tag}")
     if dr == 'solver-riv' and not q.get('hwok'): fail('1 範圍', nm, f"河牌手牌非 HW 核心/到達率低：{tag}")
     # 2 streets
     txt = (m1 or {}).get('txt', '')

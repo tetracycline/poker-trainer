@@ -189,7 +189,9 @@ function newRivQ(d) {
   if (!nodes.length) nodes = sp.gto;
   for (let t = 0; t < 12; t++) {   // hero hand must be in the current preflop range (rivPfa = 0 -> would have folded / not in range)
     const nd = pickWeighted(nodes, n => (n.acts[0].startsWith('fold') ? (n.pl !== sp.agg ? 3 : 1.5) : 1) * Math.sqrt(n.rw));
-    const ws = nd.h.map((_, j) => { const s = nd.S[j]; return rivPfa(sp, nd, j) * rivHW(sp, nd, j) * nd.r[j] * (0.1 + 2 * mixScore(s) + (s[0] > 97 ? 0 : 0.3)); });
+    const ev = effView({kind: 'riv', sp, nd}), en = ev === 'exp' && sp.exploit && sp.exploit[nd.pl] ? sp.exploit[nd.pl].nodes.find(n => n.id === nd.id) : null;
+    if (ev === 'exp' && !en) continue;   // 剝削解用得上時，只出剝削解裡也會走到這裡的手
+    const ws = nd.h.map((_, j) => { const s = nd.S[j]; if (en && en.h.indexOf(nd.h[j]) < 0) return 0; return rivPfa(sp, nd, j) * rivHW(sp, nd, j) * nd.r[j] * (0.1 + 2 * mixScore(s) + (s[0] > 97 ? 0 : 0.3)); });
     if (!ws.some(w => w > 0)) continue;
     const k = pickWeighted(nd.h.map((_, j) => j), j => ws[j]);
     return makeRivQ(sp, nd.id, nd.h[k]);
@@ -255,7 +257,7 @@ function renderBar() {
   bar.innerHTML = html; bar.querySelectorAll('.ab').forEach(b => b.onclick = () => answer(b.dataset.k));
 }
 // 剝削規則：剝削解每手多賺 >0.25bb 才用，否則照 GTO
-function effView(q) { if (VIEW !== 'exp' || q.kind !== 'riv') return VIEW; const e = q.sp.exploit && q.sp.exploit[q.nd.pl]; return e && e.gainBB > 0.25 ? 'exp' : 'gto'; }
+function effView(q) { if (VIEW !== 'exp' || q.kind !== 'riv') return VIEW; const e = q.sp.exploit && q.sp.exploit[q.nd.pl]; if (!(e && e.gainBB > 0.25)) return 'gto'; const h = q.hand != null ? heroStrat(q, 'exp') : null; return h && h.missing ? 'gto' : 'exp'; }
 function answer(k) {
   if (ANSWERED || !Q) return; const q = Q; const hs = heroStrat(q, effView(q)) || heroStrat(q, 'gto');
   const g = grpActs(hs.acts); if (!g[k]) return;
