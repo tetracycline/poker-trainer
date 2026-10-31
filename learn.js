@@ -1,3 +1,5 @@
+// 同一題（含同一步）只發一次 __Q；作答後重畫不算新題
+let QN=0;function setQ(q,o){if(q&&!q.__n)q.__n=++QN;const k=(q&&q.__n)+'|'+JSON.stringify(o);if(window.__Q&&window.__Qk===k)return;window.__Qk=k;window.__Q=o}
 (function(){
 const D=window.LD,$=s=>document.querySelector(s),R='AKQJT98765432';
 const st={tab:(location.hash.slice(1)||'tb'),gto:false,tb:'CO>BTN',iso:'UTG>BTN',two:false,grp:'SRP_IP',cat:'all',mode:'drill',tx:'A_high',q:null};
@@ -46,7 +48,7 @@ function drawTB(){const t=D.tb[st.tb],O=['UTG','HJ','CO','BTN','SB'];const heroe
 function tbDrill(t){if(!st.q||st.q.k!=='tb'){const pool=[...t.val,...t.semi,...t.call,...t.call,...D.tb[st.tb].call.map(x=>x)];
   const near=Object.keys(t.gto).filter(k=>!pool.includes(k)&&/^(A|K|Q|J|T)|s$|^(\d)\1$/.test(k));
   const all=[...t.val,...t.val,...t.semi,...t.semi,...t.call,...near.slice(0,40)];const hh=pick(all);st.q={k:'tb',h:hh,c:combo(hh),step:1,pick:null}}
- const q=st.q,h=q.h;window.__Q={drill:'tb',id:st.tb,hero:q.c,board:'',role:['pre',''],step:q.step,sc:t.sc,gl:t.gl,gv:t.gv};let o=`<div class="qcard"><div class="qs">練習：${t.o} 開 ${t.open}bb，你在 ${t.h}，拿到</div><div class="cards">${cards(q.c)}</div>`;
+ const q=st.q,h=q.h;setQ(st.q,{drill:'tb',id:st.tb,hero:q.c,board:'',role:['pre',''],step:q.step,sc:t.sc,gl:t.gl,gv:t.gv});let o=`<div class="qcard"><div class="qs">練習：${t.o} 開 ${t.open}bb，你在 ${t.h}，拿到</div><div class="cards">${cards(q.c)}</div>`;
  if(q.step===1){o+=`<div class="acts">${AB('fold','棄牌','k-fold')}${AB('call','跟注','k-call')}${AB('3bet','3-bet','k-3bet')}</div>`}
  else{const a=tbAns(t,h),ok=q.pick===a;o+=res(ok,`${h}：${{fold:'棄牌',call:'跟注','3bet':'3-bet 到 '+t.to+'bb'}[a]}`,tbWhyHand(t,h,a),st.gto&&t.gto[h]?`GTO：棄 ${t.gto[h][0]}%・跟 ${t.gto[h][1]}%・3-bet ${t.gto[h][2]}%`:'');
   if(a==='3bet'){if(q.step===2)o+=`<div class="qs" style="margin-top:10px">${t.o} 4-bet 回來！</div><div class="acts">${AB('fold','棄牌','k-fold')}${AB('call','跟注','k-call')}${AB('jam','全下','k-jam')}</div>`;
@@ -75,7 +77,7 @@ function drawISO(){const L=['UTG','HJ','CO','BTN','SB'];let key=isoKey();if(!D.i
  $('#main').innerHTML=h;bind('il',l=>{st.iso=Object.keys(D.iso).find(k=>k.startsWith(l+'>')&&k.endsWith('>BTN'))||Object.keys(D.iso).find(k=>k.startsWith(l+'>'))});bind('ih',k=>st.iso=k);bind('in',n=>st.two=n==='2');bindDrill()}
 function isoDrill(t,key){if(!st.q||st.q.k!=='iso'||st.q.key!==key){const near=['K9o','QTo','JTo','Q9s','J9s','T8s','97s','86s','A9o','A8o','K8s','55','44','33','22','K5s','Q8s','A5o','KTo'];
   const hh=pick([...t.core,...t.adv,...near.filter(x=>!t.core.includes(x))]);st.q={k:'iso',key,h:hh,c:combo(hh),pick:null}}
- window.__Q={drill:'iso',id:key,hero:st.q.c,board:'',role:['pre',''],sc:t.sc,gl:t.gl,gv:t.gv};const q=st.q,h=q.h,oth=t.other,olab={fold:'棄牌',limp:'補 0.5bb',check:'過牌'}[oth];
+ setQ(st.q,{drill:'iso',id:key,hero:st.q.c,board:'',role:['pre',''],sc:t.sc,gl:t.gl,gv:t.gv});const q=st.q,h=q.h,oth=t.other,olab={fold:'棄牌',limp:'補 0.5bb',check:'過牌'}[oth];
  let o=`<div class="qcard"><div class="qs">練習：${t.two?'2 人':t.l}跛入，你在 ${t.h}，拿到</div><div class="cards">${cards(q.c)}</div>`;
  if(!q.pick)o+=`<div class="acts">${AB(oth,olab,'k-fold')}${AB('iso','加注 '+t.size+'bb','k-3bet')}</div>`;
  else{const a=t.core.includes(h)?'iso':(oth==='limp'&&!t.limp.includes(h)?'fold':oth),adv=t.adv.includes(h);const ok=q.pick===a||(adv&&q.pick==='iso');
@@ -118,7 +120,7 @@ function actHTML(rows){return `<div class="ral">${rows.map(r=>`<div><b>${r[0]}</
 function lnDrill(rs){if(!st.q||st.q.k!=='ln'||st.q.g!==st.grp||(st.cat!=='all'&&st.q.r.cat!==st.cat)){let pool=rs.filter(r=>(st.cat==='all'||r.cat===st.cat)&&r.ex.length);
   const r=pick(pool),e=pick(r.ex);st.q={k:'ln',g:st.grp,r,e,pick:null}}
  const {r,e}=st.q,b=e[1],[rows,pot,left]=lnRows(e[2],e[4]||'',e[5],b);
- window.__Q={drill:'ln',id:r.id,hero:e[0],board:b,role:spRole(e[2],e[5]),line:e[4],spot:e[2],rows:rows.map(x=>x[0]),sc:r.sc,gl:r.gl||'',psc:r.psc||'',dev:r.dev,gv:r.gv};
+ setQ(st.q,{drill:'ln',id:r.id,hero:e[0],board:b,role:spRole(e[2],e[5]),line:e[4],spot:e[2],rows:rows.map(x=>x[0]),sc:r.sc,gl:r.gl||'',psc:r.psc||'',dev:r.dev,gv:r.gv});
  let o=`<div class="qcard"><div class="rsc">統計範圍：${esc(r.sc)}</div>${actHTML(rows)}<div class="small muted">底池 <b>${f1(pot)}bb</b>・你剩 ${f1(left)}bb</div>
  <div class="cards" style="margin-top:6px"><span class="lb">你</span>${cards(e[0])}</div>`;
  if(!st.q.pick)o+=`<div class="acts">${r.choices.map(a=>AB(a,alab(a,r.street),a==='x'||a==='f'?'k-fold':a==='c'?'k-call':a==='small'?'k-open':'k-3bet')).join('')}</div>`;
@@ -170,7 +172,7 @@ function rdDealHW(r){const ok=c=>!window.HWR||HWR.ok(...rdRole(r,D.rdPos[c[1]]),
 function hcls(c){const a=c.slice(0,2),b=c.slice(2,4);let x=R.indexOf(a[0]),y=R.indexOf(b[0]);if(x>y)[x,y]=[y,x];return x===y?R[x]+R[x]:R[x]+R[y]+(a[1]===b[1]?'s':'o')}
 function rdDrill(rs){if(!st.q||st.q.k!=='rd'||!rs.includes(st.q.r)){let r,dl;for(let k=0;k<30;k++){r=pick(rs);dl=rdDealHW(r);if(dl)break}st.q={k:'rd',r,hd:dl.hd,c:dl.c,pos:dl.pos,pick:null}}
  if(st.q.li==null)st.q.li=rdLine(st.q.r,st.q.pos);
- {const q=st.q,l=(q.r.lines||[])[q.li];window.__Q={drill:'rd',id:q.r.id,hero:q.c||q.hd.c,board:q.r.board,role:rdRole(q.r,q.pos),pos:q.pos,rows:['翻前',...(l?l.st.map(x=>x.slice(0,x.indexOf('：'))):[])],street:q.r.street,sc:q.r.sc,line:l&&l.st,act:q.hd.act,gv:q.hd.gv}}
+ {const q=st.q,l=(q.r.lines||[])[q.li];setQ(st.q,{drill:'rd',id:q.r.id,hero:q.c||q.hd.c,board:q.r.board,role:rdRole(q.r,q.pos),pos:q.pos,rows:['翻前',...(l?l.st.map(x=>x.slice(0,x.indexOf('：'))):[])],street:q.r.street,sc:q.r.sc,line:l&&l.st,act:q.hd.act,gv:q.hd.gv})}
  const {r,hd}=st.q;let o=`<div class="qcard">${rdHead(r,st.q.pos)}${rdAct(r,st.q.pos,st.q.li)}<div class="cards" style="margin-top:6px"><span class="lb">你</span>${cards(st.q.c||hd.c)}</div>
  <div class="qs" style="margin-top:8px">他拿什麼？你怎麼做？</div>`;
  const ch=r.kind==='dec'?[['x','過牌','k-fold'],['bet','下注','k-3bet']]:[['f','棄牌','k-fold'],['c','跟注','k-call'],['r','加注','k-3bet']];
