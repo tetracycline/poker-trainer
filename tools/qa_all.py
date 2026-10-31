@@ -151,7 +151,7 @@ def check_q(d, it):
     role = q.get('role') or ['pre', '']; c = cls(q.get('hero'))
     if not q.get('real') and role[0] in ('open', 'call', 'tb', 'c3', 'iso') and c and not hw_ok(role[0], role[1], c):
         fail('1 範圍', nm, f"{c} 不在 HW {role[0]} {role[1]}：{tag}")
-    if dr in ('postflop', 'hand') and (q.get('w') or 0) < 50: fail('1 範圍', nm, f"w={q.get('w')} <50：{tag}")
+    if dr in ('postflop', 'hand') and not q.get('pre') and (q.get('w') or 0) < 50: fail('1 範圍', nm, f"w={q.get('w')} <50：{tag}")
     if dr == 'pre' and role[0] != 'pre' and (q.get('reach') or 0) < 50: fail('1 範圍', nm, f"到達率 {q.get('reach')} <50：{tag}")
     if dr == 'solver-riv' and not q.get('hwok'): fail('1 範圍', nm, f"河牌手牌非 HW 核心/到達率低：{tag}")
     # 2 streets

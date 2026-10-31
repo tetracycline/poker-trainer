@@ -15,7 +15,7 @@ function sig(e){return e.tagName+'.'+((e.className&&typeof e.className==='string
 function isNext(e){return e.matches('.nx,[data-next],[data-qn],[data-a=next],[data-nav="1"]')||/^下一(題|手)/.test(txt(e))}
 function isBack(e){return e.matches('[data-back],[data-nav="-1"]')||/^(← 上一題|↶)/.test(txt(e))}
 function isAns(e){return e.matches('.ab,[data-qa],.hb,[data-tk],.abar button')&&!isNext(e)}
-function mnem(e){var t=txt(e);if(/棄/.test(t))return 'F';if(/全下/.test(t))return 'A';if(/^(跟|過牌)/.test(t))return 'C';if(/(加注|下注|3-bet|4-bet|5-bet|Iso|隔離)/i.test(t))return 'R';return null}
+function mnem(e){var t=txt(e);if(/棄/.test(t))return 'F';if(/全下/.test(t))return 'A';if(/^(跟|過牌)/.test(t))return 'C';if(/(加注|下注|開池|3-bet|4-bet|5-bet|Iso|隔離)/i.test(t))return 'R';return null}
 function fixedOf(e){if(e.matches('[data-ver],[data-v]'))return 'V';if(e.matches('[data-md],[data-m],[data-rm],[data-tab]'))return 'M';if(e.id==='gt')return 'G';if(e.tagName==='SUMMARY'&&e.closest('.dpick'))return 'D';return null}
 // -------- assignment (deterministic from DOM) --------
 function assign(){
