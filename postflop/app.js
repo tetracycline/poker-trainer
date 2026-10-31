@@ -143,6 +143,8 @@ const qkey = (sp, fl, l, b, h) => [sp, fl, l, b, h].join('|');
 const MIN_PR_Q = 0.002;
 function unrel(n, i) { if (!n.u && !n.uc) return false; if (!n._u) n._u = new Set([...(n.u || []), ...(n.uc || [])]); return n._u.has(i); }
 function conflict(n, i) { return !!(n.uc && n.uc.includes(i)); }
+// hero hand must be in the CURRENT preflop range (pf_data v8-1031x); solves used older ranges -> per-class multiplier, 0 = no longer reaches here
+function pfa(sp, n, i) { const t = IDX && IDX.pfadj && IDX.pfadj[sp + '|' + VER + '|' + n.p]; if (!t) return 1; if (!IDX._pfi) { IDX._pfi = {}; IDX.pfnames.forEach((x, k) => IDX._pfi[x] = k); } return t[IDX._pfi[classOf(combo(n, i))]]; }
 function handWeight(n, i, mk) {
   const w = n.w[i]; if (w < 10 || unrel(n, i)) return 0;
   const s = row(n, i), mx = Math.max(...s);
@@ -159,7 +161,7 @@ async function nextQ() {
     const di = ST.q.findIndex(x => x.due <= ST.cnt && (!d.sp || d.sp === x.sp) && (!d.cat || d.cat === x.c) && !(prev && prev.key === x.key));
     if (di >= 0) {
       const it = ST.q.splice(di, 1)[0]; save();
-      try { const F = await loadFlop(it.sp, it.fl), n = findNode(F, VER, it.l, it.b), i = n ? hidx(n, it.h) : -1; if (n && i >= 0 && n.w[i] >= 5 && !unrel(n, i)) q = {sp: it.sp, fl: it.fl, F, n, i, review: it.stage || 1}; } catch (e) {}
+      try { const F = await loadFlop(it.sp, it.fl), n = findNode(F, VER, it.l, it.b), i = n ? hidx(n, it.h) : -1; if (n && i >= 0 && n.w[i] >= 5 && !unrel(n, i) && pfa(it.sp, n, i) > 0) q = {sp: it.sp, fl: it.fl, F, n, i, review: it.stage || 1}; } catch (e) {}
     }
     for (let tries = 0; !q && tries < 6; tries++) {
       const cf = pick(candFlops(d), x => x.w); if (!cf) break;
@@ -168,7 +170,7 @@ async function nextQ() {
       const n = pick(nodes, x => (x.pr < MIN_PR_Q ? 0 : Math.sqrt(x.pr)) * (x.c === 'vs_raise' && d.cat !== 'vs_raise' ? 0.3 : 1)); if (!n) continue;
       const mk = i => qkey(cf.sp, cf.fl, n.l, n.b, combo(n, i));
       const idx = []; for (let i = 0; i < nh(n); i++) idx.push(i);
-      const i = pick(idx, k => (prev && prev.n === n && prev.i === k) ? 0 : handWeight(n, k, mk)); if (i == null) continue;
+      const i = pick(idx, k => (prev && prev.n === n && prev.i === k) ? 0 : handWeight(n, k, mk) * pfa(cf.sp, n, k)); if (i == null) continue;
       q = {sp: cf.sp, fl: cf.fl, F, n, i};
     }
     if (stale()) return;

@@ -128,11 +128,11 @@ function drawRD(){st.rg=st.rg||'all';st.rm=st.rm||'drill';const G=[['all','全�
  const rs=D.reads.filter(r=>st.rg==='all'||r.grp===st.rg);
  h+=st.rm==='drill'?rdDrill(rs):rdSheet(rs);$('#main').innerHTML=h;
  bind('rg',g=>st.rg=g);bind('rm',m=>st.rm=m);bindDrill()}
-function rdHead(r){return `<div class="small muted">${esc(r.spot)}・${STN[r.street]}</div><div class="qs">${esc(r.line)}</div>
+function rdHead(r,p){return `<div class="small muted">${esc(p&&D.rdSpot?D.rdSpot(r,p):r.spot)}・${STN[r.street]}</div><div class="qs">${esc(r.line)}</div>
  <div class="cards"><span class="lb">牌面</span>${bcards(r.board)}</div>`}
 function rdN(r){return `<div class="nn">樣本 ${r.n.toLocaleString()} 手・攤牌 ${r.nsd.toLocaleString()} 手${r.small?'<span class="few">・樣本偏少，參考就好</span>':''}</div>`}
-function rdDrill(rs){if(!st.q||st.q.k!=='rd'||!rs.includes(st.q.r)){const r=pick(rs);st.q={k:'rd',r,hd:pick(r.hands),pick:null}}
- const {r,hd}=st.q;let o=`<div class="qcard">${rdHead(r)}<div class="cards" style="margin-top:6px"><span class="lb">你</span>${cards(hd.c)}</div>
+function rdDrill(rs){if(!st.q||st.q.k!=='rd'||!rs.includes(st.q.r)){const r=pick(rs);const dl=D.rdDeal?D.rdDeal(r):{hd:pick(r.hands),c:r.hands[0].c};st.q={k:'rd',r,hd:dl.hd,c:dl.c,pos:dl.pos,pick:null}}
+ const {r,hd}=st.q;let o=`<div class="qcard">${rdHead(r,st.q.pos)}<div class="cards" style="margin-top:6px"><span class="lb">你</span>${cards(st.q.c||hd.c)}</div>
  <div class="qs" style="margin-top:8px">他拿什麼？你怎麼做？</div>`;
  const ch=r.kind==='dec'?[['x','過牌','k-fold'],['bet','下注','k-3bet']]:[['f','棄牌','k-fold'],['c','跟注','k-call'],['r','加注','k-3bet']];
  if(!st.q.pick)o+=`<div class="acts">${ch.map(([a,l,c])=>AB(a,l,c)).join('')}</div>`;
@@ -140,7 +140,7 @@ function rdDrill(rs){if(!st.q||st.q.k!=='rd'||!rs.includes(st.q.r)){const r=pick
   o+=`<div class="sec res ${ok?'ok':'bad'}"><div class="rh">${ok?'✓ ':'✗ '}你：${esc(hd.zh)} → ${esc(hd.act==='邊緣'?(r.kind==='dec'?'下注或過牌都行（邊緣）':'跟或棄都行（邊緣）'):hd.act)}</div>
   <div class="small muted">他的範圍：</div>${rbar(r.bar)}
   <div class="why">${esc(r.why)}</div>${r.gl?`<div class="gl">${esc(r.gl)}</div>`:''}${hd.gn?`<div class="gl">${esc(hd.gn)}</div>`:''}
-  <div class="nn">你這手對他的勝率約 ${hd.eq}%${r.need?`・跟注大約要 ${r.need}%`:''}${r.fold!=null?`・你下注他會棄 ${r.fold}%`:''}</div>${rdN(r)}</div>
+  <div class="nn">這類手對他的勝率約 ${hd.eq}%${r.need?`・跟注大約要 ${r.need}%`:''}${r.fold!=null?`・你下注他會棄 ${r.fold}%`:''}</div>${rdN(r)}</div>
   <div class="acts"><button class="ab nx" data-a="next">下一題</button></div>`}
  return o+`</div>`}
 function rdSheet(rs){return rs.map(r=>`<div class="sec"><div class="small muted">${esc(r.spot)}・${STN[r.street]}</div><div class="big">${esc(r.line)}</div>${rbar(r.bar)}<div class="why">${esc(r.why)}</div>${r.gl?`<div class="gl">${esc(r.gl)}</div>`:''}${rdN(r)}</div>`).join('')}

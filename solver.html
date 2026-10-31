@@ -92,6 +92,7 @@ nav.top.sub .topb.on{background:var(--ac);border-color:var(--ac);color:#06281a;f
 <script src="river/ranges.js"></script>
 <script src="pf_data.js?v=8x"></script>
 <script src="data/river_v8.js"></script>
+<script src="data/river_pfadj.js?v=1031z"></script>
 <script>(function(){var P=window.PF,D=window.SOLVER_DATA,pre={names:P.names,gto:{},exp:{},norake:{},pool:{},heroes:{}};
 Object.keys(P.nodes).forEach(function(k){var n=P.nodes[k];['gto','exp'].forEach(function(v){pre[v][k]={seat:n.seat,acts:n.acts,s:n[v].s,r:n[v].r,freq:n[v].freq};});pre.norake[k]={seat:n.seat,acts:n.acts,freq:n.norake};});
 D.pre=pre;})();</script>
@@ -172,17 +173,24 @@ function rivNodes(sp, view) {
   if (view === 'exp') { const out = []; [0, 1].forEach(h => { const e = sp.exploit[h]; if (e) e.nodes.forEach(n => out.push(n)); }); return out; }
   return sp.gto;
 }
-function newRivQ() {
+function newRivQ(d) {
   let sps = SPOTS;
   if (FAM !== 'all' && FAM !== 'def') sps = sps.filter(s => s.fam.startsWith(FAM));
   const sp = sps[Math.floor(Math.random() * sps.length)];
   let nodes = sp.gto.filter(n => n.h.length > 0);
   if (FAM === 'def') nodes = nodes.filter(n => n.acts[0].startsWith('fold') && n.pl !== sp.agg);
   if (!nodes.length) nodes = sp.gto;
-  const nd = pickWeighted(nodes, n => (n.acts[0].startsWith('fold') ? (n.pl !== sp.agg ? 3 : 1.5) : 1) * Math.sqrt(n.rw));
-  const k = pickWeighted(nd.h.map((_, j) => j), j => { const s = nd.S[j]; return nd.r[j] * (0.1 + 2 * mixScore(s) + (s[0] > 97 ? 0 : 0.3)); });
-  return makeRivQ(sp, nd.id, nd.h[k]);
+  for (let t = 0; t < 12; t++) {   // hero hand must be in the current preflop range (rivPfa = 0 -> would have folded / not in range)
+    const nd = pickWeighted(nodes, n => (n.acts[0].startsWith('fold') ? (n.pl !== sp.agg ? 3 : 1.5) : 1) * Math.sqrt(n.rw));
+    const ws = nd.h.map((_, j) => { const s = nd.S[j]; return rivPfa(sp, nd, j) * nd.r[j] * (0.1 + 2 * mixScore(s) + (s[0] > 97 ? 0 : 0.3)); });
+    if (!ws.some(w => w > 0)) continue;
+    const k = pickWeighted(nd.h.map((_, j) => j), j => ws[j]);
+    return makeRivQ(sp, nd.id, nd.h[k]);
+  }
+  return (d || 0) < 20 ? newRivQ((d || 0) + 1) : makeRivQ(sp, nodes[0].id, nodes[0].h[0]);
 }
+function rivPfa(sp, nd, j) { const t = window.RIVADJ && RIVADJ(sp, nd.pl, VIEW); if (!t) return 1; if (!window.RIVADJ_I) { window.RIVADJ_I = {}; RIVADJ_N.forEach((x, i) => RIVADJ_I[x] = i); }
+  const c = sp.hands[nd.pl][nd.h[j]], R = '23456789TJQKA'; let x = R.indexOf(c[0]), y = R.indexOf(c[2]); if (x < y) [x, y] = [y, x]; return t[RIVADJ_I[x === y ? R[x] + R[x] : R[x] + R[y] + (c[1] === c[3] ? 's' : 'o')]]; }
 function makeRivQ(sp, nodeId, hand) {
   const nd = sp.gto.find(n => n.id === nodeId); return {kind: 'riv', sp, nodeId, hand, combo: sp.hands[nd.pl][hand], key: 'riv|' + sp.id + '|' + nodeId + '|' + hand, acts: nd.acts, nd};
 }
@@ -192,7 +200,7 @@ function nextQ() {
   // spaced repetition: due misses come back first
   ST.queue.forEach(q => q.due--); const due = ST.queue.findIndex(q => q.due <= 0 && q.mode === MODE && (FAM === 'all' || q.fam === FAM));
   let q = null;
-  if (due >= 0) { const it = ST.queue.splice(due, 1)[0]; try { q = it.mode === 'pre' ? makePreQ(it.name, it.cls) : makeRivQ(SPOTS[SPI[it.sp]], it.node, it.hand); q.review = true; } catch (e) { q = null; } }
+  if (due >= 0) { const it = ST.queue.splice(due, 1)[0]; try { q = it.mode === 'pre' ? makePreQ(it.name, it.cls) : makeRivQ(SPOTS[SPI[it.sp]], it.node, it.hand); if (q.kind === 'riv' && !(rivPfa(q.sp, q.nd, q.nd.h.indexOf(it.hand)) > 0)) q = null; else q.review = true; } catch (e) { q = null; } }
   if (!q) q = MODE === 'pre' ? newPreQ() : newRivQ();
   Q = q; save(); renderQ();
 }
