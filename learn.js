@@ -128,22 +128,40 @@ function drawRD(){st.rg=st.rg||'all';st.rm=st.rm||'drill';const G=[['all','全�
  const rs=D.reads.filter(r=>st.rg==='all'||r.grp===st.rg);
  h+=st.rm==='drill'?rdDrill(rs):rdSheet(rs);$('#main').innerHTML=h;
  bind('rg',g=>st.rg=g);bind('rm',m=>st.rm=m);bindDrill()}
-function rdHead(r,p){return `<div class="small muted">${esc(p&&D.rdSpot?D.rdSpot(r,p):r.spot)}・${STN[r.street]}</div><div class="qs">${esc(r.line)}</div>
- <div class="cards"><span class="lb">牌面</span>${bcards(r.board)}</div>`}
-function rdN(r){return `<div class="nn">樣本 ${r.n.toLocaleString()} 手・攤牌 ${r.nsd.toLocaleString()} 手${r.small?'<span class="few">・樣本偏少，參考就好</span>':''}</div>`}
+function rdHead(r,p){return `<div class="small muted">${STN[r.street]}・讀牌</div><div class="qs">${esc(r.line)}</div>${r.sc?`<div class="rsc">統計範圍：${esc(r.sc)}</div>`:''}
+ <div class="cards"><span class="lb">牌面</span>${bcards(r.board)}${r.tx?`<span class="txz">${esc(r.tx.zh)}</span>`:''}</div>`}
+function rdN(r){const t=r.tx;return `<div class="nn">樣本：全部牌面 ${r.n.toLocaleString()} 手・攤牌 ${r.nsd.toLocaleString()}${t&&t.on?`｜${esc(t.zh)} ${t.n.toLocaleString()} 手・攤牌 ${t.nsd.toLocaleString()}`:''}${r.small?'<span class="few">・樣本偏少</span>':''}</div>`}
+function rdHIP(r,p){if(!p)return null;const O=['SB','BB','UTG','HJ','CO','BTN'],a=p.split('>'),x=t=>O.indexOf(t.replace('open','').replace('3b',''));
+ if(r.grp==='ip')return true;if(r.grp==='bb')return false;if(a.length<2)return null;
+ if(r.id.indexOf('3b_')===0)return x(a[1])>x(a[0]);if(r.grp==='3b')return x(a[0])>x(a[1]);return x(a[1])>x(a[0])}
+function rdLine(r,p){const L=r.lines||[];if(!L.length)return -1;const ip=rdHIP(r,p);let c=L.map((l,i)=>i).filter(i=>ip==null||L[i].ip===ip);if(!c.length)c=L.map((l,i)=>i);
+ let t=0;c.forEach(i=>t+=L[i].w);let x=Math.random()*t;for(const i of c){x-=L[i].w;if(x<=0)return i}return c[c.length-1]}
+function rdAct(r,p,li){const l=(r.lines||[])[li];if(!l)return '';const pf=p&&D.rdSpot?D.rdSpot(r,p):r.spot;
+ return `<div class="ral"><div><b>翻前</b>${esc(pf)}</div>${l.st.map(x=>{const k=x.indexOf('：');return `<div><b>${esc(x.slice(0,k))}</b>${esc(x.slice(k+1))}</div>`}).join('')}</div>`}
+function rdLS(r,li){const L=r.lines||[],l=L[li];if(!l||L.length<2)return '';
+ return `<div class="nn">本題這條線（占 ${l.sh}%）：${l.nsd>=60?`攤牌 ${l.nsd}・兩對+ ${l.bar.S}%・空氣 ${l.bar.A}%`:`攤牌僅 ${l.nsd} 手 → 用 ${L.length} 條線合併`}</div>`}
+function rdRange(r){const t=r.tx;if(!t)return `<div class="small muted">他的範圍：</div>${rbar(r.bar)}`;
+ return `<div class="small muted">他的範圍：${t.on?`<b class="txz" style="margin:0">${esc(t.zh)}</b>（本題牌面）`:`<b>全部牌面合併</b>（${esc(t.zh)}攤牌僅 ${t.nsd} 手，不足 60）`}</div>${rbar(t.on?t.bar:r.bar)}`}
+function rdGL(r){const t=r.tx;let o='';if(t&&t.on&&t.gl)o+=`<div class="gl">${esc(t.zh)}：${esc(t.gl)}</div>`;
+ if(r.gp)o+=`<div class="gl">全部牌面：${esc(r.gp)}</div>`;else if(r.gl)o+=`<div class="gl">${esc(r.gl)}</div>`;
+ if(r.ct&&r.ct.length)o+=`<div class="nn">${r.ct.map(esc).join('；')}</div>`;return o}
 function rdDrill(rs){if(!st.q||st.q.k!=='rd'||!rs.includes(st.q.r)){const r=pick(rs);const dl=D.rdDeal?D.rdDeal(r):{hd:pick(r.hands),c:r.hands[0].c};st.q={k:'rd',r,hd:dl.hd,c:dl.c,pos:dl.pos,pick:null}}
- const {r,hd}=st.q;let o=`<div class="qcard">${rdHead(r,st.q.pos)}<div class="cards" style="margin-top:6px"><span class="lb">你</span>${cards(st.q.c||hd.c)}</div>
+ if(st.q.li==null)st.q.li=rdLine(st.q.r,st.q.pos);
+ const {r,hd}=st.q;let o=`<div class="qcard">${rdHead(r,st.q.pos)}${rdAct(r,st.q.pos,st.q.li)}<div class="cards" style="margin-top:6px"><span class="lb">你</span>${cards(st.q.c||hd.c)}</div>
  <div class="qs" style="margin-top:8px">他拿什麼？你怎麼做？</div>`;
  const ch=r.kind==='dec'?[['x','過牌','k-fold'],['bet','下注','k-3bet']]:[['f','棄牌','k-fold'],['c','跟注','k-call'],['r','加注','k-3bet']];
  if(!st.q.pick)o+=`<div class="acts">${ch.map(([a,l,c])=>AB(a,l,c)).join('')}</div>`;
  else{const ans=rdNorm(hd.act),p=st.q.pick,ok=p===ans||ans==='cf';
   o+=`<div class="sec res ${ok?'ok':'bad'}"><div class="rh">${ok?'✓ ':'✗ '}你：${esc(hd.zh)} → ${esc(hd.act==='邊緣'?(r.kind==='dec'?'下注或過牌都行（邊緣）':'跟或棄都行（邊緣）'):hd.act)}</div>
-  <div class="small muted">他的範圍：</div>${rbar(r.bar)}
-  <div class="why">${esc(r.why)}</div>${r.gl?`<div class="gl">${esc(r.gl)}</div>`:''}${hd.gn?`<div class="gl">${esc(hd.gn)}</div>`:''}
-  <div class="nn">這類手對他的勝率約 ${hd.eq}%${r.need?`・跟注大約要 ${r.need}%`:''}${r.fold!=null?`・你下注他會棄 ${r.fold}%`:''}</div>${rdN(r)}</div>
+  ${rdRange(r)}
+  <div class="why">${esc(r.why)}</div>${rdGL(r)}${rdLS(r,st.q.li)}${hd.gn?`<div class="gl">${esc(hd.gn)}</div>`:''}${hd.tn?`<div class="gl">${esc(hd.tn)}</div>`:''}
+  <div class="nn eqx">你這類手 vs 他這條線範圍（${esc(hd.eqr||'全部牌面')}）：勝率 ${hd.eq}%${r.need?`・跟注要 ${r.need}%`:''}${r.fold!=null?`・你下注他棄 ${r.tx&&r.tx.on&&r.tx.fold!=null?r.tx.fold:r.fold}%`:''}</div>${rdN(r)}</div>
   <div class="acts"><button class="ab nx" data-a="next">下一題</button></div>`}
  return o+`</div>`}
-function rdSheet(rs){return rs.map(r=>`<div class="sec"><div class="small muted">${esc(r.spot)}・${STN[r.street]}</div><div class="big">${esc(r.line)}</div>${rbar(r.bar)}<div class="why">${esc(r.why)}</div>${r.gl?`<div class="gl">${esc(r.gl)}</div>`:''}${rdN(r)}</div>`).join('')}
+function rdSheet(rs){return rs.map(r=>`<div class="sec"><div class="small muted">${esc(r.spot)}・${STN[r.street]}</div><div class="big">${esc(r.line)}</div>${r.sc?`<div class="rsc">統計範圍：${esc(r.sc)}</div>`:''}<div class="small muted">全部牌面合併：</div>${rbar(r.bar)}<div class="why">${esc(r.why0||r.why)}</div>${r.gp?`<div class="gl">${esc(r.gp)}</div>`:r.gl?`<div class="gl">${esc(r.gl)}</div>`:''}
+ ${r.txs&&r.txs.length?`<div class="txt"><div class="small muted">分牌面（攤牌 ≥60）：</div>${r.txs.map(t=>`<div class="txr"><span>${esc(t.zh)}<i>攤 ${t.nsd}</i></span>${mbar(t.bar)}</div>`).join('')}${r.txlow&&r.txlow.length?`<div class="nn">不足 60，看合併：${r.txlow.map(esc).join('、')}</div>`:''}</div>`:''}${rdN0(r)}</div>`).join('')}
+function rdN0(r){return `<div class="nn">樣本：全部牌面 ${r.n.toLocaleString()} 手・攤牌 ${r.nsd.toLocaleString()}</div>`}
+function mbar(p){return `<div class="rb mb">${'SMWDAG'.split('').filter(k=>p[k]>0).map(k=>`<span class="${k}" style="flex:${p[k]} 0 0" title="${BZ[k]} ${p[k]}%">${p[k]>=10?p[k]:''}</span>`).join('')}</div>`}
 function draw(){nav();if(window.PKNAV)PKNAV.set(st.tab==='eq'?'eq':'exp');$('#topnav').style.display=st.tab==='eq'?'none':'';document.body.classList.toggle('eqpg',st.tab==='eq');if(st.tab==='eq'&&window.drawEQ)window.drawEQ();else if(st.tab==='tb')drawTB();else if(st.tab==='iso')drawISO();else if(st.tab==='rd')drawRD();else drawLN()}
 addEventListener('hashchange',()=>{const t=location.hash.slice(1);if(t&&t!==st.tab&&['tb','iso','ln','rd','eq'].includes(t)){st.tab=t;st.q=null;draw();scrollTo(0,0)}});
 draw();
