@@ -15,7 +15,7 @@ function comp(list){const set=new Set(list),out=[];let run=[];
  for(const t of 'so')for(let i=0;i<13;i++){const hi=R[i];run=[];const top=hi+R[i+1]+t;
   for(let j=i+1;j<13;j++){const h=hi+R[j]+t;if(set.has(h))run.push(h);else flush(top)}flush(top)}
  return out.join(' ')||'—'}
-function nav(){const T=[['tb','3-bet'],['iso','Iso 跛入'],['ln','行動線'],['rd','讀牌']];
+function nav(){const T=[['tb','3-bet'],['iso','Iso 跛入'],['ln','行動線'],['rd','讀牌'],['eq','對手範圍']];
  $('#topnav').innerHTML=T.map(([k,l])=>`<button class="topb${st.tab===k?' on':''}" data-t="${k}">${l}</button>`).join('')+`<button class="topb${st.gto?' on':''}" id="gt" style="flex:0 0 auto">GTO 對照</button>`;
  $('#topnav').querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{st.tab=b.dataset.t;st.q=null;location.hash=st.tab;draw()});
  $('#gt').onclick=()=>{st.gto=!st.gto;draw()}}
@@ -144,6 +144,6 @@ function rdDrill(rs){if(!st.q||st.q.k!=='rd'||!rs.includes(st.q.r)){const r=pick
   <div class="acts"><button class="ab nx" data-a="next">下一題</button></div>`}
  return o+`</div>`}
 function rdSheet(rs){return rs.map(r=>`<div class="sec"><div class="small muted">${esc(r.spot)}・${STN[r.street]}</div><div class="big">${esc(r.line)}</div>${rbar(r.bar)}<div class="why">${esc(r.why)}</div>${r.gl?`<div class="gl">${esc(r.gl)}</div>`:''}${rdN(r)}</div>`).join('')}
-function draw(){nav();if(st.tab==='tb')drawTB();else if(st.tab==='iso')drawISO();else if(st.tab==='rd')drawRD();else drawLN()}
+function draw(){nav();document.body.classList.toggle('eqpg',st.tab==='eq');if(st.tab==='eq'&&window.drawEQ)window.drawEQ();else if(st.tab==='tb')drawTB();else if(st.tab==='iso')drawISO();else if(st.tab==='rd')drawRD();else drawLN()}
 draw();
 })();

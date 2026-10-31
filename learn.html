@@ -83,10 +83,31 @@ details summary{cursor:pointer;color:#6fdc9c;font-size:17px;margin:6px 0}
 .rb .S{background:#e05a5a}.rb .M{background:#e8a23a}.rb .W{background:#d9cf6b}.rb .D{background:#5aa9ff}.rb .A{background:#8a968f}.rb .G{background:#33463b;color:#cfd8d2}
 .lg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:15px;color:#b9c7bf}.lg i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
 .nn{font-size:14px;color:#7f948a;margin-top:6px}.few{color:#e3bf6a}
+
+/* 對手範圍 tab */
+body.eqpg main{max-width:none!important;padding-left:14px;padding-right:14px}
+.eqw{font-size:22px;line-height:1.5}.eqw .small,.eqw .note{font-size:19px}
+.eqh{font-size:24px;font-weight:700;margin:16px 0 6px;color:var(--ac)}
+.eqb{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0}
+.eqbtn{flex:1 1 150px;border:1px solid var(--bd);border-radius:14px;padding:14px 16px;font-size:22px;background:var(--bg2);color:var(--tx);cursor:pointer;line-height:1.3}
+.eqbtn small{display:block;font-size:17px;color:var(--tx2);margin-top:2px}
+.eqbtn.on{background:var(--ac);border-color:var(--ac);color:#06281a;font-weight:700}.eqbtn.on small{color:#06281a}
+.eqbtn.big{font-size:26px;padding:18px;font-weight:700}.eqbtn.sm{flex:0 0 auto;font-size:18px;padding:6px 12px;margin-left:6px}
+.eqpath{font-size:21px;margin:6px 0;display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.eqcard{padding:16px}.eqln{font-size:19px;color:var(--tx2);margin-bottom:6px}
+.eqrow{padding:10px 12px;border-radius:10px;margin:6px 0;border:1px solid transparent}
+.eqt{font-size:24px}.eqt b{font-size:30px}
+.eqrow.sig{border-width:2px}.eqrow.up{border-color:var(--ac);background:var(--acbg)}.eqrow.dn{border-color:var(--warn);background:var(--warnbg)}
+.eqrow.sig .eqt{font-weight:700}
+.eqgrey{font-size:28px;color:var(--tx2);background:#1d2a23;border-radius:10px;padding:16px;text-align:center}.eqgrey small{display:block;font-size:18px}
+.eqsd{font-size:16px;color:var(--tx2);margin-top:6px}.eqq{font-size:26px;margin:6px 0}.eqnote{margin-top:14px}
+.eqw .res .rh{font-size:28px}
+@media (max-width:600px){.eqw{font-size:22px}.eqbtn{flex:1 1 130px;font-size:22px;padding:12px}.eqt{font-size:22px}.eqt b{font-size:27px}.eqq{font-size:23px}body.eqpg main{padding-left:8px;padding-right:8px}}
+@media (min-width:1024px){.eqw{font-size:25px}.eqbtn{font-size:25px;padding:16px 18px}.eqt{font-size:28px}.eqt b{font-size:34px}.eqh{font-size:27px}}
 </style>
 </head><body>
 <nav class="top" id="topnav"></nav>
 <main id="main"></main>
 <div class="foot" style="padding:14px 12px;text-align:center"><a href="index.html">← 回主選單</a></div>
-<script src="learn_data.js"></script><script src="reads_data.js"></script><script src="learn.js"></script><script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+<script src="learn_data.js"></script><script src="reads_data.js"></script><script src="eq_data.js"></script><script src="eq.js"></script><script src="learn.js"></script><script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body></html>
