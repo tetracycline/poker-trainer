@@ -67,7 +67,7 @@ var CSS='.kk{display:inline-block;min-width:1.25em;padding:0 .3em;margin:0 .35em
  '.kk.sib{margin:0 .3em 0 0;align-self:center}.kkh kbd:not(.kk){display:none!important}'+
  '#kkhint{font-size:15px;color:#9fb6a9;padding:4px 12px;border-bottom:1px solid #22382b;background:#0f1a14}#kkhint b{color:#dcefe3}'+
  '#kkhelp{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center}#kkhelp>div{background:#16261d;border:1px solid #3ecf7a;border-radius:16px;padding:18px 22px;max-width:640px;font-size:19px;line-height:1.7;color:#e8f1ea}#kkhelp h3{margin:0 0 6px;color:#3ecf7a}'+
- '@media (hover:none) and (pointer:coarse){.kk,#kkhint{display:none!important}.kkh kbd:not(.kk){display:inline-block!important}}';
+ '@media (hover:none) and (pointer:coarse),(max-width:700px){.kk,#kkhint{display:none!important}.kkh kbd:not(.kk){display:inline-block!important}}';
 var st=document.createElement('style');st.textContent=CSS;document.head.appendChild(st);
 var mo,pending=false,LAST=null;
 function render(){pending=false;if(mo)mo.disconnect();
