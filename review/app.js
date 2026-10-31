@@ -25,6 +25,9 @@ if (PAGE !== 'day') $('#topnav').style.display = 'none';
 if (PAGE === 'index') {
   const L = window.RVI || [];
   $('#app').innerHTML = `<div class="rvh">覆盤</div><p class="muted small">每場打完的檢討：結論、數據、三大弱點、最貴的手（測驗）、翻前錯題練習。最新的在最上面。</p>` +
+    (window.RVP ? `<a class="rvcard" href="postflop.html"><div class="row sp"><b>翻後覆盤・全部場次</b><span class="tag">${esc(window.RVP.hands)}</span></div>
+      <div class="small">${esc(window.RVP.line)}</div><div class="small muted">${(window.RVP.top || []).map(esc).join('<br>')}</div>
+      <div class="tags" style="margin-top:6px"><span class="tag rv">翻後錯題 ${window.RVP.n} 題</span></div></a>` : '') +
     (L.length ? L.map(r => `<a class="rvcard" href="${esc(r.date)}.html"><div class="row sp"><b>${esc(r.date)}</b><span class="tag">${r.hands} 手</span></div>
       <div style="margin:4px 0">${esc(r.title)}</div>
       <div class="small">結果 <b>${sg(r.net_bb)}bb（${sg(r.bb100)} bb/100）</b>${r.adj_bb100 != null ? `・運氣調整後 約 ${sg(r.adj_bb100)} bb/100` : ''}</div>
@@ -171,7 +174,7 @@ $('#app').innerHTML = `<div class="row sp"><div class="rvh">覆盤 ${esc(RV.date
     <div class="small muted" style="margin-top:6px">${esc(RV.stats_note)}</div></div>
   <div class="sec"><b>三大弱點與修正</b>${RV.leaks.map(l => `<div style="margin-top:10px"><b>${esc(l.t)}</b><div class="small">${esc(l.p)}</div><div class="note" style="margin-top:4px">修正：${esc(l.fix)}</div>
     <div class="tags" style="margin-top:6px">${l.go.map(([d, t]) => `<a class="chip sm" href="../index.html#${esc(d)}">練：${esc(t)} →</a>`).join('')}</div></div>`).join('')}</div>
-  <div class="sec"><b>翻後</b><ul>${RV.post_notes.map(x => `<li class="small">${x}</li>`).join('')}</ul></div>
+  <div class="sec"><b>翻後</b><ul>${RV.post_notes.map(x => `<li class="small">${x}</li>`).join('')}</ul><a class="chip sm" href="postflop.html">翻後 solver 覆盤＋錯題（全部場次）→</a></div>
   <div class="sec"><a class="btn" href="#quiz">去測驗（最貴的手 ${RV.costly.length} 題・翻前錯題 ${RV.drill.length} 題）→</a></div>
   <div class="sec" id="quizsec"><b>測驗</b><div class="small muted">先看到你當時的位置、手牌和動作，選完才揭曉你實戰怎麼打、solver／剝削答案和原因。翻前用跟翻前練習一樣的評分（最高頻率或 ≥25% 都算對）；錯題練習答錯會排回去再考。</div><div id="quiz"></div></div>`;
 render();
