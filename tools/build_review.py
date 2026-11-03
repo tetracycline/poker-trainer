@@ -129,14 +129,20 @@ def main():
     names = set(p for h in H for p in h['allpos'] if p != 'Hero')
     RV = dict(date=date, title=C['title'], session=C.get('session', ''), result=C['result'], conclusion=C['conclusion'], stats=C['stats'],
               stats_note=C.get('stats_note', ''), leaks=C['leaks'], post_notes=C.get('post_notes', []), costly=costly, drill=drill,
-              hands=S['hands'], pf_ver='v8', n_decisions=len(D), n_bad=len(drill), loss_total=round(sum(d['loss'] for d in D), 1))
+              hands=S['hands'], pf_ver='v8',
+              **{k: C[k] for k in ('positions', 'pos_notes', 'pre_tips', 'post_rules') if k in C}, n_decisions=len(D), n_bad=len(drill), loss_total=round(sum(d['loss'] for d in D), 1))
     blob = json.dumps(RV, ensure_ascii=False, separators=(',', ':'))
     leak = [n for n in names if n in blob]
     if leak: raise SystemExit(f'privacy check failed: {leak[:5]}')
     rd = os.path.join(A.repo, 'review'); os.makedirs(os.path.join(rd, 'data'), exist_ok=True)
     open(os.path.join(rd, 'data', f'{date}.js'), 'w', encoding='utf-8').write('window.RV=' + blob + ';\n')
     tpl = open(os.path.join(rd, 'day.tpl.html'), encoding='utf-8').read()
-    open(os.path.join(rd, f'{date}.html'), 'w', encoding='utf-8').write(tpl.replace('{{DATE}}', date).replace('{{TITLE}}', C['title']).replace('data/' + date + '.js?v=1', 'data/' + date + '.js?v=' + hashlib.md5(blob.encode()).hexdigest()[:8]))
+    short = C.get('short', '覆盤' + date[5:].replace('-', '/').lstrip('0'))
+    icons = [dict(src='../icon-192.png', sizes='192x192', type='image/png', purpose='any maskable'), dict(src='../icon-512.png', sizes='512x512', type='image/png', purpose='any maskable')]
+    json.dump(dict(name='撲克・' + C['title'], short_name=short, id=f'./{date}.html', start_url=f'./{date}.html', scope='./', display='standalone',
+                   background_color='#0f1a14', theme_color='#0f1a14', lang='zh-Hant', icons=icons),
+              open(os.path.join(rd, f'manifest-{date}.webmanifest'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    open(os.path.join(rd, f'{date}.html'), 'w', encoding='utf-8').write(tpl.replace('{{SHORT}}', short).replace('{{DATE}}', date).replace('{{TITLE}}', C['title']).replace('data/' + date + '.js?v=1', 'data/' + date + '.js?v=' + hashlib.md5(blob.encode()).hexdigest()[:8]))
     # index (newest first)
     ip = os.path.join(rd, 'data', 'index.js'); L = []
     if os.path.exists(ip):

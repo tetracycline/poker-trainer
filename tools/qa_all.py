@@ -128,7 +128,7 @@ def drills():
     D.append(dict(name='review:postflop', url='review/postflop.html#quiz', runs=[('', 100000)], finite=True))
     return D
 STATIC = ['index.html#home', 'index.html#prac', 'index.html#preflop', 'index.html#leaks', 'index.html#about', 'learn.html#ln?sheet', 'learn.html#rd?sheet',
-          'learn.html#eq', 'postflop/index.html#prac', 'postflop/index.html#charts', 'postflop/index.html#about', 'postflop/index.html#handx', 'postflop/index.html#handg', 'solver.html#tool', 'review/index.html', 'review/2026-10-31.html', 'review/postflop.html']
+          'learn.html#eq', 'postflop/index.html#prac', 'postflop/index.html#charts', 'postflop/index.html#about', 'postflop/index.html#handx', 'postflop/index.html#handg', 'solver.html#tool', 'review/index.html', 'review/2026-10-31.html', 'review/2026-11-02.html', 'review/postflop.html']
 
 POS = re.compile(r'UTG|HJ|CO|BTN|SB|BB')
 SIZE_OK = re.compile(r'\d|½|⅓|¼|⅔|¾|不分|全下|最小|all-?in', re.I)

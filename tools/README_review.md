@@ -36,3 +36,9 @@
 `review/data/hw_stats.js` sets `window.HWS` (hands, span, prev, and per-stat k/n/pct/Wilson lo–hi/prev).
 The leaks page (`app.js` renderLeaks) reads it; regenerate it after each review from the
 de-duplicated cumulative hand set (raw hands stay outside the repo; only counts are published).
+
+## 選填欄位（11/2 起）
+- `positions[[位置,手數,淨贏,bb/100,VPIP/PFR]]`、`pos_notes[]`：位置別表。
+- `pre_tips[{t,p,fix,go}]`、`post_rules[{t,p,fix,go}]`：「翻前還要改的事」「翻後先記住這幾條」卡片，格式同 `leaks`（`p` 用自己的手牌舉例，`fix` 是一條具體規則）。
+- `go` 的練習 id 可以是翻前練習 id（`3bet`），也可以是站內路徑（`learn.html#iso`、`postflop/index.html#prac`）。
+- `short`：加到主畫面時的名稱。每場會另外寫 `review/manifest-<日期>.webmanifest`，加到主畫面就直接開這場覆盤；覆盤列表本身是 `review/manifest.webmanifest`。

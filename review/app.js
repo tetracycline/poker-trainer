@@ -162,6 +162,10 @@ function dnext() { if (!CUR || !CUR.a) return; const k = S.q.shift();
   if (CUR.r === 'bad') S.q.splice(Math.min(3, S.q.length), 0, k);
   CUR = null; save(); render(); }
 
+// practice link: a bare id is a preflop drill (../index.html#id); a path like learn.html#iso is relative to the site root
+const goHref = d => /\.html/.test(d) ? '../' + esc(d) : '../index.html#' + esc(d);
+const tipsHTML = L => L.map(l => `<div style="margin-top:10px"><b>${esc(l.t)}</b><div class="small">${esc(l.p)}</div><div class="note" style="margin-top:4px">規則：${esc(l.fix)}</div>
+    ${(l.go || []).length ? `<div class="tags" style="margin-top:6px">${l.go.map(([d, t]) => `<a class="chip sm" href="${goHref(d)}">練：${esc(t)} →</a>`).join('')}</div>` : ''}</div>`).join('');
 const R = RV.result;
 $('#app').innerHTML = `<div class="row sp"><div class="rvh">覆盤 ${esc(RV.date)}</div><div class="seg ver" role="group" aria-label="版本"><button class="segb ${VER === 'exp' ? 'on' : ''}" data-ver="exp">穩健剝削</button><button class="segb ${VER === 'gto' ? 'on' : ''}" data-ver="gto">GTO</button></div></div>
   <div class="muted small">${esc(RV.title)}・${esc(RV.session)}</div>
@@ -174,7 +178,11 @@ $('#app').innerHTML = `<div class="row sp"><div class="rvh">覆盤 ${esc(RV.date
     ${RV.stats.map(r => `<tr><td>${esc(r[0])}</td><td class="${r[4] || ''}">${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td></tr>`).join('')}</table></div>
     <div class="small muted" style="margin-top:6px">${esc(RV.stats_note)}</div></div>
   <div class="sec"><b>三大弱點與修正</b>${RV.leaks.map(l => `<div style="margin-top:10px"><b>${esc(l.t)}</b><div class="small">${esc(l.p)}</div><div class="note" style="margin-top:4px">修正：${esc(l.fix)}</div>
-    <div class="tags" style="margin-top:6px">${l.go.map(([d, t]) => `<a class="chip sm" href="../index.html#${esc(d)}">練：${esc(t)} →</a>`).join('')}</div></div>`).join('')}</div>
+    <div class="tags" style="margin-top:6px">${l.go.map(([d, t]) => `<a class="chip sm" href="${goHref(d)}">練：${esc(t)} →</a>`).join('')}</div></div>`).join('')}</div>
+  ${RV.positions ? `<div class="sec"><b>位置別</b><div class="tw" style="overflow-x:auto"><table class="t st" style="margin-top:6px;white-space:nowrap"><tr><th>位置</th><th>手數</th><th>淨贏</th><th>bb/100</th><th>VPIP/PFR</th></tr>
+    ${RV.positions.map(r => `<tr>${r.map(x => `<td>${esc(x)}</td>`).join('')}</tr>`).join('')}</table></div>${(RV.pos_notes || []).length ? `<ul>${RV.pos_notes.map(x => `<li class="small">${esc(x)}</li>`).join('')}</ul>` : ''}</div>` : ''}
+  ${RV.pre_tips ? `<div class="sec"><b>翻前還要改的 ${RV.pre_tips.length} 件事</b>${tipsHTML(RV.pre_tips)}</div>` : ''}
+  ${RV.post_rules ? `<div class="sec"><b>翻後先記住這 ${RV.post_rules.length} 條</b>${tipsHTML(RV.post_rules)}</div>` : ''}
   <div class="sec"><b>翻後</b><ul>${RV.post_notes.map(x => `<li class="small">${x}</li>`).join('')}</ul><a class="chip sm" href="postflop.html">翻後 solver 覆盤＋錯題（全部場次）→</a></div>
   <div class="sec"><a class="btn" href="#quiz">去測驗（最貴的手 ${RV.costly.length} 題・翻前錯題 ${RV.drill.length} 題）→</a></div>
   <div class="sec" id="quizsec"><b>測驗</b><div class="small muted">先看到你當時的位置、手牌和動作，選完才揭曉你實戰怎麼打、solver／剝削答案和原因。翻前用跟翻前練習一樣的評分（最高頻率或 ≥25% 都算對）；錯題練習答錯會排回去再考。</div><div id="quiz"></div></div>`;
