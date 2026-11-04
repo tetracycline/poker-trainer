@@ -352,10 +352,10 @@ function renderLeaks() {
   ${row('翻牌 c-bet', hs('cbet'), '單挑約 55–65%', null)}
   ${row('面對 c-bet 棄牌', hs('fcb'), '面對 1/3 池約 39–44%', null)}
   ${row('VPIP / PFR', `${HR.vpip.pct}% / ${HR.pfr.pct}%`, '—', null)}</div></div>
-  <div class="sec"><b>1. BB 防守太少（最確定的漏洞）</b><p>你只防守 ${HR.bbdef.pct}%，連信賴區間上限 ${Math.round(HR.bbdef.hi)}% 都低於解算器（${bb}）。BB 已經投入 1bb，面對 BTN 2.5bb 只要補 1.5bb 去爭 4bb 的底池，大量同花牌、連張、帶 A 的牌都該跟。先把 BB 對 BTN、BB 對 SB 練到 90% 以上。</p>
-   <div class="row"><a class="btn" href="#bb-btn" data-go="bb-btn">BB 對 BTN</a><a class="btn" href="#bb-sb" data-go="bb-sb">BB 對 SB</a><a class="btn" href="#bb-co" data-go="bb-co">BB 對 CO</a></div></div>
+  <div class="sec"><b>1. BB 防守：單挑照表，不要超出表</b><p>你防守 ${HR.bbdef.pct}%（解算器：${bb}）。10/29 那時你防守太少；11/4 已經變成 BB VPIP 38%，太寬。NL2 池數據（GG NL2 6-max，2024-10 至 2025-05）：BB 跟 UTG 開池每手 −1.19bb（n=36,487）、跟 HJ −1.02bb（n=48,238），跟棄牌（−1bb）差不多；跟 BTN −0.73bb（n=86,692）比棄牌好。單挑照表，多人池的邊緣牌傾向棄。詳見 <a href="nl2.html#card">NL2 規則卡</a>。</p>
+   <div class="row"><a class="btn" href="#bb-utg" data-go="bb-utg">BB 對 UTG</a><a class="btn" href="#bb-btn" data-go="bb-btn">BB 對 BTN</a><a class="btn" href="#bb-sb" data-go="bb-sb">BB 對 SB</a></div></div>
   <div class="sec"><b>2. 偷盲太少</b><p>你從 CO–SB 只開 ${HR.steal.pct}%（SB ${HR.ssb.pct}%）；解算器：${steal}。${v === 'exp' ? 'NL2 池的盲注棄牌太多，所以穩健剝削版的 BTN、SB 開得比 GTO 寬；但比純剝削解收斂，只留各種情境都賺的牌（CO 以前反而比 GTO 略緊）。' : ''}</p><div class="row"><a class="btn" href="#btn" data-go="btn">BTN 開池</a><a class="btn" href="#rfi-sb" data-go="rfi-sb">SB 開池</a><a class="btn" href="#rfi-co" data-go="rfi-co">CO 開池</a></div></div>
-  <div class="sec"><b>3. SB 面對開池棄牌太多、3-bet 太少</b><p>你在 SB 棄牌 ${HR.sbfold.pct}%；解算器 vs BTN 棄牌 ${f1(F('BTNopen>SB', v, 'fold'))}%，3-bet ${f1(F('BTNopen>SB', v, '3bet'))}%、平跟 ${f1(F('BTNopen>SB', v, 'call'))}%。</p><div class="row"><a class="btn" href="#sb" data-go="sb">SB 面對開池</a><a class="btn" href="#3bet" data-go="3bet">有位置面對開池</a></div></div>
+  <div class="sec"><b>3. SB 面對開池：只 3-bet 或棄</b><p>你在 SB 棄牌 ${HR.sbfold.pct}%；解算器 vs BTN 棄牌 ${f1(F('BTNopen>SB', v, 'fold'))}%，3-bet ${f1(F('BTNopen>SB', v, '3bet'))}%、平跟 ${f1(F('BTNopen>SB', v, 'call'))}%。NL2 池 SB 平跟每手 −0.95bb（n=167,077），連贏家平跟都是 −0.20bb（n=9,321）；3-bet +1.35bb。表上的平跟頻率不高，表外的牌不要跟。</p><div class="row"><a class="btn" href="#sb" data-go="sb">SB 面對開池</a><a class="btn" href="#3bet" data-go="3bet">有位置面對開池</a></div></div>
   <div class="sec"><b>4. 面對 3-bet</b><p>你棄牌 ${HR.f3b.pct}%（${HR.f3b.k}/${HR.f3b.n}），而且幾乎從不 4-bet：JJ、KK、AK 被 3-bet 都只跟。QQ+ 一律 4-bet。${v === 'exp' ? `NL2 池的 BB 對 BTN 3-bet 比 GTO 少（${f1(PF.pool['BTNopen>BB'].t['3bet'])}% vs GTO ${f1(F('BTNopen>BB', 'gto', '3bet'))}%），而且池子面對 4-bet 只棄 ${f1(PF.pool['BTNopen>BB3b>4b'].t.fold)}%（GTO 約 ${f1(F('BTNopen>BB3b>4b', 'gto', 'fold'))}%），4-bet 詐唬不划算。所以剝削版 BTN 面對 BB 3-bet 棄 ${f1(F('BTNopen>BB3b', 'exp', 'fold'))}%（GTO ${f1(F('BTNopen>BB3b', 'gto', 'fold'))}%）、4-bet ${f1(F('BTNopen>BB3b', 'exp', '4bet'))}%（GTO ${f1(F('BTNopen>BB3b', 'gto', '4bet'))}%）：A5s–A3s、KQ 這類原本 4-bet 詐唬的牌改跟注，JJ、TT 改 4-bet 拿價值。對 3-bet 稍微多棄一點，但不是大幅多棄。` : `GTO 下 BTN 面對 BB 3-bet 棄牌 ${f1(F('BTNopen>BB3b', 'gto', 'fold'))}%。`}</p><div class="row"><a class="btn" href="#vs3b" data-go="vs3b">開池後面對 3-bet</a></div></div>
   <div class="sec"><b>剝削版和 GTO 差最多的地方</b><table class="t"><tr><th>情況</th><th>GTO</th><th>剝削</th></tr>${shifts.map(([n, a, t]) => `<tr><td>${t}</td><td>${f1(F(n, 'gto', a))}%</td><td>${f1(F(n, 'exp', a))}%</td></tr>`).join('')}</table>
    <p class="muted small">模型收益（bb/100，對 NL2 池）：${Object.keys(PF.heroes).map(s => `${s} +${f1(PF.heroes[s].gain)}`).join('、')}。</p></div>
@@ -388,7 +388,7 @@ function renderHome() {
   const H = [['index.html#prac', '翻前', '開池・防守・3-bet 練習＋範圍表'], ['postflop/index.html#prac', '翻後', '翻牌到河牌練習・河牌解算器'],
     ['learn.html#tb', '剝削', '對 NL2 池怎麼打：3-bet・Iso・行動線・讀牌'], ['learn.html#eq', '對手範圍', '他走這條線，你的牌還有多少勝率'], ['review/index.html', '覆盤', '每天的實戰手牌檢討']];
   $('#main').innerHTML = `<div class="home">${H.map(([h, t, d]) => `<a class="hb" href="${h}"><b>${t}</b><span>${d}</span></a>`).join('')}
-  <div class="hm">更多：<a href="#leaks">我的弱點</a>・<a href="#real">我的實戰手牌</a>・<a href="solver.html#tool">自己解河牌</a>・<a href="#about">說明</a></div></div>`;
+  <div class="hm">更多：<a href="nl2.html#card">NL2 規則卡</a>・<a href="#leaks">我的弱點</a>・<a href="#real">我的實戰手牌</a>・<a href="solver.html#tool">自己解河牌</a>・<a href="#about">說明</a></div></div>`;
 }
 // ---------- routing ----------
 const ALIAS = {size: 'open', value: 'solver', nodes: 'mix', quiz: 'mix', course: 'leaks', chak: 'about', pool: 'about', plan: 'about', river: 'solver', charts: 'preflop', prac: null};

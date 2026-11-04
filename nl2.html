@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1a14"><meta name="color-scheme" content="dark"><meta name="robots" content="noindex">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>撲克・NL2 規則卡</title>
+<style>
+body{margin:0;background:#0f1a14;color:#e8f1ea;font:17px/1.55 -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+a{color:#7fe0a6}
+nav.top{display:flex;gap:8px;padding:8px 10px;flex-wrap:wrap}
+.topb{padding:6px 14px;border-radius:9px;background:#16261d;border:1px solid #2c4637;color:#e8f1ea!important;text-decoration:none;font-weight:700}
+.topb.on{background:#3ecf7a;color:#06281a!important;border-color:#3ecf7a}
+main{padding:0 10px 30px}
+.sec{background:#132219;border:1px solid #2c4637;border-radius:12px;padding:10px 14px;margin:10px 0}
+.sec b.h{font-size:19px}
+.muted{color:#9fb7a8}.small{font-size:15px}
+.ev{display:inline-block;font-size:13px;padding:1px 8px;border-radius:8px;background:#22382b;color:#bfe;margin-left:6px}
+.lab{color:#3ecf7a;font-weight:700}
+ul{margin:4px 0 4px 20px;padding:0}
+.btn{display:inline-block;margin:4px 6px 0 0;padding:6px 12px;border-radius:9px;background:#1d3326;border:1px solid #2c4637;color:#e8f1ea!important;text-decoration:none}
+.qs{font-size:18px}
+.line{font-size:16px;margin:2px 0}
+.cards{margin:6px 0}.cd{display:inline-block;width:40px;height:54px;line-height:54px;text-align:center;border-radius:7px;background:#f4f4f0;color:#111;font-weight:800;font-size:21px;margin-right:4px}
+.cd.r{color:#c4142a}.cd.d{color:#1d5fd6}.cd.c{color:#1a8a3a}
+.abar{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.ab{font-size:18px;padding:10px 18px;border-radius:10px;border:1px solid #2c4637;background:#1d3326;color:#e8f1ea;cursor:pointer}
+.ab.pick{outline:3px solid #ffd34d}.ab.good{background:#1f6b3d}
+.nx{font-size:18px;padding:10px 18px;border-radius:10px;border:0;background:#3ecf7a;color:#06281a;font-weight:800;cursor:pointer}
+.res{font-size:19px;font-weight:800;margin:0 0 4px}.res.ok{color:#5be08f}.res.no{color:#ff8a8a}
+table.rt{border-collapse:collapse;margin:6px 0;font-size:15px}
+table.rt td,table.rt th{border:1px solid #2c4637;padding:3px 8px;text-align:center}
+td.c{background:#1f6b3d}td.f{background:#5a2323}td.b{background:#5a4a1d}td.me{outline:3px solid #ffd34d;outline-offset:-3px;font-weight:800}
+.grid{display:grid;grid-template-columns:repeat(13,20px);gap:1px;margin:4px 0}
+.grid i{font-style:normal;font-size:9px;line-height:20px;height:20px;text-align:center;background:#1a2a20;color:#7d9486}
+.grid i.in{background:#2f7a4c;color:#e8f1ea}.grid i.me{outline:2px solid #ffd34d;color:#fff;font-weight:800}
+@media (max-width:600px){.qs{font-size:18px}.grid{grid-template-columns:repeat(13,22px)}}
+</style>
+</head><body>
+<script src="nav.js" data-sec="exp"></script>
+<nav class="top" id="topnav"><a class="topb" href="#card" data-t="card">NL2 規則卡</a><a class="topb" href="#river" data-t="river">河牌一對：跟或棄</a></nav>
+<main><div class="pg" id="app"></div></main>
+<script src="hwrange.js?v=nl2"></script>
+<script src="nl2_rules.js?v=nl2-1105"></script>
+<script src="nl2.js?v=nl2-1105"></script>
+</body></html>

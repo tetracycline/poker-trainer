@@ -122,13 +122,14 @@ def drills():
     D.append(dict(name='tb', url='learn.html#tb', runs=[(f"LQ.st.tb='{k}';LQ.st.q=null;LQ.draw()", A.n // len(tb) + 1) for k in tb]))
     D.append(dict(name='iso', url='learn.html#iso', runs=[(f"LQ.st.iso='{k}';LQ.st.q=null;LQ.draw()", A.n // len(iso) + 1) for k in iso]))
     D.append(dict(name='eq', url='learn.html#eq', runs=[("(document.querySelector('[data-md=quiz],[data-mode=quiz]')||{click(){}}).click()", A.n)], settle=30))
+    D.append(dict(name='nl2:river', url='nl2.html#river', runs=[('', A.n)]))
     D.append(dict(name='solver:riv', url='solver.html#riv', runs=[('', A.n)]))
     for f in sorted(os.listdir(os.path.join(ROOT, 'review'))):
         if re.match(r'\d{4}-\d\d-\d\d\.html$', f): D.append(dict(name='review:' + f[:-5], url=f'review/{f}#quiz', runs=[('', 100000)], finite=True))
     D.append(dict(name='review:postflop', url='review/postflop.html#quiz', runs=[('', 100000)], finite=True))
     return D
 STATIC = ['index.html#home', 'index.html#prac', 'index.html#preflop', 'index.html#leaks', 'index.html#about', 'learn.html#ln?sheet', 'learn.html#rd?sheet',
-          'learn.html#eq', 'postflop/index.html#prac', 'postflop/index.html#charts', 'postflop/index.html#about', 'postflop/index.html#handx', 'postflop/index.html#handg', 'solver.html#tool', 'review/index.html', 'review/2026-10-31.html', 'review/2026-11-02.html', 'review/postflop.html']
+          'learn.html#eq', 'postflop/index.html#prac', 'postflop/index.html#charts', 'postflop/index.html#about', 'postflop/index.html#handx', 'postflop/index.html#handg', 'solver.html#tool', 'review/index.html', 'review/2026-10-31.html', 'review/2026-11-02.html', 'review/postflop.html', 'nl2.html#card', 'review/2026-11-04.html']
 
 POS = re.compile(r'UTG|HJ|CO|BTN|SB|BB')
 SIZE_OK = re.compile(r'\d|½|⅓|¼|⅔|¾|不分|全下|最小|all-?in', re.I)
