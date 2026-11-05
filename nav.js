@@ -2,7 +2,7 @@
 (function(){
 var s=document.currentScript,base=s.src.replace(/nav\.js(\?.*)?$/,''),sec=s.getAttribute('data-sec')||'';
 if(window.self!==window.top)return; // 被嵌入時不顯示
-var S=[['home','⌂ 首頁','index.html#home'],['pre','翻前','index.html#prac'],['post','翻後','postflop/index.html#prac'],['exp','剝削','learn.html#tb'],['eq','對手範圍','learn.html#eq'],['rv','覆盤','review/index.html']];
+var S=[['home','⌂ 首頁','index.html#home'],['pre','翻前','index.html#prac'],['post','翻後','postflop/index.html#prac'],['exp','剝削','learn.html#tb'],['nl2','NL2 規則','nl2.html#card'],['eq','對手範圍','learn.html#eq'],['rv','覆盤','review/index.html']];
 var css=document.createElement('style');css.id='gnav-css';
 css.textContent=
 '.gnav{display:flex;gap:8px;padding:10px 10px 8px;padding-top:calc(10px + env(safe-area-inset-top));background:#0b140f;border-bottom:1px solid #2c4637}'+
