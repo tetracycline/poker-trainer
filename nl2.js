@@ -24,7 +24,7 @@ function autoData(a) { // 規則卡的數字直接從對照表讀，不另存一
 // ---------- 行動線對照表（資料：lines_data.js，表和練習用同一份）----------
 const HS = {S: '兩對+', TPG: '頂對好', TPW: '頂對弱', MID: '中小對', DRAW: '強聽', WDRAW: '弱聽', AIR: '空氣'};
 const HCO = ['S', 'TPG', 'TPW', 'MID', 'DRAW', 'WDRAW', 'AIR'];
-const BS = {pool: '池', gto: 'GTO', read: '讀', rule: '則'};
+const BS = {pool: '池', gto: 'GTO'};
 const stOf = nd => /(^|_)f_/.test(nd) ? 0 : /(^|_)t_/.test(nd) ? 1 : 2;
 const isVs = nd => /_vs_|_over/.test(nd);
 const CHO = nd => /r_vs_xr/.test(nd) ? ['f', 'c'] : isVs(nd) ? ['f', 'c', 'r'] : ['x', 'small', 'big'];
@@ -60,8 +60,9 @@ function lines() {
   const al = L.al[sp] || {}, aln = L.aln[sp];
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
     return `${esc(L.nd[nd] || nd)} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(L.nd[n2] || n2)}」`; });
-  app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（直接對到 ${pc(cv.direct, cv.tot)}，其餘照相近的點）。` : ''}</p>
-  <p class="small">怎麼看：一格＝你的動作。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據、GTO＝解算器（池已對照、差不多）、讀＝池攤牌組成（有偏差）、則＝原則（沒有數據）。翻牌「下 33% / 75%」，轉牌、河牌「下 ½ 池 / 1 池」。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
+  <p class="small">怎麼看：一格＝你的動作。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。未有足夠證據的格子留白，不跨位置套用。翻牌「下 33% / 75%」，轉牌、河牌「下 ½ 池 / 1 池」。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>
   <div class="sec"><b class="h">${esc(S.t)}</b><span class="ev">${esc(S.sub)}</span>${cv && cv.by[sp] ? `<span class="ev">你 ${cv.by[sp][0]}/${cv.by[sp][1]} 個決定在表上</span>` : ''}</div>` +

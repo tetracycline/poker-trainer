@@ -1,11 +1,9 @@
-import re
 #!/usr/bin/env python3
-"""產生 lines_data.js（NL2 行動線對照表＋練習題的唯一資料來源）。  python3 tools/build_lines.py
-來源：
-  learn_data.js 的 LD.rules（行動線題：解算器＋玩家池）→ 直接沿用答案，不重算
-  reads_data.js 的 LD.reads（讀牌：玩家池攤牌組成＋勝率模型）→ 補 donk、隔離底池、3-bet 底池超池
-  /workspace/outputs/poker/lines1105/*.json（玩家池 GG NL2 6-max 原始手牌重算：河牌跟注後攤牌勝率、棄牌率、多人底池）
-每一列都有 b（依據）：pool＝玩家池數據、gto＝解算器（池已對照）、read＝池攤牌組成（有偏差）、rule＝原則（沒有數據）。"""
+"""Build the shared NL2 table/drills using only local solver GTO and supported pool evidence.
+The v2 evidence gate reads /workspace/outputs/poker_lines_v2/results/solved.json,
+rejects unsupported/insignificant recommendations, and records every old row disposition.
+Reproduce: python3 /workspace/outputs/poker_lines_v2/solve_rules.py; python3 tools/build_lines.py.
+"""
 import json, math, os, re, subprocess, random
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ST = '/workspace/outputs/poker/lines1105'
@@ -350,27 +348,29 @@ def cond_lab(c):
     if c.get('n'): p.append(c['n'] + ' 人')
     if c.get('by'): p.append('開池者下注' if c['by'] == 'PFR' else '其他人先下注')
     return '・'.join(p)
-AL = {  # 沒有自己數據的節點：照另一個點的同名節點（表上只寫一行說明，不複製）
- 'opfr': {k: 'ipfr' for k in ('f_vs_donk', 'f_vs_xr', 't_barrel', 't_delay', 't_vs_probe', 't_vs_xr', 'r_barrel', 'r_stab')},
- 'iso': {k: 'ipfr' for k in ('t_barrel', 't_delay', 't_vs_probe', 't_vs_xr', 'r_barrel', 'r_stab', 'r_vs_xr')},
- 'ipc': {'f_vs_cbet': 'bb', 't_vs_barrel': 'bb', 't_delay': 'ipfr', 'r_stab': 'ipfr', 'r_vs_xr': 'ipfr'},
- '3bp': {'3c_f_stab': 'ipc:f_stab', '3c_r_stab': 'ipfr:r_stab'},
-}
-ALN = {'opfr': '沒位置時邊緣牌多過牌', 'iso': '隔離底池對手範圍更弱，可以多開一槍', 'ipc': '有位置可以略寬', '3bp': '3-bet 底池 SPR 低，有牌更常下注'}
+# Evidence gate runs after example normalization, before assigning new IDs.
+import sys
+sys.path.insert(0, '/workspace/outputs/poker_lines_v2')
+from evidence_policy import apply
+ROWS[:] = apply(ROWS, LD)
+AL = {}; ALN = {}  # Cross-spot advice had no shared evidence; aliases removed.
 for i, r in enumerate(ROWS): r['id'] = f"{r['sp']}.{r['nd']}.{i}"; r['cl'] = cond_lab(r.get('c'))
 COV = None
-_hm = f'{ST}/hw_match.json'
-if os.path.exists(_hm):  # 你的翻後決策有多少落在表上（tools 外的分析：hw_match.py 讀 rows.json）
-    _d = json.load(open(_hm)); _dir = sum(v for k, v in _d['basis'].items() if not k.startswith('alias'))
-    COV = dict(tot=_d['tot'], cov=_d['cov'], direct=_dir, by=_d['by'])
-    for r in ROWS:
-        if _d['rowhits'].get(r['id']): r['hw'] = _d['rowhits'][r['id']]
+# Coverage and row hits are recomputed below against the final rows.
 out = dict(ver='lines-1105', built='2026-11-05',
   scope='玩家池：GG NL2（$0.01/$0.02）6-max，2024-10 至 2025-05，724 檔原始手牌；單挑 50.5 萬手、多人底池 57.1 萬手到翻牌，有效籌碼 ≥40bb。你：10/28–11/4 共 6,717 手。',
   bias='棄牌率是所有手牌的頻率，沒有偏差。河牌「跟注後勝率」：河牌跟注一定攤牌，所以偏差最小。翻牌、轉牌的「攤牌組成」只算有攤牌的手，偏向中了牌的手，只當參考。',
-  basis={'pool': '玩家池數據', 'gto': '解算器（池已對照、差異不大）', 'read': '池攤牌組成（有偏差）', 'rule': '原則（沒有數據）'},
+  basis={'pool': '玩家池數據（n≥40；勝率檢定／原表攤牌組成與偏差見每列）', 'gto': '本機解算器（範圍、代表牌面與樹設定見每列；不跨位置套用）'},
   hc=HC, tx=TX, al=AL, aln=ALN, spots=[dict(id=a, t=b, sub=c) for a, b, c in SPN], nd=NDN, rows=ROWS, cov=COV)
+from polish_text import polish
+out['notes'] = polish(ROWS)
+# Recompute HW matches against final IDs; source lines1105 stays read-only.
+json.dump(out, open('/workspace/outputs/poker_lines_v2/results/rows.json', 'w'), ensure_ascii=False)
+subprocess.run([sys.executable, '/workspace/outputs/poker_lines_v2/review_hw_match.py'], check=True)
+COV = json.load(open('/workspace/outputs/poker_lines_v2/results/hw_match.json'))
+out['cov'] = COV
+for r in ROWS: r['hw'] = COV['rowhits'].get(r['id'], 0)
 open(os.path.join(ROOT, 'lines_data.js'), 'w').write('// 自動產生：python3 tools/build_lines.py（不要手改）\nwindow.NLL=' + json.dumps(out, ensure_ascii=False, separators=(',', ':')) + ';\n')
-json.dump(out, open(f'{ST}/rows.json', 'w'), ensure_ascii=False)
+json.dump(out, open('/workspace/outputs/poker_lines_v2/results/rows.json', 'w'), ensure_ascii=False)
 from collections import Counter
 print('rows', len(ROWS), Counter(r['sp'] for r in ROWS), Counter(r['b'] for r in ROWS), 'no-eg', sum(1 for r in ROWS if not r['eg']))

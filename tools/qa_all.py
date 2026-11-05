@@ -17,6 +17,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument('-n', type=int, default=500); ap.add_argument('--only', default='')
 ap.add_argument('--shots', type=int, default=0); ap.add_argument('--shotdir', default='/tmp/qa_shots')
 ap.add_argument('--json', default='/tmp/qa_all.json')
+ap.add_argument('--data-only', action='store_true', help='Run data checks; explicitly skip all browser/layout/keyboard checks')
 A = ap.parse_args()
 
 def js_obj(path, var):
@@ -81,16 +82,27 @@ def check_lines():
     """行動線對照表（lines_data.js）：跟 LD 一致、每列有根據、例子合法且在 HW 範圍、規則卡不再有第二份河牌數據"""
     out = subprocess.run(['node', '-e', "global.window=global;eval(require('fs').readFileSync('lines_data.js','utf8'));eval(require('fs').readFileSync('nl2_rules.js','utf8'));process.stdout.write(JSON.stringify({L:window.NLL,R:window.NL2}))"], capture_output=True, text=True, cwd=ROOT)
     D = json.loads(out.stdout); NLL, NL2 = D['L'], D['R']
+    if set(NLL['basis']) != {'gto', 'pool'}: fail('3 統計範圍', 'lines', 'basis must have exactly gto/pool')
+    for filename in ('lines_data.js', 'nl2.js', 'nl2_rules.js'):
+        if '原則' in open(os.path.join(ROOT, filename)).read(): fail('3 統計範圍', 'lines', filename + ' contains unsupported evidence label')
     ldr = {r['id']: r for r in LD['rules']}
     seen = collections.defaultdict(list)
     for r in NLL['rows']:
         d = 'lines:' + r['id']
-        if r['b'] not in ('pool', 'gto', 'read', 'rule'): fail('3 統計範圍', 'lines', f"{d} 沒有根據")
-        if r['b'] == 'pool' and not (re.search(r'n=[\d,]+', r['ev']) and POS.search(r['ev']) and re.search('顯著|不明顯', r['ev'])): fail('3 統計範圍', 'lines', f"{d} 池數據沒 n/位置/顯著性：{r['ev'][:60]}")
+        if r['b'] not in ('pool', 'gto'): fail('3 統計範圍', 'lines', f"{d} 沒有根據")
+        composition = (r['sp']=='mw' and r['nd'] in ('f_vs_bet','t_vs_bet') and r['hc']==['S'] and r.get('evidence','').startswith('mw-composition:') and '勝率檢定只比較跟/棄，加注依原表的池攤牌組成' in r['ev'] and ((r['a']=='r' and r['ok']==['c']) or (r['a']=='c' and r['ok']==['r'])))
+        if r.get('evidence','').startswith('mw-composition:') and not composition: fail('3 統計範圍','lines',d+' invalid original composition evidence')
+        if r['b'] == 'pool' and not (re.search(r'n=[\d,]+', r['ev']) and POS.search(r['ev']) and (composition or re.search('顯著|不明顯', r['ev']))): fail('3 統計範圍', 'lines', f"{d} 池數據沒 n/位置/顯著性：{r['ev'][:60]}")
         if r.get('src', '').startswith('ld:'):
             L0 = ldr.get(r['src'][3:])
             if not L0: fail('6 剝削規則', 'lines', f"{d} 對不到 LD {r['src']}")
-            elif L0['ans'] != r['a']: fail('6 剝削規則', 'lines', f"{d} 跟行動線題不一致：表 {r['a']} vs LD {L0['ans']}")
+            elif L0['ans'] != r['a'] and not r.get('evidence', '').startswith('legacy:'): fail('6 剝削規則', 'lines', f"{d} 跟行動線題不一致：表 {r['a']} vs LD {L0['ans']}")
+        if r.get('evidence', '').startswith('legacy:'):
+            gf = ldr[r['src'][3:]].get('gf', {})
+            if not gf or r['a'] != max(gf, key=gf.get): fail('6 剝削規則', 'lines', d + ' is not solver majority')
+        if r['b'] == 'pool':
+            ns = [int(n.replace(',', '')) for n in re.findall(r'n=([\d,]+)', r['ev'])]
+            if not ns or min(ns) < 40 or (not composition and ('不明顯' in r['ev'] or '不顯著' in r['ev'])): fail('3 統計範圍', 'lines', d + ' lacks significant n>=40 support')
         if r['a'] in r['ok']: fail('6 剝削規則', 'lines', f"{d} 答案也在 ok 裡")
         if not r.get('x'):
             for h in r['hc']: seen[(r['sp'], r['nd'], r.get('cl'), h)].append(r['id'])
@@ -308,7 +320,8 @@ async def run():
     return shots
 
 check_data(); check_lines()
-shots = asyncio.run(run())
+shots = [] if A.data_only else asyncio.run(run())
+if A.data_only: print('DATA ONLY: browser drills, layout and keyboard checks SKIPPED')
 tot = 0; rep = {}
 print('\n==== 結果 ====')
 for cat in CATS:
@@ -318,5 +331,5 @@ for cat in CATS:
         print(f"   {dname}: {len(v)}  例：{' ｜ '.join(sorted(set(v))[:3])}")
     rep[cat] = {k: v[:50] for k, v in items.items()}
 print(f"題數：{sum(v for k, v in COUNT.items() if not k.startswith('static'))}（{len([k for k in COUNT if not k.startswith('static')])} 個練習）；失敗合計 {tot}")
-json.dump(dict(fail=rep, count=COUNT, shots=shots[:A.shots] if A.shots else []), open(A.json, 'w'), ensure_ascii=False, indent=1)
+json.dump(dict(browser_skipped=A.data_only, fail=rep, count=COUNT, shots=shots[:A.shots] if A.shots else []), open(A.json, 'w'), ensure_ascii=False, indent=1)
 sys.exit(1 if tot else 0)
