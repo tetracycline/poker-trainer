@@ -96,7 +96,7 @@ function spotTxt(g,sp){const [a,b]=sp.split('_');if(g==='SRP_IP')return `你 ${a
 function drawLN(){const rs=D.rules.filter(r=>r.group===st.grp);const cats=[...new Set(rs.map(r=>r.cat))];if(st.cat!=='all'&&!cats.includes(st.cat))st.cat='all';
  if(st.mode==='sheet'&&st.cat==='all')st.cat=cats[0];
  let h=`<div class="pg"><div class="dg">${chips(G,st.grp,'g')}</div>
- <div class="row ctl"><span class="seg"><button class="segb${st.mode==='drill'?' on':''}" data-m="drill">練習</button><button class="segb${st.mode==='sheet'?' on':''}" data-m="sheet">速查</button></span></div>
+ <div class="row ctl"><span class="seg"><button class="segb${st.mode==='drill'?' on':''}" data-m="drill">練習</button><button class="segb${st.mode==='sheet'?' on':''}" data-m="sheet">速查</button></span>${st.mode==='sheet'?' <a href="nl2.html#lines" style="margin-left:8px">NL2 行動線對照表（全部點、依尺寸）→</a>':''}</div>
  ${st.mode==='sheet'?`<div class="dg">${chips(cats.map(c=>[c,CAT[c]||c]),st.cat,'c')}</div>`:''}`;
  h+=st.mode==='drill'?lnDrill(rs):lnSheet(rs);$('#main').innerHTML=h+`</div>`;
  bind('g',g=>{st.grp=g;st.cat='all'});bind('c',c=>st.cat=c);bind('m',m=>{st.mode=m;st.cat='all'});bind('x',x=>st.tx=x);bindDrill()}

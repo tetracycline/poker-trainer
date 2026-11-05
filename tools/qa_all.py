@@ -77,6 +77,32 @@ def check_data():
             c = cards(h); bb = cards(b)
             if len(c) != 2 or len(set(c + bb)) != len(c + bb) or len(bb) not in (3, 4, 5): fail('7 牌', 'ln', f"ln {r['id']} 例子牌不合法 {h} {b}")
 
+def check_lines():
+    """行動線對照表（lines_data.js）：跟 LD 一致、每列有根據、例子合法且在 HW 範圍、規則卡不再有第二份河牌數據"""
+    out = subprocess.run(['node', '-e', "global.window=global;eval(require('fs').readFileSync('lines_data.js','utf8'));eval(require('fs').readFileSync('nl2_rules.js','utf8'));process.stdout.write(JSON.stringify({L:window.NLL,R:window.NL2}))"], capture_output=True, text=True, cwd=ROOT)
+    D = json.loads(out.stdout); NLL, NL2 = D['L'], D['R']
+    ldr = {r['id']: r for r in LD['rules']}
+    seen = collections.defaultdict(list)
+    for r in NLL['rows']:
+        d = 'lines:' + r['id']
+        if r['b'] not in ('pool', 'gto', 'read', 'rule'): fail('3 統計範圍', 'lines', f"{d} 沒有根據")
+        if r['b'] == 'pool' and not (re.search(r'n=[\d,]+', r['ev']) and POS.search(r['ev']) and re.search('顯著|不明顯', r['ev'])): fail('3 統計範圍', 'lines', f"{d} 池數據沒 n/位置/顯著性：{r['ev'][:60]}")
+        if r.get('src', '').startswith('ld:'):
+            L0 = ldr.get(r['src'][3:])
+            if not L0: fail('6 剝削規則', 'lines', f"{d} 對不到 LD {r['src']}")
+            elif L0['ans'] != r['a']: fail('6 剝削規則', 'lines', f"{d} 跟行動線題不一致：表 {r['a']} vs LD {L0['ans']}")
+        if r['a'] in r['ok']: fail('6 剝削規則', 'lines', f"{d} 答案也在 ok 裡")
+        if not r.get('x'):
+            for h in r['hc']: seen[(r['sp'], r['nd'], r.get('cl'), h)].append(r['id'])
+        for e in r['eg']:
+            c = cards(e['h']); bb = cards(e['b'])
+            if len(c) != 2 or len(set(c + bb)) != len(c + bb) or len(bb) not in (3, 4, 5): fail('7 牌', 'lines', f"{d} 例子牌不合法 {e['h']} {e['b']}")
+            k, key = e['role']
+            if k in ('open', 'call', 'tb', 'c3', 'iso') and not hw_ok(k, key, cls(e['h'])): fail('1 範圍', 'lines', f"{d} 例子 {cls(e['h'])} 不在 HW {k} {key}")
+    for k, v in seen.items():
+        if len(v) > 1: fail('6 剝削規則', 'lines', f"同一格兩個答案 {k}: {v}")
+    if 'river' in NL2: fail('6 剝削規則', 'lines', 'nl2_rules.js 還有第二份河牌數據（NL2.river）')
+
 # ---------------- browser harness ----------------
 HARN = r"""
 window.__QA = async function(n, ansSel, nextSel, settle){
@@ -123,13 +149,14 @@ def drills():
     D.append(dict(name='iso', url='learn.html#iso', runs=[(f"LQ.st.iso='{k}';LQ.st.q=null;LQ.draw()", A.n // len(iso) + 1) for k in iso]))
     D.append(dict(name='eq', url='learn.html#eq', runs=[("(document.querySelector('[data-md=quiz],[data-mode=quiz]')||{click(){}}).click()", A.n)], settle=30))
     D.append(dict(name='nl2:river', url='nl2.html#river', runs=[('', A.n)]))
+    D.append(dict(name='nl2:drill', url='nl2.html#drill', runs=[(f"document.querySelector('[data-f=\"{k}\"]').click()", A.n // 8 + 1) for k in ('all', 'ipfr', 'bb', 'opfr', 'ipc', '3bp', 'iso', 'mw')]))
     D.append(dict(name='solver:riv', url='solver.html#riv', runs=[('', A.n)]))
     for f in sorted(os.listdir(os.path.join(ROOT, 'review'))):
         if re.match(r'\d{4}-\d\d-\d\d\.html$', f): D.append(dict(name='review:' + f[:-5], url=f'review/{f}#quiz', runs=[('', 100000)], finite=True))
     D.append(dict(name='review:postflop', url='review/postflop.html#quiz', runs=[('', 100000)], finite=True))
     return D
 STATIC = ['index.html#home', 'index.html#prac', 'index.html#preflop', 'index.html#leaks', 'index.html#about', 'learn.html#ln?sheet', 'learn.html#rd?sheet',
-          'learn.html#eq', 'postflop/index.html#prac', 'postflop/index.html#charts', 'postflop/index.html#about', 'postflop/index.html#handx', 'postflop/index.html#handg', 'solver.html#tool', 'review/index.html', 'review/2026-10-31.html', 'review/2026-11-02.html', 'review/postflop.html', 'nl2.html#card', 'review/2026-11-04.html']
+          'learn.html#eq', 'postflop/index.html#prac', 'postflop/index.html#charts', 'postflop/index.html#about', 'postflop/index.html#handx', 'postflop/index.html#handg', 'solver.html#tool', 'review/index.html', 'review/2026-10-31.html', 'review/2026-11-02.html', 'review/postflop.html', 'nl2.html#card', 'nl2.html#lines', 'review/2026-11-04.html']
 
 POS = re.compile(r'UTG|HJ|CO|BTN|SB|BB')
 SIZE_OK = re.compile(r'\d|½|⅓|¼|⅔|¾|不分|全下|最小|all-?in', re.I)
@@ -178,7 +205,7 @@ def check_q(d, it):
         if dr == 'rd': need = ['翻前'] + ['翻牌', '轉牌', '河牌'][:q.get('street') or 1]
         for s in need:
             if s not in rows: fail('2 行動線', nm, f"缺 {s}（有 {rows}）：{tag}")
-    elif dr in ('postflop', 'hand', 'solver-riv', 'eq'):
+    elif dr in ('postflop', 'hand', 'solver-riv', 'eq', 'nl2lines'):
         need = ['翻前'] if dr == 'eq' else need
         for s in need:
             if s not in txt: fail('2 行動線', nm, f"畫面缺 {s}：{tag}")
@@ -280,7 +307,7 @@ async def run():
         srv.terminate()
     return shots
 
-check_data()
+check_data(); check_lines()
 shots = asyncio.run(run())
 tot = 0; rep = {}
 print('\n==== 結果 ====')
