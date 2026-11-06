@@ -364,6 +364,21 @@ out = dict(ver='lines-1105', built='2026-11-05',
   hc=HC, tx=TX, al=AL, aln=ALN, spots=[dict(id=a, t=b, sub=c) for a, b, c in SPN], nd=NDN, rows=ROWS, cov=COV)
 from polish_text import polish
 out['notes'] = polish(ROWS)
+from run6_apply import apply as apply_run6
+apply_run6(out, cond_lab)
+from run7_apply import apply as apply_run7
+apply_run7(out, cond_lab)
+from run8_apply import apply as apply_run8
+apply_run8(out, cond_lab, verdict)
+# Labels for newly enumerated decisions share the same street vocabulary.
+NDN['t_stab'] = '轉牌：翻牌跟注後，對手過牌給你'
+NDN['f_vs_donk'] = '翻牌：面對跟注者下注（領打或過牌後下注）'
+NDN['f_vs_xr'] = '翻牌：你下注後被加注'
+for r in ROWS:
+    if r['nd'] not in NDN:
+        nd = r['nd']
+        base = re.sub(r'^(?:3[bc]_|lmp_)', '', nd)
+        NDN[nd] = ('溜入底池・' if nd.startswith('lmp_') else '再加注底池・' if nd.startswith('3') else '') + NDN.get(base, base)
 # Recompute HW matches against final IDs; source lines1105 stays read-only.
 json.dump(out, open('/workspace/outputs/poker_lines_v2/results/rows.json', 'w'), ensure_ascii=False)
 subprocess.run([sys.executable, '/workspace/outputs/poker_lines_v2/review_hw_match.py'], check=True)

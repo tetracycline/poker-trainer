@@ -9,7 +9,7 @@
  6 剝削規則：池顯著偏離 且 每手 >0.25bb 才偏離，其他照 GTO
  7 牌合法（不重複、手牌不在牌面）
 回傳碼 0 = 全部通過。需要 playwright + /usr/bin/google-chrome。"""
-import argparse, asyncio, json, os, random, re, socket, subprocess, sys, time, collections
+import argparse, asyncio, json, os, random, re, socket, subprocess, sys, time, collections, math
 from playwright.async_api import async_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -82,6 +82,26 @@ def check_lines():
     """行動線對照表（lines_data.js）：跟 LD 一致、每列有根據、例子合法且在 HW 範圍、規則卡不再有第二份河牌數據"""
     out = subprocess.run(['node', '-e', "global.window=global;eval(require('fs').readFileSync('lines_data.js','utf8'));eval(require('fs').readFileSync('nl2_rules.js','utf8'));process.stdout.write(JSON.stringify({L:window.NLL,R:window.NL2}))"], capture_output=True, text=True, cwd=ROOT)
     D = json.loads(out.stdout); NLL, NL2 = D['L'], D['R']
+    from lines_contract import diff, NODES, street
+    missing = diff(NLL)
+    for m in missing:
+        fail('6 剝削規則', 'lines:coverage', '缺預期格子 ' + json.dumps(m, ensure_ascii=False))
+    for sp, nodes in NODES.items():
+        actual = {r['nd'] for r in NLL['rows'] if r['sp'] == sp}
+        if sp != 'mw' and any(street(n) == 'turn' for n in nodes) and not any(street(n) == 'turn' for n in actual):
+            fail('6 剝削規則', 'lines:coverage', sp + ' 沒有轉牌列')
+        for nd in set(nodes) - actual:
+            if sp == 'mw' and 'mw_grid' in NLL and not NLL['mw_grid']['hands'].get(nd): continue
+            fail('6 剝削規則', 'lines:coverage', sp + ':' + nd + ' 缺節點')
+    for sp, nd in {(r['sp'], r['nd']) for r in NLL['rows']}:
+        rr = [r for r in NLL['rows'] if (r['sp'], r['nd']) == (sp, nd) and not r.get('x')]
+        for cl in {r.get('cl') or '全部' for r in rr}:
+            for hc in (sorted(set(NLL.get('mw_grid', {}).get('hands', {}).get(nd, [])) | {h for r in rr for h in r['hc']}) if sp == 'mw' and 'mw_grid' in NLL else NLL['hc']):
+                if not any((r.get('cl') or '全部') == cl and hc in r['hc'] for r in rr):
+                    fail('6 剝削規則', 'lines:grid', f'{sp}:{nd}:{cl}:{hc} 會顯示空格')
+    exact = collections.Counter((r['sp'], r['nd'], hc, json.dumps(r.get('c') or {}, sort_keys=True)) for r in NLL['rows'] for hc in r['hc'])
+    for key, n in exact.items():
+        if n > 1: fail('6 剝削規則', 'lines:duplicates', str(key))
     if set(NLL['basis']) != {'gto', 'pool'}: fail('3 統計範圍', 'lines', 'basis must have exactly gto/pool')
     for filename in ('lines_data.js', 'nl2.js', 'nl2_rules.js'):
         if '原則' in open(os.path.join(ROOT, filename)).read(): fail('3 統計範圍', 'lines', filename + ' contains unsupported evidence label')
@@ -89,7 +109,9 @@ def check_lines():
     seen = collections.defaultdict(list)
     for r in NLL['rows']:
         d = 'lines:' + r['id']
-        if r['b'] not in ('pool', 'gto'): fail('3 統計範圍', 'lines', f"{d} 沒有根據")
+        if r.get('b') not in ('pool', 'gto'):
+            fail('3 統計範圍', 'lines', f"{d} 沒有根據")
+            continue
         composition = (r['sp']=='mw' and r['nd'] in ('f_vs_bet','t_vs_bet') and r['hc']==['S'] and r.get('evidence','').startswith('mw-composition:') and '勝率檢定只比較跟/棄，加注依原表的池攤牌組成' in r['ev'] and ((r['a']=='r' and r['ok']==['c']) or (r['a']=='c' and r['ok']==['r'])))
         if r.get('evidence','').startswith('mw-composition:') and not composition: fail('3 統計範圍','lines',d+' invalid original composition evidence')
         if r['b'] == 'pool' and not (re.search(r'n=[\d,]+', r['ev']) and POS.search(r['ev']) and (composition or re.search('顯著|不明顯', r['ev']))): fail('3 統計範圍', 'lines', f"{d} 池數據沒 n/位置/顯著性：{r['ev'][:60]}")
@@ -101,8 +123,42 @@ def check_lines():
             gf = ldr[r['src'][3:]].get('gf', {})
             if not gf or r['a'] != max(gf, key=gf.get): fail('6 剝削規則', 'lines', d + ' is not solver majority')
         if r['b'] == 'pool':
+            if not re.search(r'95%\s*CI|95%.*信賴', r.get('ev', '')):
+                fail('3 統計範圍', 'lines', d + ' lacks 95% CI')
+            river_pool = r.get('river_pool') if r['sp'] == 'mw' and r.get('evidence', '').startswith('run8:river:') else None
+            if river_pool:
+                v = river_pool; n = v['n']; p = v['w']/n*100
+                e = 1.96*math.sqrt(max((p/100)*(1-p/100), 1e-9)/n)*100
+                expected_action = 'c' if p >= v['need'] else 'f'
+                significant = abs(p-v['need']) > e
+                expected_ok = [] if significant else ['f' if expected_action == 'c' else 'c']
+                if n < 40 or not v.get('closes') or r['nd'] not in ('r_vs_bet', 'r_vs_xr'):
+                    fail('3 統計範圍', 'lines', d + ' invalid closing river sample')
+                if r['a'] != expected_action or r['ok'] != expected_ok:
+                    fail('6 剝削規則', 'lines', d + ' inconsistent river verdict')
+                if len(v['ci']) != 2 or any(abs(x-y)>1e-8 for x,y in zip(v['ci'], [p-e,p+e])):
+                    fail('3 統計範圍', 'lines', d + ' invalid river CI')
+                audit = NLL['mw_grid']['cells'].get(r['nd']+'|'+r['hc'][0], {})
+                if n != audit.get('n') or not 0 <= v['w'] <= n or not 0 <= v['need'] <= 100:
+                    fail('3 統計範圍', 'lines', d + ' inconsistent river audit')
+            realized = r.get('realized') if r['sp'] == 'mw' and r.get('evidence', '').startswith('run7:realized:') else None
+            if realized:
+                actions = realized.get('actions', {})
+                if len(actions) < 2 or any(v['n'] < 40 for v in actions.values()): fail('3 統計範圍', 'lines', d + ' insufficient per-action realized sample')
+                if r['a'] != max(actions, key=lambda a: actions[a]['mean']): fail('6 剝削規則', 'lines', d + ' not best observed mean')
+                expected_ok = []
+                for action, values in actions.items():
+                    if action == r['a']: continue
+                    best = actions[r['a']]; delta = best['mean'] - values['mean']
+                    se = math.sqrt(best['variance']/best['n'] + values['variance']/values['n'])
+                    ci = [delta-1.96*se, delta+1.96*se]
+                    if any(abs(x-y)>1e-8 for x,y in zip(ci, realized['ci'].get(action, []))) or len(realized['ci'].get(action, [])) != 2: fail('3 統計範圍', 'lines', d + ' invalid realized CI')
+                    if ci[0] <= 0: expected_ok.append(action)
+                if sorted(r['ok']) != sorted(expected_ok): fail('6 剝削規則', 'lines', d + ' inconsistent alternatives')
+            if not realized and not river_pool and (not re.search(r'GTO.*基準|GTO基準', r.get('ev', '')) or re.search(r'無.*GTO.*基準|沒有.*GTO', r.get('ev', ''))):
+                fail('3 統計範圍', 'lines', d + ' lacks same-node GTO baseline')
             ns = [int(n.replace(',', '')) for n in re.findall(r'n=([\d,]+)', r['ev'])]
-            if not ns or min(ns) < 40 or (not composition and ('不明顯' in r['ev'] or '不顯著' in r['ev'])): fail('3 統計範圍', 'lines', d + ' lacks significant n>=40 support')
+            if not ns or min(ns) < 40 or (not composition and not realized and not river_pool and ('不明顯' in r['ev'] or '不顯著' in r['ev'])): fail('3 統計範圍', 'lines', d + ' lacks significant n>=40 support')
         if r['a'] in r['ok']: fail('6 剝削規則', 'lines', f"{d} 答案也在 ok 裡")
         if not r.get('x'):
             for h in r['hc']: seen[(r['sp'], r['nd'], r.get('cl'), h)].append(r['id'])
