@@ -1,9 +1,10 @@
 (function(){
 const R = window.NL2, L = window.NLL, H = window.HWR, $ = s => document.querySelector(s), app = $('#app');
 const RK = '23456789TJQKA', SU = {s: '♠', h: '♥', d: '♦', c: '♣'};
-const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const cd = c => `<span class="cd ${c[1] === 'h' ? 'r' : c[1] === 'd' ? 'd' : c[1] === 'c' ? 'c' : ''}">${c[0] === 'T' ? '10' : c[0]}${SU[c[1]]}</span>`;
 const pretty = cs => cs.map(c => (c[0] === 'T' ? '10' : c[0]) + SU[c[1]]).join('');
+const nodeLabel = (sp, nd) => (L.node_labels?.[sp]?.[nd] || L.nd[nd] || nd);
 // ---------- 規則卡 ----------
 function card() {
   window.__Q = null;
@@ -16,7 +17,12 @@ function card() {
 function autoData(a) { // 規則卡的數字直接從對照表讀，不另存一份
   const [sp, nd] = a.split(':'), R = L.rows.filter(r => r.sp === sp && r.nd === nd && !r.x && r.c && r.c.sz), out = [];
   [...new Set(R.map(r => r.cl))].forEach(k => { const rr = R.filter(r => r.cl === k && r.hc.some(h => ['S', 'TPG', 'TPW', 'MID'].includes(h)));
-    const nd0 = (rr[0] && rr[0].why.match(/需要 (\d+)%/) || [])[1];
+    if (!rr.length) return;
+    const buckets = {le50: [0.33, 0.5], p75: [0.75, 1], o150: [1.5], all: [0.33, 0.5, 0.75, 1]};
+    const sizes = buckets[rr[0].c.sz];
+    if (!sizes) throw new Error('Unknown bet size bucket');
+    const odds = sizes.map(bet => Math.round(100 * bet / (1 + 2 * bet)));
+    const nd0 = odds.length > 1 ? `${odds[0]}–${odds[odds.length - 1]}` : odds[0];
     out.push(`${k}（需要 ${nd0}%）：` + rr.map(r => { const m = r.why.match(/勝率 (\d+)%/), n = r.ev.match(/n=([\d,]+)/);
       return `${HS[r.hc[0]]} ${m ? m[1] + '%' : '樣本不足'}${n ? `（n=${n[1]}）` : ''} ${short(r.a, r)}${r.ok.length ? '≈' : ''}`; }).join('、')); });
   return out;
@@ -24,7 +30,7 @@ function autoData(a) { // 規則卡的數字直接從對照表讀，不另存一
 // ---------- 行動線對照表（資料：lines_data.js，表和練習用同一份）----------
 const HS = {S: '兩對+', TPG: '頂對好', TPW: '頂對弱', MID: '中小對', DRAW: '強聽', WDRAW: '弱聽', AIR: '空氣'};
 const HCO = ['S', 'TPG', 'TPW', 'MID', 'DRAW', 'WDRAW', 'AIR'];
-const BS = {pool: '池', gto: 'GTO', gtoa: '近似'};
+const BS = {pool: '池', gto: 'GTO', gtoa: '兩人 GTO 近似'};
 const stOf = nd => /(^|_)f_/.test(nd) ? 0 : /(^|_)t_/.test(nd) ? 1 : 2;
 const hlabel = (h, nd) => stOf(nd) === 2 ? ({DRAW: '強聽未中', WDRAW: '弱聽／高張'}[h] || HS[h]) : HS[h];
 // 定義（defs.js）：每個標籤都可以點開看定義
@@ -54,7 +60,7 @@ function nodesOf(sp) {
   return o.sort((a, b) => stOf(a) - stOf(b));
 }
 function gridHtml(sp, nd, me) {
-  const R = L.rows.filter(r => r.sp === sp && r.nd === nd), base = R.filter(r => !r.x), ex = R.filter(r => r.x);
+  const R = L.rows.filter(r => r.sp === sp && r.nd === nd), base = R.filter(r => !r.x), ex = R.filter(r => r.x && (!me || r.id === me.id));
   const conds = [], cols = HCO.filter(h => R.some(r => r.hc.includes(h)));
   base.forEach(r => { const k = r.cl || '全部'; if (!conds.includes(k)) conds.push(k); });
   const cell = (k, h) => { const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
@@ -62,7 +68,7 @@ function gridHtml(sp, nd, me) {
     return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${short(r.a, r)}${r.ok.length ? '≈' : ''}<small class="df" data-df="${BS[r.b]}">${BS[r.b]}</small></td>`; };
   let h = `<div class="tw"><table class="rt lt"><tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>` +
     conds.map(k => `<tr><th class="cl">${dfl(k)}</th>${cols.map(c => cell(k, c)).join('')}</tr>`).join('') + '</table></div>';
-  if (ex.length) h += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.map(c => HS[c]).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}</span>`).join('；')}</p>`;
+  if (ex.length) h += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.map(c => HS[c]).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}<small class="df" data-df="${BS[r.b]}">${BS[r.b]}</small></span>`).join('；')}</p>`;
   return h;
 }
 function faceHtml(sp, nd) { // 這個節點你面對什麼：用第一個完整例題的最後一街
@@ -80,14 +86,14 @@ function lines() {
   window.__Q = null; const sp = LS.sp, S = L.spots.find(s => s.id === sp), cv = L.cov;
   const al = L.al[sp] || {}, aln = L.aln[sp];
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
-    return `${esc(L.nd[nd] || nd)} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(L.nd[n2] || n2)}」`; });
+    return `${esc(nodeLabel(sp, nd))} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(nodeLabel(s2, n2))}」`; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
   <p class="small">怎麼看：一格＝你的動作。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。翻牌「下 33% / 75%」，轉牌、河牌「下 ½ 池 / 1 池」。多人近似每街「下 ½ 池」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>` + defsHtml(false) + `
   <div class="sec"><b class="h">${esc(S.t)}</b><span class="ev">${esc(S.sub)}</span>${cv && cv.by[sp] ? `<span class="ev">你 ${cv.by[sp][0]}/${cv.by[sp][1]} 個決定在表上</span>` : ''}</div>` +
-  nodesOf(sp).map(nd => `<div class="sec"><b>${esc(L.nd[nd] || nd)}</b>${faceHtml(sp, nd)}${gridHtml(sp, nd)}${LS.data ? dataHtml(sp, nd) : ''}</div>`).join('') +
+  nodesOf(sp).map(nd => `<div class="sec"><b>${esc(nodeLabel(sp, nd))}</b>${faceHtml(sp, nd)}${gridHtml(sp, nd)}${LS.data ? dataHtml(sp, nd) : ''}</div>`).join('') +
   (alias.length ? `<div class="sec small"><span class="lab">其他點</span>　${aln ? esc(aln) + '。' : ''}沒有自己的數據，照下面的表：<ul>${alias.map(a => `<li>${a}</li>`).join('')}</ul></div>` : '');
 }
 const f0 = x => Number(x).toLocaleString('en-US'), pc = (a, b) => Math.round(a / b * 1000) / 10 + '%';
@@ -157,7 +163,7 @@ function drill(f, street) {
   const lst = s[s.length - 1], vs = isVs(r.nd);
   const ask = vs ? `輪到你：要跟 ${r1(s.facing)}bb（底池 ${s.pot}bb）` : `輪到你（底池 ${lst.pot}bb）`;
   app.innerHTML = `<div class="chips">${FL().map(([k, t]) => `<button class="chip${k === DF ? ' on' : ''}" data-f="${k}">${esc(t)}</button>`).join('')}</div>
-  <div id="qbox" class="sec"><p class="qs">${esc(sp.t.split('（')[0])}｜${esc(L.nd[r.nd] || r.nd)}。你的牌 ${pretty(h)}，你要怎麼做？</p>
+  <div id="qbox" class="sec"><p class="qs">${esc(sp.t.split('（')[0])}｜${esc(nodeLabel(r.sp, r.nd))}。你的牌 ${pretty(h)}，你要怎麼做？</p>
   <div class="cards">${h.map(cd).join('')}　${b.map(cd).join('')}</div>
   <p class="line">${esc(s[0])}</p>${s.slice(1).map((x, i) => `<p class="line">${x.st} ${pretty(x.cards)}：${esc(x.txt)}${i === s.length - 2 ? (x.txt ? '，' : '') + esc(ask) : ''}</p>`).join('')}
   <div class="abar">${CHO(r.nd, r.sp).map(a => `<button class="ab" data-a="${a}">${esc(alab(a, r))}${a === 'c' ? ' ' + r1(s.facing) + 'bb' : ''}</button>`).join('')}</div></div><div id="ans"></div>`;
@@ -172,7 +178,7 @@ function lanswer(a, el) {
   $('#ans').innerHTML = `<div class="sec"><p class="res ${good || alt ? 'ok' : 'no'}">${res}：${esc(alab(r.a, r))}${r.ok.length ? `（${r.ok.map(x => alab(x, r)).join('、')} 也可以）` : ''}</p><button class="nx" data-next>下一題 →</button>
   <p class="small">這手是<b>${esc(clsName(q))}</b>，表上：${esc(r.cl || '全部牌面')} → <b>${esc(alab(r.a, r))}</b>。${esc(r.why)}</p>
   <p class="small muted">${esc(L.basis[r.b])}｜${esc(r.ev)}</p>
-  <p class="small"><b>${esc(L.nd[r.nd] || r.nd)}</b>（框起來的是這題）</p>${gridHtml(r.sp, r.nd, r)}<p class="small"><a href="#lines" data-go="${r.sp}">看完整對照表</a></p></div>${defsHtml(false)}`;
+  <p class="small"><b>${esc(nodeLabel(r.sp, r.nd))}</b>（框起來的是這題）</p>${gridHtml(r.sp, r.nd, r)}<p class="small"><a href="#lines" data-go="${r.sp}">看完整對照表</a></p></div>${defsHtml(false)}`;
 }
 function clsName(q) { return q.row.hc.map(h => stOf(q.row.nd) === 2 && ['DRAW', 'WDRAW'].includes(h) ? hlabel(h, q.row.nd) : L.hc[h]).join('／'); }
 // ---------- 路由 ----------
@@ -192,7 +198,7 @@ app.addEventListener('click', e => {
 });
 if (window.__LINES_QA) window.__linesQA = {
   answer: a => lanswer(a, {classList: {add() {}}}),
-  render: sp => { LS.sp = sp; lines(); }, DEF, defsHtml, drill, gridHtml, story, nodesOf, stOf
+  render: sp => { LS.sp = sp; lines(); }, card, DEF, defsHtml, drill, gridHtml, story, nodesOf, stOf
 };
 window.addEventListener('hashchange', route); route();
 })();

@@ -351,7 +351,7 @@ def cond_lab(c):
     return '・'.join(p)
 # Evidence gate runs after example normalization, before assigning new IDs.
 import sys
-sys.path.insert(0, '/workspace/outputs/poker_lines_v2')
+sys.path.insert(0, os.path.join(ROOT, 'tools', 'lines_pipeline'))
 from evidence_policy import apply
 ROWS[:] = apply(ROWS, LD)
 AL = {}; ALN = {}  # Cross-spot advice had no shared evidence; aliases removed.
@@ -384,9 +384,14 @@ for r in ROWS:
         nd = r['nd']
         base = re.sub(r'^(?:3[bc]_|lmp_)', '', nd)
         NDN[nd] = ('溜入底池・' if nd.startswith('lmp_') else '再加注底池・' if nd.startswith('3') else '') + NDN.get(base, base)
+from semantic_labels import apply as apply_semantics
+apply_semantics(out)
+from lines_contract import semantic_errors, diff
+errors = semantic_errors(out) + [str(m) for m in diff(out)]
+assert not errors, '\n'.join(errors[:30])
 # Recompute HW matches against final IDs; source lines1105 stays read-only.
 json.dump(out, open('/workspace/outputs/poker_lines_v2/results/rows.json', 'w'), ensure_ascii=False)
-subprocess.run([sys.executable, '/workspace/outputs/poker_lines_v2/review_hw_match.py'], check=True)
+subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'lines_pipeline', 'review_hw_match.py')], check=True)
 COV = json.load(open('/workspace/outputs/poker_lines_v2/results/hw_match.json'))
 out['cov'] = COV
 for r in ROWS: r['hw'] = COV['rowhits'].get(r['id'], 0)

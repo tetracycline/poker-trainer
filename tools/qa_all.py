@@ -88,7 +88,8 @@ def check_lines():
     """行動線對照表（lines_data.js）：跟 LD 一致、每列有根據、例子合法且在 HW 範圍、規則卡不再有第二份河牌數據"""
     out = subprocess.run(['node', '-e', "global.window=global;eval(require('fs').readFileSync('lines_data.js','utf8'));eval(require('fs').readFileSync('nl2_rules.js','utf8'));process.stdout.write(JSON.stringify({L:window.NLL,R:window.NL2}))"], capture_output=True, text=True, cwd=ROOT)
     D = json.loads(out.stdout); NLL, NL2 = D['L'], D['R']
-    from lines_contract import diff, NODES, street
+    from lines_contract import diff, NODES, street, semantic_errors
+    for issue in semantic_errors(NLL): fail('6 剝削規則', 'lines:semantics', issue)
     missing = diff(NLL)
     for m in missing:
         fail('6 剝削規則', 'lines:coverage', '缺預期格子 ' + json.dumps(m, ensure_ascii=False))

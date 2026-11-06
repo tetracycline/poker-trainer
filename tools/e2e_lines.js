@@ -19,8 +19,11 @@ async function main() {
   for (const name of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2.js']) vm.runInContext(await read(name), context, {filename: name});
   if (!context.__linesQA) throw new Error('Renderer lacks QA interface (deploy nl2.js with the data)');
   const failures = [], summary = [];
+  context.__linesQA.card();
+  if (/undefined|NaN/.test(app.innerHTML)) failures.push('rule cards: invalid rendered text');
   function grids(label) {
     let count = 0;
+    if (/undefined|NaN/.test(app.innerHTML)) failures.push(`${label}: invalid rendered text`);
     for (const cell of app.innerHTML.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)) {
       const value = cell[1].replace(/<[^>]*>/g, '').trim(); count++;
       if (!value || value === '—') failures.push(`${label}: blank grid cell ${count}`);
@@ -44,6 +47,7 @@ async function main() {
       for (let i = 0; i < 30; i++) {
         context.__linesQA.drill(spot.id, street);
         const q = context.__Q;
+        if (/undefined|NaN/.test(app.innerHTML)) failures.push(`${spot.id}/${street}: invalid drill text`);
         if (!q) { failures.push(`${spot.id}/${street}: no drill question`); break; }
         const lines = [...app.innerHTML.matchAll(/<p class="line">([\s\S]*?)<\/p>/g)].map(m => m[1].replace(/<[^>]*>/g,''));
         for (const name of ['翻前','翻牌','轉牌','河牌'].slice(0, street + 2)) {

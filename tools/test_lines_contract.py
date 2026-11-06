@@ -57,5 +57,57 @@ class ContractTests(unittest.TestCase):
             self.assertTrue(any(street(nd) == 'turn' for nd in nodes), sp)
 
 
+class SemanticTests(unittest.TestCase):
+    def fixture(self):
+        return dict(node_labels={'iso':{'lmp_t_delay':'轉牌：你有位置，對手先行動；延遲搶池 (stab)'}}, rows=[dict(id='test',sp='iso',nd='lmp_t_delay',eg=[dict(t='LMP',me='CO',pa=None,pc=['BB','CO'])])])
+
+    def test_pot_type_and_first_actor_mutations(self):
+        from lines_contract import semantic_errors
+        d=self.fixture()
+        self.assertEqual(semantic_errors(d),[])
+        d['rows'][0]['eg'][0]['t']='ISO'
+        self.assertTrue(any('pot type' in e for e in semantic_errors(d)))
+        d=self.fixture();d['rows'][0]['eg'][0]['me']='BB'
+        self.assertTrue(any('first actor' in e for e in semantic_errors(d)))
+
+    def test_role_and_invalid_text_mutations(self):
+        from lines_contract import semantic_errors
+        d=self.fixture();r=d['rows'][0];r.update(sp='ipfr',nd='t_delay',why='NaN undefined')
+        d['node_labels']={'ipfr':{'t_delay':'轉牌：你有位置，對手先行動'}}
+        self.assertTrue(any('role' in e for e in semantic_errors(d)))
+        self.assertTrue(any('rendered text' in e for e in semantic_errors(d)))
+
+    def test_strategy_source_and_iso_namespace_mutations(self):
+        from lines_contract import semantic_errors
+        d=self.fixture();r=d['rows'][0]
+        r['solver']={'samples':[{'path':'iso_source.json','player':1}]}
+        self.assertTrue(any('strategy source' in e for e in semantic_errors(d)))
+        r.update(nd='iso_t_delay');d['node_labels']={'iso':{'iso_t_delay':'轉牌：你有位置，對手先行動'}}
+        self.assertTrue(any('ISO namespace' in e for e in semantic_errors(d)))
+
+    def test_mixed_nodes_have_independently_aggregated_strategies(self):
+        import json
+        from pathlib import Path
+        d=json.loads((Path(__file__).resolve().parents[1]/'lines_data.js').read_text().split('window.NLL=',1)[1].rstrip(';\n'))
+        for base in ('t_delay','t_first','t_vs_3b'):
+            groups={t:[r for r in d['rows'] if r['nd']==t+'_'+base] for t in ('iso','lmp')}
+            self.assertTrue(all(groups.values()),base)
+            common=set(r['hc'][0] for r in groups['iso']) & set(r['hc'][0] for r in groups['lmp'])
+            self.assertTrue(any(next(r for r in groups['iso'] if r['hc'][0]==h)['solver']['freq'] != next(r for r in groups['lmp'] if r['hc'][0]==h)['solver']['freq'] for h in common),base)
+
+    def test_multiway_oop_does_not_imply_first_actor(self):
+        from lines_contract import semantic_errors
+        d=dict(node_labels={'mw':{'t_vs_xr':'轉牌：你沒位置先行動'}},rows=[dict(sp='mw',nd='t_vs_xr',eg=[dict(t='SRP',me='CO',pa='CO',pc=['BB','BTN'],l='BB:x CO:b0.5 BTN:c/BB:x CO:b0.5 BTN:r3')])])
+        self.assertTrue(any('first actor' in e for e in semantic_errors(d)))
+
+    def test_generated_publication(self):
+        import json
+        from pathlib import Path
+        from lines_contract import semantic_errors
+        s=(Path(__file__).resolve().parents[1]/'lines_data.js').read_text()
+        d=json.loads(s.split('window.NLL=',1)[1].rstrip(';\n'))
+        self.assertEqual(semantic_errors(d),[])
+
+
 if __name__ == '__main__':
     unittest.main()
