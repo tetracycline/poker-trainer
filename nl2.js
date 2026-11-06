@@ -27,6 +27,19 @@ const HCO = ['S', 'TPG', 'TPW', 'MID', 'DRAW', 'WDRAW', 'AIR'];
 const BS = {pool: '池', gto: 'GTO', gtoa: '近似'};
 const stOf = nd => /(^|_)f_/.test(nd) ? 0 : /(^|_)t_/.test(nd) ? 1 : 2;
 const hlabel = (h, nd) => stOf(nd) === 2 ? ({DRAW: '強聽未中', WDRAW: '弱聽／高張'}[h] || HS[h]) : HS[h];
+// 定義（defs.js）：每個標籤都可以點開看定義
+const DEF = (window.NLDEF || {d: {}, groups: []});
+const dfs = t => `<span class="df" data-df="${esc(t)}" role="button" tabindex="0">${esc(t)}</span>`;
+const dfl = k => String(k).split('・').map(dfs).join('・');
+function defsHtml(open) {
+  return `<details class="sec defs"${open ? ' open' : ''}><summary><b>定義</b>：手牌類型、牌面、尺寸、小字（也可以直接點表格上的字）</summary>` +
+    DEF.groups.map(([g, ks]) => `<p class="small"><span class="lab">${esc(g)}</span></p><dl class="small">${ks.map(k => `<dt>${esc(k)}</dt><dd>${esc(DEF.d[k] || '')}</dd>`).join('')}</dl>`).join('') + '</details>';
+}
+function showDef(k) {
+  let b = document.getElementById('dfp');
+  if (!b) { b = document.createElement('div'); b.id = 'dfp'; document.body.appendChild(b); b.addEventListener('click', () => b.classList.remove('on')); }
+  b.innerHTML = `<b>${esc(k)}</b>　${esc(DEF.d[k] || '（沒有定義）')}<span class="muted small">　點一下關閉</span>`; b.classList.add('on');
+}
 const isVs = nd => /_vs_|_over/.test(nd);
 const CHO = (nd, sp) => (sp === 'mw' && isVs(nd)) ? ['f', 'c', 'r'] : /r_vs_xr/.test(nd) ? ['f', 'c'] : isVs(nd) ? ['f', 'c', 'r'] : ['x', 'small', 'big'];
 function alab(a, r) {
@@ -46,11 +59,18 @@ function gridHtml(sp, nd, me) {
   base.forEach(r => { const k = r.cl || '全部'; if (!conds.includes(k)) conds.push(k); });
   const cell = (k, h) => { const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
     if (!r) return '<td class="na">—</td>';
-    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${short(r.a, r)}${r.ok.length ? '≈' : ''}<small>${BS[r.b]}</small></td>`; };
-  let h = `<div class="tw"><table class="rt lt"><tr><th></th>${cols.map(c => `<th>${hlabel(c, nd)}</th>`).join('')}</tr>` +
-    conds.map(k => `<tr><th class="cl">${esc(k)}</th>${cols.map(c => cell(k, c)).join('')}</tr>`).join('') + '</table></div>';
-  if (ex.length) h += `<p class="small"><span class="lab">例外</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${esc(r.cl)}：${r.hc.map(c => HS[c]).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}</span>`).join('；')}</p>`;
+    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${short(r.a, r)}${r.ok.length ? '≈' : ''}<small class="df" data-df="${BS[r.b]}">${BS[r.b]}</small></td>`; };
+  let h = `<div class="tw"><table class="rt lt"><tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>` +
+    conds.map(k => `<tr><th class="cl">${dfl(k)}</th>${cols.map(c => cell(k, c)).join('')}</tr>`).join('') + '</table></div>';
+  if (ex.length) h += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.map(c => HS[c]).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}</span>`).join('；')}</p>`;
   return h;
+}
+function faceHtml(sp, nd) { // 這個節點你面對什麼：用第一個完整例題的最後一街
+  for (const r of L.rows) { if (r.sp !== sp || r.nd !== nd || !r.eg || !r.eg.length) continue;
+    for (const e of r.eg) { const s = story(e); if (!s || s.length !== stOf(nd) + 2) continue; const l = s[s.length - 1];
+      const face = isVs(nd) ? `你要跟 ${r1(s.facing)}bb（底池 ${s.pot}bb）` : `輪到你（底池 ${l.pot}bb）`;
+      return `<p class="small muted">你面對（例）：${l.st}${l.txt ? '：' + esc(l.txt) : ''}，${face}</p>`; } }
+  return '';
 }
 function dataHtml(sp, nd) {
   return `<ul class="dl">${L.rows.filter(r => r.sp === sp && r.nd === nd).map(r => `<li class="small">${r.x ? '例外・' : ''}${esc(r.cl || '全部')}・${r.hc.map(c => HS[c]).join('、')}：<b>${esc(alab(r.a, r))}</b>${r.ok.length ? '（' + r.ok.map(a => alab(a, r)).join('、') + ' 也可以）' : ''}。${esc(r.why)}<br><span class="muted">${BS[r.b]}｜${esc(r.ev)}${r.hw ? `｜你打過 ${r.hw} 次` : ''}</span></li>`).join('')}</ul>`;
@@ -65,9 +85,9 @@ function lines() {
   <p class="small">怎麼看：一格＝你的動作。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。翻牌「下 33% / 75%」，轉牌、河牌「下 ½ 池 / 1 池」。多人近似每街「下 ½ 池」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
-  <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>
+  <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>` + defsHtml(false) + `
   <div class="sec"><b class="h">${esc(S.t)}</b><span class="ev">${esc(S.sub)}</span>${cv && cv.by[sp] ? `<span class="ev">你 ${cv.by[sp][0]}/${cv.by[sp][1]} 個決定在表上</span>` : ''}</div>` +
-  nodesOf(sp).map(nd => `<div class="sec"><b>${esc(L.nd[nd] || nd)}</b>${gridHtml(sp, nd)}${LS.data ? dataHtml(sp, nd) : ''}</div>`).join('') +
+  nodesOf(sp).map(nd => `<div class="sec"><b>${esc(L.nd[nd] || nd)}</b>${faceHtml(sp, nd)}${gridHtml(sp, nd)}${LS.data ? dataHtml(sp, nd) : ''}</div>`).join('') +
   (alias.length ? `<div class="sec small"><span class="lab">其他點</span>　${aln ? esc(aln) + '。' : ''}沒有自己的數據，照下面的表：<ul>${alias.map(a => `<li>${a}</li>`).join('')}</ul></div>` : '');
 }
 const f0 = x => Number(x).toLocaleString('en-US'), pc = (a, b) => Math.round(a / b * 1000) / 10 + '%';
@@ -152,7 +172,7 @@ function lanswer(a, el) {
   $('#ans').innerHTML = `<div class="sec"><p class="res ${good || alt ? 'ok' : 'no'}">${res}：${esc(alab(r.a, r))}${r.ok.length ? `（${r.ok.map(x => alab(x, r)).join('、')} 也可以）` : ''}</p><button class="nx" data-next>下一題 →</button>
   <p class="small">這手是<b>${esc(clsName(q))}</b>，表上：${esc(r.cl || '全部牌面')} → <b>${esc(alab(r.a, r))}</b>。${esc(r.why)}</p>
   <p class="small muted">${esc(L.basis[r.b])}｜${esc(r.ev)}</p>
-  <p class="small"><b>${esc(L.nd[r.nd] || r.nd)}</b>（框起來的是這題）</p>${gridHtml(r.sp, r.nd, r)}<p class="small"><a href="#lines" data-go="${r.sp}">看完整對照表</a></p></div>`;
+  <p class="small"><b>${esc(L.nd[r.nd] || r.nd)}</b>（框起來的是這題）</p>${gridHtml(r.sp, r.nd, r)}<p class="small"><a href="#lines" data-go="${r.sp}">看完整對照表</a></p></div>${defsHtml(false)}`;
 }
 function clsName(q) { return q.row.hc.map(h => stOf(q.row.nd) === 2 && ['DRAW', 'WDRAW'].includes(h) ? hlabel(h, q.row.nd) : L.hc[h]).join('／'); }
 // ---------- 路由 ----------
@@ -163,6 +183,7 @@ function route() { let t = (location.hash || '#card').slice(1); if (!TABS.includ
 window.__QNEXT = () => drill();
 app.addEventListener('click', e => {
   const t = e.target;
+  const df = t.closest('[data-df]'); if (df) { showDef(df.dataset.df); return; }
   if (t.closest('[data-next]')) { drill(); return; }
   const f = t.closest('[data-f]'); if (f) { drill(f.dataset.f); return; }
   const sp = t.closest('[data-sp]'); if (sp) { LS.sp = sp.dataset.sp; lines(); return; }
@@ -171,7 +192,7 @@ app.addEventListener('click', e => {
 });
 if (window.__LINES_QA) window.__linesQA = {
   answer: a => lanswer(a, {classList: {add() {}}}),
-  render: sp => { LS.sp = sp; lines(); }, drill, gridHtml, story, nodesOf, stOf
+  render: sp => { LS.sp = sp; lines(); }, DEF, defsHtml, drill, gridHtml, story, nodesOf, stOf
 };
 window.addEventListener('hashchange', route); route();
 })();

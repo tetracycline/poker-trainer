@@ -16,7 +16,7 @@ RV = json.load(open(f'{ST}/river.json')); FT = json.load(open(f'{ST}/fturn.json'
 EG = json.load(open(f'{ST}/eg.json')); EGM = json.load(open(f'{ST}/eg_mw.json'))
 HC = {'S': '兩對以上（含三條）', 'TPG': '超對／頂對好踢（J 以上）', 'TPW': '頂對弱踢', 'MID': '中小對', 'DRAW': '強聽牌（同花聽、兩頭順）', 'WDRAW': '弱聽牌／兩張高牌', 'AIR': '空氣'}
 LDH = {'strong': 'S', 'top_good': 'TPG', 'top_weak': 'TPW', 'mid_low': 'MID', 'draw': 'DRAW', 'weak_draw': 'WDRAW', 'air': 'AIR'}
-TX = {'A_high': 'A 高面', 'KQ_high': 'K/Q 高面', 'mid_high': 'J–9 高面', 'low': '8 以下低牌面', 'paired': '成對面', 'mono': '單色面'}
+TX = {'A_high': 'A 高面', 'KQ_high': 'K/Q 高面', 'mid_high': 'J/T 高面', 'low': '9 以下低牌面', 'paired': '成對面', 'mono': '單色面'}
 CT = {'str4': '單張成順（再一張牌就成順）', 'flush': '同花第三張', 'pair': '公牌成對', 'blank': '空白', 'over': '高張', 'str3': '兩張成順'}
 SZ = {'le50': '≤½ 池', 'p75': '¾–1 池', 'o150': '超池（1.5 池）', 'all': '任何尺寸（到 1 池）'}
 f0 = lambda x: f"{x:,}"
@@ -347,6 +347,7 @@ def cond_lab(c):
     if c.get('ct'): p.append('河牌' + CT[c['ct']])
     if c.get('n'): p.append(c['n'] + ' 人')
     if c.get('by'): p.append('開池者下注' if c['by'] == 'PFR' else '其他人先下注')
+    if c.get('hr'): p.append('你是開池者' if c['hr'] == 'PFR' else '你是跟注者')
     return '・'.join(p)
 # Evidence gate runs after example normalization, before assigning new IDs.
 import sys
@@ -376,6 +377,8 @@ apply_run9(out, cond_lab)
 NDN['t_stab'] = '轉牌：翻牌跟注後，對手過牌給你'
 NDN['f_vs_donk'] = '翻牌：面對跟注者下注（領打或過牌後下注）'
 NDN['f_vs_xr'] = '翻牌：你下注後被加注'
+from run10_apply import apply as apply_run10
+apply_run10(out, cond_lab)
 for r in ROWS:
     if r['nd'] not in NDN:
         nd = r['nd']

@@ -78,6 +78,12 @@ def check_data():
             c = cards(h); bb = cards(b)
             if len(c) != 2 or len(set(c + bb)) != len(c + bb) or len(bb) not in (3, 4, 5): fail('7 牌', 'ln', f"ln {r['id']} 例子牌不合法 {h} {b}")
 
+def check_defs():
+    """每個顯示出來的標籤（牌型、牌面、尺寸、行動線、小字）都要能點開、且在 defs.js 有定義"""
+    o = subprocess.run(['node', 'tools/defs_check.js'], capture_output=True, text=True, cwd=ROOT)
+    if o.returncode != 0:
+        for ln in (o.stderr or o.stdout).strip().splitlines()[:40]:
+            fail('6 剝削規則', 'lines:defs', ln)
 def check_lines():
     """行動線對照表（lines_data.js）：跟 LD 一致、每列有根據、例子合法且在 HW 範圍、規則卡不再有第二份河牌數據"""
     out = subprocess.run(['node', '-e', "global.window=global;eval(require('fs').readFileSync('lines_data.js','utf8'));eval(require('fs').readFileSync('nl2_rules.js','utf8'));process.stdout.write(JSON.stringify({L:window.NLL,R:window.NL2}))"], capture_output=True, text=True, cwd=ROOT)
@@ -193,7 +199,7 @@ window.__QA = async function(n, ansSel, nextSel, settle){
  const CTRL='button,a[href],summary,select,input:not([type=hidden]),textarea,[role=button]';
  const measure=()=>{ if(window.PKKEYS)PKKEYS.render(); const L=window.PKKEYS&&PKKEYS.last(); const cov=new Set();
    if(L)L.list.forEach(x=>{if(x.badge&&x.label)x.els.forEach(e=>cov.add(e))});
-   const miss=[...document.querySelectorAll(CTRL)].filter(e=>vis(e)&&!e.closest('#kkhint,#kkhelp,.kk')&&!cov.has(e)).map(e=>(e.tagName+'.'+(e.className||'')+' '+(e.textContent||'').trim().slice(0,20)));
+   const miss=[...document.querySelectorAll(CTRL)].filter(e=>vis(e)&&!e.closest('#kkhint,#kkhelp,.kk')&&!e.matches('.df[data-df]')&&!cov.has(e)).map(e=>(e.tagName+'.'+(e.className||'')+' '+(e.textContent||'').trim().slice(0,20)));
    return {sh:document.documentElement.scrollHeight, ih:innerHeight, sw:document.documentElement.scrollWidth, iw:innerWidth, miss:miss.slice(0,4), nmiss:miss.length, txt:(document.querySelector('main')||document.body).innerText.slice(0,4000), act:[...new Set([...document.querySelectorAll('.ral,.line,.facing,.pfl')].concat([...document.querySelectorAll('.st')].map(e=>e.parentElement)))].filter(e=>e&&e.offsetParent).map(e=>e.innerText).join('\n'), kb:keyBottom()} };
  const keyBottom=()=>{let b=0;const els=[...document.querySelectorAll(ANSSEL+','+NXTSEL)].filter(vis);
    [...document.querySelectorAll('body *')].forEach(e=>{if(e.children.length<=3&&(e.textContent||"").trim().length<40&&/^\s*[✓✗]/.test(e.textContent||'')&&vis(e))els.push(e)});
@@ -375,7 +381,7 @@ async def run():
                 m = await pg.evaluate("(async()=>{const r=await __QA(0,'x','x',1);return null})()")
                 mm = await pg.evaluate("""(()=>{PKKEYS&&PKKEYS.render();const L=PKKEYS&&PKKEYS.last(),cov=new Set();if(L)L.list.forEach(x=>{if(x.badge&&x.label)x.els.forEach(e=>cov.add(e))});
                   const CTRL='button,a[href],summary,select,input:not([type=hidden]),textarea,[role=button]';const vis=e=>{if(!e.isConnected||e.disabled)return false;const r=e.getBoundingClientRect();if(!r.width||!r.height)return false;const cs=getComputedStyle(e);if(cs.visibility==='hidden'||cs.display==='none')return false;const dd=e.parentElement&&e.parentElement.closest('details:not([open])');return !(dd&&!(e.tagName==='SUMMARY'&&e.parentElement===dd))};
-                  const miss=[...document.querySelectorAll(CTRL)].filter(e=>vis(e)&&!e.closest('#kkhint,#kkhelp,.kk')&&!cov.has(e)).map(e=>e.tagName+' '+(e.textContent||'').trim().slice(0,20));
+                  const miss=[...document.querySelectorAll(CTRL)].filter(e=>vis(e)&&!e.closest('#kkhint,#kkhelp,.kk')&&!e.matches('.df[data-df]')&&!cov.has(e)).map(e=>e.tagName+' '+(e.textContent||'').trim().slice(0,20));
                   return {miss:miss.slice(0,5),n:miss.length,sw:document.documentElement.scrollWidth,iw:innerWidth,txt:document.body.innerText.slice(0,20000)}})()""")
                 if mm['n']: fail('4 快捷鍵', 'static:' + u, f"{mm['n']} 個按鈕沒快捷鍵 {mm['miss']}")
                 if mm['sw'] > mm['iw'] + 2: fail('5 版面', 'static:' + u, f"橫向溢出 {mm['sw']}")
@@ -388,7 +394,7 @@ async def run():
         srv.terminate()
     return shots
 
-check_data(); check_lines()
+check_data(); check_lines(); check_defs()
 shots = [] if A.data_only else asyncio.run(run())
 if A.data_only: print('DATA ONLY: browser drills, layout and keyboard checks SKIPPED')
 tot = 0; rep = {}

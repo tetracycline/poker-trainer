@@ -41,6 +41,10 @@ table.lt{font-size:15px}table.lt th.cl{text-align:left;white-space:nowrap;font-w
 table.lt td{white-space:nowrap;min-width:44px}table.lt td small{display:block;font-size:11px;opacity:.75}
 td.x{background:#25332b}td.na{color:#55695d}.mex{outline:2px solid #ffd34d;padding:0 3px}
 ul.dl li{margin:4px 0}
+.df{border-bottom:1px dotted #9fb7a8;cursor:pointer}
+#dfp{position:fixed;left:8px;right:8px;bottom:8px;z-index:50;background:#1d3326;border:2px solid #3ecf7a;border-radius:12px;padding:10px 14px;font-size:16px;line-height:1.5;display:none;box-shadow:0 4px 18px #000a}
+#dfp.on{display:block}
+details.defs summary{cursor:pointer}details.defs dt{font-weight:700;margin-top:6px}details.defs dd{margin:0 0 0 12px}
 @media (max-width:600px){.qs{font-size:18px}.grid{grid-template-columns:repeat(13,22px)}}
 </style>
 </head><body>
@@ -48,8 +52,9 @@ ul.dl li{margin:4px 0}
 <nav class="top" id="topnav"><a class="topb" href="#card" data-t="card">NL2 規則卡</a><a class="topb" href="#lines" data-t="lines">行動線對照表</a><a class="topb" href="#drill" data-t="drill">行動線練習</a><a class="topb" href="#river" data-t="river">河牌一對：跟或棄</a></nav>
 <main><div class="pg" id="app"></div></main>
 <script src="hwrange.js?v=nl2"></script>
-<script src="lines_data.js?v=lines-1105c"></script>
+<script src="defs.js?v=defs-1106a"></script>
+<script src="lines_data.js?v=lines-1106c"></script>
 <script src="nl2_rules.js?v=nl2-1105c"></script>
-<script src="nl2.js?v=nl2-1105c"></script>
+<script src="nl2.js?v=nl2-1106c"></script>
 <script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body></html>
