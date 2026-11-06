@@ -24,11 +24,11 @@ function autoData(a) { // 規則卡的數字直接從對照表讀，不另存一
 // ---------- 行動線對照表（資料：lines_data.js，表和練習用同一份）----------
 const HS = {S: '兩對+', TPG: '頂對好', TPW: '頂對弱', MID: '中小對', DRAW: '強聽', WDRAW: '弱聽', AIR: '空氣'};
 const HCO = ['S', 'TPG', 'TPW', 'MID', 'DRAW', 'WDRAW', 'AIR'];
-const BS = {pool: '池', gto: 'GTO'};
+const BS = {pool: '池', gto: 'GTO', gtoa: '近似'};
 const stOf = nd => /(^|_)f_/.test(nd) ? 0 : /(^|_)t_/.test(nd) ? 1 : 2;
 const hlabel = (h, nd) => stOf(nd) === 2 ? ({DRAW: '強聽未中', WDRAW: '弱聽／高張'}[h] || HS[h]) : HS[h];
 const isVs = nd => /_vs_|_over/.test(nd);
-const CHO = (nd, sp) => (sp === 'mw' && /r_vs_/.test(nd)) ? ['f', 'c'] : /r_vs_xr/.test(nd) ? ['f', 'c'] : isVs(nd) ? ['f', 'c', 'r'] : ['x', 'small', 'big'];
+const CHO = (nd, sp) => (sp === 'mw' && isVs(nd)) ? ['f', 'c', 'r'] : /r_vs_xr/.test(nd) ? ['f', 'c'] : isVs(nd) ? ['f', 'c', 'r'] : ['x', 'small', 'big'];
 function alab(a, r) {
   if (r && r.L && r.L[a]) return r.L[a];
   const s = stOf(r ? r.nd : '');
@@ -62,12 +62,11 @@ function lines() {
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
     return `${esc(L.nd[nd] || nd)} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(L.nd[n2] || n2)}」`; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
-  <p class="small">怎麼看：一格＝你的動作。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。未有足夠證據的多人決策不呈現，不跨位置套用。翻牌「下 33% / 75%」，轉牌、河牌「下 ½ 池 / 1 池」。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  <p class="small">怎麼看：一格＝你的動作。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。翻牌「下 33% / 75%」，轉牌、河牌「下 ½ 池 / 1 池」。多人近似每街「下 ½ 池」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>
   <div class="sec"><b class="h">${esc(S.t)}</b><span class="ev">${esc(S.sub)}</span>${cv && cv.by[sp] ? `<span class="ev">你 ${cv.by[sp][0]}/${cv.by[sp][1]} 個決定在表上</span>` : ''}</div>` +
-  (sp === 'mw' ? `<div class="sec">多人翻牌／轉牌各決策及河牌主動下注缺可靠依據，需多人解算器，暫不呈現、不出題。${!L.mw_grid.hands.r_vs_xr.length ? '河牌面對加注樣本不足，暫不出題。' : ''}河牌面對下注／加注僅列跟注即結束行動且樣本足夠的牌型。</div>` : '') +
   nodesOf(sp).map(nd => `<div class="sec"><b>${esc(L.nd[nd] || nd)}</b>${gridHtml(sp, nd)}${LS.data ? dataHtml(sp, nd) : ''}</div>`).join('') +
   (alias.length ? `<div class="sec small"><span class="lab">其他點</span>　${aln ? esc(aln) + '。' : ''}沒有自己的數據，照下面的表：<ul>${alias.map(a => `<li>${a}</li>`).join('')}</ul></div>` : '');
 }
@@ -80,7 +79,8 @@ function story(e) {
   const me = e.me, nm = p => p === me ? `你（${p}）` : p, live = [e.pa].concat(e.pc).filter(Boolean);
   const dead = (live.includes('SB') ? 0 : 0.5) + (live.includes('BB') ? 0 : 1);
   let pre;
-  if (e.t === 'SRP') pre = `${nm(e.pa)} 開池 ${r1((e.pot - dead) / live.length)}bb，${e.pc.map(nm).join('、')} 跟`;
+  if (e.pretext) pre = e.pretext;
+  else if (e.t === 'SRP') pre = `${nm(e.pa)} 開池 ${r1((e.pot - dead) / live.length)}bb，${e.pc.map(nm).join('、')} 跟`;
   else if (e.t === '3BP') pre = `${nm(e.pc[0])} 開池 2.5bb，${nm(e.pa)} 3-bet 到 ${r1((e.pot - dead) / 2)}bb，${nm(e.pc[0])} 跟`;
   else if (e.t === 'ISO') pre = `${nm(e.pc[0])} limp，${nm(e.pa)} 加注到 ${r1((e.pot - dead) / 2)}bb，${nm(e.pc[0])} 跟`;
   else pre = `${e.pc.filter(p => p !== 'BB').map(nm).join('、')} limp${e.pc.includes('BB') ? '，' + nm('BB') + ' 過牌' : ''}`;

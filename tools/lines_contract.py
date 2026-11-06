@@ -32,10 +32,7 @@ def street(nd):
     return 'flop' if nd.startswith('f_') or '_f_' in nd else 'turn' if nd.startswith('t_') or '_t_' in nd else 'river'
 
 def conditions(sp, nd):
-    if sp == 'mw':
-        if nd in ('f_bet', 't_bet'): return [dict(n=n, tx=t) for n, t in itertools.product(['3', '4+'], TEXTURES)]
-        if nd == 'f_vs_bet': return [dict(by=b, tx=t) for b, t in itertools.product(['PFR', 'NON'], TEXTURES)]
-        if nd == 't_vs_bet': return [dict(by=b, sz=z) for b, z in itertools.product(['PFR', 'NON'], ['le50', 'p75', 'o150'])]
+    if sp == 'mw': return [{'hr':'PFR'},{'hr':'CALL'}]
     if nd.endswith('r_vs_bet') or nd.endswith('r_vs_bet2'):
         return [dict(sz=z, **({'ln': l} if sp in ('bb', 'ipc') else {})) for z, l in itertools.product(['le50', 'p75', 'o150'], ['tb', 'oth'] if sp in ('bb', 'ipc') else [''])]
     if street(nd) == 'flop' and sp in ('ipfr', 'opfr', 'bb', 'ipc') and nd not in ('f_first', 'f_stab'):
@@ -46,18 +43,6 @@ def expected(data):
     """Contract plus every actual column, so UI-added conditions cannot escape QA."""
     for sp, nodes in NODES.items():
         for nd in sorted(set(nodes) | {r['nd'] for r in data['rows'] if r['sp'] == sp}):
-            if sp == 'mw' and 'mw_grid' in data:
-                # The independently published evidence audit determines eligibility.
-                cells = data['mw_grid']['cells']
-                for hc in HANDS:
-                    cell = cells.get(nd + '|' + hc, {})
-                    if data['mw_grid'].get('method') == 'river_closing_call':
-                        eligible = nd in ('r_vs_bet', 'r_vs_xr') and cell.get('n', 0) >= 40
-                    else:
-                        eligible = sum(v['n'] >= 40 for v in cell.get('actions', {}).values()) >= 2
-                    if eligible:
-                        for c in data['mw_grid']['columns']: yield sp, nd, hc, c
-                continue
             conds = conditions(sp, nd)
             conds += [r.get('c') or {} for r in data['rows'] if r['sp'] == sp and r['nd'] == nd and not r.get('x')]
             unique = {json.dumps(c, sort_keys=True): c for c in conds}

@@ -370,6 +370,8 @@ from run7_apply import apply as apply_run7
 apply_run7(out, cond_lab)
 from run8_apply import apply as apply_run8
 apply_run8(out, cond_lab, verdict)
+from run9_apply import apply as apply_run9
+apply_run9(out, cond_lab)
 # Labels for newly enumerated decisions share the same street vocabulary.
 NDN['t_stab'] = '轉牌：翻牌跟注後，對手過牌給你'
 NDN['f_vs_donk'] = '翻牌：面對跟注者下注（領打或過牌後下注）'

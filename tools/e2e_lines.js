@@ -41,11 +41,6 @@ async function main() {
     }
     for (let street = 0; street < 3; street++) {
       let count = 0;
-      if (spot.id === 'mw' && street < 2) {
-        context.__linesQA.drill(spot.id, street);
-        if (context.__Q) failures.push(`mw/${street}: unsupported question`);
-        questions.push(0); continue;
-      }
       for (let i = 0; i < 30; i++) {
         context.__linesQA.drill(spot.id, street);
         const q = context.__Q;

@@ -88,30 +88,43 @@ def check_lines():
         fail('6 剝削規則', 'lines:coverage', '缺預期格子 ' + json.dumps(m, ensure_ascii=False))
     for sp, nodes in NODES.items():
         actual = {r['nd'] for r in NLL['rows'] if r['sp'] == sp}
-        if sp != 'mw' and any(street(n) == 'turn' for n in nodes) and not any(street(n) == 'turn' for n in actual):
+        if any(street(n) == 'turn' for n in nodes) and not any(street(n) == 'turn' for n in actual):
             fail('6 剝削規則', 'lines:coverage', sp + ' 沒有轉牌列')
         for nd in set(nodes) - actual:
-            if sp == 'mw' and 'mw_grid' in NLL and not NLL['mw_grid']['hands'].get(nd): continue
             fail('6 剝削規則', 'lines:coverage', sp + ':' + nd + ' 缺節點')
     for sp, nd in {(r['sp'], r['nd']) for r in NLL['rows']}:
         rr = [r for r in NLL['rows'] if (r['sp'], r['nd']) == (sp, nd) and not r.get('x')]
         for cl in {r.get('cl') or '全部' for r in rr}:
-            for hc in (sorted(set(NLL.get('mw_grid', {}).get('hands', {}).get(nd, [])) | {h for r in rr for h in r['hc']}) if sp == 'mw' and 'mw_grid' in NLL else NLL['hc']):
+            for hc in NLL['hc']:
                 if not any((r.get('cl') or '全部') == cl and hc in r['hc'] for r in rr):
                     fail('6 剝削規則', 'lines:grid', f'{sp}:{nd}:{cl}:{hc} 會顯示空格')
+    if NLL.get('mw_grid',{}).get('columns') != [{'hr':'PFR'},{'hr':'CALL'}]:
+        fail('6 剝削規則', 'lines:mw-roles', 'MW must have opener and caller columns')
+    for r in NLL['rows']:
+        if r['sp']=='mw' and r.get('c',{}).get('hr') not in ('PFR','CALL'):
+            fail('6 剝削規則', 'lines:mw-roles', r['id']+' lacks hero role')
+    from mw_sanity import check as check_mw_sanity
+    for issue in check_mw_sanity(NLL)[0]:
+        fail('6 剝削規則', 'lines:mw-sanity', issue)
     exact = collections.Counter((r['sp'], r['nd'], hc, json.dumps(r.get('c') or {}, sort_keys=True)) for r in NLL['rows'] for hc in r['hc'])
     for key, n in exact.items():
         if n > 1: fail('6 剝削規則', 'lines:duplicates', str(key))
-    if set(NLL['basis']) != {'gto', 'pool'}: fail('3 統計範圍', 'lines', 'basis must have exactly gto/pool')
+    if set(NLL['basis']) != {'gto', 'pool', 'gtoa'}: fail('3 統計範圍', 'lines', 'basis must have exactly gto/pool/gtoa')
     for filename in ('lines_data.js', 'nl2.js', 'nl2_rules.js'):
         if '原則' in open(os.path.join(ROOT, filename)).read(): fail('3 統計範圍', 'lines', filename + ' contains unsupported evidence label')
     ldr = {r['id']: r for r in LD['rules']}
     seen = collections.defaultdict(list)
     for r in NLL['rows']:
         d = 'lines:' + r['id']
-        if r.get('b') not in ('pool', 'gto'):
+        if r.get('b') not in ('pool', 'gto', 'gtoa'):
             fail('3 統計範圍', 'lines', f"{d} 沒有根據")
             continue
+        if r['b'] == 'gtoa':
+            v = r.get('solver', {})
+            if r['sp'] != 'mw' or not v.get('samples') or not v.get('freq'):
+                fail('3 統計範圍', 'lines', d + ' invalid MW approximation provenance')
+            elif r['a'] != max(v['freq'], key=v['freq'].get) or abs(sum(v['freq'].values())-1) > .001:
+                fail('6 剝削規則', 'lines', d + ' inconsistent approximation frequency')
         composition = (r['sp']=='mw' and r['nd'] in ('f_vs_bet','t_vs_bet') and r['hc']==['S'] and r.get('evidence','').startswith('mw-composition:') and '勝率檢定只比較跟/棄，加注依原表的池攤牌組成' in r['ev'] and ((r['a']=='r' and r['ok']==['c']) or (r['a']=='c' and r['ok']==['r'])))
         if r.get('evidence','').startswith('mw-composition:') and not composition: fail('3 統計範圍','lines',d+' invalid original composition evidence')
         if r['b'] == 'pool' and not (re.search(r'n=[\d,]+', r['ev']) and POS.search(r['ev']) and (composition or re.search('顯著|不明顯', r['ev']))): fail('3 統計範圍', 'lines', f"{d} 池數據沒 n/位置/顯著性：{r['ev'][:60]}")
