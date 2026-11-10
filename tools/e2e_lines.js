@@ -21,26 +21,38 @@ async function main() {
   const failures = [], summary = [];
   context.__linesQA.card();
   if (/undefined|NaN/.test(app.innerHTML)) failures.push('rule cards: invalid rendered text');
-  function grids(label) {
+  function grids(label) { // 預設＋例外摘要：每個節點一行預設、每格都對應到非空動作（零空格）
     let count = 0;
     if (/undefined|NaN/.test(app.innerHTML)) failures.push(`${label}: invalid rendered text`);
-    for (const cell of app.innerHTML.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)) {
-      const value = cell[1].replace(/<[^>]*>/g, '').trim(); count++;
-      if (!value || value === '—') failures.push(`${label}: blank grid cell ${count}`);
+    for (const m of app.innerHTML.matchAll(/<p class="sum">([\s\S]*?)<\/p>/g)) {
+      count++; const t = m[1].replace(/<[^>]*>/g, '').replace(/.*→/, '').trim();
+      if (!t || t === '—') failures.push(`${label}: blank default ${count}`);
     }
-    if (!count) failures.push(`${label}: no rendered grid cells`);
+    if (!count) failures.push(`${label}: no rendered node summary`);
     return count;
+  }
+  function cellsOk(sp, nd) {
+    const S = context.__linesQA.nodeSum(sp, nd);
+    for (const c of S.cells) {
+      const lab = String((c.r.L && c.r.L[c.r.a]) || c.r.a || '');
+      if (!lab || /undefined|NaN/.test(lab)) failures.push(`${sp}/${nd}: blank cell ${c.k}/${c.h}`);
+    }
+    const hc = Object.keys(context.NLL.hc);
+    for (const k of new Set(S.cells.map(c => c.k))) for (const h of hc)
+      if (!S.cells.some(c => c.k === k && c.h === h)) failures.push(`${sp}/${nd}: ${k}/${h} has no answer`);
   }
   for (const spot of context.NLL.spots) {
     context.__linesQA.render(spot.id);
     const cells = grids(spot.id), questions = [];
     for (const nd of context.__linesQA.nodesOf(spot.id)) {
-      const eligible = context.NLL.rows.filter(r => r.sp === spot.id && r.nd === nd)
-        .some(r => (r.eg || []).some(e => {
+      cellsOk(spot.id, nd);
+      const exc = context.NLL.rows.filter(r => r.sp === spot.id && r.nd === nd && context.__linesQA.isExc(r));
+      if (!exc.filter(r => !r.noeg).length) continue;   // 全部同一動作，或例外牌型不在你的範圍：不出題（HW 11/10）
+      const eligible = exc.some(r => (r.eg || []).some(e => {
           const story = context.__linesQA.story(e);
           return story && story.length === context.__linesQA.stOf(nd) + 2;
         }));
-      if (!eligible) failures.push(`${spot.id}/${nd}: no complete drill example`);
+      if (!eligible) failures.push(`${spot.id}/${nd}: no complete drill example for its exceptions`);
     }
     for (let street = 0; street < 3; street++) {
       let count = 0;
@@ -48,7 +60,8 @@ async function main() {
         context.__linesQA.drill(spot.id, street);
         const q = context.__Q;
         if (/undefined|NaN/.test(app.innerHTML)) failures.push(`${spot.id}/${street}: invalid drill text`);
-        if (!q) { failures.push(`${spot.id}/${street}: no drill question`); break; }
+        if (!q) { if (context.__linesQA.pool(spot.id).some(r => context.__linesQA.stOf(r.nd) === street)) failures.push(`${spot.id}/${street}: no drill question`); break; }
+        if (!context.__linesQA.isExc(q.row)) failures.push(`${spot.id}/${street}/${q.id}: drill on a non-exception row`);
         const lines = [...app.innerHTML.matchAll(/<p class="line">([\s\S]*?)<\/p>/g)].map(m => m[1].replace(/<[^>]*>/g,''));
         for (const name of ['翻前','翻牌','轉牌','河牌'].slice(0, street + 2)) {
           if (!lines.some(line => line.startsWith(name))) failures.push(`${spot.id}/${street}/${q.id}: missing ${name}`);

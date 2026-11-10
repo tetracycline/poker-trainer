@@ -59,23 +59,73 @@ function nodesOf(sp) {
   const o = []; L.rows.forEach(r => { if (r.sp === sp && !o.includes(r.nd)) o.push(r.nd); });
   return o.sort((a, b) => stOf(a) - stOf(b));
 }
+// 每個節點只列「預設動作＋例外」：同動作的牌型合併，不再逐格列出（HW 11/10：只有不同的才列、才出題）
+const SUMC = {};
+function nodeSum(sp, nd) {
+  const key = sp + '|' + nd; if (SUMC[key]) return SUMC[key];
+  const R = L.rows.filter(r => r.sp === sp && r.nd === nd), base = R.filter(r => !r.x), xr = R.filter(r => r.x);
+  const cells = []; base.forEach(r => r.hc.forEach(h => cells.push({k: r.cl || '全部', h, r})));
+  const mode = cs => { const c = {}; cs.forEach(x => { c[x.r.a] = (c[x.r.a] || 0) + 1; }); let b = null; for (const a in c) if (b === null || c[a] > c[b]) b = a; return b; };
+  const D = mode(cells), conds = [], exc = new Set(xr.map(r => r.id));
+  cells.forEach(c => { if (!conds.includes(c.k)) conds.push(c.k); });
+  const lines = conds.map(k => {
+    const cs = cells.filter(c => c.k === k), Mc = mode(cs), own = Mc !== D && cs.filter(c => c.r.a === Mc).length * 2 > cs.length ? Mc : null;
+    const ref = own || D, groups = [];
+    cs.forEach(c => { if (own && c.r.a === own) exc.add(c.r.id);
+      if (c.r.a === ref) return; exc.add(c.r.id);
+      let g = groups.find(g => g.a === c.r.a); if (!g) groups.push(g = {a: c.r.a, cs: []}); g.cs.push(c); });
+    return {k, own, ownCs: own ? cs.filter(c => c.r.a === own) : [], groups, all: cs};
+  });
+  // 牌面高低分半（run 004）：同一個條件的另一半，用「這一半實際答案」整理，全部一樣就只寫一行
+  const half = [], plain = [];
+  xr.forEach(r => { if (!r.hi) { plain.push(r); return; }
+    const parent = r.cl.replace(/・?最高張 (T 以上|9 以下)$/, '') || '全部'; let h = half.find(x => x.k === r.cl);
+    if (!h) half.push(h = {k: r.cl, parent, xs: []}); h.xs.push(r); });
+  half.forEach(h => {
+    const pl = lines.find(l => l.k === h.parent), ref = pl ? (pl.own || D) : D;
+    const E = (pl ? pl.all : []).map(c => { const x = h.xs.find(r => r.hc.includes(c.h)); return x ? {k: h.k, h: c.h, r: x} : c; });
+    const M = mode(E), own = M !== ref && E.filter(c => c.r.a === M).length * 2 > E.length ? M : null, groups = [];
+    E.forEach(c => { if ((own ? c.r.a === own : c.r.a === ref) && (own || !h.xs.includes(c.r))) return;
+      if (!own && !h.xs.includes(c.r)) return;
+      let g = groups.find(g => g.a === c.r.a); if (!g) groups.push(g = {a: c.r.a, cs: []}); g.cs.push(c); });
+    lines.push({k: h.k, own, ownCs: own ? E.filter(c => c.r.a === own) : [], groups, all: E, half: 1});
+  });
+  return (SUMC[key] = {D, dCs: cells.filter(c => c.r.a === D), lines, xr: plain, exc, cells});
+}
+const isExc = r => nodeSum(r.sp, r.nd).exc.has(r.id);
+function actTxt(a, cs, me) { // 同一動作在不同列可能有不同尺寸／根據：全部列出，不另造數字
+  const pc = l => /½ 池/.test(l) ? 50 : /1 池/.test(l) ? 100 : (+(l.match(/(\d+)%/) || [])[1] || null);
+  let labs = [...new Set(cs.map(c => short(a, c.r)))];
+  if ((a === 'small' || a === 'big') && labs.length > 1 && labs.every(l => pc(l))) { const v = labs.map(pc), lo = Math.min(...v), hi = Math.max(...v); labs = [`下 ${lo === hi ? lo : lo + '–' + hi}% 池`]; }
+  const bs = [...new Set(cs.map(c => BS[c.r.b]))], ok = cs.some(c => c.r.ok.length);
+  return `<b class="${ACL(a)}">${esc(labs.join('／'))}${ok ? '≈' : ''}</b>${bs.map(b => `<small class="df" data-df="${b}">${b}</small>`).join('')}`;
+}
+function clsList(cs, nd, me) {
+  return HCO.filter(h => cs.some(c => c.h === h)).map(h => { const hit = me && cs.some(c => c.h === h && c.r.id === me.id);
+    return `<span class="${hit ? 'mex' : ''}">${dfs(hlabel(h, nd))}</span>`; }).join('、');
+}
 function gridHtml(sp, nd, me) {
-  const R = L.rows.filter(r => r.sp === sp && r.nd === nd), base = R.filter(r => !r.x), ex = R.filter(r => r.x && (!me || r.id === me.id));
-  const conds = [], cols = HCO.filter(h => R.some(r => r.hc.includes(h)));
-  base.forEach(r => { const k = r.cl || '全部'; if (!conds.includes(k)) conds.push(k); });
-  const cell = (k, h) => { const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
-    if (!r) return '<td class="na">—</td>';
-    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${short(r.a, r)}${r.ok.length ? '≈' : ''}<small class="df" data-df="${BS[r.b]}">${BS[r.b]}</small></td>`; };
-  let h = `<div class="tw"><table class="rt lt"><tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>` +
-    conds.map(k => `<tr><th class="cl">${dfl(k)}</th>${cols.map(c => cell(k, c)).join('')}</tr>`).join('') + '</table></div>';
-  if (ex.length) h += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.map(c => HS[c]).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}<small class="df" data-df="${BS[r.b]}">${BS[r.b]}</small></span>`).join('；')}</p>`;
+  const S = nodeSum(sp, nd), multi = S.lines.length > 1 || S.lines[0].k !== '全部';
+  const nEx = S.lines.reduce((n, l) => n + l.groups.length + (l.own ? 1 : 0), 0) + S.xr.length;
+  let h = `<p class="sum">${nEx ? '其餘全部' : (multi ? '所有牌面、所有牌型' : '所有牌型')} → ${actTxt(S.D, S.dCs)}</p>`;
+  const li = [];
+  S.lines.forEach(l => {
+    const pre = l.k === '全部' ? '' : `${dfl(l.k)}：`;
+    if (l.own) li.push(`<li>${pre}${l.groups.length ? '其餘' : '全部'} → ${actTxt(l.own, l.ownCs)}${l.ownCs.some(c => me && c.r.id === me.id) ? '<span class="mex">（這題）</span>' : ''}</li>`);
+    l.groups.forEach(g => li.push(`<li>${pre}${clsList(g.cs, nd, me)} → ${actTxt(g.a, g.cs)}</li>`));
+  });
+  const xg = []; S.xr.forEach(r => { let g = xg.find(g => g.cl === r.cl && g.a === r.a); if (!g) xg.push(g = {cl: r.cl, a: r.a, cs: []}); r.hc.forEach(h => g.cs.push({h, r})); });
+  xg.forEach(g => li.push(`<li>${dfl(g.cl)}：${clsList(g.cs, nd, me)} → ${actTxt(g.a, g.cs)}</li>`));
+  if (li.length) h += `<p class="small"><span class="lab">${dfs('例外')}</span></p><ul class="exl">${li.join('')}</ul>`;
   return h;
 }
-function faceHtml(sp, nd) { // 這個節點你面對什麼：用第一個完整例題的最後一街
-  for (const r of L.rows) { if (r.sp !== sp || r.nd !== nd || !r.eg || !r.eg.length) continue;
+function faceHtml(sp, nd) { // 這個節點你面對什麼：例題的完整行動線（翻前＋先前各街＋這街）
+  const ex = L.rows.filter(r => r.sp === sp && r.nd === nd && r.eg && r.eg.length);
+  for (const r of ex.filter(isExc).concat(ex)) {
     for (const e of r.eg) { const s = story(e); if (!s || s.length !== stOf(nd) + 2) continue; const l = s[s.length - 1];
       const face = isVs(nd) ? `你要跟 ${r1(s.facing)}bb（底池 ${s.pot}bb）` : `輪到你（底池 ${l.pot}bb）`;
-      return `<p class="small muted">你面對（例）：${l.st}${l.txt ? '：' + esc(l.txt) : ''}，${face}</p>`; } }
+      const prev = s.slice(1, -1).map(x => `${x.st}：${esc(x.txt)}`).join(' → ');
+      return `<p class="small muted">你面對（例）：${esc(s[0])} → ${prev ? prev + ' → ' : ''}${l.st}${l.txt ? '：' + esc(l.txt) : ''}，${face}</p>`; } }
   return '';
 }
 function dataHtml(sp, nd) {
@@ -88,7 +138,7 @@ function lines() {
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
     return `${esc(nodeLabel(sp, nd))} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(nodeLabel(s2, n2))}」`; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
-  <p class="small">怎麼看：一格＝你的動作。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。翻牌「下 33% / 75%」，轉牌、河牌「下 ½ 池 / 1 池」。多人近似每街「下 ½ 池」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  <p class="small">怎麼看：每個節點先寫「其餘全部 → 預設動作」，下面只列跟預設不同的牌型／牌面（例外）；練習也只出例外。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：GTO 照解算樹（翻牌 33% / 75%，轉牌、河牌 ½ 池 / 1 池，3-bet 底池等另標）；池估照牌池實際下注的平均尺寸（例：下注約 90% 池）。多人近似每街「下 ½ 池」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>` + defsHtml(false) + `
@@ -140,7 +190,7 @@ function story(e) {
 let LQ = null, ln = 0, DF = 'all';
 const FL = () => [['all', '全部']].concat(L.spots.map(s => [s.id, s.t.split('（')[0]])).concat([['riv', '河牌一對：跟或棄']]);
 function pool(f) {
-  return L.rows.filter(r => r.eg && r.eg.length && (f === 'all' || (f === 'riv' ? (/r_vs_bet/.test(r.nd) && r.sp !== 'mw' && r.hc.some(h => ['TPG', 'TPW', 'MID'].includes(h))) : r.sp === f)));
+  return L.rows.filter(r => r.eg && r.eg.length && isExc(r) && (f === 'all' || (f === 'riv' ? (/r_vs_bet/.test(r.nd) && r.sp !== 'mw' && r.hc.some(h => ['TPG', 'TPW', 'MID'].includes(h))) : r.sp === f)));
 }
 function newLQ(f, street) {
   const P = pool(f).filter(r => street === undefined || stOf(r.nd) === street);
@@ -158,7 +208,7 @@ function newLQ(f, street) {
 function drill(f, street) {
   window.__Q = null;
   DF = f || DF; const q = LQ = newLQ(DF, street);
-  if (!q) { app.innerHTML = '<div class="sec">這個分類沒有題目。</div>'; return; }
+  if (!q) { app.innerHTML = '<div class="sec">這個分類沒有題目（只有跟預設不同的牌型才出題）。</div>'; return; }
   const r = q.row, e = q.e, s = q.s, h = cs2(e.h), b = cs2(e.b), sp = L.spots.find(x => x.id === r.sp);
   const lst = s[s.length - 1], vs = isVs(r.nd);
   const ask = vs ? `輪到你：要跟 ${r1(s.facing)}bb（底池 ${s.pot}bb）` : `輪到你（底池 ${lst.pot}bb）`;
@@ -198,7 +248,7 @@ app.addEventListener('click', e => {
 });
 if (window.__LINES_QA) window.__linesQA = {
   answer: a => lanswer(a, {classList: {add() {}}}),
-  render: sp => { LS.sp = sp; lines(); }, card, DEF, defsHtml, drill, gridHtml, story, nodesOf, stOf
+  render: sp => { LS.sp = sp; lines(); }, nodeSum, isExc, pool, card, DEF, defsHtml, drill, gridHtml, story, nodesOf, stOf
 };
 window.addEventListener('hashchange', route); route();
 })();

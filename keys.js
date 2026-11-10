@@ -7,7 +7,7 @@
 if(window.self!==window.top||window.PKKEYS)return;
 var POOL='QWETYUIOPSJKLZXBN'.split('');
 var CTRL='button,a[href],summary,select,input:not([type=hidden]),textarea,[role=button]';
-var SKIP='#kkhint,#kkhelp,.kk';
+var SKIP='#kkhint,#kkhelp,.kk,.df[data-df]'; // 名詞定義（點了看說明）不佔快捷鍵；QA 也同樣排除
 function vis(e){if(!e.isConnected||e.disabled)return false;if(e.closest(SKIP))return false;var r=e.getBoundingClientRect();if(!r.width||!r.height)return false;var dd=e.parentElement&&e.parentElement.closest('details:not([open])');if(dd&&!(e.tagName==='SUMMARY'&&e.parentElement===dd))return false;var cs=getComputedStyle(e);return cs.visibility!=='hidden'&&cs.display!=='none'}
 function isOn(e){return e.classList.contains('on')||e.classList.contains('sel')||e.getAttribute('aria-pressed')==='true'||e.getAttribute('aria-selected')==='true'}
 function txt(e){var t='';e.childNodes.forEach(function(n){if(!(n.nodeType===1&&n.tagName==='KBD'))t+=n.textContent});return t.replace(/\s+/g,' ').trim()}
