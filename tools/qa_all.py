@@ -116,16 +116,23 @@ def check_lines():
     exact = collections.Counter((r['sp'], r['nd'], hc, json.dumps(r.get('c') or {}, sort_keys=True)) for r in NLL['rows'] for hc in r['hc'])
     for key, n in exact.items():
         if n > 1: fail('6 剝削規則', 'lines:duplicates', str(key))
-    if set(NLL['basis']) != {'gto', 'pool', 'gtoa'}: fail('3 統計範圍', 'lines', 'basis must have exactly gto/pool/gtoa')
+    if set(NLL['basis']) != {'gto', 'pool', 'gtoa', 'est'}: fail('3 統計範圍', 'lines', 'basis must have exactly gto/pool/gtoa/est')
     for filename in ('lines_data.js', 'nl2.js', 'nl2_rules.js'):
         if '原則' in open(os.path.join(ROOT, filename)).read(): fail('3 統計範圍', 'lines', filename + ' contains unsupported evidence label')
     ldr = {r['id']: r for r in LD['rules']}
     seen = collections.defaultdict(list)
     for r in NLL['rows']:
         d = 'lines:' + r['id']
-        if r.get('b') not in ('pool', 'gto', 'gtoa'):
+        if r.get('b') not in ('pool', 'gto', 'gtoa', 'est'):
             fail('3 統計範圍', 'lines', f"{d} 沒有根據")
             continue
+        if r['b'] == 'est':   # run 003 pool estimate of the most profitable action (not a closed proof)
+            v = r.get('pool_est_run003') or {}
+            ns = [int(n.replace(',', '')) for n in re.findall(r'n=([\d,]+)', r.get('ev', ''))]
+            if r['sp'] == 'mw' or not v or v.get('action') != r['a'] or not r.get('evidence', '').startswith('run003:'): fail('3 統計範圍', 'lines', d + ' invalid run003 estimate provenance')
+            elif not ns or v.get('n', 0) < 40 or max(ns) < 40: fail('3 統計範圍', 'lines', d + ' run003 estimate n<40')
+            elif '估算' not in r['why'] or '不是封閉證明' not in r['ev'] or 'GTO 基準' not in r['ev'] or '95% CI' not in r['ev']: fail('3 統計範圍', 'lines', d + ' run003 estimate lacks honest labels / GTO baseline / CI')
+            elif r['a'] not in (v.get('arms') or {}) or any(x['ev_bb'] > v['arms'][r['a']]['ev_bb'] + 1e-9 for x in v['arms'].values()): fail('6 剝削規則', 'lines', d + ' run003 answer is not the best estimated arm')
         if r['b'] == 'gtoa':
             v = r.get('solver', {})
             if r['sp'] != 'mw' or not v.get('samples') or not v.get('freq'):
