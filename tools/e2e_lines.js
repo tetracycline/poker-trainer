@@ -16,7 +16,7 @@ async function main() {
   let seed = 1106;
   context.Math = Object.create(Math);
   context.Math.random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
-  for (const name of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js', 'nl2_titles.js', 'nl2.js']) vm.runInContext(await read(name), context, {filename: name});
+  for (const name of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js', 'nl2_titles.js', 'nl2_drillpath.js', 'nl2.js']) vm.runInContext(await read(name), context, {filename: name});
   if (!context.__linesQA) throw new Error('Renderer lacks QA interface (deploy nl2.js with the data)');
   const failures = [], summary = [];
   context.__linesQA.card();
@@ -66,7 +66,12 @@ async function main() {
   if (context.__linesQA.gridHtml('ipc', 't_delay')) failures.push('ipc/t_delay table still rendered');
   context.__linesQA.render('bb');
   const bbHtml = context.__linesQA.gridHtml('bb', 't_vs_barrel') || '';
-  if (/空氣/.test(bbHtml)) failures.push('bb/t_vs_barrel rendered 空氣');
+  // 2026-11-12 起牌型逐街可變（HW「兩對以上呢」）：翻牌用兩張高牌／卡順跟注、轉牌變空氣是真的發得出來，
+  // 所以不再一律禁止空氣；改查「翻牌就是空氣的牌」不會跟注（空氣格只能來自別的翻牌牌型），且這一格走得到。
+  if (/空氣/.test(bbHtml)) {
+    if (context.NLL.rows.some(r => r.sp === 'bb' && r.nd === 'f_vs_cbet' && !r.x && r.hc.includes('AIR') && r.a === 'c')) failures.push('bb/t_vs_barrel 空氣 from a flop-air call');
+    if (!context.NLL.rows.some(r => r.sp === 'bb' && r.nd === 't_vs_barrel' && r.hc.includes('AIR') && context.__linesQA.rowReached(r, 'AIR'))) failures.push('bb/t_vs_barrel rendered unreachable 空氣');
+  }
   for (const spot of context.NLL.spots) {
     context.__linesQA.render(spot.id);
     const cells = grids(spot.id), questions = [];

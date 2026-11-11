@@ -3,8 +3,10 @@
    做法：執行正式 nl2.js 渲染每個情境，從「畫面上的 HTML」讀出每張表的標題、每一格；
    從標題文字重建完整行動線；對每個顯示的牌型×牌面格，逐一走過這條線上「你」先前的每個決定
    （翻牌、轉牌、本街先前；對手動作照線上假設），到該決定點的資料表查這個牌型的答案（主答案 r.a，
-   ≈ 的替代動作不算），必須等於線上要求的動作。牌型照本頁規則逐街沿用同一標籤；牌面以
+   ≈ 的替代動作不算），必須等於線上要求的動作。牌型會逐街改變：先前那一街用「那一街的牌型」查，
+   翻牌→轉牌→河牌 的牌型序列必須真的發得出來（tools/class_trans.json，正式分類器真實發牌）；牌面以
    翻牌質地 → 各街最高張（T 以上／9 以下）追蹤，例外列依條件套用。
+   另外反查：走得到卻沒顯示的格（漏格）、走得到卻沒顯示的線（漏表）。
    用法：node tools/reach_verify.js [repoRoot] [--log out.md] [--json out.json] [--quiet]
    結束碼：違規數 > 0 → 1。 */
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
@@ -138,7 +140,7 @@ function lineFacts(P) {
     checkTurn: st.length >= 3 && st[1].includes('你過') && !heroBet(st[1]),
     betBet: st.length >= 3 && heroBet(st[0]) && heroBet(st[1]),
     // 翻前加注者＝最後一個加注的人：你 3-bet、你加注隔離，或你開池而沒有人 3-bet
-    pfr: /你 3-bet|你加注隔離/.test(P.pre) || (/(^|，)你 \S+ 開/.test(P.pre) && !/3-bet/.test(P.pre))
+    pfr: /你 (\S+ )?3-bet|你 ?(\S+ )?加注隔離/.test(P.pre) || (/(^|，)你 \S+ 開/.test(P.pre) && !/3-bet/.test(P.pre))
   };
 }
 // 一列的條件 vs 狀態／線：true＝一定符合，'maybe'＝不追蹤的條件（下注尺寸、河牌牌型），false＝不符
@@ -164,8 +166,46 @@ function answersAt(sp, nd, h, s, street, F) {
   if (!definiteEx) for (const r of base) if (condFit(r, s, street, F)) out.add(r.a);
   return out;
 }
+// 牌型序列表（真實發牌）：質地|各街最高張 → 出現過的 翻轉河 牌型序列
+const CTJ = JSON.parse(fs.readFileSync(path.join(__dirname, 'class_trans.json'), 'utf8'));
+const LET = { S: 's', TPG: 'g', TPW: 'w', MID: 'm', DRAW: 'd', WDRAW: 'k', AIR: 'a' }, HC = Object.keys(LET);
+const SEQ = {};
+for (const [k, v] of Object.entries(CTJ)) if (!k.startsWith('_')) SEQ[k] = new Set(v.split(' '));
+function seqs(h, s, S) { // 第 0..S 街的牌型（最後一街＝h）
+  if (S === 0) return [[h]];
+  const out = [];
+  for (const a of HC) for (const b of (S === 2 ? HC : [null])) {
+    const want = S === 1 ? LET[a] + LET[h] : LET[a] + LET[b] + LET[h];
+    const keys = S === 1 ? ['T', 'L'].map(x => s.tx + '|' + s.hi[0] + s.hi[1] + x) : [s.tx + '|' + s.hi.join('')];
+    const hit = keys.some(k => SEQ[k] && [...SEQ[k]].some(q => q.startsWith(want)));
+    if (hit) out.push(S === 1 ? [a, h] : [a, b, h]);
+  }
+  return out;
+}
 const NEED = { 過: ['x'], 下注: ['small', 'big'], 全下: ['big', 'small', 'r'], 跟: ['c'], 加注: ['r'] };
 
+
+// 反查用：給一條線（各街正規化動作）、一列、一個牌型 → 走不走得到
+function decisionsFor(sp, nd, streets) {
+  const out = [];
+  streets.forEach((bits, i) => bits.forEach((b, j) => {
+    if (!b.startsWith('你')) return;
+    const prefix = streets.slice(0, i).map(x => x.join('、')).concat([bits.slice(0, j).join('、')]).join('|');
+    out.push({ street: i, verb: b.slice(1), need: NEED[b.slice(1)] || [], nodes: [...(DEC.get([sp, pfxOf(nd), i, prefix].join('#')) || [])] });
+  }));
+  return out;
+}
+function reachable(sp, nd, streets, F, r, h) {
+  const S = streets.length - 1, decs = decisionsFor(sp, nd, streets), rows = rowsOf(sp, nd);
+  if (!decs.every(d => d.nodes.length)) return false;
+  for (const s of states(S)) {
+    if (!condFit(r, s, S, F)) continue;
+    if (!r.x && rows.some(x => x.x && x.hc.includes(h) && condFit(x, s, S, F) === true)) continue;
+    const ok = (d, c) => d.nodes.some(n => [...answersAt(sp, n, c, s, d.street, F)].some(a => d.need.includes(a)));
+    if (seqs(h, s, S).some(q => decs.every(d => ok(d, q[d.street])))) return true;
+  }
+  return false;
+}
 // ---------- 6. 驗證每張表 ----------
 const report = { tables: [], violations: [], flags: [], counts: {} };
 function V(t, kind, msg) { report.violations.push({ table: t.title, node: t.sp + '/' + t.nd, kind, msg }); t.viol.push(kind + '：' + msg); }
@@ -241,27 +281,40 @@ for (const spot of L.spots) {
       // 這列本身的條件
       const witnesses = [];
       const perDec = decisions.map(() => new Map());
+      const candDec = decisions.map(() => new Map());
       for (const s of SS) {
         const fit = condFit(r, s, S, F); if (!fit) continue;
         if (!r.x) { // 基本列：此狀態若有一定適用的例外，基本格不代表這個狀態
           const exDef = nodeRows.some(x => x.x && x.hc.includes(h) && condFit(x, s, S, F) === true);
           if (exDef) continue;
         }
-        let ok = true;
-        decisions.forEach((d, di) => {
-          let A = new Set();
-          for (const nd of d.nodes) for (const a of answersAt(t.sp, nd, h, s, d.street, F)) A.add(a); // 你的翻前角色（開池者／跟注者）整條線不變
-          const pass = [...A].some(a => d.need.includes(a));
-          const bk = d.street === 0 ? TXN[s.tx] : (s.hi[d.street] === 'T' ? '最高張 T 以上' : '最高張 9 以下');
-          perDec[di].set(bk, { A: [...A], pass });
-          if (!pass) ok = false;
+        // 每個決定：哪些「當街牌型」的主答案符合線上動作
+        const passBy = decisions.map(d => {
+          const ok = new Set();
+          for (const c of HC) {
+            const A = new Set(); for (const nd of d.nodes) for (const a of answersAt(t.sp, nd, c, s, d.street, F)) A.add(a);
+            if ([...A].some(a => d.need.includes(a))) ok.add(c);
+          }
+          return ok;
         });
-        if (ok) witnesses.push(s);
+        const allSeq = seqs(h, s, S);
+        const chain = allSeq.find(q => decisions.every((d, di) => passBy[di].has(q[d.street])));
+        decisions.forEach((d, di) => { // 給理由：這一街可能是哪些牌型、它們的答案
+          for (const q of allSeq) { const c = q[d.street]; const A = new Set(); for (const nd of d.nodes) for (const a of answersAt(t.sp, nd, c, s, d.street, F)) A.add(ANS[a]);
+            candDec[di].set(c, new Set([...(candDec[di].get(c) || []), ...A])); }
+        });
+        decisions.forEach((d, di) => {
+          const bk = d.street === 0 ? TXN[s.tx] : (s.hi[d.street] === 'T' ? '最高張 T 以上' : '最高張 9 以下');
+          const prev = perDec[di].get(bk) || { A: [], pass: false, cls: new Set() };
+          const A = new Set(prev.A); for (const nd of d.nodes) for (const a of answersAt(t.sp, nd, d.street === S ? h : (chain ? chain[d.street] : h), s, d.street, F)) A.add(a);
+          perDec[di].set(bk, { A: [...A], pass: prev.pass || !!chain, cls: new Set([...prev.cls, ...(chain ? [chain[d.street]] : [])]) });
+        });
+        if (chain) witnesses.push({ ...s, chain });
       }
       decisions.forEach((d, di) => {
         const m = perDec[di];
         const parts = [...m.entries()].map(([bk, v]) => `${bk}=${v.A.length ? [...new Set(v.A.map(a => ANS[a]))].join('/') : '（沒有答案）'}${v.pass ? '✓' : '✗'}`);
-        lines.push(`${HNAME[h]}：${STN[d.street]}「${d.prefix.split('|').pop() || '你先行動'}」→ 線上要你${d.verb}；節點 ${d.nodes.join('/') || '（無）'} 答案 ${parts.join('、') || '（此列條件下無牌面）'}`);
+        const cl = [...new Set([...m.values()].flatMap(v => [...v.cls]))].map(c => HNAME[c]); lines.push(`${HNAME[h]}：${STN[d.street]}「${d.prefix.split('|').pop() || '你先行動'}」→ 線上要你${d.verb}；${cl.length ? '那時牌型可以是 ' + cl.join('／') + '；' : ''}節點 ${d.nodes.join('/') || '（無）'} 答案 ${parts.join('、') || '（此列條件下無牌面）'}`);
       });
       const okAll = witnesses.length > 0 && decisions.every(d => d.nodes.length);
       // 白話理由（給 HW 看）
@@ -272,17 +325,19 @@ for (const spot of L.spots) {
         if (miss) reason = `前面「${STN[miss.street]}：${miss.prefix.split('|').pop() || '你先行動'}，你${miss.verb}」這一步，資料裡沒有對應的表，無法確認哪些牌會這樣打`;
         else if (!anyState) reason = '這一列的條件（三槍／你轉牌過牌／你的翻前角色）跟這條線不符';
         else {
-          const di = decisions.findIndex((d, i) => ![...perDec[i].values()].some(v => v.pass));
+          const di = decisions.findIndex((d, i) => ![...candDec[i].entries()].some(([c, A]) => [...A].some(a => d.verb === a || (d.verb === '全下' && /下注|加注/.test(a)))));
           if (di >= 0) {
-            const d = decisions[di], acts = [...new Set([...perDec[di].values()].flatMap(v => v.A.map(a => ANS[a])))];
-            const bks = [...perDec[di].keys()], all = d.street === 0 ? bks.length === 6 : bks.length === 2;
-            reason = `${HNAME[h]}在${STN[d.street]}「${d.prefix.split('|').pop() || '你先行動'}」時${all ? '' : '（這一格對應的牌面：' + bks.join('、') + '）'}的答案是「${acts.join('／') || '沒有答案'}」，不會${d.verb}，所以走不到這條線`;
+            const d = decisions[di], cm = candDec[di];
+            const desc = [...cm.entries()].map(([c, A]) => `${HNAME[c]}＝${[...A].join('／') || '沒有答案'}`).join('、');
+            reason = d.street === S
+              ? `${HNAME[h]}在${STN[d.street]}「${d.prefix.split('|').pop() || '你先行動'}」時的答案是「${[...(cm.get(h) || [])].join('／') || '沒有答案'}」，不會${d.verb}，所以走不到這條線`
+              : `到${STN[S]}會是${HNAME[h]}的牌，在${STN[d.street]}可能是：${desc || '（發不出來）'}；在${STN[d.street]}「${d.prefix.split('|').pop() || '你先行動'}」時都不會${d.verb}，所以走不到這條線`;
           } else if (perDec.length && [...perDec[0].keys()].length === 0) reason = '這一格代表的牌面都歸例外列';
           else reason = `每一步單獨看都有牌面會這樣打，但沒有同一個牌面能一路走到這一格（翻牌質地／各街最高張前後對不上）`;
         }
         if (!r.x && anyState && !reason.startsWith('前面') && SS.filter(s => condFit(r, s, S, F)).every(s => nodeRows.some(x => x.x && x.hc.includes(h) && condFit(x, s, S, F) === true))) reason = '這一格代表的牌面都由例外列另外列出';
       }
-      const wtxt = witnesses.length ? '可走到，例：' + [...new Set(witnesses.map(s => TXN[s.tx] + (S >= 1 ? '／轉牌' + (s.hi[1] === 'T' ? 'T+' : '9-') : '') + (S >= 2 ? '／河牌' + (s.hi[2] === 'T' ? 'T+' : '9-') : '')))].slice(0, 4).join('；') : '走不到';
+      const wtxt = witnesses.length ? '可走到，例：' + [...new Set(witnesses.map(s => TXN[s.tx] + (S >= 1 ? '／轉牌' + (s.hi[1] === 'T' ? 'T+' : '9-') : '') + (S >= 2 ? '／河牌' + (s.hi[2] === 'T' ? 'T+' : '9-') : '') + (S >= 1 ? '（' + s.chain.map(c => HNAME[c]).join('→') + '）' : '')))].slice(0, 4).join('；') : '走不到';
       if (!decisions.length) lines.push(`${HNAME[h]}：之前沒有你的翻後決定（翻前不分牌型）✓`);
       return { ok: okAll, lines, wtxt, witnesses, reason };
     }
@@ -313,11 +368,45 @@ for (const spot of L.spots) {
         if (!res.ok) V(t, '走不到的格', `例外 ${e.cond}×${lab}：${res.lines.filter(x => /✗|（無）/.test(x)).join('；') || res.wtxt}`);
       }
     }
+    // (g) 反查漏格：這個節點資料裡每一列 × 每個牌型，走得到卻沒顯示
+    const shownBase = new Set(), shownEx = new Set();
+    for (const row of t.rows) row.cells.forEach((c, ci) => { if (!/\bna\b/.test(c.cls)) shownBase.add(row.cond + '|' + HCODE[t.cols[ci]]); });
+    for (const e of t.exc) for (const lab of (e.classes || [])) shownEx.add(e.cond + '|' + (Object.keys(HNAME).find(k => HNAME[k] === lab) || HCODE[lab]));
+    const canonSt = P.streets.map(b => canon(b));
+    for (const r of nodeRows) for (const h of r.hc) {
+      const k = (r.x ? r.cl : (r.cl || '全部')) + '|' + h;
+      if ((r.x ? shownEx : shownBase).has(k)) continue;
+      if (reachable(t.sp, t.nd, canonSt, F, r, h)) V(t, '漏格', `${r.x ? '例外 ' : ''}${r.cl || '全部'}×${HNAME[h]}（${ANS[r.a]}）走得到卻沒有顯示`);
+    }
+    t.key = canonSt.map(b => b.join('、')).join('|');
     t.nCells = nCells;
     if (!nCells) V(t, '空表', '顯示了標題但表裡沒有任何格');
   }
 }
 
+// (h) 反查漏表：資料例題裡出現的每條線，有走得到的格卻沒有表
+{
+  const shown = new Set(report.tables.map(t => t.sp + '/' + t.nd + '#' + t.key));
+  const seen = new Set();
+  for (const r0 of L.rows) for (const e of r0.eg || []) {
+    const st = streetOfNd(r0.nd), segs = String(e.l || '').split('/');
+    if (segs.length !== st + 1) continue;
+    const streets = segs.map(g => canon(rawBits(g, e.me))), key = streets.map(b => b.join('、')).join('|');
+    const pfr = e.me === e.pa, id = r0.sp + '/' + r0.nd + '#' + key;
+    if (shown.has(id) || seen.has(id + pfr)) continue; seen.add(id + pfr);
+    const F = { ...lineFacts({ streets, pre: '' }), pfr };
+    const hits = [];
+    for (const r of rowsOf(r0.sp, r0.nd)) for (const h of r.hc) if (reachable(r0.sp, r0.nd, streets, F, r, h)) hits.push(`${r.x ? '例外 ' : ''}${r.cl || '全部'}×${HNAME[h]}`);
+    if (hits.length) report.violations.push({ table: key.replace(/\|/g, ' → '), node: r0.sp + '/' + r0.nd, kind: '漏表', msg: `這條線（${['翻牌', '轉牌', '河牌'].slice(0, streets.length).map((x, i) => x + '：' + (streets[i].join('、') || '（無）')).join(' → ')}）有 ${hits.length} 格走得到卻沒有表：${hits.slice(0, 8).join('、')}${hits.length > 8 ? '…' : ''}` });
+  }
+}
+// 轉換表一致：渲染器內建的 CT 必須與 tools/class_trans.json 相同
+{
+  const src = fs.existsSync(path.join(root, 'nl2_titles.js')) ? fs.readFileSync(path.join(root, 'nl2_titles.js'), 'utf8') : '';
+  const m = src.match(/const CT = (\{[^;]*\});/);
+  const mine = Object.fromEntries(Object.entries(CTJ).filter(([k]) => !k.startsWith('_')));
+  if (!m || JSON.stringify(JSON.parse(m[1])) !== JSON.stringify(mine)) report.violations.push({ table: '-', node: '-', kind: '轉換表', msg: 'nl2_titles.js 內建的牌型轉換表與 tools/class_trans.json 不同（或沒有）' });
+}
 // 例題（你面對）與標題一致：位置、每街動作、底池
 function checkFace(t, P) {
   if (!t.face) { report.flags.push({ table: t.title, msg: '沒有例題' }); return; }

@@ -113,7 +113,7 @@ function gridOne(sp, nd, me, line) {
   };
   let h = `<div class="tw"><table class="rt lt"><tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>` +
     condsShown.map(k => `<tr><th class="cl">${dfl(k)}</th>${cols.map(c => cell(k, c)).join('')}</tr>`).join('') + '</table></div>';
-  if (ex.length) h += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => HS[c]).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}<small class="df" data-df="${BS[r.b]}">${BS[r.b]}</small></span>`).join('；')}</p>`;
+  if (ex.length) h += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => hlabel(c, r.nd)).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}<small class="df" data-df="${BS[r.b]}">${BS[r.b]}</small></span>`).join('；')}</p>`;
   return h;
 }
 function faceHtml(sp, nd, line) { // 這個節點你面對什麼：例題的完整行動線（翻前＋先前各街＋這街）
@@ -133,7 +133,7 @@ function faceHtml(sp, nd, line) { // 這個節點你面對什麼：例題的完�
   return '';
 }
 function dataHtml(sp, nd, line) {
-  return `<ul class="dl">${L.rows.filter(r => r.sp === sp && r.nd === nd && r.hc.some(h => rowReached(r, h, line))).map(r => `<li class="small">${r.x ? '例外・' : ''}${esc(r.cl || '全部')}・${r.hc.map(c => HS[c]).join('、')}：<b>${esc(alab(r.a, r))}</b>${r.ok.length ? '（' + r.ok.map(a => alab(a, r)).join('、') + ' 也可以）' : ''}。${esc(r.why)}<br><span class="muted">${BS[r.b]}｜${esc(r.ev)}${r.hw ? `｜你打過 ${r.hw} 次` : ''}</span></li>`).join('')}</ul>`;
+  return `<ul class="dl">${L.rows.filter(r => r.sp === sp && r.nd === nd && r.hc.some(h => rowReached(r, h, line))).map(r => `<li class="small">${r.x ? '例外・' : ''}${esc(r.cl || '全部')}・${r.hc.map(c => hlabel(c, r.nd)).join('、')}：<b>${esc(alab(r.a, r))}</b>${r.ok.length ? '（' + r.ok.map(a => alab(a, r)).join('、') + ' 也可以）' : ''}。${esc(r.why)}<br><span class="muted">${BS[r.b]}｜${esc(r.ev)}${r.hw ? `｜你打過 ${r.hw} 次` : ''}</span></li>`).join('')}</ul>`;
 }
 let LS = {sp: 'bb', data: false};
 function lines() {
@@ -197,7 +197,36 @@ function story(e) {
 let LQ = null, ln = 0, DF = 'all';
 const FL = () => [['all', '全部']].concat(L.spots.map(s => [s.id, s.t.split('（')[0]])).concat([['riv', '河牌一對：跟或棄']]);
 // 題目只用「走得到這條線」的例題：例題自己的線要顯示，而且這一列的牌型在那條線上走得到
-const egOk = (r, e) => { if (!TITLES) return true; const ln = TITLES.titleForEg(r.sp, r.nd, e); return !!ln && r.hc.some(h => rowReached(r, h, ln)); };
+// 例題的實際牌面若落在同牌型的例外列（例：轉牌最高張 9 以下），這題的正解是例外列的答案，不能用基本列出題
+const EGRK = '23456789TJQKA';
+function egCond(e, k, ln) { // 例題在第 k 街的條件值
+  const b = String(e.b || ''), cs = []; for (let i = 0; i < b.length; i += 2) cs.push(b.slice(i, i + 2));
+  const fl = cs.slice(0, 3), rk = c => EGRK.indexOf(c[0]), seen = cs.slice(0, 3 + k);
+  const suits = new Set(fl.map(c => c[1])), ranks = fl.map(rk);
+  const tx = suits.size === 1 ? 'mono' : new Set(ranks).size < 3 ? 'paired' : Math.max(...ranks) === 12 ? 'A_high' : Math.max(...ranks) >= 10 ? 'KQ_high' : Math.max(...ranks) >= 8 ? 'mid_high' : 'low';
+  const hi = seen.length ? (Math.max(...seen.map(rk)) >= 8 ? 'T' : 'L') : null;
+  let ct = null;
+  if (k >= 1 && cs[2 + k]) {
+    const pre = cs.slice(0, 2 + k), c = cs[2 + k], pr = pre.map(x => rk(x) + 2), r0 = rk(c) + 2;
+    const win = rs => { const st = new Set(rs); if (st.has(14)) st.add(1); let m = 0; for (let lo = 1; lo <= 10; lo++) { let n = 0; for (let x = lo; x < lo + 5; x++) if (st.has(x)) n++; m = Math.max(m, n); } return m; };
+    const w0 = win(pr), w1 = win(pr.concat([r0]));
+    ct = pr.includes(r0) ? 'pair' : pre.filter(x => x[1] === c[1]).length >= 2 ? 'flush' : (w1 >= 4 && w0 < 4) ? 'str4' : (w1 >= 3 && w0 < 3) ? 'str3' : r0 > Math.max(...pr) ? 'over' : 'blank';
+  }
+  const seg = String(e.l || '').split('/')[k] || '', bets = seg.split(' ').filter(t => t && !t.startsWith(e.me + ':') && /:b/.test(t)).map(t => parseFloat(t.split(':b')[1]));
+  const last = seg.split(' ').filter(t => t && !t.startsWith(e.me + ':') && /:[bra]/.test(t)).pop() || '';
+  const sz = /:b/.test(last) ? (bets[bets.length - 1] <= 0.6 ? 'le50' : bets[bets.length - 1] <= 1.15 ? 'p75' : 'o150') : null;
+  const F = (ln && ln.facts) || {};
+  return { tx, hi, ct, sz, ln: F.tb ? 'tb' : 'oth', prior: [F.checkTurn && 'check_turn', F.betBet && 'bet_bet'].filter(Boolean), hr: F.pfr ? 'PFR' : 'CALL' };
+}
+function egInException(r, e, ln) {
+  if (r.x) return false;
+  const k = stOf(r.nd), v = egCond(e, k, ln);
+  return L.rows.some(x => x.x && x.sp === r.sp && x.nd === r.nd && x.hc.some(h => r.hc.includes(h)) && x.a !== r.a &&
+    Object.entries(x.c || {}).every(([key, want]) => key === 'prior' ? v.prior.includes(want) : (v[key] == null ? true : v[key] === want))); // 算不出的條件（全下尺寸）保守當作符合
+}
+// 例題的實際牌路（tools/build_drill_paths.py 用正式分類器逐街算）跟表上答案對不上的，不出題
+const egPathBad = (r, e) => !window.__NL2_NO_EGPATH && !!(window.NL2_EGBAD && (window.NL2_EGBAD[r.id] || []).includes(r.eg.indexOf(e)));
+const egOk = (r, e) => { if (!TITLES) return true; if (egPathBad(r, e)) return false; const ln = TITLES.titleForEg(r.sp, r.nd, e); return !!ln && r.hc.some(h => rowReached(r, h, ln)) && !egInException(r, e, ln); };
 // 只列表、不出題的線：這條線走得到的格沒有完整例題手牌（HW 2026-11-11 同意保留表格、不進練習）
 const TABLE_ONLY = new Set(['mw/r_vs_xr']);
 const tableOnly = (sp, nd) => TABLE_ONLY.has(sp + '/' + nd);
@@ -259,7 +288,7 @@ app.addEventListener('click', e => {
   if (t.closest('[data-tg]')) { LS.data = !LS.data; lines(); return; }
   const go = t.closest('[data-go]'); if (go) LS.sp = go.dataset.go;
 });
-if (window.__LINES_QA) window.__linesQA = { tableOnly,
+if (window.__LINES_QA) window.__linesQA = { tableOnly, egCond, egInException, egOk,
   answer: a => lanswer(a, {classList: {add() {}}}),
   render: sp => { LS.sp = sp; lines(); }, pool, card, DEF, defsHtml, drill, gridHtml, story, nodesOf, stOf, nodeVisible, rowReached, REACH, TITLES, lineList
 };

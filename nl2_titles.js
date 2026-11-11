@@ -54,11 +54,35 @@
     const me = e.me, t = e.t, pa = e.pa, pc = (e.pc || []).filter(Boolean);
     const nm = p => p || '對手';
     const out = [];
+    if (e.mw && e.pretext) { // 多人：照例題的實際翻前順序逐人寫（溜入、開池、加注溜入者、3-bet、跟），你的動作才上金色
+      let raised = 0; const seq = [];
+      for (const x of String(e.pretext).split('，')) {
+        const m = x.trim().match(/^((?:你（\w+）|\w+)(?:、(?:你（\w+）|\w+))*) (\S+)/);
+        if (!m) continue;
+        const ps = m[1].split('、').map(q => (q.match(/^你（(\w+)）$/) || [null, q])[1]), v0 = m[2];
+        if (/^棄牌/.test(v0)) continue;
+        let v;
+        if (/^開池/.test(v0)) { v = '開'; raised = 1; }
+        else if (/^(再加注|3-bet)/.test(v0)) { v = '3-bet'; raised = 2; }
+        else if (/^加注/.test(v0)) { v = raised ? '3-bet' : '加注隔離'; raised = raised ? 2 : 1; }
+        else if (/^全下/.test(v0)) { v = '全下'; raised++; }
+        else if (/^過牌/.test(v0)) v = '過';
+        else if (/^(跟注|跟|limp)/.test(v0)) v = raised ? '跟' : '溜入';
+        else continue;
+        for (const q of ps) seq.push({ p: q, v });
+      }
+      for (const x of seq) {
+        const prev = out[out.length - 1];
+        if (x.p !== me && prev && !prev.h && prev.v === x.v) { prev.ps.push(x.p); prev.t = `${prev.ps.join('、')} ${x.v}`; continue; }
+        out.push({ h: x.p === me, v: x.v, ps: [x.p], t: x.p === me ? `你 ${x.p} ${x.v}` : `${x.p} ${x.v}` });
+      }
+      if (out.length) return out;
+    }
     if (t === '3BP') {
       const opener = pc[0], three = pa;
       const cold = pc.slice(1).filter(p => p !== three && p !== opener);
       out.push({ h: opener === me, t: opener === me ? `你 ${nm(opener)} 開` : `${nm(opener)} 開` });
-      out.push({ h: three === me, t: three === me ? '你 3-bet' : `${nm(three)} 3-bet` });
+      out.push({ h: three === me, t: three === me ? `你 ${nm(me)} 3-bet` : `${nm(three)} 3-bet` });
       for (const p of cold) out.push({ h: p === me, t: p === me ? `你 ${p} 跟` : `${p} 跟` }); // 多人：冷跟 3-bet 的人
       if (three === me) out.push({ h: false, t: `${nm(opener)} 跟` });
       else if (opener === me) out.push({ h: true, t: `你 ${nm(me)} 跟` });
@@ -69,7 +93,7 @@
     if (t === 'ISO') {
       const iso = pa, limp = pc[0];
       out.push({ h: limp === me, t: limp === me ? `你 ${nm(limp)} 溜入` : `${nm(limp)} 溜入` });
-      out.push({ h: iso === me, t: iso === me ? '你加注隔離' : `${nm(iso)} 加注隔離` });
+      out.push({ h: iso === me, t: iso === me ? `你 ${nm(me)} 加注隔離` : `${nm(iso)} 加注隔離` });
       out.push({ h: me !== iso, t: (me !== iso) ? `你 ${nm(me)} 跟` : `${nm(limp)} 跟` });
       return out;
     }
@@ -152,7 +176,25 @@
   // ---------- 可達性（逐線、逐格）----------
   // 一個牌型 × 一列條件，能不能走到這條線：這條線上你先前的每一個決定（翻牌、轉牌、本街先前），
   // 到「那個決定點」的表查這個牌型的主答案（≈ 的替代動作不算），必須就是線上寫的動作。
-  // 牌型逐街沿用同一標籤；牌面狀態＝翻牌質地＋各街最高張（T 以上／9 以下），例外列照條件優先。
+  // 牌型會逐街改變（中小對轉牌成三條、聽牌補中、空氣中對…）：先前那一街用「那一街的牌型」查答案，
+  // 只要有某一串 翻牌→轉牌→河牌 牌型能真的發出來（CT），而且每個決定的主答案都對，這一格就走得到。
+  // 牌面狀態＝翻牌質地＋各街最高張（T 以上／9 以下），例外列照條件優先。
+  // CT：tools/class_trans.json（tools/build_class_trans.py，正式分類器 run10_common.classes 真實發牌 4,000 萬手）
+  const CT = {"A_high|TTT":"aaa aam ada add adm ads aka akk akm aks amm ams dda ddd ddm dds dma dmm dms dsa dss gga ggg ggs gsa gss kda kdd kdm kds kka kkk kkm kks kma kmm kms ksa kss mma mmm mms msa mss ssa sss wsa wss wwa wws www","KQ_high|TTT":"aaa aag aam aaw ada add adg adm ads adw agg agm ags aka akg akk akm aks akw amm ams awm aws aww dda ddd ddg ddm dds ddw dgg dgm dgs dma dmm dms dsa dss dwa dwm dws dww gga ggg ggm ggs gmm gms gsa gss kda kdd kdg kdm kds kdw kgg kgm kgs kka kkg kkk kkm kks kkw kma kmm kms ksa kss kwa kwm kws kww mma mmm mms msa mss ssa sss wma wmm wms wsa wss wwa wwm wws www","low|LLL":"aaa aam aaw ada add adm ads adw aka akk akm aks akw amm ams awm aws aww dda ddd ddg ddm dds ddw dga dgg dgm dgs dma dmm dms dsa dss dwa dwm dws dww gga ggg ggm ggs gma gmm gms gsa gss kaa kam kaw kda kdd kdg kdm kds kdw kga kgg kgm kgs kka kkg kkk kkm kks kkw kma kmm kms ksa kss kwa kwm kws kww mma mmm mms msa mss ssa sss wma wmm wms wsa wss wwa wwm wws www","low|LLT":"aaa aaw ada add ads adw aka akk aks akw amm ams awm aws dda ddd ddg dds ddw dga dgm dgs dma dmm dms dsa dss dwa dwm dws gga ggg ggm ggs gma gmm gms gsa gss kaa kaw kda kdd kdg kds kdw kgm kgs kka kkg kkk kks kkw kmm kms ksa kss kwm kws mma mmm mms msa mss ssa sss wma wmm wms wsa wss wwa wwm wws","low|LTT":"aaa aam aaw ada add adm ads adw aka akk akm aks akw awm aws aww dda ddd ddg ddm dds ddw dga dgg dgm dgs dsa dss dwa dwm dws dww gga ggg ggm ggs gma gmm gms gsa gss kaa kag kam kaw kda kdd kdg kdm kds kdw kga kgg kgm kgs kka kkg kkk kkm kks kkw ksa kss kwa kwm kws kww mma mmm mms msa mss ssa sss wma wmm wms wsa wss","mid_high|TTT":"aaa aam aaw ada add adm ads adw aka akk akm aks akw amm ams awm aws aww dda ddd ddg ddm dds ddw dga dgg dgm dgs dma dmm dms dsa dss dwa dwm dws dww gga ggg ggm ggs gma gmm gms gsa gss kda kdd kdg kdm kds kdw kga kgg kgm kgs kka kkg kkk kkm kks kkw kma kmm kms ksa kss kwa kwm kws kww mma mmm mms msa mss ssa sss wma wmm wms wsa wss wwa wwm wws www","mono|LLL":"aaa aam aaw ada add adm ads adw aka akk akm aks akw ama amm ams awa awm aws aww dda ddd ddg ddm dds ddw dga dgg dgm dgs dma dmm dms dsa dss dwa dwm dws dww gga ggg ggm ggs gma gmm gms gsa gss kaa kam kaw kda kdd kdg kdm kds kdw kga kgg kgm kgs kka kkg kkk kkm kks kkw kma kmm kms ksa kss kwa kwm kws kww mma mmm mms msa mss ssa sss wma wmm wms wsa wss wwa wwm wws www","mono|LLT":"aaa aaw ada add ads adw aka akk aks akw ama amm ams awa awm dda ddd ddg dds ddw dga dgm dgs dma dmm dms dsa dss dwa dwm dws gga ggg ggm ggs gma gmm gms gsa gss kaa kaw kda kdd kdg kds kdw kga kgm kgs kka kkg kkk kks kkw kma kmm kms ksa kss kwa kwm kws mma mmm mms msa mss ssa sss wma wmm wms wsa wss wwa wwm wws","mono|LTT":"aaa aam aaw ada add adm ads adw aka akk akm aks akw awa awm aws aww dda ddd ddg ddm dds ddw dga dgg dgm dgs dsa dss dwa dwm dws dww gga ggg ggm ggs gma gmm gms gsa gss kaa kag kam kaw kda kdd kdg kdm kds kdw kga kgg kgm kgs kka kkg kkk kkm kks kkw ksa kss kwa kwm kws kww mma mmm mms msa mss ssa sss wma wmm wms wsa wss","mono|TTT":"aaa aag aam aaw ada add adg adm ads adw aga agg agm ags aka akg akk akm aks akw ama amm ams awa awm aws aww dda ddd ddg ddm dds ddw dga dgg dgm dgs dma dmm dms dsa dss dwa dwm dws dww gga ggg ggm ggs gma gmm gms gsa gss kda kdd kdg kdm kds kdw kga kgg kgm kgs kka kkg kkk kkm kks kkw kma kmm kms ksa kss kwa kwm kws kww mma mmm mms msa mss ssa sss wma wmm wms wsa wss wwa wwm wws www","paired|LLL":"aaa aam aas aaw ada add adm ads adw aka akk akm aks akw ama amm ams asa ass awm aws aww dda ddd ddg ddm dds ddw dgg dgm dgs dma dmm dms dss dwm dws dww ggg ggm ggs gmm gms gss kaa kam kas kaw kda kdd kdg kdm kds kdw kgg kgm kgs kka kkg kkk kkm kks kkw kma kmm kms ksa kss kwm kws kww mma mmm mms msa mss ssa sss wmm wms wsa wss wwm wws www","paired|LLT":"aaa aas aaw ada add ads adw aka akk aks akw amm ams asa ass awm aws dda ddd ddg dds ddw dgm dgs dmm dms dss dwm dws ggg ggm ggs gmm gms gss kaa kas kaw kda kdd kdg kds kdw kgm kgs kka kkg kkk kks kkw kmm kms ksa kss kwm kws mma mmm mms mss ssa sss wmm wms wss wwm wws","paired|LTT":"aaa aam aas aaw ada add adm ads adw aka akk akm aks akw asa ass awm aws aww dda ddd ddg ddm dds ddw dgg dgm dgs dss dwm dws dww ggg ggm ggs gmm gms gss kaa kag kam kas kaw kda kdd kdg kdm kds kdw kgg kgm kgs kka kkg kkk kkm kks kkw ksa kss kwm kws kww mma mmm mms mss ssa sss wmm wms wss","paired|TTT":"aaa aag aam aas aaw ada add adg adm ads adw agg agm ags aka akg akk akm aks akw ama amm ams asa ass awm aws aww dda ddd ddg ddm dds ddw dgg dgm dgs dma dmm dms dss dwm dws dww ggg ggm ggs gmm gms gsa gss kda kdd kdg kdm kds kdw kgg kgm kgs kka kkg kkk kkm kks kkw kma kmm kms ksa kss kwm kws kww mma mmm mms msa mss ssa sss wmm wms wsa wss wwm wws www"};
+  const HL = { S: 's', TPG: 'g', TPW: 'w', MID: 'm', DRAW: 'd', WDRAW: 'k', AIR: 'a' };
+  const T3 = new Map(), T2 = new Map();
+  for (const [k, v] of Object.entries(CT)) for (const q of v.split(' ')) {
+    (T3.get(k) || T3.set(k, new Set()).get(k)).add(q);
+    const k2 = k.slice(0, -1); (T2.get(k2) || T2.set(k2, new Set()).get(k2)).add(q.slice(0, 2));
+  }
+  // 到第 st 街是 h 的牌型序列（第 0..st 街）；同一街的決定用同一個牌型
+  function chains(h, s, st) {
+    if (st === 0) return [[h]];
+    const out = [];
+    if (st === 1) { const P = T2.get(s.tx + '|' + s.hi[0] + s.hi[1]); for (const c0 of HANDS) if (P && P.has(HL[c0] + HL[h])) out.push([c0, h]); }
+    else { const P = T3.get(s.tx + '|' + s.hi.join('')); for (const c0 of HANDS) for (const c1 of HANDS) if (P && P.has(HL[c0] + HL[c1] + HL[h])) out.push([c0, c1, h]); }
+    return out;
+  }
   const TXS = ['A_high', 'KQ_high', 'mid_high', 'low', 'paired', 'mono'];
   const NEED = { 過: ['x'], 下注: ['small', 'big'], 全下: ['big', 'small', 'r'], 跟: ['c'], 加注: ['r'] };
   function boardStates(S) {
@@ -258,7 +300,7 @@
         const F = lineFacts(segs, preToks);
         const decs = decisionsOf(rec, b.key);
         const states = boardStates(rec.st);
-        const cache = new Map();
+        const cache = new Map(), pcache = new Map();
         function rowOk(r, h) {
           if (r.sp !== rec.sp || r.nd !== rec.nd || !r.hc.includes(h)) return false;
           const ck = r.id + '|' + h;
@@ -269,7 +311,8 @@
             for (const s of states) {
               if (!rowFits(r, s, rec.st, F)) continue;
               if (!r.x && rows.some(x => x.x && x.hc.includes(h) && rowFits(x, s, rec.st, F) === true)) continue; // 這個牌面由例外列代表
-              if (decs.every(d => d.nds.some(nd => [...primary(rec.sp, nd, h, s, d.st, F)].some(a => d.need.includes(a))))) { ok = true; break; }
+              const pass = (d, c) => { const pk = d.st + '|' + d.prefix + '|' + c + '|' + s.tx + s.hi.join(''); if (!pcache.has(pk)) pcache.set(pk, d.nds.some(nd => [...primary(rec.sp, nd, c, s, d.st, F)].some(a => d.need.includes(a)))); return pcache.get(pk); };
+              if (chains(h, s, rec.st).some(q => decs.every(d => pass(d, q[d.st])))) { ok = true; break; }
             }
           }
           cache.set(ck, ok);
