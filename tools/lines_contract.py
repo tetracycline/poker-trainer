@@ -46,7 +46,13 @@ def conditions(sp, nd):
     return [{}]
 
 def expected(data):
-    """Contract plus every actual column, so UI-added conditions cannot escape QA."""
+    """Contract plus every actual column, so UI-added conditions cannot escape QA.
+
+    Displayed turn/river (non-mw) cells are further restricted by reachability
+    (nl2_reach.js / qa_all check_lines): only hand classes that arrive from
+    parent answers are required in the UI. This function still enumerates the
+    data contract so unit tests do not depend on live parent answers.
+    """
     for sp, nodes in NODES.items():
         for nd in sorted(set(nodes) | {r['nd'] for r in data['rows'] if r['sp'] == sp}):
             conds = conditions(sp, nd)

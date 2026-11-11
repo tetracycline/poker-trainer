@@ -10,7 +10,7 @@ async function main() {
   const ctx = {console, __LINES_QA: true, location: {hash: '#lines'}, scrollTo() {}, addEventListener() {}, document: {querySelector: () => app, querySelectorAll: () => [], getElementById: () => null}};
   ctx.window = ctx; vm.createContext(ctx);
   let seed = 652; ctx.Math = Object.create(Math); ctx.Math.random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
-  for (const n of ['defs.js', 'lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2.js']) vm.runInContext(await read(n), ctx, {filename: n});
+  for (const n of ['defs.js', 'lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js', 'nl2.js']) vm.runInContext(await read(n), ctx, {filename: n});
   const D = ctx.NLDEF, F = [], used = new Set(), Q = ctx.__linesQA;
   if (!D || !D.d) { console.log('defs.js missing'); process.exitCode = 1; return; }
   const grouped = new Set(D.groups.flatMap(g => g[1]));

@@ -59,65 +59,86 @@ function nodesOf(sp) {
   const o = []; L.rows.forEach(r => { if (r.sp === sp && !o.includes(r.nd)) o.push(r.nd); });
   return o.sort((a, b) => stOf(a) - stOf(b));
 }
-// 每個節點只列「預設動作＋例外」：同動作的牌型合併，不再逐格列出（HW 11/10：只有不同的才列、才出題）
+// 轉／河牌（非 mw）只列走得到的牌型；一張表：動作相同則一列「所有牌型」，否則「其餘牌型」＋上色例外。
+const REACH = (window.NL2REACH && window.NL2REACH.build(L)) || { usesReach: () => false, classReached: () => true, visible: () => true, reachedHands: () => HCO };
+const nodeVisible = (sp, nd) => !REACH.usesReach || !REACH.usesReach(sp, nd) || REACH.visible(sp, nd);
+const rowReached = (r, h) => !REACH.usesReach(r.sp, r.nd) || REACH.classReached(r.sp, r.nd, h, r);
 const SUMC = {};
 function nodeSum(sp, nd) {
   const key = sp + '|' + nd; if (SUMC[key]) return SUMC[key];
   const R = L.rows.filter(r => r.sp === sp && r.nd === nd), base = R.filter(r => !r.x), xr = R.filter(r => r.x);
-  const cells = []; base.forEach(r => r.hc.forEach(h => cells.push({k: r.cl || '全部', h, r})));
+  const cells = [];
+  base.forEach(r => r.hc.forEach(h => { if (rowReached(r, h)) cells.push({k: r.cl || '全部', h, r}); }));
   const mode = cs => { const c = {}; cs.forEach(x => { c[x.r.a] = (c[x.r.a] || 0) + 1; }); let b = null; for (const a in c) if (b === null || c[a] > c[b]) b = a; return b; };
-  const D = mode(cells), conds = [], exc = new Set(xr.map(r => r.id));
-  cells.forEach(c => { if (!conds.includes(c.k)) conds.push(c.k); });
+  const conds = []; cells.forEach(c => { if (!conds.includes(c.k)) conds.push(c.k); });
+  const D = cells.length ? mode(cells) : null, exc = new Set();
   const lines = conds.map(k => {
-    const cs = cells.filter(c => c.k === k), Mc = mode(cs), own = Mc !== D && cs.filter(c => c.r.a === Mc).length * 2 > cs.length ? Mc : null;
-    const ref = own || D, groups = [];
-    cs.forEach(c => { if (own && c.r.a === own) exc.add(c.r.id);
-      if (c.r.a === ref) return; exc.add(c.r.id);
-      let g = groups.find(g => g.a === c.r.a); if (!g) groups.push(g = {a: c.r.a, cs: []}); g.cs.push(c); });
-    return {k, own, ownCs: own ? cs.filter(c => c.r.a === own) : [], groups, all: cs};
+    const cs = cells.filter(c => c.k === k), Mc = mode(cs);
+    const groups = [];
+    cs.forEach(c => {
+      if (c.r.a === Mc) return; exc.add(c.r.id);
+      let g = groups.find(g => g.a === c.r.a); if (!g) groups.push(g = {a: c.r.a, cs: []}); g.cs.push(c);
+    });
+    return {k, mode: Mc, defCs: cs.filter(c => c.r.a === Mc), groups, all: cs};
   });
-  // 牌面高低分半（run 004）：同一個條件的另一半，用「這一半實際答案」整理，全部一樣就只寫一行
+  // 牌面高低分半（run 004）：同一條件的另一半，用這一半實際答案整理
   const half = [], plain = [];
-  xr.forEach(r => { if (!r.hi) { plain.push(r); return; }
+  xr.forEach(r => { if (!r.hi) { if (r.hc.some(h => rowReached(r, h))) plain.push(r); return; }
     const parent = r.cl.replace(/・?最高張 (T 以上|9 以下)$/, '') || '全部'; let h = half.find(x => x.k === r.cl);
     if (!h) half.push(h = {k: r.cl, parent, xs: []}); h.xs.push(r); });
   half.forEach(h => {
-    const pl = lines.find(l => l.k === h.parent), ref = pl ? (pl.own || D) : D;
-    const E = (pl ? pl.all : []).map(c => { const x = h.xs.find(r => r.hc.includes(c.h)); return x ? {k: h.k, h: c.h, r: x} : c; });
-    const M = mode(E), own = M !== ref && E.filter(c => c.r.a === M).length * 2 > E.length ? M : null, groups = [];
-    E.forEach(c => { if ((own ? c.r.a === own : c.r.a === ref) && (own || !h.xs.includes(c.r))) return;
-      if (!own && !h.xs.includes(c.r)) return;
+    const pl = lines.find(l => l.k === h.parent);
+    const src = pl ? pl.all : cells.filter(c => c.k === (h.parent || '全部'));
+    const E = [];
+    (src.length ? src : HCO.map(hh => ({h: hh, r: h.xs[0], k: h.k}))).forEach(c => {
+      const x = h.xs.find(r => r.hc.includes(c.h));
+      const cell = x ? {k: h.k, h: c.h, r: x} : {k: h.k, h: c.h, r: c.r};
+      if (rowReached(cell.r, cell.h)) E.push(cell);
+    });
+    if (!E.length) return;
+    const M = mode(E), groups = [];
+    E.forEach(c => { if (c.r.a === M) return; exc.add(c.r.id);
       let g = groups.find(g => g.a === c.r.a); if (!g) groups.push(g = {a: c.r.a, cs: []}); g.cs.push(c); });
-    lines.push({k: h.k, own, ownCs: own ? E.filter(c => c.r.a === own) : [], groups, all: E, half: 1});
+    lines.push({k: h.k, mode: M, defCs: E.filter(c => c.r.a === M), groups, all: E, half: 1});
   });
-  return (SUMC[key] = {D, dCs: cells.filter(c => c.r.a === D), lines, xr: plain, exc, cells});
+  plain.forEach(r => r.hc.forEach(h => { if (rowReached(r, h)) exc.add(r.id); }));
+  return (SUMC[key] = {D, lines, xr: plain, exc, cells, empty: !cells.length && !plain.length && !lines.length});
 }
 const isExc = r => nodeSum(r.sp, r.nd).exc.has(r.id);
-function actTxt(a, cs, me) { // 同一動作在不同列可能有不同尺寸／根據：全部列出，不另造數字
+function actTxt(a, cs) { // 同一動作在不同列可能有不同尺寸／根據：全部列出，不另造數字
   const pc = l => /½ 池/.test(l) ? 50 : /1 池/.test(l) ? 100 : (+(l.match(/(\d+)%/) || [])[1] || null);
   let labs = [...new Set(cs.map(c => short(a, c.r)))];
   if ((a === 'small' || a === 'big') && labs.length > 1 && labs.every(l => pc(l))) { const v = labs.map(pc), lo = Math.min(...v), hi = Math.max(...v); labs = [`下 ${lo === hi ? lo : lo + '–' + hi}% 池`]; }
   const bs = [...new Set(cs.map(c => BS[c.r.b]))], ok = cs.some(c => c.r.ok.length);
-  return `<b class="${ACL(a)}">${esc(labs.join('／'))}${ok ? '≈' : ''}</b>${bs.map(b => `<small class="df" data-df="${b}">${b}</small>`).join('')}`;
-}
-function clsList(cs, nd, me) {
-  return HCO.filter(h => cs.some(c => c.h === h)).map(h => { const hit = me && cs.some(c => c.h === h && c.r.id === me.id);
-    return `<span class="${hit ? 'mex' : ''}">${dfs(hlabel(h, nd))}</span>`; }).join('、');
+  return `${esc(labs.join('／'))}${ok ? '≈' : ''}<small class="df" data-df="${bs[0] || ''}">${bs.map(b => esc(b)).join('／')}</small>`;
 }
 function gridHtml(sp, nd, me) {
-  const S = nodeSum(sp, nd), multi = S.lines.length > 1 || S.lines[0].k !== '全部';
-  const nEx = S.lines.reduce((n, l) => n + l.groups.length + (l.own ? 1 : 0), 0) + S.xr.length;
-  let h = `<p class="sum">${nEx ? '其餘全部' : (multi ? '所有牌面、所有牌型' : '所有牌型')} → ${actTxt(S.D, S.dCs)}</p>`;
-  const li = [];
+  const S = nodeSum(sp, nd);
+  if (S.empty || !S.lines.length) return '';
+  const multi = S.lines.length > 1 || (S.lines[0] && S.lines[0].k !== '全部') || S.xr.length;
+  const rows = [];
+  let nDiff = 0;
+  const tdAct = (a, cs, rHit) => `<td class="${ACL(a)}${rHit ? ' me' : ''}">${actTxt(a, cs)}</td>`;
   S.lines.forEach(l => {
-    const pre = l.k === '全部' ? '' : `${dfl(l.k)}：`;
-    if (l.own) li.push(`<li>${pre}${l.groups.length ? '其餘' : '全部'} → ${actTxt(l.own, l.ownCs)}${l.ownCs.some(c => me && c.r.id === me.id) ? '<span class="mex">（這題）</span>' : ''}</li>`);
-    l.groups.forEach(g => li.push(`<li>${pre}${clsList(g.cs, nd, me)} → ${actTxt(g.a, g.cs)}</li>`));
+    const pre = multi ? `<th class="cl">${dfl(l.k)}</th>` : '';
+    const allSame = !l.groups.length;
+    const defLab = allSame ? '所有牌型' : '其餘牌型';
+    const defHit = me && l.defCs.some(c => c.r.id === me.id);
+    rows.push(`<tr>${pre}<th class="cl">${defHit ? '<span class="mex">' : ''}${dfs(defLab)}${defHit ? '</span>' : ''}</th>${tdAct(l.mode, l.defCs, defHit)}</tr>`);
+    l.all.filter(c => c.r.a !== l.mode).forEach(c => { // 每個不同牌型一列，不上合併
+      nDiff++;
+      const hit = me && c.r.id === me.id;
+      rows.push(`<tr class="diff">${pre}<th class="cl">${hit ? '<span class="mex">' : ''}${dfs(hlabel(c.h, nd))}${hit ? '</span>' : ''}</th>${tdAct(c.r.a, [c], hit)}</tr>`);
+    });
   });
-  const xg = []; S.xr.forEach(r => { let g = xg.find(g => g.cl === r.cl && g.a === r.a); if (!g) xg.push(g = {cl: r.cl, a: r.a, cs: []}); r.hc.forEach(h => g.cs.push({h, r})); });
-  xg.forEach(g => li.push(`<li>${dfl(g.cl)}：${clsList(g.cs, nd, me)} → ${actTxt(g.a, g.cs)}</li>`));
-  if (li.length) h += `<p class="small"><span class="lab">${dfs('例外')}</span></p><ul class="exl">${li.join('')}</ul>`;
-  return h;
+  S.xr.forEach(r => r.hc.filter(h => rowReached(r, h)).forEach(h => {
+    nDiff++;
+    const hit = me && r.id === me.id, c = {h, r, k: r.cl};
+    const pre = multi || r.cl ? `<th class="cl">${dfl(r.cl)}</th>` : '';
+    rows.push(`<tr class="diff">${pre}<th class="cl">${hit ? '<span class="mex">' : ''}${dfs(hlabel(h, nd))}${hit ? '</span>' : ''}</th>${tdAct(r.a, [c], hit)}</tr>`);
+  }));
+  const leg = nDiff ? '<p class="leg" aria-hidden="true">色列＝與其餘牌型動作不同</p>' : '';
+  return `<div class="tw"><table class="rt lt">${rows.join('')}</table></div>${leg}`;
 }
 function faceHtml(sp, nd) { // 這個節點你面對什麼：例題的完整行動線（翻前＋先前各街＋這街）
   const ex = L.rows.filter(r => r.sp === sp && r.nd === nd && r.eg && r.eg.length);
@@ -129,7 +150,7 @@ function faceHtml(sp, nd) { // 這個節點你面對什麼：例題的完整行�
   return '';
 }
 function dataHtml(sp, nd) {
-  return `<ul class="dl">${L.rows.filter(r => r.sp === sp && r.nd === nd).map(r => `<li class="small">${r.x ? '例外・' : ''}${esc(r.cl || '全部')}・${r.hc.map(c => HS[c]).join('、')}：<b>${esc(alab(r.a, r))}</b>${r.ok.length ? '（' + r.ok.map(a => alab(a, r)).join('、') + ' 也可以）' : ''}。${esc(r.why)}<br><span class="muted">${BS[r.b]}｜${esc(r.ev)}${r.hw ? `｜你打過 ${r.hw} 次` : ''}</span></li>`).join('')}</ul>`;
+  return `<ul class="dl">${L.rows.filter(r => r.sp === sp && r.nd === nd && r.hc.some(h => rowReached(r, h))).map(r => `<li class="small">${r.x ? '例外・' : ''}${esc(r.cl || '全部')}・${r.hc.map(c => HS[c]).join('、')}：<b>${esc(alab(r.a, r))}</b>${r.ok.length ? '（' + r.ok.map(a => alab(a, r)).join('、') + ' 也可以）' : ''}。${esc(r.why)}<br><span class="muted">${BS[r.b]}｜${esc(r.ev)}${r.hw ? `｜你打過 ${r.hw} 次` : ''}</span></li>`).join('')}</ul>`;
 }
 let LS = {sp: 'bb', data: false};
 function lines() {
@@ -138,12 +159,12 @@ function lines() {
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
     return `${esc(nodeLabel(sp, nd))} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(nodeLabel(s2, n2))}」`; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
-  <p class="small">怎麼看：每個節點先寫「其餘全部 → 預設動作」，下面只列跟預設不同的牌型／牌面（例外）；練習也只出例外。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：GTO 照解算樹（翻牌 33% / 75%，轉牌、河牌 ½ 池 / 1 池，3-bet 底池等另標）；池估照牌池實際下注的平均尺寸（例：下注約 90% 池）。多人近似每街「下 ½ 池」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  <p class="small">怎麼看：每個節點一張表。動作相同就一列「所有牌型」；有不同則一列「其餘牌型」，不同的牌型另外上色。轉牌、河牌只列上游走得到的牌型（翻牌已棄或沒走這條線的不列）；練習只出與預設不同、且走得到的牌型。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：GTO 照解算樹（翻牌 33% / 75%，轉牌、河牌 ½ 池 / 1 池，3-bet 底池等另標）；池估照牌池實際下注的平均尺寸（例：下注約 90% 池）。多人近似每街「下 ½ 池」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>` + defsHtml(false) + `
   <div class="sec"><b class="h">${esc(S.t)}</b><span class="ev">${esc(S.sub)}</span>${cv && cv.by[sp] ? `<span class="ev">你 ${cv.by[sp][0]}/${cv.by[sp][1]} 個決定在表上</span>` : ''}</div>` +
-  nodesOf(sp).map(nd => `<div class="sec"><b>${esc(nodeLabel(sp, nd))}</b>${faceHtml(sp, nd)}${gridHtml(sp, nd)}${LS.data ? dataHtml(sp, nd) : ''}</div>`).join('') +
+  nodesOf(sp).filter(nd => nodeVisible(sp, nd)).map(nd => `<div class="sec"><b>${esc(nodeLabel(sp, nd))}</b>${faceHtml(sp, nd)}${gridHtml(sp, nd)}${LS.data ? dataHtml(sp, nd) : ''}</div>`).join('') +
   (alias.length ? `<div class="sec small"><span class="lab">其他點</span>　${aln ? esc(aln) + '。' : ''}沒有自己的數據，照下面的表：<ul>${alias.map(a => `<li>${a}</li>`).join('')}</ul></div>` : '');
 }
 const f0 = x => Number(x).toLocaleString('en-US'), pc = (a, b) => Math.round(a / b * 1000) / 10 + '%';
@@ -190,7 +211,7 @@ function story(e) {
 let LQ = null, ln = 0, DF = 'all';
 const FL = () => [['all', '全部']].concat(L.spots.map(s => [s.id, s.t.split('（')[0]])).concat([['riv', '河牌一對：跟或棄']]);
 function pool(f) {
-  return L.rows.filter(r => r.eg && r.eg.length && isExc(r) && (f === 'all' || (f === 'riv' ? (/r_vs_bet/.test(r.nd) && r.sp !== 'mw' && r.hc.some(h => ['TPG', 'TPW', 'MID'].includes(h))) : r.sp === f)));
+  return L.rows.filter(r => r.eg && r.eg.length && isExc(r) && r.hc.some(h => rowReached(r, h)) && nodeVisible(r.sp, r.nd) && (f === 'all' || (f === 'riv' ? (/r_vs_bet/.test(r.nd) && r.sp !== 'mw' && r.hc.some(h => ['TPG', 'TPW', 'MID'].includes(h))) : r.sp === f)));
 }
 function newLQ(f, street) {
   const P = pool(f).filter(r => street === undefined || stOf(r.nd) === street);
@@ -205,10 +226,25 @@ function newLQ(f, street) {
   }
   return null;
 }
+
+function rangeHtml(e) { // 這題相關的翻前範圍（HW：題目下面放表）
+  if (!H || !e || !e.role) return '';
+  const [kind, key] = e.role, list = H[kind] && H[kind][key];
+  if (!list || !list.length) return '';
+  const h = (e.h.match(/../g) || []), a = h[0] && h[0][0], b = h[1] && h[1][0];
+  const hero = a && b ? (a === b ? a + a : (RK.indexOf(a) > RK.indexOf(b) ? a + b : b + a) + (h[0][1] === h[1][1] ? 's' : 'o')) : '';
+  const lab = ({open:'開池',call:'跟注',tb:'3-bet',c3:'跟 3-bet',iso:'隔離'}[kind] || kind) + '・' + key;
+  let g = '';
+  for (let i = 0; i < 13; i++) for (let j = 0; j < 13; j++) {
+    const A = 12 - i, B = 12 - j, name = A === B ? RK[A] + RK[A] : A > B ? RK[A] + RK[B] + 's' : RK[B] + RK[A] + 'o';
+    g += `<i class="${list.includes(name) ? 'in' : ''}${name === hero ? ' me' : ''}">${name}</i>`;
+  }
+  return `<details class="pr"><summary class="small muted">這題相關翻前範圍：${esc(lab)}</summary><div class="grid">${g}</div></details>`;
+}
 function drill(f, street) {
   window.__Q = null;
   DF = f || DF; const q = LQ = newLQ(DF, street);
-  if (!q) { app.innerHTML = '<div class="sec">這個分類沒有題目（只有跟預設不同的牌型才出題）。</div>'; return; }
+  if (!q) { app.innerHTML = '<div class="sec">這個分類沒有題目（只出跟預設不同、且走得到的牌型）。</div>'; return; }
   const r = q.row, e = q.e, s = q.s, h = cs2(e.h), b = cs2(e.b), sp = L.spots.find(x => x.id === r.sp);
   const lst = s[s.length - 1], vs = isVs(r.nd);
   const ask = vs ? `輪到你：要跟 ${r1(s.facing)}bb（底池 ${s.pot}bb）` : `輪到你（底池 ${lst.pot}bb）`;
@@ -216,7 +252,7 @@ function drill(f, street) {
   <div id="qbox" class="sec"><p class="qs">${esc(sp.t.split('（')[0])}｜${esc(nodeLabel(r.sp, r.nd))}。你的牌 ${pretty(h)}，你要怎麼做？</p>
   <div class="cards">${h.map(cd).join('')}　${b.map(cd).join('')}</div>
   <p class="line">${esc(s[0])}</p>${s.slice(1).map((x, i) => `<p class="line">${x.st} ${pretty(x.cards)}：${esc(x.txt)}${i === s.length - 2 ? (x.txt ? '，' : '') + esc(ask) : ''}</p>`).join('')}
-  <div class="abar">${CHO(r.nd, r.sp).map(a => `<button class="ab" data-a="${a}">${esc(alab(a, r))}${a === 'c' ? ' ' + r1(s.facing) + 'bb' : ''}</button>`).join('')}</div></div><div id="ans"></div>`;
+  <div class="abar">${CHO(r.nd, r.sp).map(a => `<button class="ab" data-a="${a}">${esc(alab(a, r))}${a === 'c' ? ' ' + r1(s.facing) + 'bb' : ''}</button>`).join('')}</div>${rangeHtml(e)}</div><div id="ans"></div>`;
   window.__Q = q;
   app.querySelectorAll('.ab').forEach(el => el.onclick = () => lanswer(el.dataset.a, el));
 }
@@ -248,7 +284,7 @@ app.addEventListener('click', e => {
 });
 if (window.__LINES_QA) window.__linesQA = {
   answer: a => lanswer(a, {classList: {add() {}}}),
-  render: sp => { LS.sp = sp; lines(); }, nodeSum, isExc, pool, card, DEF, defsHtml, drill, gridHtml, story, nodesOf, stOf
+  render: sp => { LS.sp = sp; lines(); }, nodeSum, isExc, pool, card, DEF, defsHtml, drill, gridHtml, story, nodesOf, stOf, nodeVisible, rowReached, REACH
 };
 window.addEventListener('hashchange', route); route();
 })();

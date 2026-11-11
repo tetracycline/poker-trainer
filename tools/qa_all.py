@@ -99,10 +99,29 @@ def check_lines():
             fail('6 剝削規則', 'lines:coverage', sp + ' 沒有轉牌列')
         for nd in set(nodes) - actual:
             fail('6 剝削規則', 'lines:coverage', sp + ':' + nd + ' 缺節點')
+    # 轉／河（非 mw）只要求「走得到」的牌型有答案；走不到的列不顯示，也不再當空格失敗。翻牌與 mw 仍要七種牌型。
+    reach_out = subprocess.run(['node', '-e', "global.window=global;global.globalThis=global;eval(require('fs').readFileSync('nl2_reach.js','utf8'));eval(require('fs').readFileSync('lines_data.js','utf8'));process.stdout.write(JSON.stringify(NL2REACH.build(window.NLL).dump()))"], capture_output=True, text=True, cwd=ROOT)
+    if reach_out.returncode != 0:
+        fail('6 剝削規則', 'lines:reach', 'nl2_reach.js dump failed: ' + (reach_out.stderr or reach_out.stdout)[:200])
+        REACHMAP = {}
+    else:
+        REACHMAP = json.loads(reach_out.stdout)
+    def _ckey(r):
+        c = r.get('c') or {}
+        return json.dumps(c, sort_keys=True, ensure_ascii=False) if c else '{}'
     for sp, nd in {(r['sp'], r['nd']) for r in NLL['rows']}:
+        info = REACHMAP.get(sp + '|' + nd) or {}
+        if info.get('usesReach') and not info.get('visible'):
+            continue
         rr = [r for r in NLL['rows'] if (r['sp'], r['nd']) == (sp, nd) and not r.get('x')]
-        for cl in {r.get('cl') or '全部' for r in rr}:
-            for hc in NLL['hc']:
+        for r0 in rr:
+            cl = r0.get('cl') or '全部'
+            allowed = set(NLL['hc'])
+            if info.get('usesReach'):
+                allowed = set(info.get('byC', {}).get(_ckey(r0), []) or info.get('byC', {}).get(json.dumps(r0.get('c') or {}, sort_keys=True), []))
+                if not allowed:
+                    continue
+            for hc in allowed:
                 if not any((r.get('cl') or '全部') == cl and hc in r['hc'] for r in rr):
                     fail('6 剝削規則', 'lines:grid', f'{sp}:{nd}:{cl}:{hc} 會顯示空格')
     if NLL.get('mw_grid',{}).get('columns') != [{'hr':'PFR'},{'hr':'CALL'}]:
