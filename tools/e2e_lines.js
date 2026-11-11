@@ -16,7 +16,7 @@ async function main() {
   let seed = 1106;
   context.Math = Object.create(Math);
   context.Math.random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
-  for (const name of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js', 'nl2.js']) vm.runInContext(await read(name), context, {filename: name});
+  for (const name of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js', 'nl2_titles.js', 'nl2.js']) vm.runInContext(await read(name), context, {filename: name});
   if (!context.__linesQA) throw new Error('Renderer lacks QA interface (deploy nl2.js with the data)');
   const failures = [], summary = [];
   context.__linesQA.card();
@@ -25,6 +25,9 @@ async function main() {
     let count = 0;
     if (/undefined|NaN/.test(app.innerHTML)) failures.push(`${label}: invalid rendered text`);
     if (/所有牌型|其餘牌型|class="leg"|class="diff"/.test(app.innerHTML)) failures.push(`${label}: compact-table leftover`);
+    if (/先前行動見例題|全部前面行動線|逐題列出翻前|翻前角色見情境/.test(app.innerHTML)) failures.push(`${label}: vague node title leftover`);
+    const plain = app.innerHTML.replace(/<[^>]+>/g, '');
+    if (label==='bb' && !/你過、對手過/.test(plain)) failures.push('bb: t_probe-style title missing 你過、對手過');
     for (const cell of app.innerHTML.matchAll(/<td\b([^>]*)>([\s\S]*?)<\/td>/g)) {
       const value = cell[2].replace(/<[^>]*>/g, '').trim(); count++;
       const isNa = /\bna\b/.test(cell[1]);
