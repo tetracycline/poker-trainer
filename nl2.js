@@ -117,10 +117,15 @@ function gridOne(sp, nd, me, line) {
   return h;
 }
 function faceHtml(sp, nd, line) { // 這個節點你面對什麼：例題的完整行動線（翻前＋先前各街＋這街）
-  const ex = L.rows.filter(r => r.sp === sp && r.nd === nd && r.eg && r.eg.length && r.hc.some(h => rowReached(r, h, line)));
-  for (const r of ex) {
-    for (const e of r.eg) {
-      if (line && TITLES && TITLES.lineKeyFromEg(e, stOf(nd)) !== line.key) continue;
+  // 例題只用來顯示行動線（位置、尺寸、底池），不顯示手牌，所以同一條線的任何例題都可以
+  const ex = L.rows.filter(r => r.sp === sp && r.nd === nd && r.eg && r.eg.length && (line || r.hc.some(h => rowReached(r, h, line))));
+  const sig = e => e ? [e.t, e.me, e.pa, (e.pc || []).join(','), e.pretext || ''].join('|') : '';
+  const cand = []; // 例題必須跟標題同一條線、同一組翻前位置
+  for (const r of ex) for (const e of r.eg) if (!line || !TITLES || TITLES.lineKeyFromEg(e, stOf(nd)) === line.key) cand.push(e);
+  if (line && line.eg) cand.sort((a, b) => (sig(b) === sig(line.eg)) - (sig(a) === sig(line.eg)));
+  for (const r of [0]) {
+    for (const e of cand) {
+      if (line && line.eg && sig(e) !== sig(line.eg)) continue;
       const s = story(e); if (!s || s.length !== stOf(nd) + 2) continue; const l = s[s.length - 1];
       const face = isVs(nd) ? `你要跟 ${r1(s.facing)}bb（底池 ${s.pot}bb）` : `輪到你（底池 ${l.pot}bb）`;
       const prev = s.slice(1, -1).map(x => `${x.st}：${esc(x.txt)}`).join(' → ');
@@ -144,7 +149,7 @@ function lines() {
   <div class="sec"><b class="h">${esc(S.t)}</b><span class="ev">${esc(S.sub)}</span>${cv && cv.by[sp] ? `<span class="ev">你 ${cv.by[sp][0]}/${cv.by[sp][1]} 個決定在表上</span>` : ''}</div>` +
   nodesOf(sp).filter(nd => nodeVisible(sp, nd)).flatMap(nd => {
     const use = lineList(sp, nd).length ? lineList(sp, nd) : [null];
-    return use.map(ln => `<div class="sec"><b class="ttl">${ln ? ln.titleHtml : esc(nodeLabel(sp, nd))}</b>${faceHtml(sp, nd, ln)}${gridHtml(sp, nd, null, ln)}${LS.data ? dataHtml(sp, nd, ln) : ''}</div>`);
+    return use.map(ln => `<div class="sec" data-node="${sp}/${nd}"><b class="ttl">${ln ? ln.titleHtml : esc(nodeLabel(sp, nd))}</b>${faceHtml(sp, nd, ln)}${gridHtml(sp, nd, null, ln)}${LS.data ? dataHtml(sp, nd, ln) : ''}</div>`);
   }).join('') +
   (alias.length ? `<div class="sec small"><span class="lab">其他點</span>　${aln ? esc(aln) + '。' : ''}沒有自己的數據，照下面的表：<ul>${alias.map(a => `<li>${a}</li>`).join('')}</ul></div>` : '');
 }
@@ -191,14 +196,19 @@ function story(e) {
 // ---------- 練習（同一份表）----------
 let LQ = null, ln = 0, DF = 'all';
 const FL = () => [['all', '全部']].concat(L.spots.map(s => [s.id, s.t.split('（')[0]])).concat([['riv', '河牌一對：跟或棄']]);
+// 題目只用「走得到這條線」的例題：例題自己的線要顯示，而且這一列的牌型在那條線上走得到
+const egOk = (r, e) => { if (!TITLES) return true; const ln = TITLES.titleForEg(r.sp, r.nd, e); return !!ln && r.hc.some(h => rowReached(r, h, ln)); };
+// 只列表、不出題的線：這條線走得到的格沒有完整例題手牌（HW 2026-11-11 同意保留表格、不進練習）
+const TABLE_ONLY = new Set(['mw/r_vs_xr']);
+const tableOnly = (sp, nd) => TABLE_ONLY.has(sp + '/' + nd);
 function pool(f) {
-  return L.rows.filter(r => r.eg && r.eg.length && nodeVisible(r.sp, r.nd) && r.hc.some(h => rowReached(r, h)) && (!(TITLES && r.eg) || r.eg.some(e => TITLES.titleForEg(r.sp, r.nd, e))) && (f === 'all' || (f === 'riv' ? (/r_vs_bet/.test(r.nd) && r.sp !== 'mw' && r.hc.some(h => ['TPG', 'TPW', 'MID'].includes(h))) : r.sp === f)));
+  return L.rows.filter(r => r.eg && r.eg.length && !tableOnly(r.sp, r.nd) && nodeVisible(r.sp, r.nd) && r.hc.some(h => rowReached(r, h)) && r.eg.some(e => egOk(r, e)) && (f === 'all' || (f === 'riv' ? (/r_vs_bet/.test(r.nd) && r.sp !== 'mw' && r.hc.some(h => ['TPG', 'TPW', 'MID'].includes(h))) : r.sp === f)));
 }
 function newLQ(f, street) {
   const P = pool(f).filter(r => street === undefined || stOf(r.nd) === street);
   if (!P.length) return null;
   for (let t = 0; t < 200; t++) {
-    const r = P[Math.floor(Math.random() * P.length)], e = r.eg[Math.floor(Math.random() * r.eg.length)], s = story(e);
+    const r = P[Math.floor(Math.random() * P.length)], egs = r.eg.filter(e => egOk(r, e)), e = egs[Math.floor(Math.random() * egs.length)], s = e && story(e);
     if (!s) continue;
     if (s.length !== stOf(r.nd) + 2) continue;
     if (f === 'riv' && !['TPG', 'TPW', 'MID'].some(h => r.hc.includes(h))) continue;
@@ -249,7 +259,7 @@ app.addEventListener('click', e => {
   if (t.closest('[data-tg]')) { LS.data = !LS.data; lines(); return; }
   const go = t.closest('[data-go]'); if (go) LS.sp = go.dataset.go;
 });
-if (window.__LINES_QA) window.__linesQA = {
+if (window.__LINES_QA) window.__linesQA = { tableOnly,
   answer: a => lanswer(a, {classList: {add() {}}}),
   render: sp => { LS.sp = sp; lines(); }, pool, card, DEF, defsHtml, drill, gridHtml, story, nodesOf, stOf, nodeVisible, rowReached, REACH, TITLES, lineList
 };

@@ -78,7 +78,9 @@ async function main() {
           const story = context.__linesQA.story(e);
           return story && story.length === context.__linesQA.stOf(nd) + 2;
         }));
-      if (!eligible) failures.push(`${spot.id}/${nd}: no complete drill example`);
+      const tOnly = context.__linesQA.tableOnly && context.__linesQA.tableOnly(spot.id, nd);
+      if (tOnly && context.__linesQA.pool(spot.id).some(r => r.nd === nd)) failures.push(`${spot.id}/${nd}: table-only line leaked into drill pool`);
+      if (!eligible && !tOnly) failures.push(`${spot.id}/${nd}: no complete drill example`);
     }
     for (let street = 0; street < 3; street++) {
       let count = 0;

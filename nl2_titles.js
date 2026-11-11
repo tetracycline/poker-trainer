@@ -1,5 +1,6 @@
 // NL2 節點標題：寫成明確行動線；同一節點若有多條先前線就拆表。
-// 逐線由親節點「實際答案」（牌型 × 牌面條件）往下追，走不到的線／列／節點不顯示。
+// 逐線、逐格：線上你先前每個決定都到該決定點查主答案，走不到的格／線／節點不顯示（見 build 內說明）。
+// 獨立驗證：tools/reach_verify.js（從畫面讀表，不用這裡的程式）。
 (function (root) {
   const HANDS = ['S', 'TPG', 'TPW', 'MID', 'DRAW', 'WDRAW', 'AIR'];
   const STN = ['翻牌', '轉牌', '河牌'];
@@ -24,118 +25,30 @@
       return { hero: p === me, pos: p, k: a[0], verb: verb(a) };
     });
   }
-  function normSeg(acts) {
-    const parts = [];
-    for (const a of acts) {
-      if (!a.hero && a.verb === '棄') continue; // 對手棄牌不改變這條線
-      const v = (!a.hero && a.verb === '全下') ? '加注' : a.verb;
-      const bit = (a.hero ? '你' : '對手') + v;
-      if (parts.length && parts[parts.length - 1] === bit && !a.hero) continue; // 連續的對手過／跟併成一次
-      parts.push(bit);
+  // 一街的動作 → 你／對手＋動作（照實寫；只做三件事：對手棄牌不寫、連續相同的對手動作併成一次、
+  // 對手在你行動前跟別的對手的注不寫）。對手全下：本街已有人下注 → 對手加注；沒有 → 對手下注（表不分尺寸）。
+  function canonSeg(acts) {
+    const a = []; let bet = false;
+    for (const x of acts) {
+      if (!x.hero && x.verb === '棄') continue;
+      const v = (!x.hero && x.verb === '全下') ? (bet ? '加注' : '下注') : x.verb;
+      if (/下注|加注|全下/.test(x.verb)) bet = true;
+      const bit = (x.hero ? '你' : '對手') + v;
+      if (a.length && a[a.length - 1] === bit && !x.hero) continue;
+      a.push(bit);
     }
-    return parts.join('、');
+    return a.filter((b, i) => !(b === '對手跟' && i > 0 && /^對手(下注|加注|全下)/.test(a[i - 1])));
   }
-  // 線的識別：已完成各街＋本街已發生的動作（不含尺寸）
-  function semanticSeg(seg) {
-    if (!seg) return '';
-    const bits = seg.split('、').filter(Boolean);
-    const you = bits.filter(b => b.startsWith('你'));
-    const vBet = bits.find(b => /^對手(下注|加注)/.test(b));
-    const youBet = you.find(b => /下注|全下/.test(b));
-    const youRaise = you.find(b => b === '你加注');
-    const youCall = you.find(b => b === '你跟');
-    const youCheck = you.includes('你過') || you.find(b => b === '你過');
-    const villFirst = bits[0] && bits[0].startsWith('對手');
-    if (vBet && (youCall || youRaise)) {
-      return (youCheck && bits.indexOf('你過') < bits.indexOf(vBet) ? '你過、' : '') + vBet + '、' + (youRaise || youCall) + (youRaise && bits.includes('對手跟') ? '、對手跟' : '');
-    }
-    if (youBet) {
-      const after = [];
-      if (bits.includes('對手跟')) after.push('對手跟');
-      if (bits.includes('對手加注')) after.push('對手加注');
-      if (youCall && bits.includes('對手加注')) after.push('你跟');
-      return (villFirst && bits[0] === '對手過' ? '對手過、' : '') + youBet + (after.length ? '、' + after.join('、') : '');
-    }
-    if (vBet && !youCall && !youRaise && !youBet) {
-      return (bits[0] === '你過' ? '你過、' : '') + vBet; // 本街你已過、對手下注，等你回應
-    }
-    if (youCheck) return villFirst ? '對手過、你過' : (bits.some(b => b === '對手過') ? '你過、對手過' : '你過');
-    if (bits.length && bits.every(b => b === '對手過')) return '對手過';
-    return seg;
-  }
+  // 線的識別：各街（到本街為止）已發生的動作，以「|」分街，位置固定（空的街也保留）
   function lineKeyFromEg(e, st) {
     const segs = String(e.l || '').split('/');
     const parts = [];
-    for (let i = 0; i <= st && i < segs.length; i++) {
-      const acts = actsOfSeg(segs[i], e.me);
-      if (!acts.length) continue;
-      const n = semanticSeg(normSeg(acts));
-      if (n) parts.push(n);
-    }
+    for (let i = 0; i <= st; i++) parts.push(canonSeg(actsOfSeg(segs[i], e.me)).join('、'));
     return parts.join('|');
   }
   function segsFromKey(key) { return key ? key.split('|') : []; }
 
-  function lastHeroK(segText) {
-    const m = [...String(segText || '').matchAll(/你(過|跟|棄|下注|加注|全下)/g)];
-    if (!m.length) return null;
-    return { 過: 'x', 跟: 'c', 棄: 'f', 下注: 'b', 加注: 'r', 全下: 'a' }[m[m.length - 1][1]];
-  }
-  function viaOfK(k) {
-    if (k === 'x') return 'check';
-    if (k === 'c') return 'call';
-    if (k === 'r') return 'raise';
-    if (k === 'b' || k === 'a') return 'bet';
-    return null;
-  }
-  // 這一段完成的街，對應哪種親節點（kind）
-  function kindsForSeg(segText) {
-    const s = segText || '';
-    if (/你跟|你加注/.test(s) && /對手下注|對手加注/.test(s)) {
-      return ['vs_cbet', 'vs_donk', 'vs_bet', 'vs_over', 'vs_barrel', 'vs_probe', 'vs_xr'];
-    }
-    if (/你下注|你全下/.test(s)) {
-      return ['cbet', 'stab', 'first', 'lead', 'bet', 'barrel', 'delay', 'probe'];
-    }
-    if (/你過/.test(s)) {
-      return ['cbet', 'stab', 'first', 'lead', 'bet', 'barrel', 'delay', 'probe'];
-    }
-    return [];
-  }
-
-  function actsSet(r) { return new Set([r.a, ...(r.ok || [])]); }
-  function viaMatch(r, via) {
-    const A = actsSet(r);
-    if (via === 'call') return A.has('c');
-    if (via === 'raise') return A.has('r');
-    if (via === 'check') return A.has('x');
-    if (via === 'bet') return A.has('small') || A.has('big');
-    return false;
-  }
-  function txBucket(cl, c) {
-    const s = cl || '';
-    if (/A 高面|K\/Q 高面|J\/T 高面|最高張 T 以上/.test(s)) return 'high';
-    if (/9 以下|最高張 9 以下/.test(s)) return 'low';
-    if (/成對面/.test(s)) return 'pair';
-    if (/單色面/.test(s)) return 'mono';
-    if (c && c.hi === 'T') return 'high';
-    if (c && c.hi === 'L') return 'low';
-    if (c && c.tx) {
-      if (/A_high|KQ|JT|high/i.test(c.tx)) return 'high';
-      if (/low|9/i.test(c.tx)) return 'low';
-      if (/pair/i.test(c.tx)) return 'pair';
-      if (/mono|flush|tone/i.test(c.tx)) return 'mono';
-    }
-    return 'all';
-  }
-  function txCompat(parentB, childB) {
-    if (childB === 'all' || parentB === 'all') return true;
-    if (childB === parentB) return true;
-    if ((parentB === 'pair' || parentB === 'mono') && (childB === 'high' || childB === 'low')) return 'unsure';
-    if ((childB === 'pair' || childB === 'mono') && (parentB === 'high' || parentB === 'low')) return 'unsure';
-    return false;
-  }
-
+  const PRE_ORDER = ['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
   function preflopTokens(e) {
     if (!e) return [{ h: false, t: '翻前已完成' }];
     const me = e.me, t = e.t, pa = e.pa, pc = (e.pc || []).filter(Boolean);
@@ -143,26 +56,36 @@
     const out = [];
     if (t === '3BP') {
       const opener = pc[0], three = pa;
+      const cold = pc.slice(1).filter(p => p !== three && p !== opener);
       out.push({ h: opener === me, t: opener === me ? `你 ${nm(opener)} 開` : `${nm(opener)} 開` });
       out.push({ h: three === me, t: three === me ? '你 3-bet' : `${nm(three)} 3-bet` });
+      for (const p of cold) out.push({ h: p === me, t: p === me ? `你 ${p} 跟` : `${p} 跟` }); // 多人：冷跟 3-bet 的人
       if (three === me) out.push({ h: false, t: `${nm(opener)} 跟` });
-      else out.push({ h: true, t: `你 ${nm(me)} 跟` });
+      else if (opener === me) out.push({ h: true, t: `你 ${nm(me)} 跟` });
+      else if (!cold.includes(me)) out.push({ h: false, t: `${nm(opener)} 跟` });
+      else out.push({ h: false, t: `${nm(opener)} 跟` });
       return out;
     }
     if (t === 'ISO') {
       const iso = pa, limp = pc[0];
       out.push({ h: limp === me, t: limp === me ? `你 ${nm(limp)} 溜入` : `${nm(limp)} 溜入` });
       out.push({ h: iso === me, t: iso === me ? '你加注隔離' : `${nm(iso)} 加注隔離` });
-      out.push({ h: limp === me || (me !== iso), t: (me !== iso) ? `你 ${nm(me)} 跟` : `${nm(limp)} 跟` });
+      out.push({ h: me !== iso, t: (me !== iso) ? `你 ${nm(me)} 跟` : `${nm(limp)} 跟` });
       return out;
     }
-    if (t === 'LMP' || !pa) {
+    if (t === 'LMP' || !pa) { // 溜入底池：逐人寫；你的部分才上金色
+      let seq = [];
       if (e.pretext) {
-        const short = String(e.pretext).replace(/UTG 棄牌，/g, '').replace(/棄牌，/g, '棄，');
-        const clipped = short.length > 36 ? '溜入底池，你（' + me + '）' : short;
-        return [{ h: true, t: clipped.indexOf('你') >= 0 ? clipped : `溜入底池，你（${me}）` }];
+        for (const x of String(e.pretext).split('，')) {
+          const m = x.match(/^(你（(\w+)）|(\w+)) (跟注|過牌|加注|棄牌)/);
+          if (!m || m[4] === '棄牌') continue;
+          const p = m[2] || m[3];
+          seq.push({ p, v: m[4] === '過牌' ? '過' : m[4] === '加注' ? '加注' : '溜入' });
+        }
       }
-      return [{ h: true, t: `溜入底池，你（${me}）` }];
+      if (!seq.length) seq = pc.slice().sort((x, y) => PRE_ORDER.indexOf(x) - PRE_ORDER.indexOf(y)).map(p => ({ p, v: p === 'BB' ? '過' : '溜入' }));
+      for (const x of seq) out.push({ h: x.p === me, t: x.p === me ? `你 ${x.p} ${x.v}` : `${x.p} ${x.v}` });
+      return out;
     }
     // SRP / default
     const opener = pa, callers = pc.filter(p => p !== opener);
@@ -182,14 +105,10 @@
     return out;
   }
 
-  function questionFor(kind, curSeg) {
-    if (/vs_3b/.test(kind)) return '你要怎麼做？';
-    if (/vs_xr/.test(kind)) return '你要怎麼做？';
-    if (/vs_/.test(kind)) return '你要怎麼做？';
-    if (curSeg && /對手過/.test(curSeg) && !/你(?:過|跟|下注|加注|全下)/.test(curSeg.split('對手過').pop() || '')) {
-      return '輪到你，下注或過牌？';
-    }
-    if (curSeg && curSeg.length) return '輪到你，下注或過牌？';
+  function questionFor(kind, curSeg) { // 照本街實際狀態問：面對下注／加注 → 你要怎麼做；否則下注或過牌
+    const bits = String(curSeg || '').split('、').filter(Boolean);
+    if (bits.length && /^對手(下注|加注|全下|超池下注)/.test(bits[bits.length - 1])) return '你要怎麼做？';
+    if (bits.length) return '輪到你，下注或過牌？';
     return '你先行動，下注或過牌？';
   }
 
@@ -200,7 +119,8 @@
     parts.push({ plain: '翻前：' + prePlain, html: '翻前：' + preHtml });
     for (let i = 0; i <= st; i++) {
       const name = STN[i];
-      const seg = segs[i] || '';
+      let seg = segs[i] || '';
+      if (i === st && bareKind(kind) === 'vs_over') seg = seg.replace(/對手下注$/, '對手超池下注'); // 跟一般面對下注的表分開
       if (i < st) {
         // 已完成的街
         if (!seg) continue;
@@ -229,17 +149,52 @@
     return [...m.entries()].sort((a, b) => b[1] - a[1])[0];
   }
 
+  // ---------- 可達性（逐線、逐格）----------
+  // 一個牌型 × 一列條件，能不能走到這條線：這條線上你先前的每一個決定（翻牌、轉牌、本街先前），
+  // 到「那個決定點」的表查這個牌型的主答案（≈ 的替代動作不算），必須就是線上寫的動作。
+  // 牌型逐街沿用同一標籤；牌面狀態＝翻牌質地＋各街最高張（T 以上／9 以下），例外列照條件優先。
+  const TXS = ['A_high', 'KQ_high', 'mid_high', 'low', 'paired', 'mono'];
+  const NEED = { 過: ['x'], 下注: ['small', 'big'], 全下: ['big', 'small', 'r'], 跟: ['c'], 加注: ['r'] };
+  function boardStates(S) {
+    const out = [], seen = new Set();
+    for (const tx of TXS) {
+      const h0s = ['A_high', 'KQ_high', 'mid_high'].includes(tx) ? ['T'] : tx === 'low' ? ['L'] : ['T', 'L'];
+      for (const h0 of h0s) for (const h1 of (h0 === 'T' ? ['T'] : ['T', 'L'])) for (const h2 of (h1 === 'T' ? ['T'] : ['T', 'L'])) {
+        const hi = [h0, h1, h2], k = tx + hi.slice(0, S + 1).join('');
+        if (!seen.has(k)) { seen.add(k); out.push({ tx, hi }); }
+      }
+    }
+    return out;
+  }
+  function lineFacts(segs, preToks) {
+    const bits = i => (segs[i] || '').split('、').filter(Boolean);
+    const firstBet = i => { for (const b of bits(i)) { if (/^對手(下注|全下)/.test(b)) return 'v'; if (/^你(下注|全下)/.test(b)) return 'h'; } return ''; };
+    const heroAgg = i => bits(i).some(b => /^你(下注|全下|加注)/.test(b));
+    return {
+      tb: segs.length >= 3 && firstBet(0) === 'v' && firstBet(1) === 'v' && firstBet(2) === 'v',
+      checkTurn: segs.length >= 3 && bits(1).includes('你過') && !heroAgg(1),
+      betBet: segs.length >= 3 && heroAgg(0) && heroAgg(1),
+      // 翻前加注者（資料的「你是開池者」）＝最後加注的人：你 3-bet／你加注隔離，或你開池且沒人 3-bet
+      pfr: preToks.some(x => x.h && /3-bet|加注隔離/.test(x.t)) || (preToks.some(x => x.h && /開$/.test(x.t)) && !preToks.some(x => /3-bet/.test(x.t)))
+    };
+  }
+  // 列條件是否符合：true 一定符合；'maybe' 有不追蹤的條件（下注尺寸、河牌牌型）；false 不符
+  function rowFits(r, s, street, F) {
+    let maybe = false;
+    for (const [k, v] of Object.entries(r.c || {})) {
+      if (k === 'tx') { if (s.tx !== v) return false; }
+      else if (k === 'hi') { if (s.hi[street] !== v) return false; }
+      else if (k === 'ln') { if ((v === 'tb') !== F.tb) return false; }
+      else if (k === 'prior') { if ((v === 'check_turn' && !F.checkTurn) || (v === 'bet_bet' && !F.betBet)) return false; }
+      else if (k === 'hr') { if ((v === 'PFR') !== F.pfr) return false; }
+      else maybe = true;
+    }
+    return maybe ? 'maybe' : true;
+  }
+
   function build(L) {
     const nodeIndex = new Map();
     const nodeList = [];
-    const unsure = [];
-    const unsureSeen = new Set();
-    function noteUnsure(sp, nd, reason, extra) {
-      const id = sp + '|' + nd + '|' + reason + '|' + (extra || '');
-      if (unsureSeen.has(id)) return;
-      unsureSeen.add(id);
-      unsure.push({ sp, nd, reason, extra: extra || '' });
-    }
     for (const r of L.rows) {
       const key = r.sp + '|' + r.nd;
       if (!nodeIndex.has(key)) {
@@ -250,250 +205,120 @@
       }
       nodeIndex.get(key).rows.push(r);
     }
-    function rowsOf(sp, nd) {
-      const hit = nodeIndex.get(sp + '|' + nd);
-      return hit ? hit.rows : [];
+    const rowsOf = (sp, nd) => (nodeIndex.get(sp + '|' + nd) || { rows: [] }).rows;
+    // 決定點：情境＋前綴＋街＋這個決定之前的完整行動（來自各節點例題）→ 節點
+    const DECI = new Map();
+    for (const rec of nodeList) for (const r of nodeIndex.get(rec.key).rows) for (const e of (r.eg || [])) {
+      if (String(e.l || '').split('/').length !== rec.st + 1) continue;
+      const k = [rec.sp, rec.pfx, rec.st, lineKeyFromEg(e, rec.st)].join('#');
+      if (!DECI.has(k)) DECI.set(k, new Set());
+      DECI.get(k).add(rec.nd);
     }
-    function existingKinds(sp, pfx, st) {
-      return nodeList.filter(n => n.sp === sp && n.pfx === pfx && n.st === st);
+    function decisionsOf(rec, key) {
+      const segs = segsFromKey(key), out = [];
+      for (let i = 0; i <= rec.st; i++) {
+        const bits = (segs[i] || '').split('、').filter(Boolean);
+        bits.forEach((b, j) => {
+          if (!b.startsWith('你')) return;
+          const prefix = segs.slice(0, i).concat([bits.slice(0, j).join('、')]).join('|');
+          const nds = [...(DECI.get([rec.sp, rec.pfx, i, prefix].join('#')) || [])];
+          out.push({ st: i, verb: b.slice(1), need: NEED[b.slice(1)] || [], nds, prefix });
+        });
+      }
+      return out;
     }
-    // 親節點答案：某牌型在相容牌面是否走出 via
-    function canDo(sp, parentNd, h, via, childRow) {
-      const rows = rowsOf(sp, parentNd);
-      if (!rows.length) return false;
-      const childB = txBucket(childRow && childRow.cl, childRow && childRow.c);
-      let unsureHit = false, ok = false;
-      const base = rows.filter(r => !r.x && r.hc.includes(h));
-      const ex = rows.filter(r => r.x && r.hc.includes(h));
-      const packs = (ex.length ? ex : []).concat(base);
-      for (const r of packs) {
-        if (!viaMatch(r, via)) continue;
-        const cmp = txCompat(txBucket(r.cl, r.c), childB);
-        if (cmp === 'unsure') { unsureHit = true; ok = true; }
-        else if (cmp) ok = true;
-      }
-      if (unsureHit) noteUnsure(sp, parentNd, '牌面條件無法與子節點一一對應（成對面／單色面 vs 最高張），暫當走得到', '');
-      return ok;
-    }
-
-    // 這條已完成的街，這個牌型能否走出來
-    function streetReachable(sp, pfx, st, segText, h, childRow) {
-      const k = lastHeroK(segText);
-      const via = viaOfK(k);
-      if (!via) {
-        // 本段沒有你的動作（例如只有對手過、等你行動）——不檢查已完成動作
-        return true;
-      }
-      const kinds = kindsForSeg(segText);
-      const parents = existingKinds(sp, pfx, st).filter(n => kinds.includes(bareKind(n.kind)));
-      if (!parents.length) {
-        // 這個情境沒有對應的親節點（例如只有面對 c-bet、沒有「你先行動」表）
-        // 若是翻牌且線從「面對下注」開始，視為翻前可到達的根線。
-        if (st === 0) return true;
-        return false;
-      }
-      return parents.some(n => canDo(sp, n.nd, h, via, childRow));
+    function primary(sp, nd, h, s, street, F) {
+      const R = rowsOf(sp, nd).filter(r => r.hc.includes(h));
+      const out = new Set(); let sure = false;
+      for (const r of R) if (r.x) { const f = rowFits(r, s, street, F); if (f) { out.add(r.a); if (f === true) sure = true; } }
+      if (!sure) for (const r of R) if (!r.x && rowFits(r, s, street, F)) out.add(r.a);
+      return out;
     }
 
-    // 某牌型 × 子列條件，能否走到這條明確線（追到本節點之前的已完成街）
-    function classReachesLine(rec, lineKey, h, childRow) {
-      const segs = segsFromKey(lineKey);
-      // 已完成的街：0 .. st-1；本街已發生的「你已經做過的動作」（例如你下注後被加注）也要能從親節點對上
-      for (let i = 0; i < rec.st; i++) {
-        const seg = segs[i] || '';
-        if (!streetReachable(rec.sp, rec.pfx, i, seg, h, childRow)) return false;
-      }
-      // 同街衍生（你下注被加注、你加注被再加注）：檢查本街已發生的你的動作
-      if (/vs_xr|vs_3b/.test(rec.kind)) {
-        const cur = segs[rec.st] || '';
-        const k = lastHeroK(cur);
-        const via = rec.kind.indexOf('vs_3b') >= 0 ? 'raise' : 'bet';
-        // 若標題還沒把「你下注／你加注」寫進本街（key 可能只有先前街），仍用 kind 要求
-        const needVia = viaOfK(k) || via;
-        const parentKinds = rec.kind.indexOf('vs_3b') >= 0
-          ? ['vs_cbet', 'vs_donk', 'vs_bet', 'vs_over', 'vs_barrel', 'vs_probe']
-          : ['cbet', 'stab', 'first', 'lead', 'bet', 'barrel', 'delay', 'probe'];
-        const parents = existingKinds(rec.sp, rec.pfx, rec.st).filter(n => parentKinds.includes(bareKind(n.kind)));
-        if (parents.length && !parents.some(n => canDo(rec.sp, n.nd, h, needVia, childRow))) return false;
-        if (!parents.length && rec.st > 0) return false;
-      }
-      return true;
-    }
-
-    // 收集每個節點的明確線（來自例子；沒例子則一條空先前線）
-    const lineMap = new Map(); // sp|nd -> lines
+    const lineMap = new Map();
     const removed = [];
-
     for (const rec of nodeList) {
       const rows = nodeIndex.get(rec.key).rows;
       const buckets = new Map();
-      for (const r of rows) {
-        for (const e of (r.eg || [])) {
-          const key = lineKeyFromEg(e, rec.st);
-          const ln = (r.c && r.c.ln) || '';
-          const prior = (r.c && r.c.prior) || '';
-          if (!buckets.has(key)) buckets.set(key, { key, lns: new Set(), priors: new Set(), egs: [], rows: new Set(), pres: [] });
-          const b = buckets.get(key);
-          if (ln) b.lns.add(ln);
-          if (prior) b.priors.add(prior);
-          b.egs.push({ e, r });
-          b.rows.add(r);
-          b.pres.push(e);
-        }
+      for (const r of rows) for (const e of (r.eg || [])) {
+        if (String(e.l || '').split('/').length !== rec.st + 1) continue;
+        const key = lineKeyFromEg(e, rec.st);
+        if (!buckets.has(key)) buckets.set(key, { key, egs: [], er: [] });
+        buckets.get(key).egs.push(e); buckets.get(key).er.push({ e, r });
       }
-      // 沒有例子的列：若已有線就掛上去；否則合成一條
-      if (!buckets.size) {
-        buckets.set('', { key: '', lns: new Set(), priors: new Set(), egs: [], rows: new Set(rows), pres: [] });
-      }
-      // 把沒例子、但 ln/prior 對得上的列掛到已有的線
-      for (const r of rows) {
-        const ln = (r.c && r.c.ln) || '', prior = (r.c && r.c.prior) || '';
-        if (!ln && !prior) {
-          for (const b of buckets.values()) b.rows.add(r);
-          continue;
-        }
-        let hung = false;
-        for (const b of buckets.values()) {
-          const lnOk = !b.lns.size || !ln || b.lns.has(ln);
-          const prOk = !b.priors.size || !prior || b.priors.has(prior);
-          // 三槍線 = 兩條街都跟了下注；不是三槍 = 其他
-          const looksTb = /你跟/.test(b.key) && (b.key.match(/你跟/g) || []).length >= 2;
-          const looksOth = !looksTb;
-          const lnMatch = !ln || (ln === 'tb' && looksTb) || (ln === 'oth' && looksOth) || b.lns.has(ln);
-          if (lnMatch && prOk) { b.rows.add(r); hung = true; }
-        }
-        if (!hung) for (const b of buckets.values()) b.rows.add(r); // 答案仍複製到各線，牌型再靠 rowOk 過濾
-      }
-
+      if (!buckets.size) { const k0 = Array(rec.st + 1).fill('').join('|'); buckets.set(k0, { key: k0, egs: [], er: [] }); }
       const lines = [];
-      for (const [id, b] of buckets) {
-        const ePick = (mostCommon(b.pres.map(e => JSON.stringify({ t: e.t, me: e.me, pa: e.pa, pc: e.pc, pretext: e.pretext || '', l: e.l }))) || [])[0];
-        const eObj = ePick ? b.pres.find(e => JSON.stringify({ t: e.t, me: e.me, pa: e.pa, pc: e.pc, pretext: e.pretext || '', l: e.l }) === ePick) : b.pres[0];
+      for (const b of buckets.values()) {
+        const sig = e => JSON.stringify({ t: e.t, me: e.me, pa: e.pa, pc: e.pc, pretext: e.pretext || '' });
+        const top = (mostCommon(b.egs.map(sig)) || [])[0];
+        const eObj = top ? b.egs.find(e => sig(e) === top) : null;
         const segs = segsFromKey(b.key);
         const preToks = preflopTokens(eObj || guessPre(rec));
         const titles = buildTitle(preToks, segs, rec.kind, rec.st);
-        // 每個牌型、每一列條件是否走得到這條線
-        function lineLn() {
-          if (b.lns && b.lns.size === 1) return [...b.lns][0];
-          const looksTb = /你跟/.test(b.key) && (b.key.match(/你跟/g) || []).length >= 2;
-          if (b.lns && b.lns.has('tb') && looksTb) return 'tb';
-          if (b.lns && b.lns.has('oth') && !looksTb) return 'oth';
-          return '';
-        }
-        function linePrior() { return (b.priors && b.priors.size === 1) ? [...b.priors][0] : ''; }
-        const thisLn = lineLn(), thisPrior = linePrior();
+        const F = lineFacts(segs, preToks);
+        const decs = decisionsOf(rec, b.key);
+        const states = boardStates(rec.st);
+        const cache = new Map();
         function rowOk(r, h) {
-          if (!r.hc.includes(h)) return false;
-          if (thisLn && r.c && r.c.ln && r.c.ln !== thisLn) return false;
-          if (thisPrior && r.c && r.c.prior && r.c.prior !== thisPrior) return false;
-          return classReachesLine(rec, b.key, h, r);
-        }
-        const reached = [];
-        for (const r of b.rows) {
-          for (const h of r.hc) if (rowOk(r, h) && !reached.includes(h)) reached.push(h);
-        }
-        // 也檢查節點全部列（答案複製到拆開的表）：以走得到的牌型為準
-        const reachedAll = [];
-        for (const r of rows) {
-          for (const h of r.hc) {
-            if (thisLn && r.c && r.c.ln && r.c.ln !== thisLn) continue;
-            if (thisPrior && r.c && r.c.prior && r.c.prior !== thisPrior) continue;
-            if (classReachesLine(rec, b.key, h, r) && !reachedAll.includes(h)) reachedAll.push(h);
-          }
-        }
-        const hands = reachedAll.length ? reachedAll : reached;
-        const whyDrop = [];
-        if (!hands.length) {
-          // 為什麼走不到
-          if (rec.st >= 1) {
-            const segs0 = segsFromKey(b.key);
-            const need = [];
-            for (let i = 0; i < rec.st; i++) {
-              const hk = lastHeroK(segs0[i] || '');
-              if (hk) need.push(STN[i] + ' 需要你' + verb(hk) + '（' + (segs0[i] || '（空）') + '）');
+          if (r.sp !== rec.sp || r.nd !== rec.nd || !r.hc.includes(h)) return false;
+          const ck = r.id + '|' + h;
+          if (cache.has(ck)) return cache.get(ck);
+          if (root.__NL2_NOFILTER) return true; // 只給 QA（tools/reach_verify.js --nofilter）看「不過濾會出現什麼」
+          let ok = false;
+          if (decs.every(d => d.nds.length)) {
+            for (const s of states) {
+              if (!rowFits(r, s, rec.st, F)) continue;
+              if (!r.x && rows.some(x => x.x && x.hc.includes(h) && rowFits(x, s, rec.st, F) === true)) continue; // 這個牌面由例外列代表
+              if (decs.every(d => d.nds.some(nd => [...primary(rec.sp, nd, h, s, d.st, F)].some(a => d.need.includes(a))))) { ok = true; break; }
             }
-            whyDrop.push(need.length ? need.join('；') : '上游沒有能走出這條線的牌型');
-            // 親節點完全沒有人做該動作？
-            for (let i = 0; i < rec.st; i++) {
-              const seg = segs0[i] || '';
-              const hk = lastHeroK(seg);
-              const via = viaOfK(hk);
-              if (!via) continue;
-              const kinds = kindsForSeg(seg);
-              const parents = existingKinds(rec.sp, rec.pfx, i).filter(n => kinds.includes(bareKind(n.kind)));
-              if (parents.length && parents.every(n => !HANDS.some(hh => canDo(rec.sp, n.nd, hh, via, null)))) {
-                whyDrop.push('親節點 ' + parents.map(p => p.nd).join('/') + ' 沒有任何牌型會' + (via === 'check' ? '過牌' : via === 'call' ? '跟注' : via === 'bet' ? '下注' : '加注') + '（線卻假設有）');
-              }
-              if (!parents.length && rec.st > 0 && via) {
-                whyDrop.push('找不到對應的 ' + STN[i] + ' 親節點（' + kinds.join('/') + '）');
-              }
-            }
-          } else {
-            whyDrop.push('這條翻牌線沒有走得到的牌型');
           }
+          cache.set(ck, ok);
+          return ok;
+        }
+        const hands = HANDS.filter(h => rows.some(r => !r.x && rowOk(r, h)));
+        // 標題翻前位置改用「走得到的格」的例題（例題才對得上標題）；翻前角色不同就不換
+        let eUse = eObj, tUse = titles;
+        const egR = b.er.filter(x => x.r.hc.some(h => rowOk(x.r, h))).map(x => x.e);
+        const top2 = (mostCommon(egR.map(sig)) || [])[0];
+        if (top2 && top2 !== (eObj && sig(eObj))) {
+          const e2 = egR.find(e => sig(e) === top2), p2 = preflopTokens(e2);
+          if (lineFacts(segs, p2).pfr === F.pfr) { eUse = e2; tUse = buildTitle(p2, segs, rec.kind, rec.st); }
         }
         const visible = hands.length > 0;
         if (!visible) {
-          removed.push({
-            sp: rec.sp, nd: rec.nd, line: titles.titleText, key: b.key,
-            reason: whyDrop.join('。') || '沒有牌型走得到這條線'
-          });
+          const miss = decs.filter(d => !d.nds.length);
+          removed.push({ sp: rec.sp, nd: rec.nd, line: tUse.titleText, key: b.key,
+            reason: miss.length ? miss.map(d => `${STN[d.st]}「${d.prefix.split('|').pop() || '你先行動'}」之後你${d.verb}：資料裡沒有這個決定點`).join('；')
+              : '沒有任何牌型照前面各街的答案會走到這條線' });
         }
-        lines.push({
-          id: rec.sp + '/' + rec.nd + '#' + lines.length,
-          key: b.key, ln: thisLn, prior: thisPrior,
-          titleText: titles.titleText, titleHtml: titles.titleHtml,
-          nEg: b.egs.length, hands, visible,
-          rowOk, rows: [...b.rows]
-        });
+        lines.push({ id: rec.sp + '/' + rec.nd + '#' + lines.length, key: b.key, eg: eUse, facts: F, decisions: decs,
+          titleText: tUse.titleText, titleHtml: tUse.titleHtml, nEg: b.egs.length, hands, visible, rowOk });
       }
       lineMap.set(rec.key, lines);
     }
 
     function guessPre(rec) {
-      // 從同情境任何例子湊翻前
       for (const r of L.rows) if (r.sp === rec.sp && (r.eg || [])[0]) return r.eg[0];
-      return { t: 'SRP', me: rec.sp === 'bb' ? 'BB' : rec.sp === 'ipfr' ? 'BTN' : 'BTN', pa: 'BTN', pc: ['BB'] };
+      return { t: 'SRP', me: rec.sp === 'bb' ? 'BB' : 'BTN', pa: 'BTN', pc: ['BB'] };
     }
-
-    function lines(sp, nd) {
-      return (lineMap.get(sp + '|' + nd) || []).filter(ln => ln.visible);
-    }
-    function nodeVisible(sp, nd) {
-      return lines(sp, nd).length > 0;
-    }
+    function lines(sp, nd) { return (lineMap.get(sp + '|' + nd) || []).filter(ln => ln.visible); }
+    function nodeVisible(sp, nd) { return lines(sp, nd).length > 0; }
     function rowReached(r, h, line) {
-      const all = lineMap.get(r.sp + '|' + r.nd) || [];
       if (line) return line.visible && line.rowOk(r, h);
-      return all.some(ln => ln.visible && ln.rowOk(r, h));
+      return lines(r.sp, r.nd).some(ln => ln.rowOk(r, h));
     }
-    function titleForEg(sp, nd, e) {
+    function titleForEg(sp, nd, e) { // 只回傳這個例題自己的線（不再退回第一條）
       const rec = nodeIndex.get(sp + '|' + nd);
       if (!rec) return null;
       const k = lineKeyFromEg(e, rec.rec.st);
-      const ls = lines(sp, nd);
-      return ls.find(ln => ln.key === k) || ls[0] || null;
+      return lines(sp, nd).find(ln => ln.key === k) || null;
     }
     function dump() {
       const out = {};
       for (const rec of nodeList) {
-        const vis = nodeVisible(rec.sp, rec.nd);
         const ls = lineMap.get(rec.key) || [];
-        const byC = {};
-        for (const r of nodeIndex.get(rec.key).rows) {
-          if (r.x) continue;
-          const ck = JSON.stringify(r.c || {}, Object.keys(r.c || {}).sort());
-          if (!byC[ck]) byC[ck] = [];
-          for (const h of r.hc) if (rowReached(r, h) && !byC[ck].includes(h)) byC[ck].push(h);
-        }
-        out[rec.key] = {
-          visible: vis,
-          usesReach: true,
-          st: rec.st,
-          byC,
-          nLines: ls.filter(l => l.visible).length,
-          nDropped: ls.filter(l => !l.visible).length
-        };
+        out[rec.key] = { visible: nodeVisible(rec.sp, rec.nd), st: rec.st, nLines: ls.filter(l => l.visible).length, nDropped: ls.filter(l => !l.visible).length,
+          lines: ls.filter(l => l.visible).map(l => ({ key: l.key, hands: l.hands })) };
       }
       return out;
     }
@@ -502,20 +327,17 @@
       let nSplit = 0, nTables = 0, nOmittedNodes = 0;
       for (const rec of nodeList) {
         const ls = lineMap.get(rec.key) || [];
-        const shown = ls.filter(l => l.visible);
-        const dropped = ls.filter(l => !l.visible);
+        const shown = ls.filter(l => l.visible), dropped = ls.filter(l => !l.visible);
         if (shown.length > 1) nSplit++;
         nTables += shown.length;
         if (!shown.length) nOmittedNodes++;
-        all.push({
-          sp: rec.sp, nd: rec.nd, st: rec.st,
+        all.push({ sp: rec.sp, nd: rec.nd, st: rec.st,
           old: (L.node_labels && L.node_labels[rec.sp] && L.node_labels[rec.sp][rec.nd]) || (L.nd && L.nd[rec.nd]) || rec.nd,
-          shown: shown.map(l => ({ title: l.titleText, key: l.key, hands: l.hands.slice(), nEg: l.nEg, ln: l.ln, prior: l.prior })),
+          shown: shown.map(l => ({ title: l.titleText, key: l.key, hands: l.hands.slice(), nEg: l.nEg })),
           dropped: dropped.map(l => ({ title: l.titleText, key: l.key, reason: (removed.find(x => x.sp === rec.sp && x.nd === rec.nd && x.key === l.key) || {}).reason })),
-          split: shown.length > 1, nShown: shown.length, nDropped: dropped.length
-        });
+          split: shown.length > 1, nShown: shown.length, nDropped: dropped.length });
       }
-      return { all, removed, unsure, nNodes: nodeList.length, nSplit, nTables, nOmittedNodes };
+      return { all, removed, unsure: [], nNodes: nodeList.length, nSplit, nTables, nOmittedNodes };
     }
     return { lines, nodeVisible, rowReached, titleForEg, lineKeyFromEg, dump, audit, HANDS };
   }
