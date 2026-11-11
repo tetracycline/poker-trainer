@@ -48,12 +48,37 @@ function showDef(k) {
 }
 const isVs = nd => /_vs_|_over/.test(nd);
 const CHO = (nd, sp) => (sp === 'mw' && isVs(nd)) ? ['f', 'c', 'r'] : /r_vs_xr/.test(nd) ? ['f', 'c'] : isVs(nd) ? ['f', 'c', 'r'] : ['x', 'small', 'big'];
-function alab(a, r) {
+const STD_SZ = [[1/3, '1/3'], [1/2, '1/2'], [3/4, '3/4'], [1, '1'], [1.5, '1.5']];
+const nearestSz = p => STD_SZ.reduce((b, z) => Math.abs(z[0] - p) < Math.abs(b[0] - p) ? z : b)[1];
+function potFromLab(lab) { // 從原始標籤讀底池比例；全下維持全下；「或超池」保留兩檔標準尺寸
+  if (!lab) return null;
+  const t = String(lab).replace(/（[^）]*）|\([^)]*\)/g, '');
+  if (/全下/.test(t) && !/\d\s*%|池/.test(t.replace(/全下/g, ''))) return { allin: true };
+  if (/或超池/.test(t)) return { or: ['3/4', '1.5'] };
+  const FR = { '⅓': 1/3, '½': 1/2, '⅔': 2/3, '¾': 3/4 };
+  for (const ch in FR) if (t.includes(ch)) return { pot: FR[ch] };
+  let m = t.match(/(\d+)\s*\/\s*(\d+)/);
+  if (m) return { pot: +m[1] / +m[2] };
+  m = t.match(/(\d+(?:\.\d+)?)\s*%/);
+  if (m) return { pot: +m[1] / 100 };
+  m = t.match(/下注\s*(?:約\s*)?(\d+(?:\.\d+)?)\s*池/);
+  if (m) return { pot: +m[1] };
+  return null;
+}
+function fmtLab(lab) {
+  const p = potFromLab(lab);
+  if (!p) return lab;
+  if (p.allin) return '全下';
+  if (p.or) return '下注 ' + p.or.join('或');
+  return '下注 ' + nearestSz(p.pot);
+}
+function rawLab(a, r) {
   if (r && r.L && r.L[a]) return r.L[a];
   const s = stOf(r ? r.nd : '');
   return {x: '過牌', f: '棄牌', c: '跟注', r: '加注'}[a] || (a === 'small' ? (s ? '下注 ½ 池' : '下注 33%') : (s ? '下注 1 池' : '下注 75%'));
 }
-const short = (a, r) => alab(a, r).replace('下注 ', '下 ').replace('棄牌', '棄').replace('跟注', '跟').replace('過牌', '過');
+function alab(a, r) { return fmtLab(rawLab(a, r)); }
+const short = (a, r) => alab(a, r).replace('棄牌', '棄').replace('跟注', '跟').replace('過牌', '過');
 const ACL = a => a === 'c' ? 'c' : a === 'f' ? 'f' : a === 'x' ? 'x' : 'b';
 function nodesOf(sp) {
   const o = []; L.rows.forEach(r => { if (r.sp === sp && !o.includes(r.nd)) o.push(r.nd); });
@@ -103,7 +128,7 @@ function lines() {
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
     return `${esc(nodeLabel(sp, nd))} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(nodeLabel(s2, n2))}」`; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
-  <p class="small">怎麼看：一格＝你的動作。轉牌、河牌只列出上游走得到的牌型（翻牌已棄或沒走這條線的不列）。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：GTO 照解算樹（翻牌 33% / 75%，轉牌、河牌 ½ 池 / 1 池，3-bet 底池等另標）；池估照牌池實際下注的平均尺寸（例：下注約 90% 池）。多人近似每街「下 ½ 池」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  <p class="small">怎麼看：一格＝你的動作。轉牌、河牌只列出上游走得到的牌型（翻牌已棄或沒走這條線的不列）。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔；池估是牌池實際下注均值再靠檔，不是精確到 1%。點「池估」可看說明。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>` + defsHtml(false) + `

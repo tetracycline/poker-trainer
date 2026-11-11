@@ -30,6 +30,7 @@ async function main() {
       const isNa = /\bna\b/.test(cell[1]);
       if (isNa) continue; // 走不到的條件×牌型
       if (!value || value === '—') failures.push(`${label}: blank grid cell ${count}`);
+      if (/約|牌池均值|\d+%/.test(value)) failures.push(`${label}: oversized or raw-percent cell ${count}: ${value}`);
     }
     if (!count) failures.push(`${label}: no rendered grid cells`);
     return count;
