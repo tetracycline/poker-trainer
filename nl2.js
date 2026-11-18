@@ -74,7 +74,7 @@ function nTxt(r) { // 格子小字：根據＋樣本數（池 n／解算牌面�
   return '';
 }
 const cellSmall = r => r.rofb ? `<small class="df" data-df="沿用">沿用 n${r.rn.p}·${r.rn.g}盤</small>` : `<small class="df" data-df="${BS[r.b]}">${BS[r.b]}${nTxt(r)}</small>`;
-const hlabel = (h, nd) => stOf(nd) === 2 ? ({DRAW: '強聽未中', WDRAW: '弱聽／高張'}[h] || HS[h]) : HS[h];
+const hlabel = (h, nd) => HS[h]; // 每街固定五欄，不在河牌改名
 // 定義（defs.js）：每個標籤都可以點開看定義
 const DEF = (window.NLDEF || {d: {}, groups: []});
 const dfs = t => `<span class="df" data-df="${esc(t)}" role="button" tabindex="0">${esc(t)}</span>`;
@@ -424,14 +424,15 @@ function gridOne(sp, nd, me, line, ro, cat) {
     return `<td class="${ACL(sh.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, nl.href, nl.extras)}</td>`;
   };
   const head = `<tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>`;
-  let body = '';
-  for (let i = 0; i < groupsShown.length; i++) {
-    const g = groupsShown[i];
-    if (groupsShown.length > 1 || g) body += `<tr class="grp"><th class="cl" colspan="${1 + cols.length}">${dfl(g || '全部')}</th></tr>`;
-    if (i === 0 || groupsShown.length > 1) body += (i === 0 ? '' : head);
-    body += BT_ROWS.map(([, zh]) => `<tr data-cl="${esc(g ? g + '・' + zh : zh)}"${item && i === 0 && btOf(zh) ? ` id="${item.id}-${btOf(zh)}"` : ''}><th class="cl">${dfl(zh)}</th>${cols.map(c => cell(g, zh, c)).join('')}</tr>`).join('');
-  }
-  let html = `<div class="tw"><table class="rt lt">${head}${body}</table></div>`;
+  // 面對不同下注尺寸可能有多組條件：每一組必須獨立固定六列，而不是合成18列。
+  // 同一行動線保留一個節點，附屬的尺寸組以小標題分開，避免混淆牌面列。
+  let html = groupsShown.map((g, i) => {
+    const body = BT_ROWS.map(([, zh]) =>
+      `<tr data-cl="${esc(g ? g + '・' + zh : zh)}"${item && i === 0 && btOf(zh) ? ` id="${item.id}-${btOf(zh)}"` : ''}><th class="cl">${dfl(zh)}</th>${cols.map(c => cell(g, zh, c)).join('')}</tr>`
+    ).join('');
+    const label = g ? `<p class="small muted">面對情境：${dfl(g)}</p>` : '';
+    return `${label}<div class="tw"><table class="rt lt">${head}${body}</table></div>`;
+  }).join('');
   if (ex.length) html += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => hlabel(c, r.nd)).join('、')} → <b>${esc(cellMain(r, nd))}</b><small class="df" data-df="${esc(basisOf(r))}">${esc(basisOf(r))}</small></span>`).join('；')}</p>`;
   return html;
 }
