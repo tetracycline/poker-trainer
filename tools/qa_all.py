@@ -151,7 +151,7 @@ def check_lines():
             dom = r.get('dominance')
             if dom and (not dom.get('by') or any((next((x for x in NLL['rows'] if x['id'] == i), {}).get('a', 'f') == 'f') != (r['a'] == 'f') for i in dom['by'])): fail('6 剝削規則', 'lines', d + ' dominance fix without a matching source row')
             elif dom: pass
-            elif r['sp'] == 'mw' or not v or v.get('action') != r['a'] or not r.get('evidence', '').startswith(('run003:', 'run004:', 'run005:')): fail('3 統計範圍', 'lines', d + ' invalid run003/run004 estimate provenance')
+            elif r['sp'] == 'mw' or not v or v.get('action') != r['a'] or not r.get('evidence', '').startswith(('run003:', 'run004:', 'run005:', 'run006:')): fail('3 統計範圍', 'lines', d + ' invalid run003/run004 estimate provenance')
             elif not ns or v.get('n', 0) < 40 or max(ns) < 40: fail('3 統計範圍', 'lines', d + ' run003 estimate n<40')
             elif '估算' not in r['why'] or '不是封閉證明' not in r['ev'] or 'GTO 基準' not in r['ev'] or '95% CI' not in r['ev']: fail('3 統計範圍', 'lines', d + ' run003 estimate lacks honest labels / GTO baseline / CI')
             elif not dom and r['a'] not in (v.get('arms') or {}) or any(x['ev_bb'] > v['arms'][r['a']]['ev_bb'] + 1e-9 for x in v['arms'].values()): fail('6 剝削規則', 'lines', d + ' run003 answer is not the best estimated arm')

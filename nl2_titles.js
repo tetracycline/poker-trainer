@@ -226,6 +226,12 @@
     for (const [k, v] of Object.entries(r.c || {})) {
       if (k === 'tx') { if (s.tx !== v) return false; }
       else if (k === 'hi') { if (s.hi[street] !== v) return false; }
+      else if (k === 'bt') {
+        const rise = {A_high:['A_high','paired','mono'], KQ_high:['A_high','KQ_high','paired','mono'], mid_high:['A_high','KQ_high','mid_high','paired','mono'], low:['low','paired','mono','A_high','mid_high','KQ_high'], paired:['paired','mono'], mono:['mono']};
+        const ok = street <= 0 ? [s.tx] : (rise[s.tx] || rise.low);
+        if (!ok.includes(v)) return false;
+        maybe = true;
+      }
       else if (k === 'ln') { if ((v === 'tb') !== F.tb) return false; }
       else if (k === 'prior') { if ((v === 'check_turn' && !F.checkTurn) || (v === 'bet_bet' && !F.betBet)) return false; }
       else if (k === 'hr') { if ((v === 'PFR') !== F.pfr) return false; }

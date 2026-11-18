@@ -123,11 +123,18 @@ function parseSections(html, sp) {
         rows.push({ cond: cond.replace(/&amp;/g, '&'), h, hlab: HNAME[h] || h, cells: parseCells(tr.body) });
       }
     } else {
-      cols = trs.length ? [...trs[0].body.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].slice(1).map(m => strip(m[1])) : [];
-      rows = trs.slice(1).map(tr => {
-        const cond = strip((tr.body.match(/<th class="cl">([\s\S]*?)<\/th>/) || [])[1] || '');
-        return { cond, cells: parseCells(tr.body) };
-      });
+      cols = [];
+      rows = [];
+      for (const tr of trs) {
+        if (/\bgrp\b/.test(tr.attr) || /colspan=/.test(tr.body)) continue;
+        if (!/<td/.test(tr.body)) {
+          const cs = [...tr.body.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].slice(1).map(m => strip(m[1]));
+          if (cs.length) cols = cs;
+          continue;
+        }
+        const cond = ((tr.attr.match(/data-cl="([^"]*)"/) || [])[1] || strip((tr.body.match(/<th class="cl">([\s\S]*?)<\/th>/) || [])[1] || '')).replace(/&amp;/g, '&');
+        rows.push({ cond, cells: parseCells(tr.body) });
+      }
     }
     const exm = seg.match(/<span class="lab"><span class="df"[^>]*>例外<\/span><\/span>　([\s\S]*?)<\/p>/);
     const exc = exm ? exm[1].split('；').map(x => {
@@ -177,6 +184,12 @@ function condFit(r, s, street, F) {
     const v = c[k];
     if (k === 'tx') { if (s.tx !== v) return false; }
     else if (k === 'hi') { if (s.hi[street] !== v) return false; }
+    else if (k === 'bt') {
+      const rise = {A_high:['A_high','paired','mono'], KQ_high:['A_high','KQ_high','paired','mono'], mid_high:['A_high','KQ_high','mid_high','paired','mono'], low:['low','paired','mono','A_high','mid_high','KQ_high'], paired:['paired','mono'], mono:['mono']};
+      const ok = street <= 0 ? [s.tx] : (rise[s.tx] || rise.low);
+      if (!ok.includes(v)) return false;
+      maybe = true;
+    }
     else if (k === 'ln') { if (F == null) { maybe = true; continue; } if ((v === 'tb') !== F.tb) return false; }
     else if (k === 'prior') { if (F == null) { maybe = true; continue; } if (v === 'check_turn' && !F.checkTurn) return false; if (v === 'bet_bet' && !F.betBet) return false; }
     else if (k === 'hr') { if (F == null) { maybe = true; continue; } if ((v === 'PFR') !== F.pfr) return false; }
@@ -380,7 +393,8 @@ for (const spot of L.spots) {
         if (/\bna\b/.test(c.cls)) return;
         nCells++;
         const pool = rowsFor(rv);
-        const r = pool.find(x => !x.x && (x.cl || '全部') === row.cond && x.hc.includes(h));
+        const r = pool.find(x => !x.x && (x.cl || '全部') === row.cond && x.hc.includes(h))
+          || pool.find(x => !x.x && x.hc.includes(h) && !(x.c && x.c.bt) && ((x.cl || '全部') === '全部' || (x.rn && x.rn.k === 'cert')));
         if (!r) { V(t, '資料', `${lab}：資料裡找不到這一格`); return; }
         const want = ANS[r.a];
         if (!c.text.startsWith(want === '下注' ? '' : want) && !(r.a === 'r' && /^全下/.test(c.text))) V(t, '答案', `${lab}：畫面「${c.text}」與資料答案 ${r.a} 不一致`);
@@ -412,6 +426,12 @@ for (const spot of L.spots) {
       if ((r.x ? shownEx : shownBase).has(k)) continue;
       // CERT 列（無 ro）出現在每一欄，任一欄有顯示即可
       if (!rowRo(r) && [...(r.x ? shownEx : shownBase)].some(x => x.startsWith((r.x ? r.cl : (r.cl || '全部')) + '|' + h + '|'))) continue;
+      if ([...(r.x ? shownEx : shownBase)].some(x => x.startsWith((r.x ? r.cl : (r.cl || '全部')) + '|' + h + '|'))) continue;
+      // 全部／CERT 無 bt：同一答案已填進固定牌面列
+      if (!r.x && !(r.c && r.c.bt) && ((r.cl || '全部') === '全部' || (r.rn && r.rn.k === 'cert')) && [...shownBase].some(x => x.split('|')[1] === h)) continue;
+      // ct 列掛在例外
+      if (!r.x && r.c && r.c.ct && shownEx.has((r.cl || '') + '|' + h + '|' + (rowRo(r) || ''))) continue;
+      if (!r.x && r.c && r.c.ct && shownEx.has((r.cl || '') + '|' + h + '|')) continue;
       if (reachable(t.sp, t.nd, canonSt, F, r, h)) V(t, '漏格', `${r.x ? '例外 ' : ''}${r.cl || '全部'}×${HNAME[h]}${rowRo(r) ? '×' + RO_SHORT[rowRo(r)] : ''}（${ANS[r.a]}）走得到卻沒有顯示`);
     }
     t.key = canonSt.map(b => b.join('、')).join('|');

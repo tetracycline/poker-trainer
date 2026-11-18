@@ -32,35 +32,37 @@ const HS = {S: '兩對+', TPG: '頂對好', TPW: '頂對弱', MID: '中小對', 
 const HCO = ['S', 'TPG', 'TPW', 'MID', 'DRAW', 'WDRAW', 'AIR'];
 const BS = {pool: '池', gto: 'GTO', gtoa: '兩人 GTO 近似', est: '池估'};
 const stOf = nd => /(^|_)f_/.test(nd) ? 0 : /(^|_)t_/.test(nd) ? 1 : 2;
-// 轉牌／河牌落牌分類（run 005；與 /workspace/poker_r005/rcat.py 同一規則）。k：1＝轉牌、2＝河牌。優先：同花 > 順子 > 成對 > 高張 > 補聽（轉牌）> 空白
-const RO_ORD = ['over', 'pair', 'flush', 'straight', 'draw', 'brick'];
-const RO_CN = {over: '高張落下（A/K 或新最大牌）', pair: '公牌成對', flush: '同花完成', straight: '順子完成', draw: '補聽牌', brick: '空白牌'};
-const RO_CT = {flush: 'flush', str4: 'straight'};
-function rcat(bstr, k) {
-  const b = String(bstr || ''), cs = []; for (let i = 0; i < 2 * (3 + k) && i < b.length; i += 2) cs.push(b.slice(i, i + 2));
-  if (cs.length !== 3 + k) return null;
-  const c = cs[cs.length - 1], pre = cs.slice(0, -1), rv = x => '23456789TJQKA'.indexOf(x[0]) + 2, r = rv(c), pr = pre.map(rv), su = pre.map(x => x[1]);
-  const w = rs => { const st = new Set(rs); if (st.has(14)) st.add(1); let m = 0; for (let lo = 1; lo <= 10; lo++) { let n = 0; for (let x = lo; x < lo + 5; x++) if (st.has(x)) n++; m = Math.max(m, n); } return m; };
-  const nsu = su.filter(x => x === c[1]).length;
-  if (nsu >= 2) return 'flush';
-  const w0 = w(pr), w1 = w(pr.concat([r]));
-  if ((w0 < 3 && w1 >= 3) || (w0 < 4 && w1 >= 4)) return 'straight';
-  if (pr.includes(r)) return 'pair';
-  if (r >= 13 || r > Math.max(...pr)) return 'over';
-  if (k === 1) {
-    if (nsu === 1) return 'draw';
-    const lo = new Set(pr.concat(pr.filter(x => x === 14).map(() => 1))), rr = r === 14 ? [14, 1] : [r];
-    if (rr.some(a => [...lo].some(q => Math.abs(a - q) === 1))) return 'draw';
-  }
-  return 'brick';
+// 當街牌面（與翻牌同一套列、同一優先序；/workspace/poker_r005/btx.py）。JS street：0＝翻牌、1＝轉牌、2＝河牌。
+const BT_ROWS = [['low', '9 以下低牌面'], ['paired', '成對面'], ['mono', '單色面'], ['A_high', 'A 高面'], ['mid_high', 'J/T 高面'], ['KQ_high', 'K/Q 高面']];
+const BT_ZH = Object.fromEntries(BT_ROWS);
+const BT_KEYS = BT_ROWS.map(x => x[0]);
+const _BT_RISE = {A_high: ['A_high', 'paired', 'mono'], KQ_high: ['A_high', 'KQ_high', 'paired', 'mono'], mid_high: ['A_high', 'KQ_high', 'mid_high', 'paired', 'mono'], low: BT_KEYS, paired: ['paired', 'mono'], mono: ['mono']};
+function textureNow(bstr, k) { // k＝JS street；看前 3+k 張公牌
+  const n = 3 + k, b = String(bstr || ''), cs = [];
+  for (let i = 0; i < 2 * n && i < b.length; i += 2) cs.push(b.slice(i, i + 2));
+  if (cs.length !== n) return null;
+  const RV = '23456789TJQKA', suits = cs.map(c => c[1]), rs = cs.map(c => RV.indexOf(c[0]) + 2);
+  const sc = {}; for (const s of suits) sc[s] = (sc[s] || 0) + 1;
+  if (Math.max(...Object.values(sc)) >= 3) return 'mono';
+  if (new Set(rs).size < rs.length) return 'paired';
+  const m = Math.max(...rs);
+  return m === 14 ? 'A_high' : m >= 12 ? 'KQ_high' : m >= 10 ? 'mid_high' : 'low';
 }
-const rowRo = r => (r.c && r.c.ro) || (r.c && RO_CT[r.c.ct]) || null; // null＝不分落牌（CERT 列）：每類表都列
-const roOk = (r, ro) => !ro || !rowRo(r) || rowRo(r) === ro;
-const roTitle = (nd, ro) => ro ? `<b class="ro">｜${stOf(nd) === 1 ? '轉牌' : '河牌'}：${dfs(RO_CN[ro])}</b>` : '';
-function rosOf(sp, nd) { // 這個節點有分落牌的類別（照固定順序）
-  if (!stOf(nd)) return [null];
-  const got = new Set(L.rows.filter(r => r.sp === sp && r.nd === nd && r.c && r.c.ro).map(r => r.c.ro));
-  const o = RO_ORD.filter(k => got.has(k)); return o.length ? o : [null];
+function possibleBt(flopTx, street) { return street <= 0 ? [flopTx] : (_BT_RISE[flopTx] || BT_KEYS); }
+function splitCl(cl) {
+  const k = cl || '全部';
+  for (const [, zh] of BT_ROWS) {
+    if (k === zh) return {grp: '', tx: zh};
+    if (k.endsWith('・' + zh)) return {grp: k.slice(0, -(zh.length + 1)), tx: zh};
+  }
+  return {grp: k === '全部' ? '' : k, tx: k === '全部' ? '全部' : null};
+}
+function isCtRow(r) { return (r.c && r.c.ct) || (r.rn && r.rn.k === 'ct'); }
+function btTitle(nd, r, e) {
+  const st = stOf(nd); if (!st) return '';
+  const key = (r && r.c && r.c.bt) || (e && textureNow(e.b, st));
+  if (!key || !BT_ZH[key]) return '';
+  return `<b class="ro">｜${st === 1 ? '轉牌' : '河牌'}：${dfs(BT_ZH[key])}</b>`;
 }
 const RNK = {cert: 'CERT', est: '', gtoe: '', gto: '', fb: '沿用', ct: ''};
 function nTxt(r) { // 格子小字：根據＋樣本數（池 n／解算牌面數）
@@ -129,59 +131,79 @@ const TITLES = (window.NL2TITLES && window.NL2TITLES.build(L)) || null;
 const lineList = (sp, nd) => TITLES ? TITLES.lines(sp, nd) : [];
 const nodeVisible = (sp, nd) => TITLES ? TITLES.nodeVisible(sp, nd) : (!REACH.usesReach || !REACH.usesReach(sp, nd) || REACH.visible(sp, nd));
 const rowReached = (r, h, line) => TITLES ? TITLES.rowReached(r, h, line) : (!REACH.usesReach(r.sp, r.nd) || REACH.classReached(r.sp, r.nd, h, r));
-const RO_SHORT = {over: '高張落下', pair: '成對', flush: '同花完成', straight: '順子完成', draw: '補聽', brick: '空白'};
-const roHead = rv => `<span class="df" data-df="${esc(RO_CN[rv])}" role="button" tabindex="0">${esc(RO_SHORT[rv])}</span>`;
 function gridHtml(sp, nd, me, line, ro) {
   const lines = line ? [line] : (lineList(sp, nd).length ? lineList(sp, nd) : [null]);
   return lines.map(ln => gridOne(sp, nd, me, ln, ro)).join('');
 }
-function gridOne(sp, nd, me, line, ro) {
+function gridMw(sp, nd, me, line) {
   const reached = (r, h) => rowReached(r, h, line);
-  const ros = rosOf(sp, nd), split = ros[0] != null;
   const R = L.rows.filter(r => r.sp === sp && r.nd === nd), base = R.filter(r => !r.x);
   const ex = R.filter(r => r.x && (!me || r.id === me.id) && r.hc.some(h => reached(r, h)));
   const conds = [];
   base.forEach(r => { const k = r.cl || '全部'; if (!conds.includes(k)) conds.push(k); });
-  if (!split) {
-    const cols = HCO.filter(h => base.some(r => r.hc.includes(h) && reached(r, h)));
-    const condsShown = conds.filter(k => cols.some(h => {
-      const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
-      return r && reached(r, h);
-    }));
-    if (!cols.length || !condsShown.length) return '';
-    const cell = (k, h) => {
-      const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
-      if (!r || !reached(r, h)) return '<td class="na">—</td>';
-      return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${short(r.a, r)}${r.ok.length ? '≈' : ''}${cellSmall(r)}</td>`;
-    };
-    let h = `<div class="tw"><table class="rt lt"><tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>` +
-      condsShown.map(k => `<tr><th class="cl">${dfl(k)}</th>${cols.map(c => cell(k, c)).join('')}</tr>`).join('') + '</table></div>';
-    if (ex.length) h += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => hlabel(c, r.nd)).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}${cellSmall(r)}</span>`).join('；')}</p>`;
-    return h;
-  }
-  const findR = (k, h, rv) => base.find(r => (r.cl || '全部') === k && r.hc.includes(h) && rowRo(r) === rv)
-    || base.find(r => (r.cl || '全部') === k && r.hc.includes(h) && !rowRo(r));
-  const colsH = HCO.filter(h => conds.some(k => ros.some(rv => { const r = findR(k, h, rv); return r && reached(r, h); })));
-  const condsShown = conds.filter(k => colsH.some(h => ros.some(rv => { const r = findR(k, h, rv); return r && reached(r, h); })));
-  if (!colsH.length || !condsShown.length) return '';
-  const cell = (k, h, rv) => {
-    const r = findR(k, h, rv);
+  const cols = HCO.filter(h => base.some(r => r.hc.includes(h) && reached(r, h)));
+  const condsShown = conds.filter(k => cols.some(h => {
+    const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
+    return r && reached(r, h);
+  }));
+  if (!cols.length || !condsShown.length) return '';
+  const cell = (k, h) => {
+    const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
     if (!r || !reached(r, h)) return '<td class="na">—</td>';
-    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}" data-ro="${rv}" data-h="${h}">${short(r.a, r)}${r.ok.length ? '≈' : ''}${cellSmall(r)}</td>`;
+    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${short(r.a, r)}${r.ok.length ? '≈' : ''}${cellSmall(r)}</td>`;
   };
-  const heads = `<tr><th></th>${ros.map(rv => `<th class="ro" data-ro="${rv}">${roHead(rv)}</th>`).join('')}</tr>`;
-  const body = condsShown.map(k => {
-    const grp = (condsShown.length > 1 || k !== '全部') ? `<tr class="grp"><th class="cl" colspan="${1 + ros.length}">${dfl(k)}</th></tr>` : '';
-    const hs = colsH.filter(h => ros.some(rv => { const r = findR(k, h, rv); return r && reached(r, h); }));
-    return grp + hs.map(h => `<tr data-cl="${esc(k)}" data-h="${h}"><th class="cl">${dfs(hlabel(h, nd))}</th>${ros.map(rv => cell(k, h, rv)).join('')}</tr>`).join('');
-  }).join('');
-  let html = `<div class="tw"><table class="rt lt" data-kind="runout">${heads}${body}</table></div>`;
-  if (ex.length) html += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${rowRo(r) ? roHead(rowRo(r)) + '・' : ''}${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => hlabel(c, r.nd)).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}${cellSmall(r)}</span>`).join('；')}</p>`;
+  let html = `<div class="tw"><table class="rt lt"><tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>` +
+    condsShown.map(k => `<tr data-cl="${esc(k)}"><th class="cl">${dfl(k)}</th>${cols.map(c => cell(k, c)).join('')}</tr>`).join('') + '</table></div>';
+  if (ex.length) html += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => hlabel(c, r.nd)).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}${cellSmall(r)}</span>`).join('；')}</p>`;
+  return html;
+}
+function gridOne(sp, nd, me, line, ro) {
+  if (sp === 'mw') return gridMw(sp, nd, me, line);
+  const reached = (r, h) => rowReached(r, h, line);
+  const R = L.rows.filter(r => r.sp === sp && r.nd === nd);
+  const base = R.filter(r => !r.x && !isCtRow(r));
+  const ex = R.filter(r => (r.x || isCtRow(r)) && (!me || r.id === me.id) && r.hc.some(h => reached(r, h)));
+  const groups = [];
+  const seenG = new Set();
+  for (const r of base) {
+    const g = splitCl(r.cl).grp;
+    if (!seenG.has(g)) { seenG.add(g); groups.push(g); }
+  }
+  if (!groups.length) groups.push('');
+  const findR = (grp, zh, h) => {
+    const want = grp ? grp + '・' + zh : zh;
+    const hit = base.find(r => (r.cl || '全部') === want && r.hc.includes(h));
+    if (hit) return hit;
+    // CERT／全部：沒有該牌面列時，同一個答案填進每一列
+    return base.find(r => r.hc.includes(h) && !(r.c && r.c.bt) && (
+      (r.cl || '全部') === '全部' && !grp ||
+      (grp && (r.cl || '') === grp) ||
+      (r.rn && r.rn.k === 'cert' && (!grp || (r.cl || '') === grp || (r.cl || '全部') === '全部'))
+    ));
+  };
+  const cols = HCO.filter(h => groups.some(g => BT_ROWS.some(([, zh]) => { const r = findR(g, zh, h); return r && reached(r, h); })));
+  const groupsShown = groups.filter(g => cols.some(h => BT_ROWS.some(([, zh]) => { const r = findR(g, zh, h); return r && reached(r, h); })));
+  if (!cols.length || !groupsShown.length) return '';
+  const cell = (g, zh, h) => {
+    const r = findR(g, zh, h);
+    if (!r || !reached(r, h)) return '<td class="na">—</td>';
+    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${short(r.a, r)}${r.ok.length ? '≈' : ''}${cellSmall(r)}</td>`;
+  };
+  const head = `<tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>`;
+  let body = '';
+  for (let i = 0; i < groupsShown.length; i++) {
+    const g = groupsShown[i];
+    if (groupsShown.length > 1 || g) body += `<tr class="grp"><th class="cl" colspan="${1 + cols.length}">${dfl(g || '全部')}</th></tr>`;
+    if (i === 0 || groupsShown.length > 1) body += (i === 0 ? '' : head);
+    body += BT_ROWS.map(([, zh]) => `<tr data-cl="${esc(g ? g + '・' + zh : zh)}"><th class="cl">${dfl(zh)}</th>${cols.map(c => cell(g, zh, c)).join('')}</tr>`).join('');
+  }
+  let html = `<div class="tw"><table class="rt lt">${head}${body}</table></div>`;
+  if (ex.length) html += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => hlabel(c, r.nd)).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}${cellSmall(r)}</span>`).join('；')}</p>`;
   return html;
 }
 function faceHtml(sp, nd, line, ro) { // 這個節點你面對什麼：例題的完整行動線（翻前＋先前各街＋這街）
   // 例題只用來顯示行動線（位置、尺寸、底池），不顯示手牌，所以同一條線的任何例題都可以
-  const ex = L.rows.filter(r => r.sp === sp && r.nd === nd && roOk(r, ro) && r.eg && r.eg.length && (line || r.hc.some(h => rowReached(r, h, line))));
+  const ex = L.rows.filter(r => r.sp === sp && r.nd === nd && r.eg && r.eg.length && (line || r.hc.some(h => rowReached(r, h, line))));
   const sig = e => e ? [e.t, e.me, e.pa, (e.pc || []).join(','), e.pretext || ''].join('|') : '';
   const cand = []; // 例題必須跟標題同一條線、同一組翻前位置
   for (const r of ex) for (const e of r.eg) if (!line || !TITLES || TITLES.lineKeyFromEg(e, stOf(nd)) === line.key) cand.push(e);
@@ -191,13 +213,13 @@ function faceHtml(sp, nd, line, ro) { // 這個節點你面對什麼：例題的
       if (line && line.eg && sig(e) !== sig(line.eg)) continue;
       const s = story(e); if (!s || s.length !== stOf(nd) + 2) continue; const l = s[s.length - 1];
       const face = isVs(nd) ? `你要跟 ${r1(s.facing)}bb（底池 ${s.pot}bb）` : `輪到你（底池 ${l.pot}bb）`;
-      const cs = x => ro ? ' ' + pretty(x.cards) : ''; // 分落牌的表：例題寫出每街實際發的牌
+      const cs = x => stOf(nd) ? ' ' + pretty(x.cards) : ''; // 轉牌／河牌：例題寫出每街實際發的牌
       const prev = s.slice(1, -1).map(x => `${x.st}${cs(x)}：${esc(x.txt)}`).join(' → ');
       return `<p class="small muted">你面對（例）：${esc(s[0])} → ${prev ? prev + ' → ' : ''}${l.st}${cs(l)}${l.txt ? '：' + esc(l.txt) : ''}，${face}</p>`; } }
   return '';
 }
 function dataHtml(sp, nd, line, ro) {
-  return `<ul class="dl">${L.rows.filter(r => r.sp === sp && r.nd === nd && roOk(r, ro) && r.hc.some(h => rowReached(r, h, line))).map(r => `<li class="small">${r.rofb ? '沿用・' : ''}${r.x ? '例外・' : ''}${esc(r.cl || '全部')}・${r.hc.map(c => hlabel(c, r.nd)).join('、')}：<b>${esc(alab(r.a, r))}</b>${r.ok.length ? '（' + r.ok.map(a => alab(a, r)).join('、') + ' 也可以）' : ''}。${esc(r.why)}<br><span class="muted">${BS[r.b]}｜${esc(r.ev)}${r.hw ? `｜你打過 ${r.hw} 次` : ''}</span></li>`).join('')}</ul>`;
+  return `<ul class="dl">${L.rows.filter(r => r.sp === sp && r.nd === nd && r.hc.some(h => rowReached(r, h, line))).map(r => `<li class="small">${r.rofb ? '沿用・' : ''}${r.x ? '例外・' : ''}${esc(r.cl || '全部')}・${r.hc.map(c => hlabel(c, r.nd)).join('、')}：<b>${esc(alab(r.a, r))}</b>${r.ok.length ? '（' + r.ok.map(a => alab(a, r)).join('、') + ' 也可以）' : ''}。${esc(r.why)}<br><span class="muted">${BS[r.b]}｜${esc(r.ev)}${r.hw ? `｜你打過 ${r.hw} 次` : ''}</span></li>`).join('')}</ul>`;
 }
 let LS = {sp: 'bb', data: false};
 function lines() {
@@ -206,7 +228,7 @@ function lines() {
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
     return `${esc(nodeLabel(sp, nd))} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(nodeLabel(s2, n2))}」`; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
-  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔；池估是牌池實際下注均值再靠檔，不是精確到 1%。點「池估」可看說明。轉牌、河牌同一條行動線還是一張表：列是牌型，欄是這一街新發的那張牌（高張落下、成對、同花完成、順子完成、補聽、空白）。小字的 n＝這類落牌的牌池決策數（池估，或池估確認 GTO 仍最賺）；「盤」＝這類落牌的解算牌面數；「沿用」＝兩種資料都不夠，沿用沒分落牌的答案。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔；池估是牌池實際下注均值再靠檔，不是精確到 1%。點「池估」可看說明。同一條行動線一張表。橫列固定、跟翻牌同一套：9 以下低牌面、成對面、單色面、A 高面、J/T 高面、K/Q 高面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽併入該牌面列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。小字的 n＝這類牌面的牌池決策數（池估，或池估確認 GTO 仍最賺）；「盤」＝這類牌面的解算牌面數；「沿用」＝兩種資料都不夠，沿用沒分牌面的答案。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>` + defsHtml(false) + `
@@ -280,7 +302,7 @@ function egCond(e, k, ln) { // 例題在第 k 街的條件值
   const last = seg.split(' ').filter(t => t && !t.startsWith(e.me + ':') && /:[bra]/.test(t)).pop() || '';
   const sz = /:b/.test(last) ? (bets[bets.length - 1] <= 0.6 ? 'le50' : bets[bets.length - 1] <= 1.15 ? 'p75' : 'o150') : null;
   const F = (ln && ln.facts) || {};
-  return { tx, hi, ct, sz, ro: k >= 1 ? rcat(b, k) : null, ln: F.tb ? 'tb' : 'oth', prior: [F.checkTurn && 'check_turn', F.betBet && 'bet_bet'].filter(Boolean), hr: F.pfr ? 'PFR' : 'CALL' };
+  return { tx, hi, ct, sz, bt: textureNow(b, k), ln: F.tb ? 'tb' : 'oth', prior: [F.checkTurn && 'check_turn', F.betBet && 'bet_bet'].filter(Boolean), hr: F.pfr ? 'PFR' : 'CALL' };
 }
 function egInException(r, e, ln) {
   if (r.x) return false;
@@ -319,7 +341,7 @@ function drill(f, street) {
   const lst = s[s.length - 1], vs = isVs(r.nd);
   const ask = vs ? `輪到你：要跟 ${r1(s.facing)}bb（底池 ${s.pot}bb）` : `輪到你（底池 ${lst.pot}bb）`;
   app.innerHTML = `<div class="chips">${FL().map(([k, t]) => `<button class="chip${k === DF ? ' on' : ''}" data-f="${k}">${esc(t)}</button>`).join('')}</div>
-  <div id="qbox" class="sec"><p class="qs">${esc(sp.t.split('（')[0])}｜<span class="ttl">${(TITLES && TITLES.titleForEg(r.sp, r.nd, e) || {}).titleHtml || esc(nodeLabel(r.sp, r.nd))}</span>${roTitle(r.nd, rowRo(r))}。你的牌 ${pretty(h)}，你要怎麼做？</p>
+  <div id="qbox" class="sec"><p class="qs">${esc(sp.t.split('（')[0])}｜<span class="ttl">${(TITLES && TITLES.titleForEg(r.sp, r.nd, e) || {}).titleHtml || esc(nodeLabel(r.sp, r.nd))}</span>${btTitle(r.nd, r, e)}。你的牌 ${pretty(h)}，你要怎麼做？</p>
   <div class="cards">${h.map(cd).join('')}　${b.map(cd).join('')}</div>
   <p class="line">${esc(s[0])}</p>${s.slice(1).map((x, i) => `<p class="line">${x.st} ${pretty(x.cards)}：${esc(x.txt)}${i === s.length - 2 ? (x.txt ? '，' : '') + esc(ask) : ''}</p>`).join('')}
   <div class="abar">${CHO(r.nd, r.sp).map(a => `<button class="ab" data-a="${a}">${esc(alab(a, r))}${a === 'c' ? ' ' + r1(s.facing) + 'bb' : ''}</button>`).join('')}</div></div><div id="ans"></div>`;
@@ -334,7 +356,7 @@ function lanswer(a, el) {
   $('#ans').innerHTML = `<div class="sec"><p class="res ${good || alt ? 'ok' : 'no'}">${res}：${esc(alab(r.a, r))}${r.ok.length ? `（${r.ok.map(x => alab(x, r)).join('、')} 也可以）` : ''}</p><button class="nx" data-next>下一題 →</button>
   <p class="small">這手是<b>${esc(clsName(q))}</b>，表上：${esc(r.cl || '全部牌面')} → <b>${esc(alab(r.a, r))}</b>。${esc(r.why)}</p>
   <p class="small muted">${esc(L.basis[r.b])}｜${esc(r.ev)}</p>
-  <p class="small"><b class="ttl">${(TITLES && TITLES.titleForEg(r.sp, r.nd, q.e) || {}).titleHtml || esc(nodeLabel(r.sp, r.nd))}</b>${roTitle(r.nd, rowRo(r) || rcat(q.e.b, stOf(r.nd)))}（框起來的是這題）</p>${gridHtml(r.sp, r.nd, r, TITLES && TITLES.titleForEg(r.sp, r.nd, q.e))}<p class="small"><a href="#lines" data-go="${r.sp}">看完整對照表</a></p></div>${defsHtml(false)}`;
+  <p class="small"><b class="ttl">${(TITLES && TITLES.titleForEg(r.sp, r.nd, q.e) || {}).titleHtml || esc(nodeLabel(r.sp, r.nd))}</b>${btTitle(r.nd, r, q.e)}（框起來的是這題）</p>${gridHtml(r.sp, r.nd, r, TITLES && TITLES.titleForEg(r.sp, r.nd, q.e))}<p class="small"><a href="#lines" data-go="${r.sp}">看完整對照表</a></p></div>${defsHtml(false)}`;
 }
 function clsName(q) { return q.row.hc.map(h => stOf(q.row.nd) === 2 && ['DRAW', 'WDRAW'].includes(h) ? hlabel(h, q.row.nd) : L.hc[h]).join('／'); }
 // ---------- 路由 ----------
