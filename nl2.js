@@ -1,5 +1,8 @@
 (function(){
 const R = window.NL2, L = window.NLL, H = window.HWR, $ = s => document.querySelector(s), app = $('#app');
+// NL2 教學行動線只提供單挑底池；多人策略不可用 HU solver 近似冒充。
+L.spots = L.spots.filter(s => s.id !== 'mw');
+L.rows = L.rows.filter(r => r.sp !== 'mw');
 const RK = '23456789TJQKA', SU = {s: '♠', h: '♥', d: '♦', c: '♣'};
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const cd = c => `<span class="cd ${c[1] === 'h' ? 'r' : c[1] === 'd' ? 'd' : c[1] === 'c' ? 'c' : ''}">${c[0] === 'T' ? '10' : c[0]}${SU[c[1]]}</span>`;
@@ -29,7 +32,7 @@ function autoData(a) { // 規則卡的數字直接從對照表讀，不另存一
 }
 // ---------- 行動線對照表（資料：lines_data.js，表和練習用同一份）----------
 const HS = {S: '兩對+', TPG: '頂對好', TPW: '頂對弱', MID: '中小對', DRAW: '強聽', WDRAW: '弱聽', AIR: '空氣'};
-const HCO = ['S', 'TPG', 'TPW', 'MID', 'DRAW', 'WDRAW', 'AIR'];
+const HCO = ['TPG', 'TPW', 'MID', 'DRAW', 'WDRAW'];
 const BS = {pool: '池', gto: 'GTO', gtoa: '兩人 GTO 近似', est: '池估'};
 const stOf = nd => /(^|_)f_/.test(nd) ? 0 : /(^|_)t_/.test(nd) ? 1 : 2;
 // 當街牌面（與翻牌同一套列、同一優先序；/workspace/poker_r005/btx.py）。JS street：0＝翻牌、1＝轉牌、2＝河牌。
@@ -89,7 +92,7 @@ function showDef(k) {
   b.innerHTML = `<b>${esc(k)}</b>　${esc(DEF.d[k] || '（沒有定義）')}<span class="muted small">　點一下關閉</span>`; b.classList.add('on');
 }
 const isVs = nd => /_vs_|_over/.test(nd);
-const CHO = (nd, sp) => (sp === 'mw' && isVs(nd)) ? ['f', 'c', 'r'] : /r_vs_xr/.test(nd) ? ['f', 'c'] : isVs(nd) ? ['f', 'c', 'r'] : ['x', 'small', 'big'];
+const CHO = (nd, sp) => /r_vs_xr/.test(nd) ? ['f', 'c'] : isVs(nd) ? ['f', 'c', 'r'] : ['x', 'small', 'big'];
 const STD_SZ = [[1/3, '⅓'], [1/2, '½'], [2/3, '⅔'], [3/4, '¾'], [1, '1'], [1.5, '1½']];
 const nearestSz = p => STD_SZ.reduce((b, z) => Math.abs(z[0] - p) < Math.abs(b[0] - p) ? z : b)[1];
 function potFromLab(lab) { // 從原始標籤讀底池比例；全下維持全下；「或超池」保留兩檔標準尺寸
@@ -542,7 +545,7 @@ function egInException(r, e, ln) {
 const egPathBad = (r, e) => !window.__NL2_NO_EGPATH && !!(window.NL2_EGBAD && (window.NL2_EGBAD[r.id] || []).includes(r.eg.indexOf(e)));
 const egOk = (r, e) => { if (!TITLES) return true; if (egPathBad(r, e)) return false; const ln = TITLES.titleForEg(r.sp, r.nd, e); return !!ln && r.hc.some(h => rowReached(r, h, ln)) && !egInException(r, e, ln); };
 // 只列表、不出題的線：這條線走得到的格沒有完整例題手牌（HW 2026-11-11 同意保留表格、不進練習）
-const TABLE_ONLY = new Set(['mw/r_vs_xr']);
+const TABLE_ONLY = new Set();
 const tableOnly = (sp, nd) => TABLE_ONLY.has(sp + '/' + nd);
 function pool(f) {
   return L.rows.filter(r => r.eg && r.eg.length && !tableOnly(r.sp, r.nd) && nodeVisible(r.sp, r.nd) && r.hc.some(h => rowReached(r, h)) && r.eg.some(e => egOk(r, e)) && (f === 'all' || (f === 'riv' ? (/r_vs_bet/.test(r.nd) && r.sp !== 'mw' && r.hc.some(h => ['TPG', 'TPW', 'MID'].includes(h))) : r.sp === f)));
