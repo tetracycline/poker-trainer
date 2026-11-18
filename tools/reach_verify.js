@@ -36,6 +36,8 @@ const L = ctx.NLL, Q = ctx.__linesQA;
 // ---------- 2. 基本表 ----------
 const HCODE = { '兩對+': 'S', '頂對好': 'TPG', '頂對弱': 'TPW', '中小對': 'MID', '強聽': 'DRAW', '強聽未中': 'DRAW', '弱聽': 'WDRAW', '弱聽／高張': 'WDRAW', '空氣': 'AIR' };
 const HNAME = { S: '兩對+', TPG: '頂對好', TPW: '頂對弱', MID: '中小對', DRAW: '強聽', WDRAW: '弱聽', AIR: '空氣' };
+// 檢查可達性仍使用完整的七類做轉換，只有下列五類屬於使用者要求顯示的欄位。
+const DISPLAY_HANDS = new Set(['TPG','TPW','MID','DRAW','WDRAW']);
 const STN = ['翻牌', '轉牌', '河牌'];
 const TX = ['A_high', 'KQ_high', 'mid_high', 'low', 'paired', 'mono'];
 const TXN = { A_high: 'A 高面', KQ_high: 'K/Q 高面', mid_high: 'J/T 高面', low: '9 以下', paired: '成對面', mono: '單色面' };
@@ -501,6 +503,7 @@ for (const spot of L.spots) {
     for (const e of t.exc) for (const lab of (e.classes || [])) shownEx.add(e.cond + '|' + (Object.keys(HNAME).find(k => HNAME[k] === lab) || HCODE[lab]) + '|' + (e.ro || ''));
     const canonSt = P.streets.map(b => canon(b));
     for (const r of nodeRows) for (const h of r.hc) {
+      if (!DISPLAY_HANDS.has(h)) continue; // UI 刻意不顯示兩對+／空氣，非漏格
       const k = (r.x ? r.cl : (r.cl || '全部')) + '|' + h + '|' + (rowRo(r) || '');
       if ((r.x ? shownEx : shownBase).has(k)) continue;
       // CERT 列（無 ro）出現在每一欄，任一欄有顯示即可
@@ -533,7 +536,7 @@ for (const spot of L.spots) {
     if (shown.has(id) || seen.has(id + pfr)) continue; seen.add(id + pfr);
     const F = { ...lineFacts({ streets, pre: '' }), pfr };
     const hits = [];
-    for (const r of rowsOf(r0.sp, r0.nd)) for (const h of r.hc) if (reachable(r0.sp, r0.nd, streets, F, r, h)) hits.push(`${r.x ? '例外 ' : ''}${r.cl || '全部'}×${HNAME[h]}`);
+    for (const r of rowsOf(r0.sp, r0.nd)) for (const h of r.hc) if (DISPLAY_HANDS.has(h) && reachable(r0.sp, r0.nd, streets, F, r, h)) hits.push(`${r.x ? '例外 ' : ''}${r.cl || '全部'}×${HNAME[h]}`);
     if (hits.length) report.violations.push({ table: key.replace(/\|/g, ' → '), node: r0.sp + '/' + r0.nd, kind: '漏表', msg: `這條線（${['翻牌', '轉牌', '河牌'].slice(0, streets.length).map((x, i) => x + '：' + (streets[i].join('、') || '（無）')).join(' → ')}）有 ${hits.length} 格走得到卻沒有表：${hits.slice(0, 8).join('、')}${hits.length > 8 ? '…' : ''}` });
   }
 }
