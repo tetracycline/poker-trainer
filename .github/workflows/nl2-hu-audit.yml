@@ -29,6 +29,10 @@ jobs:
       - name: Independently verify reachability
         if: always()
         run: node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+      - name: Block merge until every continuing line reaches river
+        if: always()
+        run: |
+          node -e 'const c = require("./nl2-audit/link.json").counts; console.log("Reach river: " + c.reachRiver + "/" + c.continuing + " (" + c.riverShare + "%)"); if (c.continuing > 0 && c.reachRiver !== c.continuing) process.exit(1);'
       - name: Upload evidence even if coverage is incomplete
         if: always()
         uses: actions/upload-artifact@v4
