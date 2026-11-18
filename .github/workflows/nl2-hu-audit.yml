@@ -1,0 +1,37 @@
+name: NL2 HU navigation audit
+on:
+  pull_request:
+    paths:
+      - 'nl2.html'
+      - 'nl2.js'
+      - 'nl2_titles.js'
+      - 'nl2_reach.js'
+      - 'lines_data.js'
+      - 'tools/hu_line_contract.js'
+      - 'tools/link_audit.js'
+      - 'tools/reach_verify.js'
+      - '.github/workflows/nl2-hu-audit.yml'
+  workflow_dispatch:
+jobs:
+  hu-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: mkdir -p nl2-audit
+      - name: Verify only heads-up tables and exact layout
+        run: node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+      - name: Audit navigation and report true reach-to-river rate
+        if: always()
+        run: node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+      - name: Independently verify reachability
+        if: always()
+        run: node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+      - name: Upload evidence even if coverage is incomplete
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-audit
+          path: nl2-audit/
