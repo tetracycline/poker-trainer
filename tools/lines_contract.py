@@ -64,7 +64,7 @@ def expected(data):
 def diff(data):
     missing = []
     for sp, nd, hc, c in expected(data):
-        if not any(r['sp'] == sp and r['nd'] == nd and hc in r['hc'] and not r.get('x') and all(c.get(k) == v for k, v in (r.get('c') or {}).items()) for r in data['rows']):
+        if not any(r['sp'] == sp and r['nd'] == nd and hc in r['hc'] and not r.get('x') and all(c.get(k) == v for k, v in (r.get('c') or {}).items() if k != 'ro') for r in data['rows']):
             missing.append(dict(sp=sp, nd=nd, hc=hc, c=c))
     return missing
 

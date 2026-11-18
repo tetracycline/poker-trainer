@@ -44,6 +44,9 @@ const pfxOf = nd => (nd.match(/^(3b_|3c_|lmp_|iso_)/) || [''])[0];
 const ANS = { x: '過', c: '跟', f: '棄', r: '加注', small: '下注', big: '下注' };
 const strip = s => String(s).replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
 const rowsOf = (sp, nd) => L.rows.filter(r => r.sp === sp && r.nd === nd);
+// run 005 落牌分類：表只含同類列（未分的 CERT 列每類都列；河牌 ct 列歸到對應類）
+const RO_CN = { over: '高張落下（A/K 或新最大牌）', pair: '公牌成對', flush: '同花完成', straight: '順子完成', draw: '補聽牌', brick: '空白牌' };
+const rowRo = r => (r.c && r.c.ro) || (r.c && ({ flush: 'flush', str4: 'straight' })[r.c.ct]) || null;
 
 // ---------- 3. 自己的動作正規化（原始例題 → 你/對手＋動作）----------
 const VB = { x: '過', c: '跟', f: '棄', b: '下注', r: '加注', a: '全下' };
@@ -112,7 +115,9 @@ function parseSections(html, sp) {
     const exm = seg.match(/<span class="lab"><span class="df"[^>]*>例外<\/span><\/span>　([\s\S]*?)<\/p>/);
     const exc = exm ? exm[1].split('；').map(x => { const t = strip(x); const m = t.match(/^(.*)：(.*) → (.*)$/); return m ? { cond: m[1], classes: m[2].split('、'), text: m[3].replace(/(池估|池|GTO|兩人 GTO 近似)$/, '') } : { raw: t }; }) : [];
     const [nsp, nd] = starts[k].node.split('/');
-    out.push({ sp: nsp || sp, nd, titleHtml, title: strip(titleHtml), face: strip(face), cols, rows, exc });
+    const rom = seg.match(/<b class="ro">｜(?:轉牌|河牌)：([\s\S]*?)<\/b>/); // run 005：每類落牌一張表
+    const ro = rom ? (Object.keys(RO_CN).find(k => RO_CN[k] === strip(rom[1])) || '?' + strip(rom[1])) : null;
+    out.push({ sp: nsp || sp, nd, titleHtml, title: strip(titleHtml), ro, face: strip(face), cols, rows, exc });
   }
   return out;
 }
@@ -224,8 +229,9 @@ for (const spot of L.spots) {
   for (const t of secs) {
     t.viol = []; t.checks = []; t.removedCells = [];
     report.tables.push(t);
-    if (seenTitle.has(t.title)) V(t, '重複', '同一情境出現兩張標題完全相同的表');
-    seenTitle.add(t.title);
+    if (t.ro && t.ro.startsWith('?')) V(t, '標題', '無法辨認的落牌類別：' + t.ro.slice(1));
+    if (seenTitle.has(t.title + '|' + (t.ro || ''))) V(t, '重複', '同一情境出現兩張標題完全相同的表');
+    seenTitle.add(t.title + '|' + (t.ro || ''));
     const P = parseTitle(t.title);
     if (!P) { V(t, '標題', '標題無法解析成明確行動線'); continue; }
     t.P = P;
@@ -272,8 +278,8 @@ for (const spot of L.spots) {
       });
     }
     t.decisions = decisions;
-    // (f) 每一格
-    const nodeRows = rowsOf(t.sp, t.nd);
+    // (f) 每一格（分落牌的表只看同類列）
+    const nodeRows = rowsOf(t.sp, t.nd).filter(r => !t.ro || !rowRo(r) || rowRo(r) === t.ro);
     const SS = states(S);
     function checkCell(r, h, label, txt) {
       const lines = [];
@@ -420,7 +426,8 @@ function checkFace(t, P) {
   if (posTi.size && [...posTi].some(p => !posEx.has(p))) V(t, '例題', `標題位置 ${[...posTi].join('、')} 與例題 ${[...posEx].join('、')} 不一致`);
   let pot = parseFloat((pre.match(/底池 ([\d.]+)bb/) || [])[1]);
   for (let i = 1; i < parts.length; i++) {
-    const m = parts[i].match(/^(翻牌|轉牌|河牌)(?:：(.*)|，(.*))?$/); if (!m) { V(t, '例題', '例題無法解析：' + parts[i]); return; }
+    const m = parts[i].match(/^(翻牌|轉牌|河牌)(?: [^：，]+)?(?:：(.*)|，(.*))?$/); // run 005：分落牌的表在街名後寫實際發的牌
+    if (!m) { V(t, '例題', '例題無法解析：' + parts[i]); return; }
     let body = m[2] || m[3] || '';
     let final = null;
     const fm = body.match(/(?:^|，)(輪到你（底池 ([\d.]+)bb）|你要跟 ([\d.]+)bb（底池 ([\d.]+)bb）)$/);

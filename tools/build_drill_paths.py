@@ -9,6 +9,7 @@ H = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.abspath(sys.argv[
 sys.path[:0] = [os.path.join(H, 'lines_pipeline'), '/workspace/outputs/poker/lines1105', '/workspace/outputs/poker_solver/read_v1']
 from run10_common import classes
 from common import texture, ctype
+from rcat import rcat
 D = json.loads(subprocess.check_output(['node', os.path.join(H, 'dump_drill_candidates.js'), ROOT]))
 by = collections.defaultdict(list)
 for r in D['rows']: by[(r['sp'], r['nd'])].append(r)
@@ -22,6 +23,7 @@ def fits(r, e, k, F, segs):
         if key == 'tx' and texture(b[:6]) != v: return False
         if key == 'hi' and hi(b, k) != v: return False
         if key == 'ct' and (k == 0 or ctype(b, k + 1) != v): return False
+        if key == 'ro' and (k == 0 or rcat(b, k + 1) != v): return False   # run 005 落牌分類
         if key == 'sz':
             last = [t for t in segs[k].split(' ') if t and t.split(':')[0] != e['me'] and t.split(':')[1][:1] in 'bra']
             if last and last[-1].split(':')[1][:1] == 'b' and szb(float(last[-1].split(':')[1][1:])) != v: return False
