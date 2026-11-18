@@ -405,7 +405,8 @@ function gridOne(sp, nd, me, line, ro, cat) {
       (r.rn && r.rn.k === 'cert' && (!grp || (r.cl || '') === grp || (r.cl || '全部') === '全部'))
     ));
   };
-  const cols = HCO.filter(h => groups.some(g => BT_ROWS.some(([, zh]) => { const r = findR(g, zh, h); return r && reached(r, h); })));
+  // Five fixed teaching columns. Unreachable hand classes remain explicitly empty.
+  const cols = HCO;
   const groupsShown = groups.filter(g => cols.some(h => BT_ROWS.some(([, zh]) => { const r = findR(g, zh, h); return r && reached(r, h); })));
   if (!cols.length || !groupsShown.length) return '';
   const item = (cat && line) ? catItem(sp, nd, line) : null;
