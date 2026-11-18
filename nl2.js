@@ -513,7 +513,7 @@ app.addEventListener('click', e => {
   const sp = t.closest('[data-sp]'); if (sp) {
     LS.sp = sp.dataset.sp;
     if (location.hash && String(location.hash).startsWith('#ln-')) location.hash = 'lines';
-    else lines();
+    lines();
     return;
   }
   if (t.closest('[data-tg]')) { LS.data = !LS.data; lines(); return; }
