@@ -460,7 +460,8 @@ function lines() {
   window.__Q = null; const sp = LS.sp, S = L.spots.find(s => s.id === sp), cv = L.cov;
   const al = L.al[sp] || {}, aln = L.aln[sp];
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
-    return `${esc(nodeLabel(sp, nd))} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(nodeLabel(s2, n2))}」`; });
+    const peer = L.spots.find(s => s.id === s2);
+    return peer ? `${esc(nodeLabel(sp, nd))} → 照「${esc(peer.t)}」的「${esc(nodeLabel(s2, n2))}」` : ''; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
   <p class="small"><b>雙人底池限定：</b>固定五欄（頂對好、頂對弱、中小對、強聽、弱聽）及六種牌面。未具備 solver 的後續街標「待解：缺下一街」，不可誤當作牌局結束；請勿將缺資料的動作視為已驗證 GTO。轉牌或河牌若改變牌面，必須依實際新公牌重新選列。</p><p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、2/3、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔（⅔ 也在這組裡）；池估是牌池實際下注均值再靠檔，不是精確到 1%。格子只寫動作和「GTO」或「剝削」（剝削＝牌池估算比 GTO 更賺，不是封閉證明），不列樣本數或頻率。下注、加注會標尺寸（⅓、½、⅔、¾、1、1½ 或全下）。面對下注時，若資料有尺寸分檔，格子會寫門檻（例：面對小注 跟、面對 ≥¾ 棄）；翻牌／轉牌資料沒有分檔時不另造門檻。點動作或「→ 下一步」會跳到同一街的後續表（過→面對下注、下注／加注→被加注）或下一街同一條線的表，對得到就停在同一種牌面列；多人會對在同一條翻前線。後面的表有「↑ 上一步」。棄牌沒有下一步。同一條行動線一張表。橫列固定、跟翻牌同一套，順序是：9 以下低牌面、J/T 高面、K/Q 高面、A 高面、成對面、單色面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽，以及舊的「最高張 9 以下／T 以上」分半，都併入這六列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。格子的主連結是「這一步被跟或過完之後」的下一街；同一街的被加注／面對下注用旁邊的小連結「若被加注→」「若面對下注→」。棄牌、全下、河牌已結束的格子不再標「（無後續表）」。若資料還沒有下一街的表，格子不標終點，只保留同一街小連結（若有）。樣本很少或剝削動作與 GTO 頻率差很多的格子會標「低把握」。詳細樣本與頻率在「顯示每格的數據」。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
@@ -615,7 +616,7 @@ function goAnchor(info) {
 function route() {
   const info = hashInfo(), tab = info.tab;
   document.querySelectorAll('.topb').forEach(e => e.classList.toggle('on', e.dataset.t === tab));
-  if (info.sp && info.sp !== LS.sp) LS.sp = info.sp;
+  if (info.sp && info.sp !== LS.sp && L.spots.some(s => s.id === info.sp)) LS.sp = info.sp;
   const stay = tab === 'lines' && LS.view === 'lines' && app.querySelector && app.querySelector('[data-node]');
   if (!stay) {
     if (tab === 'card') card();
@@ -639,7 +640,7 @@ app.addEventListener('click', e => {
     return;
   }
   if (t.closest('[data-tg]')) { LS.data = !LS.data; lines(); return; }
-  const go = t.closest('[data-go]'); if (go) LS.sp = go.dataset.go;
+  const go = t.closest('[data-go]'); if (go && L.spots.some(s => s.id === go.dataset.go)) LS.sp = go.dataset.go;
 });
 if (window.__LINES_QA) window.__linesQA = { tableOnly, egCond, egInException, egOk,
   answer: a => lanswer(a, {classList: {add() {}}}),
