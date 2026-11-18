@@ -21,7 +21,7 @@ if (!ctx.__linesQA || !ctx.NLL) throw new Error('NL2 renderer/data unavailable')
 const EXPECT = ['頂對好','頂對弱','中小對','強聽','弱聽'];
 const ROWS = ['9 以下低牌面','J/T 高面','K/Q 高面','A 高面','成對面','單色面'];
 const errors = [];
-const stats = {spots:0,tables:0,huRows:ctx.NLL.rows.length,missingNextCells:0,nonFoldCells:0,riverTables:0,bySpot:[]};
+const stats = {spots:0,tables:0,huRows:ctx.NLL.rows.length,missingNextCells:0,nonFoldCells:0,bySpot:[]};
 if (ctx.NLL.spots.some(s => s.id === 'mw')) errors.push('multiway spot is still present');
 if (ctx.NLL.rows.some(r => r.sp === 'mw' || (r.eg || []).some(e=>e.mw)))
   errors.push('multiway rows/examples are still present');
@@ -43,7 +43,6 @@ for (const spot of ctx.NLL.spots) {
     if (JSON.stringify(actualRows)!==JSON.stringify(ROWS))
       errors.push(spot.id+': expected six rows, got '+JSON.stringify(actualRows));
     stats.tables++; tc++;
-    if (/data-node="[^"]*\/r_/.test(html)) stats.riverTables++;
     for (const td of markup.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)) {
       const txt=clean(td[1]);
       if (txt==='—' || /^棄|^全下|^加注 全下/.test(txt)) continue;
