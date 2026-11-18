@@ -351,7 +351,9 @@ for (const spot of L.spots) {
     const F = lineFacts(P);
     // (a) 合法動作
     const cur = P.streets[S] || [];
-    const facing = cur.length > 0 && /^對手(下注|加注|全下|超池下注)/.test(cur[cur.length - 1]);
+    const last = cur[cur.length - 1] || '';
+    const facedBet = cur.some(b => /^對手(下注|加注|全下|超池下注)$/.test(b));
+    const facing = cur.length > 0 && (/^對手(下注|加注|全下|超池下注)/.test(last) || (last === '對手跟' && facedBet));
     if (facing && t.question !== undefined && P.question !== '你要怎麼做？') V(t, '標題', '面對下注卻問「下注或過牌」');
     if (!facing && P.question === '你要怎麼做？') V(t, '標題', '沒人下注卻問「你要怎麼做？」（應為下注或過牌）');
     const legal = txt => { const u = String(txt || '').replace(/^面對\S+\s+/, '').replace(/（無後續表）/g, '').trim(); return facing ? /^(棄|跟|加注|全下)/.test(u) : /^(過|下注|全下)/.test(u); };
