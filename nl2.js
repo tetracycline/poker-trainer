@@ -29,7 +29,7 @@ function autoData(a) { // 規則卡的數字直接從對照表讀，不另存一
 }
 // ---------- 行動線對照表（資料：lines_data.js，表和練習用同一份）----------
 const HS = {S: '兩對+', TPG: '頂對好', TPW: '頂對弱', MID: '中小對', DRAW: '強聽', WDRAW: '弱聽', AIR: '空氣'};
-const HCO = ['S', 'TPG', 'TPW', 'MID', 'DRAW', 'WDRAW', 'AIR'];
+const HCO = ['TPG', 'TPW', 'MID', 'DRAW', 'WDRAW']; // HU 行動線固定五欄；兩對+／空氣不在本頁欄位
 const BS = {pool: '池', gto: 'GTO', gtoa: '兩人 GTO 近似', est: '池估'};
 const stOf = nd => /(^|_)f_/.test(nd) ? 0 : /(^|_)t_/.test(nd) ? 1 : 2;
 // 當街牌面（與翻牌同一套列、同一優先序；/workspace/poker_r005/btx.py）。JS street：0＝翻牌、1＝轉牌、2＝河牌。
@@ -127,6 +127,14 @@ function nodesOf(sp) {
   return o.sort((a, b) => stOf(a) - stOf(b));
 }
 // 表格版型照 9b695d6；標題寫成明確行動線，多條先前線就拆表。走不到的線／牌型不列。
+// 行動線頁只顯示雙人底池。移除多人情境及例題，避免以 HU solver 冒充多人 GTO。
+L.spots = L.spots.filter(s => s.id !== 'mw');
+L.rows = L.rows.filter(r => r.sp !== 'mw').map(r => {
+  if (!Array.isArray(r.eg)) return r;
+  const eg = r.eg.filter(e => !e.mw);
+  return Object.assign({}, r, { eg });
+}).filter(r => !Array.isArray(r.eg) || r.eg.length > 0);
+// Multiway-specific aliases and labels may remain in raw data, but are not navigable.
 const REACH = (window.NL2REACH && window.NL2REACH.build(L)) || { usesReach: () => false, classReached: () => true, visible: () => true };
 const TITLES = (window.NL2TITLES && window.NL2TITLES.build(L)) || null;
 const lineList = (sp, nd) => TITLES ? TITLES.lines(sp, nd) : [];
@@ -327,7 +335,8 @@ function cellInner(r, nd, href, extras) {
   const act = href ? `<a class="jmp" href="#${href}">${esc(main)}</a>` : esc(main);
   const sec = (extras || []).map(x => `<a class="jmp sub" href="#${x.href}">${esc(x.lab)}→</a>`).join(' ');
   const lo = lowConf(r) ? '<small class="lo" title="樣本少或與 GTO 頻率差很多">低把握</small>' : '';
-  return `${act}${sec ? ' ' + sec : ''} <small class="df" data-df="${esc(b)}">${esc(b)}</small>${lo ? ' ' + lo : ''}`;
+  const unresolved = !href && stOf(nd) < 2 && !/^(棄|全下|加注 全下)/.test(main) ? '<small class="lo" title="缺少被跟注／過完後的下一街求解資料，並非終局">待解：缺下一街</small>' : '';
+  return `${act}${sec ? ' ' + sec : ''} <small class="df" data-df="${esc(b)}">${esc(b)}</small>${lo ? ' ' + lo : ''}${unresolved ? ' ' + unresolved : ''}`;
 }
 function navHtml(cat, item) {
   if (!cat || !item) return '';
@@ -353,7 +362,7 @@ function gridMw(sp, nd, me, line, cat) {
   const ex = R.filter(r => r.x && !isHiSplitEx(r) && (!me || r.id === me.id) && r.hc.some(h => reached(r, h)));
   const conds = [];
   base.forEach(r => { const k = r.cl || '全部'; if (!conds.includes(k)) conds.push(k); });
-  const cols = HCO.filter(h => base.some(r => r.hc.includes(h) && reached(r, h)));
+  const cols = HCO; // 固定五個手牌欄位；不可達者顯示 —
   const condsShown = conds.filter(k => cols.some(h => {
     const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
     return r && reached(r, h);
@@ -402,9 +411,9 @@ function gridOne(sp, nd, me, line, ro, cat) {
       (r.rn && r.rn.k === 'cert' && (!grp || (r.cl || '') === grp || (r.cl || '全部') === '全部'))
     ));
   };
-  const cols = HCO.filter(h => groups.some(g => BT_ROWS.some(([, zh]) => { const r = findR(g, zh, h); return r && reached(r, h); })));
+  const cols = HCO; // 固定五欄，與各表可達性無關
   const groupsShown = groups.filter(g => cols.some(h => BT_ROWS.some(([, zh]) => { const r = findR(g, zh, h); return r && reached(r, h); })));
-  if (!cols.length || !groupsShown.length) return '';
+  if (!groupsShown.length) return '';
   const item = (cat && line) ? catItem(sp, nd, line) : null;
   const btOf = zh => (BT_ROWS.find(([, z]) => z === zh) || [''])[0];
   const cell = (g, zh, h) => {
@@ -453,9 +462,9 @@ function lines() {
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
     return `${esc(nodeLabel(sp, nd))} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(nodeLabel(s2, n2))}」`; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
-  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、2/3、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔（⅔ 也在這組裡）；池估是牌池實際下注均值再靠檔，不是精確到 1%。格子只寫動作和「GTO」或「剝削」（剝削＝牌池估算比 GTO 更賺，不是封閉證明），不列樣本數或頻率。下注、加注會標尺寸（⅓、½、⅔、¾、1、1½ 或全下）。面對下注時，若資料有尺寸分檔，格子會寫門檻（例：面對小注 跟、面對 ≥¾ 棄）；翻牌／轉牌資料沒有分檔時不另造門檻。點動作或「→ 下一步」會跳到同一街的後續表（過→面對下注、下注／加注→被加注）或下一街同一條線的表，對得到就停在同一種牌面列；多人會對在同一條翻前線。後面的表有「↑ 上一步」。棄牌沒有下一步。同一條行動線一張表。橫列固定、跟翻牌同一套，順序是：9 以下低牌面、J/T 高面、K/Q 高面、A 高面、成對面、單色面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽，以及舊的「最高張 9 以下／T 以上」分半，都併入這六列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。格子的主連結是「這一步被跟或過完之後」的下一街；同一街的被加注／面對下注用旁邊的小連結「若被加注→」「若面對下注→」。棄牌、全下、河牌已結束的格子不再標「（無後續表）」。若資料還沒有下一街的表，格子不標終點，只保留同一街小連結（若有）。樣本很少或剝削動作與 GTO 頻率差很多的格子會標「低把握」。詳細樣本與頻率在「顯示每格的數據」。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  <p class="small"><b>雙人底池限定：</b>固定五欄（頂對好、頂對弱、中小對、強聽、弱聽）及六種牌面。未具備 solver 的後續街標「待解：缺下一街」，不可誤當作牌局結束；請勿將缺資料的動作視為已驗證 GTO。轉牌或河牌若改變牌面，必須依實際新公牌重新選列。</p><p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、2/3、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔（⅔ 也在這組裡）；池估是牌池實際下注均值再靠檔，不是精確到 1%。格子只寫動作和「GTO」或「剝削」（剝削＝牌池估算比 GTO 更賺，不是封閉證明），不列樣本數或頻率。下注、加注會標尺寸（⅓、½、⅔、¾、1、1½ 或全下）。面對下注時，若資料有尺寸分檔，格子會寫門檻（例：面對小注 跟、面對 ≥¾ 棄）；翻牌／轉牌資料沒有分檔時不另造門檻。點動作或「→ 下一步」會跳到同一街的後續表（過→面對下注、下注／加注→被加注）或下一街同一條線的表，對得到就停在同一種牌面列；多人會對在同一條翻前線。後面的表有「↑ 上一步」。棄牌沒有下一步。同一條行動線一張表。橫列固定、跟翻牌同一套，順序是：9 以下低牌面、J/T 高面、K/Q 高面、A 高面、成對面、單色面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽，以及舊的「最高張 9 以下／T 以上」分半，都併入這六列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。格子的主連結是「這一步被跟或過完之後」的下一街；同一街的被加注／面對下注用旁邊的小連結「若被加注→」「若面對下注→」。棄牌、全下、河牌已結束的格子不再標「（無後續表）」。若資料還沒有下一街的表，格子不標終點，只保留同一街小連結（若有）。樣本很少或剝削動作與 GTO 頻率差很多的格子會標「低把握」。詳細樣本與頻率在「顯示每格的數據」。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
-  <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
+  <div class="chips">${L.spots.filter(s => s.id !== 'mw').map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>` + defsHtml(false) + `
   <div class="sec"><b class="h">${esc(S.t)}</b><span class="ev">${esc(S.sub)}</span>${cv && cv.by[sp] ? `<span class="ev">你 ${cv.by[sp][0]}/${cv.by[sp][1]} 個決定在表上</span>` : ''}</div>` +
   (function(){ const cat = lineCatalog(sp);
