@@ -198,12 +198,14 @@ function hrefNext(cat, item, a, bt) {
 }
 function basisOf(r) { return r.b === 'est' ? '剝削' : 'GTO'; }
 function faceTag(cl) {
-  const g = String(cl || '').split('・')[0];
-  if (/^≤½|^≤1\/2/.test(g)) return '小注';
-  if (/^≤⅓|^≤1\/3/.test(g)) return '≤⅓';
-  if (/¾|3\/4/.test(g)) return '≥¾';
-  if (/超池/.test(g)) return '超池';
-  if (/任何尺寸/.test(g)) return '任何尺寸';
+  const parts = String(cl || '').split('・');
+  for (const g of parts) {
+    if (/^≤½|^≤1\/2/.test(g)) return '小注';
+    if (/^≤⅓|^≤1\/3/.test(g)) return '≤⅓';
+    if (/¾|3\/4/.test(g)) return '≥¾';
+    if (/超池/.test(g)) return '超池';
+    if (/任何尺寸/.test(g)) return '任何尺寸';
+  }
   return '';
 }
 function actText(a, r) {
