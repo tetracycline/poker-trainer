@@ -203,12 +203,79 @@ function condFit(r, s, street, F) {
   return maybe ? 'maybe' : true;
 }
 // 某節點、某牌型、某狀態下，可能的主答案（例外優先）
+const MIX_FLOOR = 0.40, MIX_RATIO = 0.70;
+function isHiSplitEx(r) { return /(^|・)最高張 (9 以下|T 以上)$/.test(r.cl || ''); }
+const BT_ZH_SET = new Set(['9 以下低牌面', 'J/T 高面', 'K/Q 高面', 'A 高面', '成對面', '單色面']);
+function mwWantCl(t) {
+  if (!t || t.sp !== 'mw') return null;
+  const pre = String(t.title || '').split('→')[0].replace(/^翻前：/, '');
+  const acts = [...pre.matchAll(/你(?:（\w+）| [A-Z]+)? ?(\S+)/g)].map(m => m[1]);
+  const last = acts[acts.length - 1] || '';
+  if (/^(開|開池|3-bet|再加注)/.test(last)) return '你是開池者';
+  return '你是跟注者';
+}
+function rowCondOf(t, row) {
+  const role = mwWantCl(t);
+  if (role && BT_ZH_SET.has(row.cond)) return role;
+  return row.cond;
+}
+function canonAct(k) {
+  k = String(k || '');
+  if (k === 'x' || k === 'f' || k === 'c' || k === 'r' || k === 'small' || k === 'big') return k;
+  if (k === 'b33' || k === 'b50' || k === 'b66') return 'small';
+  if (k === 'b75' || k === 'b100' || k === 'b150') return 'big';
+  if (/^allin/.test(k) || /^raise/.test(k)) return 'r';
+  return '';
+}
+function displayA(r) {
+  if (!r || r.b === 'est') return r && r.a;
+  const raw = (r.solver && (r.solver.exact_freqs || r.solver.freq)) || null;
+  if (!raw) return r.a;
+  const mass = {};
+  for (const [k, v] of Object.entries(raw)) {
+    const a = canonAct(k), n = Number(v);
+    if (a && n > 0) mass[a] = (mass[a] || 0) + n;
+  }
+  let best = r.a, bestF = -1;
+  for (const [a, f] of Object.entries(mass)) if (f > bestF) { best = a; bestF = f; }
+  return best;
+}
+function actsOfRow(r) {
+  if (r.b === 'est') {
+    const out = new Set([r.a]);
+    for (const a of (r.ok || [])) out.add(a);
+    return out;
+  }
+  const raw = (r.solver && (r.solver.exact_freqs || r.solver.freq)) || null;
+  const mass = {};
+  if (raw) for (const [k, v] of Object.entries(raw)) {
+    const a = canonAct(k), n = Number(v);
+    if (a && n > 0) mass[a] = (mass[a] || 0) + n;
+  }
+  const tot = Object.values(mass).reduce((s, x) => s + x, 0);
+  if (tot > 0) {
+    for (const k of Object.keys(mass)) mass[k] /= tot;
+    const fMax = Math.max(...Object.values(mass));
+    const out = new Set();
+    for (const [a, f] of Object.entries(mass))
+      if (f >= fMax - 1e-9 || (f >= MIX_FLOOR && f >= fMax * MIX_RATIO)) out.add(a);
+    return out;
+  }
+  const out = new Set([r.a]);
+  for (const a of (r.ok || [])) out.add(a);
+  return out;
+}
+const STRONG = new Set(['S', 'TPG', 'TPW']), WEAK = new Set(['AIR', 'WDRAW']);
+function chainOk(q) {
+  for (let i = 1; i < q.length; i++) if (STRONG.has(q[i - 1]) && WEAK.has(q[i])) return false;
+  return true;
+}
 function answersAt(sp, nd, h, s, street, F) {
   const R = rowsOf(sp, nd).filter(r => r.hc.includes(h));
-  const ex = R.filter(r => r.x), base = R.filter(r => !r.x);
+  const ex = R.filter(r => r.x && !isHiSplitEx(r)), base = R.filter(r => !r.x);
   const out = new Set(); let definiteEx = false;
-  for (const r of ex) { const f = condFit(r, s, street, F); if (f) { out.add(r.a); if (f === true) definiteEx = true; } }
-  if (!definiteEx) for (const r of base) if (condFit(r, s, street, F)) out.add(r.a);
+  for (const r of ex) { const f = condFit(r, s, street, F); if (f) { for (const a of actsOfRow(r)) out.add(a); if (f === true) definiteEx = true; } }
+  if (!definiteEx) for (const r of base) if (condFit(r, s, street, F)) for (const a of actsOfRow(r)) out.add(a);
   return out;
 }
 // 牌型序列表（真實發牌）：質地|各街最高張 → 出現過的 翻轉河 牌型序列
@@ -223,7 +290,7 @@ function seqs(h, s, S) { // 第 0..S 街的牌型（最後一街＝h）
     const want = S === 1 ? LET[a] + LET[h] : LET[a] + LET[b] + LET[h];
     const keys = S === 1 ? ['T', 'L'].map(x => s.tx + '|' + s.hi[0] + s.hi[1] + x) : [s.tx + '|' + s.hi.join('')];
     const hit = keys.some(k => SEQ[k] && [...SEQ[k]].some(q => q.startsWith(want)));
-    if (hit) out.push(S === 1 ? [a, h] : [a, b, h]);
+    if (hit) { const q = S === 1 ? [a, h] : [a, b, h]; if (chainOk(q)) out.push(q); }
   }
   return out;
 }
@@ -245,7 +312,7 @@ function reachable(sp, nd, streets, F, r, h) {
   if (!decs.every(d => d.nodes.length)) return false;
   for (const s of states(S)) {
     if (!condFit(r, s, S, F)) continue;
-    if (!r.x && rows.some(x => x.x && x.hc.includes(h) && condFit(x, s, S, F) === true)) continue;
+    if (!r.x && rows.some(x => x.x && !isHiSplitEx(x) && x.hc.includes(h) && condFit(x, s, S, F) === true)) continue;
     const ok = (d, c) => d.nodes.some(n => [...answersAt(sp, n, c, s, d.street, F)].some(a => d.need.includes(a)));
     if (seqs(h, s, S).some(q => decs.every(d => ok(d, q[d.street])))) return true;
   }
@@ -331,7 +398,7 @@ for (const spot of L.spots) {
       for (const s of SS) {
         const fit = condFit(r, s, S, F); if (!fit) continue;
         if (!r.x) { // 基本列：此狀態若有一定適用的例外，基本格不代表這個狀態
-          const exDef = nodeRows.some(x => x.x && x.hc.includes(h) && condFit(x, s, S, F) === true);
+          const exDef = nodeRows.some(x => x.x && !isHiSplitEx(x) && x.hc.includes(h) && condFit(x, s, S, F) === true);
           if (exDef) continue;
         }
         // 每個決定：哪些「當街牌型」的主答案符合線上動作
@@ -381,7 +448,7 @@ for (const spot of L.spots) {
           } else if (perDec.length && [...perDec[0].keys()].length === 0) reason = '這一格代表的牌面都歸例外列';
           else reason = `每一步單獨看都有牌面會這樣打，但沒有同一個牌面能一路走到這一格（翻牌質地／各街最高張前後對不上）`;
         }
-        if (!r.x && anyState && !reason.startsWith('前面') && SS.filter(s => condFit(r, s, S, F)).every(s => nodeRows.some(x => x.x && x.hc.includes(h) && condFit(x, s, S, F) === true))) reason = '這一格代表的牌面都由例外列另外列出';
+        if (!r.x && anyState && !reason.startsWith('前面') && SS.filter(s => condFit(r, s, S, F)).every(s => nodeRows.some(x => x.x && !isHiSplitEx(x) && x.hc.includes(h) && condFit(x, s, S, F) === true))) reason = '這一格代表的牌面都由例外列另外列出';
       }
       const wtxt = witnesses.length ? '可走到，例：' + [...new Set(witnesses.map(s => TXN[s.tx] + (S >= 1 ? '／轉牌' + (s.hi[1] === 'T' ? 'T+' : '9-') : '') + (S >= 2 ? '／河牌' + (s.hi[2] === 'T' ? 'T+' : '9-') : '') + (S >= 1 ? '（' + s.chain.map(c => HNAME[c]).join('→') + '）' : '')))].slice(0, 4).join('；') : '走不到';
       if (!decisions.length) lines.push(`${HNAME[h]}：之前沒有你的翻後決定（翻前不分牌型）✓`);
@@ -398,12 +465,12 @@ for (const spot of L.spots) {
         if (/\bna\b/.test(c.cls)) return;
         nCells++;
         const pool = rowsFor(rv);
-        const r = pool.find(x => !x.x && (x.cl || '全部') === row.cond && x.hc.includes(h))
+        const r = pool.find(x => !x.x && (x.cl || '全部') === rowCondOf(t, row) && x.hc.includes(h))
           || pool.find(x => !x.x && x.hc.includes(h) && !(x.c && x.c.bt) && ((x.cl || '全部') === '全部' || (x.rn && x.rn.k === 'cert')));
         if (!r) { V(t, '資料', `${lab}：資料裡找不到這一格`); return; }
-        const want = ANS[r.a];
+        const want = ANS[displayA(r)];
         const txt = c.text.replace(/^面對\S+\s+/, '').replace(/（無後續表）/g, '').trim();
-        if (!txt.startsWith(want === '下注' ? '' : want) && !(r.a === 'r' && /全下/.test(c.text))) V(t, '答案', `${lab}：畫面「${c.text}」與資料答案 ${r.a} 不一致`);
+        if (!txt.startsWith(want === '下注' ? '' : want) && !(displayA(r) === 'r' && /全下/.test(c.text))) V(t, '答案', `${lab}：畫面「${c.text}」與資料答案 ${displayA(r)} 不一致`);
         const res = checkCell(r, h, lab, c.text);
         t.checks.push({ cell: `${lab}＝${c.text}`, ...res });
         if (!res.ok) V(t, '走不到的格', `${lab}（${c.text}）：${res.lines.filter(x => /✗|（無）/.test(x)).join('；') || res.wtxt}`);
@@ -424,7 +491,7 @@ for (const spot of L.spots) {
     }
     // (g) 反查漏格：這個節點資料裡每一列 × 每個牌型（分落牌則再 × 落牌類），走得到卻沒顯示
     const shownBase = new Set(), shownEx = new Set();
-    for (const row of t.rows) row.cells.forEach((c, ci) => { if (!/\bna\b/.test(c.cls)) shownBase.add(row.cond + '|' + hOf(row, ci) + '|' + (roOf(row, ci, c) || '')); });
+    for (const row of t.rows) row.cells.forEach((c, ci) => { if (!/\bna\b/.test(c.cls)) shownBase.add(rowCondOf(t, row) + '|' + hOf(row, ci) + '|' + (roOf(row, ci, c) || '')); });
     for (const e of t.exc) for (const lab of (e.classes || [])) shownEx.add(e.cond + '|' + (Object.keys(HNAME).find(k => HNAME[k] === lab) || HCODE[lab]) + '|' + (e.ro || ''));
     const canonSt = P.streets.map(b => canon(b));
     for (const r of nodeRows) for (const h of r.hc) {
@@ -530,7 +597,7 @@ if (LOG) {
   const o = [];
   o.push('# NL2 行動線：逐表、逐格可達性檢查（完整紀錄）', '');
   o.push(`產生：tools/reach_verify.js（獨立驗證，不用 nl2_reach.js）｜表 ${report.counts.tables} 張、節點 ${report.counts.nodes} 個、格 ${report.counts.cells} 格｜違規 ${report.counts.violations}`, '');
-  o.push('規則：每一格的牌型，把標題這條線上「你」先前每一個決定（翻牌、轉牌、本街先前）都到該決定點的表查答案；答案必須就是線上寫的動作（只算主答案，≈ 的另一個動作不算）。對手的動作照標題假設。牌型逐街沿用同一標籤（本頁規則）；牌面：翻牌質地 → 轉牌／河牌最高張（T 以上／9 以下），有例外列時照例外。翻前不分牌型，不檢查。', '');
+  o.push('規則：每一格的牌型，把標題這條線上「你」先前每一個決定（翻牌、轉牌、本街先前）都到該決定點的表查答案；答案必須就是線上寫的動作。混合策略：頻率差很多時只跟最高頻率的動作；行動 a 走進這條線 iff f(a) 為最高，或 f(a)≥40% 且 f(a)≥70%×最高頻率。沒有頻率時用主答案，有 ≈ 且無頻率時兩個動作都算。兩對／頂對以上變成空氣／弱聽的路徑不算（極稀有轉壞）。「最高張 9 以下／T 以上」例外列已併入六列，不擋基本格。對手的動作照標題假設。牌面：翻牌質地 → 轉牌／河牌最高張（T 以上／9 以下），有（非最高張分半）例外列時照例外。翻前不分牌型，不檢查。', '');
   let cur = '';
   for (const t of report.tables) {
     const spt = L.spots.find(s => s.id === t.sp);

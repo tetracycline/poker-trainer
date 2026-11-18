@@ -140,48 +140,87 @@ function lid(sp, nd, key, bt) {
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return 'ln-' + sp + '-' + nd + '-' + (h >>> 0).toString(36) + (bt ? '-' + bt : '');
 }
+function keyForLid(ln) {
+  return ((ln && ln.pf) ? ln.pf + '##' : '') + (ln ? (ln.key || '') : '');
+}
+function catItem(sp, nd, ln) {
+  return {sp, nd, pfx: ndPfx(nd), st: stOf(nd), key: ln ? (ln.key || '') : '', pf: (ln && ln.pf) || '', ln, id: lid(sp, nd, keyForLid(ln))};
+}
+function pfOk(a, b) {
+  if (!a || !b) return true;
+  if (a.sp !== 'mw' && b.sp !== 'mw') return true;
+  if (!a.pf || !b.pf) return true;
+  return a.pf === b.pf;
+}
 function lineCatalog(sp) {
   const out = [];
   for (const nd of nodesOf(sp)) {
     if (!nodeVisible(sp, nd)) continue;
-    const pfx = ndPfx(nd), st = stOf(nd);
     const lns = lineList(sp, nd).length ? lineList(sp, nd) : [null];
-    for (const ln of lns) out.push({sp, nd, pfx, st, key: ln ? ln.key : '', ln, id: lid(sp, nd, ln ? ln.key : '')});
+    for (const ln of lns) out.push(catItem(sp, nd, ln));
   }
   return out;
 }
 function facingOk(face) { return !/你(下注|跟|加注|全下)/.test(face || ''); }
 function nextEntries(cat, item, verb) {
-  if (!verb || !cat || !item || item.st >= 2) return [];
+  if (!verb || !cat || !item) return [];
   const segs0 = (item.key || '').split('|');
   const last = segs0[segs0.length - 1] || '';
   const withHero = last ? last + '、你' + verb : '你' + verb;
-  const pack = tail => segs0.slice(0, -1).concat([tail]).join('|');
-  const prefixes = verb === '跟' ? [pack(withHero)]
-    : verb === '過' ? [pack(withHero), pack(withHero + '、對手過')]
-    : (verb === '下注' || verb === '加注') ? [pack(withHero + '、對手跟')] : [];
+  const afterHero = (done) => {
+    if (done === withHero) return [];
+    if (!done.startsWith(withHero + '、')) return null;
+    return done.slice(withHero.length + 1).split('、').filter(Boolean);
+  };
+  const oppOnly = (bits, kinds) => bits && bits.every(b => kinds.includes(b));
   const rank = face => !face ? 0 : face === '對手過' ? 1 : face === '對手下注' ? 2 : 3;
   const found = [];
-  for (const p of prefixes) for (const x of cat) {
-    if (x.st !== item.st + 1 || x.pfx !== item.pfx) continue;
+  for (const x of cat) {
+    if (x.pfx !== item.pfx || x.id === item.id || !pfOk(item, x)) continue;
     const segs = (x.key || '').split('|');
-    if (segs.length !== item.st + 2) continue;
-    if (segs.slice(0, -1).join('|') === p && facingOk(segs[segs.length - 1])) found.push(x);
+    if (x.st === item.st && segs.length === segs0.length
+        && segs.slice(0, -1).join('|') === segs0.slice(0, -1).join('|')) {
+      const rest = afterHero(segs[segs.length - 1] || '');
+      if (verb === '過' && rest && rest.length && rest[rest.length - 1] === '對手下注' && oppOnly(rest.slice(0, -1), ['對手過'])) found.push(x);
+      else if ((verb === '下注' || verb === '加注') && rest && rest.length && rest[rest.length - 1] === '對手加注' && oppOnly(rest.slice(0, -1), ['對手跟', '對手過'])) found.push(x);
+    } else if (item.st < 2 && x.st === item.st + 1 && segs.length === item.st + 2
+        && segs.slice(0, -1).slice(0, segs0.length - 1).join('|') === segs0.slice(0, -1).join('|')
+        && facingOk(segs[segs.length - 1])) {
+      const bits = afterHero(segs.slice(0, -1)[segs.slice(0, -1).length - 1] || '');
+      if (bits === null) continue;
+      if (verb === '跟' && oppOnly(bits, ['對手跟'])) found.push(x);
+      else if (verb === '過' && oppOnly(bits, ['對手過'])) found.push(x);
+      else if ((verb === '下注' || verb === '加注') && bits.length && oppOnly(bits, ['對手跟'])) found.push(x);
+    }
   }
   const seen = new Set();
-  return found.sort((a, b) => rank(a.key.split('|').pop()) - rank(b.key.split('|').pop()) || a.nd.localeCompare(b.nd))
+  return found.sort((a, b) => (a.st - b.st) || rank((a.key || '').split('|').pop()) - rank((b.key || '').split('|').pop()) || a.nd.localeCompare(b.nd))
     .filter(x => seen.has(x.id) ? false : (seen.add(x.id), true));
 }
 function prevEntry(cat, item) {
-  if (!cat || !item || item.st < 1) return null;
+  if (!cat || !item) return null;
   const segs = (item.key || '').split('|');
-  const completed = segs.slice(0, -1).join('|');
+  const last = segs[segs.length - 1] || '';
+  const m = last.match(/^(?:(.*)、)?你(過|下注|跟|加注)(?:、對手.*)?$/);
+  if (m && /你(過|下注|跟|加注)/.test(last)) {
+    const prevFace = m[1] || '';
+    const want = segs.slice(0, -1).concat([prevFace]).join('|');
+    for (const x of cat) {
+      if (x.st !== item.st || x.pfx !== item.pfx || x.id === item.id || !pfOk(item, x)) continue;
+      if ((x.key || '') === want) return x;
+    }
+  }
+  if (item.st < 1) return null;
+  const completed = segs.slice(0, -1);
   for (const x of cat) {
-    if (x.st !== item.st - 1 || x.pfx !== item.pfx) continue;
-    const start = x.key || '';
-    if (completed === start) return x;
-    if (start === '' && /^你(下注|過|跟|加注)/.test(completed) && !completed.includes('|')) return x;
-    if (start && completed.startsWith(start + '、你')) return x;
+    if (x.st !== item.st - 1 || x.pfx !== item.pfx || !pfOk(item, x)) continue;
+    const ps = (x.key || '').split('|');
+    if (ps.length !== item.st) continue;
+    if (ps.slice(0, -1).join('|') !== completed.slice(0, -1).join('|')) continue;
+    const xFace = ps[ps.length - 1] || '';
+    const curDone = completed[completed.length - 1] || '';
+    const need = xFace ? xFace + '、你' : '你';
+    if (curDone === xFace || curDone.startsWith(need)) return x;
   }
   return null;
 }
@@ -219,9 +258,11 @@ function actText(a, r) {
   }
   return lab;
 }
+function shownOf(r) { return (TITLES && TITLES.topAct) ? TITLES.topAct(r) : { a: r.a, mix: !!(r.ok && r.ok.length) }; }
 function cellMain(r, nd) {
-  const act = actText(r.a, r), face = isVs(nd) ? faceTag(r.cl) : '';
-  return (face ? '面對' + face + ' ' : '') + act + (r.ok && r.ok.length ? '≈' : '');
+  const sh = shownOf(r);
+  const act = actText(sh.a, r), face = isVs(nd) ? faceTag(r.cl) : '';
+  return (face ? '面對' + face + ' ' : '') + act + (sh.mix ? '≈' : '');
 }
 function cellInner(r, nd, href, note) {
   const main = cellMain(r, nd), b = basisOf(r);
@@ -259,13 +300,14 @@ function gridMw(sp, nd, me, line, cat) {
     return r && reached(r, h);
   }));
   if (!cols.length || !condsShown.length) return '';
-  const item = (cat && line) ? {sp, nd, pfx: ndPfx(nd), st: stOf(nd), key: line.key || '', id: lid(sp, nd, line.key || '')} : null;
+  const item = (cat && line) ? catItem(sp, nd, line) : null;
   const cell = (k, h) => {
     const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
     if (!r || !reached(r, h)) return '<td class="na">—</td>';
-    const href = item ? hrefNext(cat, item, r.a) : '';
-    const note = !!(cat && stOf(nd) < 2 && !href && r.a !== 'f');
-    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, href, note)}</td>`;
+    const sh = shownOf(r);
+    const href = item ? hrefNext(cat, item, sh.a) : '';
+    const note = !!(cat && !href && sh.a !== 'f');
+    return `<td class="${ACL(sh.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, href, note)}</td>`;
   };
   let html = `<div class="tw"><table class="rt lt"><tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>` +
     condsShown.map(k => `<tr data-cl="${esc(k)}"><th class="cl">${dfl(k)}</th>${cols.map(c => cell(k, c)).join('')}</tr>`).join('') + '</table></div>';
@@ -273,19 +315,26 @@ function gridMw(sp, nd, me, line, cat) {
   return html;
 }
 function gridOne(sp, nd, me, line, ro, cat) {
-  if (sp === 'mw') return gridMw(sp, nd, me, line, cat);
   const reached = (r, h) => rowReached(r, h, line);
   const R = L.rows.filter(r => r.sp === sp && r.nd === nd);
   const base = R.filter(r => !r.x && !isCtRow(r));
   const ex = R.filter(r => (r.x || isCtRow(r)) && !isHiSplitEx(r) && (!me || r.id === me.id) && r.hc.some(h => reached(r, h)));
   const groups = [];
   const seenG = new Set();
-  for (const r of base) {
-    const g = splitCl(r.cl).grp;
-    if (!seenG.has(g)) { seenG.add(g); groups.push(g); }
+  if (sp === 'mw') groups.push('');
+  else {
+    for (const r of base) {
+      const g = splitCl(r.cl).grp;
+      if (!seenG.has(g)) { seenG.add(g); groups.push(g); }
+    }
   }
   if (!groups.length) groups.push('');
+  const mwHr = (sp === 'mw' && line && line.facts) ? (line.facts.pfr ? 'PFR' : 'CALL') : null;
   const findR = (grp, zh, h) => {
+    if (mwHr) {
+      return base.find(r => r.hc.includes(h) && r.c && r.c.hr === mwHr)
+        || base.find(r => r.hc.includes(h) && r.cl === (mwHr === 'PFR' ? '你是開池者' : '你是跟注者'));
+    }
     const want = grp ? grp + '・' + zh : zh;
     const hit = base.find(r => (r.cl || '全部') === want && r.hc.includes(h));
     if (hit) return hit;
@@ -298,14 +347,15 @@ function gridOne(sp, nd, me, line, ro, cat) {
   const cols = HCO.filter(h => groups.some(g => BT_ROWS.some(([, zh]) => { const r = findR(g, zh, h); return r && reached(r, h); })));
   const groupsShown = groups.filter(g => cols.some(h => BT_ROWS.some(([, zh]) => { const r = findR(g, zh, h); return r && reached(r, h); })));
   if (!cols.length || !groupsShown.length) return '';
-  const item = (cat && line) ? {sp, nd, pfx: ndPfx(nd), st: stOf(nd), key: line.key || '', id: lid(sp, nd, line.key || '')} : null;
+  const item = (cat && line) ? catItem(sp, nd, line) : null;
   const btOf = zh => (BT_ROWS.find(([, z]) => z === zh) || [''])[0];
   const cell = (g, zh, h) => {
     const r = findR(g, zh, h);
     if (!r || !reached(r, h)) return '<td class="na">—</td>';
-    const href = item ? hrefNext(cat, item, r.a, btOf(zh)) : '';
-    const note = !!(cat && stOf(nd) < 2 && !href && r.a !== 'f');
-    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, href, note)}</td>`;
+    const sh = shownOf(r);
+    const href = item ? hrefNext(cat, item, sh.a, btOf(zh)) : '';
+    const note = !!(cat && !href && sh.a !== 'f');
+    return `<td class="${ACL(sh.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, href, note)}</td>`;
   };
   const head = `<tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>`;
   let body = '';
@@ -346,7 +396,7 @@ function lines() {
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
     return `${esc(nodeLabel(sp, nd))} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(nodeLabel(s2, n2))}」`; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
-  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔；池估是牌池實際下注均值再靠檔，不是精確到 1%。格子只寫動作和「GTO」或「剝削」（剝削＝牌池估算比 GTO 更賺，不是封閉證明），不列樣本數或頻率。下注、加注會標尺寸（⅓、½、¾、1、1½ 或全下）。面對下注時，格子會寫門檻（例：面對小注 跟、面對 ≥¾ 棄）。點動作或「→ 下一步」會跳到下一街同一條線的表，對得到就停在同一種牌面列；後面的表有「↑ 上一步」。棄牌沒有下一步。同一條行動線一張表。橫列固定、跟翻牌同一套，順序是：9 以下低牌面、J/T 高面、K/Q 高面、A 高面、成對面、單色面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽，以及舊的「最高張 9 以下／T 以上」分半，都併入這六列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。翻牌、轉牌若這一步之後資料裡沒有下一街的表，格子會標「（無後續表）」。詳細樣本與頻率在「顯示每格的數據」。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、2/3、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔（⅔ 也在這組裡）；池估是牌池實際下注均值再靠檔，不是精確到 1%。格子只寫動作和「GTO」或「剝削」（剝削＝牌池估算比 GTO 更賺，不是封閉證明），不列樣本數或頻率。下注、加注會標尺寸（⅓、½、⅔、¾、1、1½ 或全下）。面對下注時，若資料有尺寸分檔，格子會寫門檻（例：面對小注 跟、面對 ≥¾ 棄）；翻牌／轉牌資料沒有分檔時不另造門檻。點動作或「→ 下一步」會跳到同一街的後續表（過→面對下注、下注／加注→被加注）或下一街同一條線的表，對得到就停在同一種牌面列；多人會對在同一條翻前線。後面的表有「↑ 上一步」。棄牌沒有下一步。同一條行動線一張表。橫列固定、跟翻牌同一套，順序是：9 以下低牌面、J/T 高面、K/Q 高面、A 高面、成對面、單色面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽，以及舊的「最高張 9 以下／T 以上」分半，都併入這六列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。若這一步之後資料裡沒有同一街或下一街的表（真的走到終點），格子會標「（無後續表）」。詳細樣本與頻率在「顯示每格的數據」。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>` + defsHtml(false) + `
@@ -355,7 +405,7 @@ function lines() {
   return nodesOf(sp).filter(nd => nodeVisible(sp, nd)).flatMap(nd => {
     const use = lineList(sp, nd).length ? lineList(sp, nd) : [null];
     return use.map(ln => { const g = gridHtml(sp, nd, null, ln, null, cat); if (!g) return '';
-      const item = {sp, nd, pfx: ndPfx(nd), st: stOf(nd), key: ln ? ln.key : '', ln, id: lid(sp, nd, ln ? ln.key : '')};
+      const item = catItem(sp, nd, ln);
       return `<div class="sec" data-node="${sp}/${nd}" id="${item.id}"><b class="ttl">${ln ? ln.titleHtml : esc(nodeLabel(sp, nd))}</b>${navHtml(cat, item)}${faceHtml(sp, nd, ln)}${g}${LS.data ? dataHtml(sp, nd, ln) : ''}</div>`; });
   }).join(''); })() +
   (alias.length ? `<div class="sec small"><span class="lab">其他點</span>　${aln ? esc(aln) + '。' : ''}沒有自己的數據，照下面的表：<ul>${alias.map(a => `<li>${a}</li>`).join('')}</ul></div>` : '');
@@ -527,7 +577,8 @@ app.addEventListener('click', e => {
 });
 if (window.__LINES_QA) window.__linesQA = { tableOnly, egCond, egInException, egOk,
   answer: a => lanswer(a, {classList: {add() {}}}),
-  render: sp => { LS.sp = sp; lines(); }, pool, card, DEF, defsHtml, drill, gridHtml, story, nodesOf, stOf, nodeVisible, rowReached, REACH, TITLES, lineList
+  render: sp => { LS.sp = sp; lines(); }, pool, card, DEF, defsHtml, drill, gridHtml, story, nodesOf, stOf, nodeVisible, rowReached, REACH, TITLES, lineList,
+  lineCatalog, nextEntries, prevEntry, catItem, lid, keyForLid, shownOf, VERB_OF
 };
 window.addEventListener('hashchange', route); route();
 })();

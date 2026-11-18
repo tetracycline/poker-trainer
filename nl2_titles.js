@@ -191,12 +191,74 @@
   function chains(h, s, st) {
     if (st === 0) return [[h]];
     const out = [];
-    if (st === 1) { const P = T2.get(s.tx + '|' + s.hi[0] + s.hi[1]); for (const c0 of HANDS) if (P && P.has(HL[c0] + HL[h])) out.push([c0, h]); }
-    else { const P = T3.get(s.tx + '|' + s.hi.join('')); for (const c0 of HANDS) for (const c1 of HANDS) if (P && P.has(HL[c0] + HL[c1] + HL[h])) out.push([c0, c1, h]); }
+    if (st === 1) { const P = T2.get(s.tx + '|' + s.hi[0] + s.hi[1]); for (const c0 of HANDS) if (P && P.has(HL[c0] + HL[h])) { const q=[c0,h]; if (chainOk(q)) out.push(q); } }
+    else { const P = T3.get(s.tx + '|' + s.hi.join('')); for (const c0 of HANDS) for (const c1 of HANDS) if (P && P.has(HL[c0] + HL[c1] + HL[h])) { const q=[c0,c1,h]; if (chainOk(q)) out.push(q); } }
     return out;
   }
   const TXS = ['A_high', 'KQ_high', 'mid_high', 'low', 'paired', 'mono'];
   const NEED = { 過: ['x'], 下注: ['small', 'big'], 全下: ['big', 'small', 'r'], 跟: ['c'], 加注: ['r'] };
+  // 混合策略：頻率差很多時只跟最高者。行動 a 走進這條線 iff f(a) 為最高，或 f(a)≥40% 且 f(a)≥70%×最高頻率。
+  const MIX_FLOOR = 0.40, MIX_RATIO = 0.70;
+  function isHiSplitEx(r) { return /(^|・)最高張 (9 以下|T 以上)$/.test(r.cl || ''); }
+  function pfKey(e) {
+    if (!e) return '';
+    const typ = e.t || 'SRP';
+    const hero = e.me && e.me === e.pa ? (typ === '3BP' ? '你是3-bet者' : '你是開池者') : '你是跟注者';
+    return typ + '\t' + hero;
+  }
+function canonAct(k) {
+    k = String(k || '');
+    if (k === 'x' || k === 'f' || k === 'c' || k === 'r' || k === 'small' || k === 'big') return k;
+    if (k === 'b33' || k === 'b50' || k === 'b66') return 'small';
+    if (k === 'b75' || k === 'b100' || k === 'b150') return 'big';
+    if (/^allin/.test(k) || /^raise/.test(k)) return 'r';
+    return '';
+  }
+  function actsOfRow(r) {
+    if (r.b === 'est') {
+      const out = new Set([r.a]);
+      for (const a of (r.ok || [])) out.add(a);
+      return out;
+    }
+    const raw = (r.solver && (r.solver.exact_freqs || r.solver.freq)) || null;
+    const mass = {};
+    if (raw) for (const [k, v] of Object.entries(raw)) {
+      const a = canonAct(k), n = Number(v);
+      if (a && n > 0) mass[a] = (mass[a] || 0) + n;
+    }
+    const tot = Object.values(mass).reduce((s, x) => s + x, 0);
+    if (tot > 0) {
+      for (const k of Object.keys(mass)) mass[k] /= tot;
+      const fMax = Math.max(...Object.values(mass));
+      const out = new Set();
+      for (const [a, f] of Object.entries(mass))
+        if (f >= fMax - 1e-9 || (f >= MIX_FLOOR && f >= fMax * MIX_RATIO)) out.add(a);
+      return out;
+    }
+    const out = new Set([r.a]);
+    for (const a of (r.ok || [])) out.add(a);
+    return out;
+  }
+  function topAct(r) {
+    if (!r) return { a: '', mix: false };
+    if (r.b === 'est') return { a: r.a, mix: !!(r.ok && r.ok.length) };
+    const acts = actsOfRow(r);
+    const raw = (r.solver && (r.solver.exact_freqs || r.solver.freq)) || null;
+    if (!raw) return { a: r.a, mix: acts.size > 1 };
+    const mass = {};
+    for (const [k, v] of Object.entries(raw)) {
+      const a = canonAct(k), n = Number(v);
+      if (a && n > 0) mass[a] = (mass[a] || 0) + n;
+    }
+    let best = r.a, bestF = -1;
+    for (const [a, f] of Object.entries(mass)) if (f > bestF) { best = a; bestF = f; }
+    return { a: best, mix: acts.size > 1 };
+  }
+  const STRONG = new Set(['S', 'TPG', 'TPW']), WEAK = new Set(['AIR', 'WDRAW']);
+  function chainOk(q) {
+    for (let i = 1; i < q.length; i++) if (STRONG.has(q[i - 1]) && WEAK.has(q[i])) return false;
+    return true;
+  }
   function boardStates(S) {
     const out = [], seen = new Set();
     for (const tx of TXS) {
@@ -283,8 +345,12 @@
     function primary(sp, nd, h, s, street, F) {
       const R = rowsOf(sp, nd).filter(r => r.hc.includes(h));
       const out = new Set(); let sure = false;
-      for (const r of R) if (r.x) { const f = rowFits(r, s, street, F); if (f) { out.add(r.a); if (f === true) sure = true; } }
-      if (!sure) for (const r of R) if (!r.x && rowFits(r, s, street, F)) out.add(r.a);
+      for (const r of R) if (r.x && !isHiSplitEx(r)) {
+        const f = rowFits(r, s, street, F);
+        if (f) { for (const a of actsOfRow(r)) out.add(a); if (f === true) sure = true; }
+      }
+      if (!sure) for (const r of R) if (!r.x && rowFits(r, s, street, F))
+        for (const a of actsOfRow(r)) out.add(a);
       return out;
     }
 
@@ -295,11 +361,13 @@
       const buckets = new Map();
       for (const r of rows) for (const e of (r.eg || [])) {
         if (String(e.l || '').split('/').length !== rec.st + 1) continue;
-        const key = lineKeyFromEg(e, rec.st);
-        if (!buckets.has(key)) buckets.set(key, { key, egs: [], er: [] });
-        buckets.get(key).egs.push(e); buckets.get(key).er.push({ e, r });
+        const post = lineKeyFromEg(e, rec.st);
+        const pf = rec.sp === 'mw' ? pfKey(e) : '';
+        const bkey = pf ? pf + '##' + post : post;
+        if (!buckets.has(bkey)) buckets.set(bkey, { key: post, pf, egs: [], er: [] });
+        buckets.get(bkey).egs.push(e); buckets.get(bkey).er.push({ e, r });
       }
-      if (!buckets.size) { const k0 = Array(rec.st + 1).fill('').join('|'); buckets.set(k0, { key: k0, egs: [], er: [] }); }
+      if (!buckets.size) { const k0 = Array(rec.st + 1).fill('').join('|'); buckets.set(k0, { key: k0, pf: '', egs: [], er: [] }); }
       const lines = [];
       for (const b of buckets.values()) {
         const sig = e => JSON.stringify({ t: e.t, me: e.me, pa: e.pa, pc: e.pc, pretext: e.pretext || '' });
@@ -321,7 +389,7 @@
           if (decs.every(d => d.nds.length)) {
             for (const s of states) {
               if (!rowFits(r, s, rec.st, F)) continue;
-              if (!r.x && rows.some(x => x.x && x.hc.includes(h) && rowFits(x, s, rec.st, F) === true)) continue; // 這個牌面由例外列代表
+              if (!r.x && rows.some(x => x.x && !isHiSplitEx(x) && x.hc.includes(h) && rowFits(x, s, rec.st, F) === true)) continue; // 這個牌面由（非最高張分半）例外列代表
               const pass = (d, c) => { const pk = d.st + '|' + d.prefix + '|' + c + '|' + s.tx + s.hi.join(''); if (!pcache.has(pk)) pcache.set(pk, d.nds.some(nd => [...primary(rec.sp, nd, c, s, d.st, F)].some(a => d.need.includes(a)))); return pcache.get(pk); };
               if (chains(h, s, rec.st).some(q => decs.every(d => pass(d, q[d.st])))) { ok = true; break; }
             }
@@ -345,7 +413,7 @@
             reason: miss.length ? miss.map(d => `${STN[d.st]}「${d.prefix.split('|').pop() || '你先行動'}」之後你${d.verb}：資料裡沒有這個決定點`).join('；')
               : '沒有任何牌型照前面各街的答案會走到這條線' });
         }
-        lines.push({ id: rec.sp + '/' + rec.nd + '#' + lines.length, key: b.key, eg: eUse, facts: F, decisions: decs,
+        lines.push({ id: rec.sp + '/' + rec.nd + '#' + lines.length, key: b.key, pf: b.pf || '', eg: eUse, facts: F, decisions: decs,
           titleText: tUse.titleText, titleHtml: tUse.titleHtml, nEg: b.egs.length, hands, visible, rowOk });
       }
       lineMap.set(rec.key, lines);
@@ -393,7 +461,7 @@
       }
       return { all, removed, unsure: [], nNodes: nodeList.length, nSplit, nTables, nOmittedNodes };
     }
-    return { lines, nodeVisible, rowReached, titleForEg, lineKeyFromEg, dump, audit, HANDS };
+    return { lines, nodeVisible, rowReached, titleForEg, lineKeyFromEg, dump, audit, HANDS, topAct, actsOfRow };
   }
 
   root.NL2TITLES = { build, lineKeyFromEg, streetOf, splitNd };
