@@ -107,9 +107,11 @@ function parseSections(html, sp) {
     const tm = seg.match(/<b class="ttl">([\s\S]*?)<\/b>/);
     const titleHtml = tm ? tm[1] : '';
     const face = (seg.match(/<p class="small muted">你面對（例）：([\s\S]*?)<\/p>/) || [])[1] || '';
-    const tabm = seg.match(/<table\b([^>]*)>([\s\S]*?)<\/table>/) || [];
-    const kind = /data-kind="runout"/.test(tabm[1] || '') ? 'runout' : 'class';
-    const tab = tabm[2] || '';
+    // 同一行動線可能有數個下注尺寸情境，每個情境各一張固定六列的小表。
+    // 解析全部小表，不可只讀第一張而把其他尺寸的可達格誤判成漏格。
+    const tabms = [...seg.matchAll(/<table\b([^>]*)>([\s\S]*?)<\/table>/g)];
+    const kind = /data-kind="runout"/.test((tabms[0] || [])[1] || '') ? 'runout' : 'class';
+    const tab = tabms.map(m => m[2]).join('');
     const trs = [...tab.matchAll(/<tr([^>]*)>([\s\S]*?)<\/tr>/g)].map(m => ({ attr: m[1], body: m[2] }));
     const parseCells = body => [...body.matchAll(/<td class="([^"]*)"[^>]*>([\s\S]*?)<\/td>/g)].map(m => ({ cls: m[1], ro: (m[0].match(/data-ro="([^"]+)"/) || [])[1] || null, text: strip(m[2].replace(/<small[\s\S]*?<\/small>/g, '')), basis: strip((m[2].match(/<small[^>]*>([\s\S]*?)<\/small>/) || [])[1] || '') }));
     let cols, rows, ros = null;
