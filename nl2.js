@@ -89,7 +89,7 @@ function showDef(k) {
 }
 const isVs = nd => /_vs_|_over/.test(nd);
 const CHO = (nd, sp) => (sp === 'mw' && isVs(nd)) ? ['f', 'c', 'r'] : /r_vs_xr/.test(nd) ? ['f', 'c'] : isVs(nd) ? ['f', 'c', 'r'] : ['x', 'small', 'big'];
-const STD_SZ = [[1/3, '1/3'], [1/2, '1/2'], [3/4, '3/4'], [1, '1'], [1.5, '1.5']];
+const STD_SZ = [[1/3, '⅓'], [1/2, '½'], [2/3, '⅔'], [3/4, '¾'], [1, '1'], [1.5, '1½']];
 const nearestSz = p => STD_SZ.reduce((b, z) => Math.abs(z[0] - p) < Math.abs(b[0] - p) ? z : b)[1];
 function potFromLab(lab) { // 從原始標籤讀底池比例；全下維持全下；「或超池」保留兩檔標準尺寸
   if (!lab) return null;
@@ -110,7 +110,7 @@ function fmtLab(lab) {
   const p = potFromLab(lab);
   if (!p) return lab;
   if (p.allin) return '全下';
-  if (p.or) return '下注 ' + p.or.join('或');
+  if (p.or) return '下注 ' + p.or.map(x => ({'3/4':'¾','1.5':'1½'}[x] || x)).join('或');
   return '下注 ' + nearestSz(p.pot);
 }
 function rawLab(a, r) {
@@ -129,13 +129,121 @@ function nodesOf(sp) {
 const REACH = (window.NL2REACH && window.NL2REACH.build(L)) || { usesReach: () => false, classReached: () => true, visible: () => true };
 const TITLES = (window.NL2TITLES && window.NL2TITLES.build(L)) || null;
 const lineList = (sp, nd) => TITLES ? TITLES.lines(sp, nd) : [];
+const ND_PFX = ['3b_', '3c_', 'lmp_', 'iso_'];
+const ndPfx = nd => ND_PFX.find(p => nd.startsWith(p)) || '';
+const VERB_OF = {x: '過', small: '下注', big: '下注', c: '跟', r: '加注'};
+const STN_NAV = ['翻牌', '轉牌', '河牌'];
+function lid(sp, nd, key, bt) {
+  const s = sp + '\t' + nd + '\t' + (key || '');
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return 'ln-' + sp + '-' + nd + '-' + (h >>> 0).toString(36) + (bt ? '-' + bt : '');
+}
+function lineCatalog(sp) {
+  const out = [];
+  for (const nd of nodesOf(sp)) {
+    if (!nodeVisible(sp, nd)) continue;
+    const pfx = ndPfx(nd), st = stOf(nd);
+    const lns = lineList(sp, nd).length ? lineList(sp, nd) : [null];
+    for (const ln of lns) out.push({sp, nd, pfx, st, key: ln ? ln.key : '', ln, id: lid(sp, nd, ln ? ln.key : '')});
+  }
+  return out;
+}
+function facingOk(face) { return !/你(下注|跟|加注|全下)/.test(face || ''); }
+function nextEntries(cat, item, verb) {
+  if (!verb || !cat || !item || item.st >= 2) return [];
+  const segs0 = (item.key || '').split('|');
+  const last = segs0[segs0.length - 1] || '';
+  const withHero = last ? last + '、你' + verb : '你' + verb;
+  const pack = tail => segs0.slice(0, -1).concat([tail]).join('|');
+  const prefixes = verb === '跟' ? [pack(withHero)]
+    : verb === '過' ? [pack(withHero), pack(withHero + '、對手過')]
+    : (verb === '下注' || verb === '加注') ? [pack(withHero + '、對手跟')] : [];
+  const rank = face => !face ? 0 : face === '對手過' ? 1 : face === '對手下注' ? 2 : 3;
+  const found = [];
+  for (const p of prefixes) for (const x of cat) {
+    if (x.st !== item.st + 1 || x.pfx !== item.pfx) continue;
+    const segs = (x.key || '').split('|');
+    if (segs.length !== item.st + 2) continue;
+    if (segs.slice(0, -1).join('|') === p && facingOk(segs[segs.length - 1])) found.push(x);
+  }
+  const seen = new Set();
+  return found.sort((a, b) => rank(a.key.split('|').pop()) - rank(b.key.split('|').pop()) || a.nd.localeCompare(b.nd))
+    .filter(x => seen.has(x.id) ? false : (seen.add(x.id), true));
+}
+function prevEntry(cat, item) {
+  if (!cat || !item || item.st < 1) return null;
+  const segs = (item.key || '').split('|');
+  const completed = segs.slice(0, -1).join('|');
+  for (const x of cat) {
+    if (x.st !== item.st - 1 || x.pfx !== item.pfx) continue;
+    const start = x.key || '';
+    if (completed === start) return x;
+    if (start === '' && /^你(下注|過|跟|加注)/.test(completed) && !completed.includes('|')) return x;
+    if (start && completed.startsWith(start + '、你')) return x;
+  }
+  return null;
+}
+function nextLab(x) {
+  const kind = x.nd.replace(/^(3b_|3c_|lmp_|iso_)/, '').replace(/^[ftr]_/, '');
+  const km = {barrel: '繼續下注', delay: '延遲 c-bet', stab: '先行動', first: '先行動', probe: '試探下注',
+    vs_probe: '面對試探', vs_barrel: '面對繼續下注', vs_cbet: '面對 c-bet', vs_bet: '面對下注', vs_bet2: '面對下注',
+    vs_xr: '被加注', vs_donk: '面對領打', vs_over: '面對超池下注', cbet: 'c-bet', bet: '下注或過牌', lead: '領打'};
+  return STN_NAV[x.st] + (km[kind] ? '・' + km[kind] : '');
+}
+function hrefNext(cat, item, a, bt) {
+  const nx = nextEntries(cat, item, VERB_OF[a]);
+  if (!nx.length) return '';
+  return nx[0].id + (bt ? '-' + bt : '');
+}
+function basisOf(r) { return r.b === 'est' ? '剝削' : 'GTO'; }
+function faceTag(cl) {
+  const g = String(cl || '').split('・')[0];
+  if (/^≤½|^≤1\/2/.test(g)) return '小注';
+  if (/^≤⅓|^≤1\/3/.test(g)) return '≤⅓';
+  if (/¾|3\/4/.test(g)) return '≥¾';
+  if (/超池/.test(g)) return '超池';
+  if (/任何尺寸/.test(g)) return '任何尺寸';
+  return '';
+}
+function actText(a, r) {
+  let lab = short(a, r);
+  if (a === 'r') {
+    const p = potFromLab(rawLab(a, r));
+    if (p && p.allin) lab = '加注 全下';
+    else if (lab === '全下') lab = '加注 全下';
+    else if (!/^加注/.test(lab)) lab = '加注';
+  }
+  return lab;
+}
+function cellMain(r, nd) {
+  const act = actText(r.a, r), face = isVs(nd) ? faceTag(r.cl) : '';
+  return (face ? '面對' + face + ' ' : '') + act + (r.ok && r.ok.length ? '≈' : '');
+}
+function cellInner(r, nd, href) {
+  const main = cellMain(r, nd), b = basisOf(r);
+  const act = href ? `<a class="jmp" href="#${href}">${esc(main)}</a>` : esc(main);
+  return `${act} <small class="df" data-df="${esc(b)}">${esc(b)}</small>`;
+}
+function navHtml(cat, item) {
+  if (!cat || !item) return '';
+  const bits = [];
+  const prev = prevEntry(cat, item);
+  if (prev) bits.push(`<a class="jmp" href="#${prev.id}">↑ 上一步</a>`);
+  const seen = new Set();
+  for (const v of ['下注', '過', '跟', '加注']) for (const x of nextEntries(cat, item, v)) {
+    if (seen.has(x.id)) continue; seen.add(x.id);
+    bits.push(`<a class="jmp" href="#${x.id}">→ ${esc(nextLab(x))}</a>`);
+  }
+  return bits.length ? `<p class="navln">${bits.join('　')}</p>` : '';
+}
 const nodeVisible = (sp, nd) => TITLES ? TITLES.nodeVisible(sp, nd) : (!REACH.usesReach || !REACH.usesReach(sp, nd) || REACH.visible(sp, nd));
 const rowReached = (r, h, line) => TITLES ? TITLES.rowReached(r, h, line) : (!REACH.usesReach(r.sp, r.nd) || REACH.classReached(r.sp, r.nd, h, r));
-function gridHtml(sp, nd, me, line, ro) {
+function gridHtml(sp, nd, me, line, ro, cat) {
   const lines = line ? [line] : (lineList(sp, nd).length ? lineList(sp, nd) : [null]);
-  return lines.map(ln => gridOne(sp, nd, me, ln, ro)).join('');
+  return lines.map(ln => gridOne(sp, nd, me, ln, ro, cat)).join('');
 }
-function gridMw(sp, nd, me, line) {
+function gridMw(sp, nd, me, line, cat) {
   const reached = (r, h) => rowReached(r, h, line);
   const R = L.rows.filter(r => r.sp === sp && r.nd === nd), base = R.filter(r => !r.x);
   const ex = R.filter(r => r.x && (!me || r.id === me.id) && r.hc.some(h => reached(r, h)));
@@ -147,18 +255,20 @@ function gridMw(sp, nd, me, line) {
     return r && reached(r, h);
   }));
   if (!cols.length || !condsShown.length) return '';
+  const item = (cat && line) ? {sp, nd, pfx: ndPfx(nd), st: stOf(nd), key: line.key || '', id: lid(sp, nd, line.key || '')} : null;
   const cell = (k, h) => {
     const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
     if (!r || !reached(r, h)) return '<td class="na">—</td>';
-    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${short(r.a, r)}${r.ok.length ? '≈' : ''}${cellSmall(r)}</td>`;
+    const href = item ? hrefNext(cat, item, r.a) : '';
+    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, href)}</td>`;
   };
   let html = `<div class="tw"><table class="rt lt"><tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>` +
     condsShown.map(k => `<tr data-cl="${esc(k)}"><th class="cl">${dfl(k)}</th>${cols.map(c => cell(k, c)).join('')}</tr>`).join('') + '</table></div>';
-  if (ex.length) html += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => hlabel(c, r.nd)).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}${cellSmall(r)}</span>`).join('；')}</p>`;
+  if (ex.length) html += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => hlabel(c, r.nd)).join('、')} → <b>${esc(cellMain(r, nd))}</b><small class="df" data-df="${esc(basisOf(r))}">${esc(basisOf(r))}</small></span>`).join('；')}</p>`;
   return html;
 }
-function gridOne(sp, nd, me, line, ro) {
-  if (sp === 'mw') return gridMw(sp, nd, me, line);
+function gridOne(sp, nd, me, line, ro, cat) {
+  if (sp === 'mw') return gridMw(sp, nd, me, line, cat);
   const reached = (r, h) => rowReached(r, h, line);
   const R = L.rows.filter(r => r.sp === sp && r.nd === nd);
   const base = R.filter(r => !r.x && !isCtRow(r));
@@ -174,7 +284,6 @@ function gridOne(sp, nd, me, line, ro) {
     const want = grp ? grp + '・' + zh : zh;
     const hit = base.find(r => (r.cl || '全部') === want && r.hc.includes(h));
     if (hit) return hit;
-    // CERT／全部：沒有該牌面列時，同一個答案填進每一列
     return base.find(r => r.hc.includes(h) && !(r.c && r.c.bt) && (
       (r.cl || '全部') === '全部' && !grp ||
       (grp && (r.cl || '') === grp) ||
@@ -184,10 +293,13 @@ function gridOne(sp, nd, me, line, ro) {
   const cols = HCO.filter(h => groups.some(g => BT_ROWS.some(([, zh]) => { const r = findR(g, zh, h); return r && reached(r, h); })));
   const groupsShown = groups.filter(g => cols.some(h => BT_ROWS.some(([, zh]) => { const r = findR(g, zh, h); return r && reached(r, h); })));
   if (!cols.length || !groupsShown.length) return '';
+  const item = (cat && line) ? {sp, nd, pfx: ndPfx(nd), st: stOf(nd), key: line.key || '', id: lid(sp, nd, line.key || '')} : null;
+  const btOf = zh => (BT_ROWS.find(([, z]) => z === zh) || [''])[0];
   const cell = (g, zh, h) => {
     const r = findR(g, zh, h);
     if (!r || !reached(r, h)) return '<td class="na">—</td>';
-    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${short(r.a, r)}${r.ok.length ? '≈' : ''}${cellSmall(r)}</td>`;
+    const href = item ? hrefNext(cat, item, r.a, btOf(zh)) : '';
+    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, href)}</td>`;
   };
   const head = `<tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>`;
   let body = '';
@@ -195,10 +307,10 @@ function gridOne(sp, nd, me, line, ro) {
     const g = groupsShown[i];
     if (groupsShown.length > 1 || g) body += `<tr class="grp"><th class="cl" colspan="${1 + cols.length}">${dfl(g || '全部')}</th></tr>`;
     if (i === 0 || groupsShown.length > 1) body += (i === 0 ? '' : head);
-    body += BT_ROWS.map(([, zh]) => `<tr data-cl="${esc(g ? g + '・' + zh : zh)}"><th class="cl">${dfl(zh)}</th>${cols.map(c => cell(g, zh, c)).join('')}</tr>`).join('');
+    body += BT_ROWS.map(([, zh]) => `<tr data-cl="${esc(g ? g + '・' + zh : zh)}"${item && !g && i === 0 && btOf(zh) ? ` id="${item.id}-${btOf(zh)}"` : ''}><th class="cl">${dfl(zh)}</th>${cols.map(c => cell(g, zh, c)).join('')}</tr>`).join('');
   }
   let html = `<div class="tw"><table class="rt lt">${head}${body}</table></div>`;
-  if (ex.length) html += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => hlabel(c, r.nd)).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}${cellSmall(r)}</span>`).join('；')}</p>`;
+  if (ex.length) html += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => hlabel(c, r.nd)).join('、')} → <b>${esc(cellMain(r, nd))}</b><small class="df" data-df="${esc(basisOf(r))}">${esc(basisOf(r))}</small></span>`).join('；')}</p>`;
   return html;
 }
 function faceHtml(sp, nd, line, ro) { // 這個節點你面對什麼：例題的完整行動線（翻前＋先前各街＋這街）
@@ -228,15 +340,18 @@ function lines() {
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
     return `${esc(nodeLabel(sp, nd))} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(nodeLabel(s2, n2))}」`; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
-  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔；池估是牌池實際下注均值再靠檔，不是精確到 1%。點「池估」可看說明。同一條行動線一張表。橫列固定、跟翻牌同一套：9 以下低牌面、成對面、單色面、A 高面、J/T 高面、K/Q 高面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽併入該牌面列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。小字的 n＝這類牌面的牌池決策數（池估，或池估確認 GTO 仍最賺）；「盤」＝這類牌面的解算牌面數；「沿用」＝兩種資料都不夠，沿用沒分牌面的答案。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔；池估是牌池實際下注均值再靠檔，不是精確到 1%。格子只寫動作和「GTO」或「剝削」（剝削＝牌池估算比 GTO 更賺，不是封閉證明），不列樣本數或頻率。下注、加注會標尺寸（⅓、½、¾、1、1½ 或全下）。面對下注時，格子會寫門檻（例：面對小注 跟、面對 ≥¾ 棄）。點動作或「→ 下一步」會跳到下一街同一條線的表，對得到就停在同一種牌面列；後面的表有「↑ 上一步」。棄牌沒有下一步。同一條行動線一張表。橫列固定、跟翻牌同一套：9 以下低牌面、成對面、單色面、A 高面、J/T 高面、K/Q 高面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽併入該牌面列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。詳細樣本與頻率在「顯示每格的數據」。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>` + defsHtml(false) + `
   <div class="sec"><b class="h">${esc(S.t)}</b><span class="ev">${esc(S.sub)}</span>${cv && cv.by[sp] ? `<span class="ev">你 ${cv.by[sp][0]}/${cv.by[sp][1]} 個決定在表上</span>` : ''}</div>` +
-  nodesOf(sp).filter(nd => nodeVisible(sp, nd)).flatMap(nd => {
+  (function(){ const cat = lineCatalog(sp);
+  return nodesOf(sp).filter(nd => nodeVisible(sp, nd)).flatMap(nd => {
     const use = lineList(sp, nd).length ? lineList(sp, nd) : [null];
-    return use.map(ln => { const g = gridHtml(sp, nd, null, ln); return g ? `<div class="sec" data-node="${sp}/${nd}"><b class="ttl">${ln ? ln.titleHtml : esc(nodeLabel(sp, nd))}</b>${faceHtml(sp, nd, ln)}${g}${LS.data ? dataHtml(sp, nd, ln) : ''}</div>` : ''; });
-  }).join('') +
+    return use.map(ln => { const g = gridHtml(sp, nd, null, ln, null, cat); if (!g) return '';
+      const item = {sp, nd, pfx: ndPfx(nd), st: stOf(nd), key: ln ? ln.key : '', ln, id: lid(sp, nd, ln ? ln.key : '')};
+      return `<div class="sec" data-node="${sp}/${nd}" id="${item.id}"><b class="ttl">${ln ? ln.titleHtml : esc(nodeLabel(sp, nd))}</b>${navHtml(cat, item)}${faceHtml(sp, nd, ln)}${g}${LS.data ? dataHtml(sp, nd, ln) : ''}</div>`; });
+  }).join(''); })() +
   (alias.length ? `<div class="sec small"><span class="lab">其他點</span>　${aln ? esc(aln) + '。' : ''}沒有自己的數據，照下面的表：<ul>${alias.map(a => `<li>${a}</li>`).join('')}</ul></div>` : '');
 }
 const f0 = x => Number(x).toLocaleString('en-US'), pc = (a, b) => Math.round(a / b * 1000) / 10 + '%';
@@ -361,16 +476,46 @@ function lanswer(a, el) {
 function clsName(q) { return q.row.hc.map(h => stOf(q.row.nd) === 2 && ['DRAW', 'WDRAW'].includes(h) ? hlabel(h, q.row.nd) : L.hc[h]).join('／'); }
 // ---------- 路由 ----------
 const TABS = ['card', 'lines', 'drill', 'river'];
-function route() { let t = (location.hash || '#card').slice(1); if (!TABS.includes(t)) t = 'card';
-  document.querySelectorAll('.topb').forEach(e => e.classList.toggle('on', e.dataset.t === t));
-  if (t === 'card') card(); else if (t === 'lines') lines(); else drill(t === 'river' ? 'riv' : (DF === 'riv' ? 'all' : DF)); window.scrollTo(0, 0); }
+function hashInfo() {
+  const h = (location.hash || '#card').slice(1);
+  const m = h.match(/^ln-(\w+)-([\w]+)-([a-z0-9]+)(?:-(A_high|KQ_high|mid_high|low|paired|mono))?$/);
+  if (m) return {tab: 'lines', sp: m[1], table: 'ln-' + m[1] + '-' + m[2] + '-' + m[3], id: h, row: m[4] || ''};
+  if (h === 'lines') return {tab: 'lines'};
+  if (h === 'card' || h === '') return {tab: 'card'};
+  if (h === 'drill' || h === 'river') return {tab: h};
+  return {tab: 'card'};
+}
+function goAnchor(info) {
+  if (!info || !info.id || !document.getElementById) return;
+  const el = document.getElementById(info.id) || document.getElementById(info.table);
+  if (el) el.scrollIntoView({block: 'start', behavior: 'smooth'});
+}
+function route() {
+  const info = hashInfo(), tab = info.tab;
+  document.querySelectorAll('.topb').forEach(e => e.classList.toggle('on', e.dataset.t === tab));
+  if (info.sp && info.sp !== LS.sp) LS.sp = info.sp;
+  const stay = tab === 'lines' && LS.view === 'lines' && app.querySelector && app.querySelector('[data-node]');
+  if (!stay) {
+    if (tab === 'card') card();
+    else if (tab === 'lines') lines();
+    else drill(tab === 'river' ? 'riv' : (DF === 'riv' ? 'all' : DF));
+  }
+  LS.view = tab === 'lines' ? 'lines' : tab;
+  if (info.id) { if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => goAnchor(info)); else goAnchor(info); }
+  else if (!stay) window.scrollTo(0, 0);
+}
 window.__QNEXT = () => drill();
 app.addEventListener('click', e => {
   const t = e.target;
   const df = t.closest('[data-df]'); if (df) { showDef(df.dataset.df); return; }
   if (t.closest('[data-next]')) { drill(); return; }
   const f = t.closest('[data-f]'); if (f) { drill(f.dataset.f); return; }
-  const sp = t.closest('[data-sp]'); if (sp) { LS.sp = sp.dataset.sp; lines(); return; }
+  const sp = t.closest('[data-sp]'); if (sp) {
+    LS.sp = sp.dataset.sp;
+    if (location.hash && String(location.hash).startsWith('#ln-')) location.hash = 'lines';
+    else lines();
+    return;
+  }
   if (t.closest('[data-tg]')) { LS.data = !LS.data; lines(); return; }
   const go = t.closest('[data-go]'); if (go) LS.sp = go.dataset.go;
 });

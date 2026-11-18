@@ -99,7 +99,7 @@ function parseSections(html, sp) {
   const out = [];
   const re = /<div class="sec" data-node="([^"]+)"><b class="ttl">([\s\S]*?)<\/b>([\s\S]*?)<\/div>(?=<div class="sec"|<div class="sec small"|$)/g;
   // 段落內含 <div class="tw">…</div>，用手動切段
-  const starts = [...html.matchAll(/<div class="sec" data-node="([^"]+)">/g)].map(m => ({ i: m.index, node: m[1] }));
+  const starts = [...html.matchAll(/<div class="sec"[^>]*data-node="([^"]+)"/g)].map(m => ({ i: m.index, node: m[1] }));
   for (let k = 0; k < starts.length; k++) {
     const seg = html.slice(starts[k].i, k + 1 < starts.length ? starts[k + 1].i : html.length);
     const tm = seg.match(/<b class="ttl">([\s\S]*?)<\/b>/);
@@ -143,7 +143,7 @@ function parseSections(html, sp) {
       if (!m) return { raw: t };
       const roLab = m[1] || '';
       const ro = Object.keys(RO_SHORT).find(k => RO_SHORT[k] === roLab) || Object.keys(RO_CN).find(k => RO_CN[k] === roLab) || null;
-      return { ro, cond: m[2], classes: m[3].split('、'), text: m[4].replace(/(沿用 ?n[\d.]*·?[\d.]*盤|池估|池|GTO|兩人 GTO 近似).*$/, '').trim() };
+      return { ro, cond: m[2], classes: m[3].split('、'), text: m[4].replace(/(沿用 ?n[\d.]*·?[\d.]*盤|池估|兩人 GTO 近似|GTO|剝削).*$/, '').trim() };
     }) : [];
     const [nsp, nd] = starts[k].node.split('/');
     out.push({ sp: nsp || sp, nd, titleHtml, title: strip(titleHtml), kind, ro: null, ros, face: strip(face), cols, rows, exc });
@@ -278,7 +278,7 @@ for (const spot of L.spots) {
     const facing = cur.length > 0 && /^對手(下注|加注|全下|超池下注)/.test(cur[cur.length - 1]);
     if (facing && t.question !== undefined && P.question !== '你要怎麼做？') V(t, '標題', '面對下注卻問「下注或過牌」');
     if (!facing && P.question === '你要怎麼做？') V(t, '標題', '沒人下注卻問「你要怎麼做？」（應為下注或過牌）');
-    const legal = txt => facing ? /^(棄|跟|加注|全下)/.test(txt) : /^(過|下注|全下)/.test(txt);
+    const legal = txt => { const u = String(txt || '').replace(/^面對\S+\s+/, ''); return facing ? /^(棄|跟|加注|全下)/.test(u) : /^(過|下注|全下)/.test(u); };
     // (b) 你的上色
     const hi = [...t.titleHtml.matchAll(/<span class="ha">([\s\S]*?)<\/span>/g)].map(m => strip(m[1]));
     for (const x of hi) if (!/^你/.test(x) && !/^輪到你/.test(x)) V(t, '上色', `金色標到不是你的動作：「${x}」`);
@@ -397,7 +397,8 @@ for (const spot of L.spots) {
           || pool.find(x => !x.x && x.hc.includes(h) && !(x.c && x.c.bt) && ((x.cl || '全部') === '全部' || (x.rn && x.rn.k === 'cert')));
         if (!r) { V(t, '資料', `${lab}：資料裡找不到這一格`); return; }
         const want = ANS[r.a];
-        if (!c.text.startsWith(want === '下注' ? '' : want) && !(r.a === 'r' && /^全下/.test(c.text))) V(t, '答案', `${lab}：畫面「${c.text}」與資料答案 ${r.a} 不一致`);
+        const txt = c.text.replace(/^面對\S+\s+/, '');
+        if (!txt.startsWith(want === '下注' ? '' : want) && !(r.a === 'r' && /全下/.test(c.text))) V(t, '答案', `${lab}：畫面「${c.text}」與資料答案 ${r.a} 不一致`);
         const res = checkCell(r, h, lab, c.text);
         t.checks.push({ cell: `${lab}＝${c.text}`, ...res });
         if (!res.ok) V(t, '走不到的格', `${lab}（${c.text}）：${res.lines.filter(x => /✗|（無）/.test(x)).join('；') || res.wtxt}`);
