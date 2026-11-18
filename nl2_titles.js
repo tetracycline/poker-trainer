@@ -230,6 +230,11 @@
         const rise = {A_high:['A_high','paired','mono'], KQ_high:['A_high','KQ_high','paired','mono'], mid_high:['A_high','KQ_high','mid_high','paired','mono'], low:['low','paired','mono','A_high','mid_high','KQ_high'], paired:['paired','mono'], mono:['mono']};
         const ok = street <= 0 ? [s.tx] : (rise[s.tx] || rise.low);
         if (!ok.includes(v)) return false;
+        if (street > 0) {
+          const hiNow = s.hi[street];
+          if (hiNow === 'T' && v === 'low') return false;
+          if (hiNow === 'L' && (v === 'A_high' || v === 'KQ_high' || v === 'mid_high')) return false;
+        }
         maybe = true;
       }
       else if (k === 'ln') { if ((v === 'tb') !== F.tb) return false; }

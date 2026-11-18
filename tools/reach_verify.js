@@ -188,6 +188,11 @@ function condFit(r, s, street, F) {
       const rise = {A_high:['A_high','paired','mono'], KQ_high:['A_high','KQ_high','paired','mono'], mid_high:['A_high','KQ_high','mid_high','paired','mono'], low:['low','paired','mono','A_high','mid_high','KQ_high'], paired:['paired','mono'], mono:['mono']};
       const ok = street <= 0 ? [s.tx] : (rise[s.tx] || rise.low);
       if (!ok.includes(v)) return false;
+      if (street > 0) {
+        const hiNow = s.hi[street];
+        if (hiNow === 'T' && v === 'low') return false;
+        if (hiNow === 'L' && (v === 'A_high' || v === 'KQ_high' || v === 'mid_high')) return false;
+      }
       maybe = true;
     }
     else if (k === 'ln') { if (F == null) { maybe = true; continue; } if ((v === 'tb') !== F.tb) return false; }
@@ -278,7 +283,7 @@ for (const spot of L.spots) {
     const facing = cur.length > 0 && /^對手(下注|加注|全下|超池下注)/.test(cur[cur.length - 1]);
     if (facing && t.question !== undefined && P.question !== '你要怎麼做？') V(t, '標題', '面對下注卻問「下注或過牌」');
     if (!facing && P.question === '你要怎麼做？') V(t, '標題', '沒人下注卻問「你要怎麼做？」（應為下注或過牌）');
-    const legal = txt => { const u = String(txt || '').replace(/^面對\S+\s+/, ''); return facing ? /^(棄|跟|加注|全下)/.test(u) : /^(過|下注|全下)/.test(u); };
+    const legal = txt => { const u = String(txt || '').replace(/^面對\S+\s+/, '').replace(/（無後續表）/g, '').trim(); return facing ? /^(棄|跟|加注|全下)/.test(u) : /^(過|下注|全下)/.test(u); };
     // (b) 你的上色
     const hi = [...t.titleHtml.matchAll(/<span class="ha">([\s\S]*?)<\/span>/g)].map(m => strip(m[1]));
     for (const x of hi) if (!/^你/.test(x) && !/^輪到你/.test(x)) V(t, '上色', `金色標到不是你的動作：「${x}」`);
@@ -397,7 +402,7 @@ for (const spot of L.spots) {
           || pool.find(x => !x.x && x.hc.includes(h) && !(x.c && x.c.bt) && ((x.cl || '全部') === '全部' || (x.rn && x.rn.k === 'cert')));
         if (!r) { V(t, '資料', `${lab}：資料裡找不到這一格`); return; }
         const want = ANS[r.a];
-        const txt = c.text.replace(/^面對\S+\s+/, '');
+        const txt = c.text.replace(/^面對\S+\s+/, '').replace(/（無後續表）/g, '').trim();
         if (!txt.startsWith(want === '下注' ? '' : want) && !(r.a === 'r' && /全下/.test(c.text))) V(t, '答案', `${lab}：畫面「${c.text}」與資料答案 ${r.a} 不一致`);
         const res = checkCell(r, h, lab, c.text);
         t.checks.push({ cell: `${lab}＝${c.text}`, ...res });
@@ -433,6 +438,8 @@ for (const spot of L.spots) {
       // ct 列掛在例外
       if (!r.x && r.c && r.c.ct && shownEx.has((r.cl || '') + '|' + h + '|' + (rowRo(r) || ''))) continue;
       if (!r.x && r.c && r.c.ct && shownEx.has((r.cl || '') + '|' + h + '|')) continue;
+      // run 004「最高張 9 以下／T 以上」已併入固定六列，不再當獨立例外列顯示
+      if (r.x && /(^|・)最高張 (9 以下|T 以上)$/.test(r.cl || '')) continue;
       if (reachable(t.sp, t.nd, canonSt, F, r, h)) V(t, '漏格', `${r.x ? '例外 ' : ''}${r.cl || '全部'}×${HNAME[h]}${rowRo(r) ? '×' + RO_SHORT[rowRo(r)] : ''}（${ANS[r.a]}）走得到卻沒有顯示`);
     }
     t.key = canonSt.map(b => b.join('、')).join('|');

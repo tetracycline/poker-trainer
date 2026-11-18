@@ -33,7 +33,7 @@ const HCO = ['S', 'TPG', 'TPW', 'MID', 'DRAW', 'WDRAW', 'AIR'];
 const BS = {pool: '池', gto: 'GTO', gtoa: '兩人 GTO 近似', est: '池估'};
 const stOf = nd => /(^|_)f_/.test(nd) ? 0 : /(^|_)t_/.test(nd) ? 1 : 2;
 // 當街牌面（與翻牌同一套列、同一優先序；/workspace/poker_r005/btx.py）。JS street：0＝翻牌、1＝轉牌、2＝河牌。
-const BT_ROWS = [['low', '9 以下低牌面'], ['paired', '成對面'], ['mono', '單色面'], ['A_high', 'A 高面'], ['mid_high', 'J/T 高面'], ['KQ_high', 'K/Q 高面']];
+const BT_ROWS = [['low', '9 以下低牌面'], ['mid_high', 'J/T 高面'], ['KQ_high', 'K/Q 高面'], ['A_high', 'A 高面'], ['paired', '成對面'], ['mono', '單色面']];
 const BT_ZH = Object.fromEntries(BT_ROWS);
 const BT_KEYS = BT_ROWS.map(x => x[0]);
 const _BT_RISE = {A_high: ['A_high', 'paired', 'mono'], KQ_high: ['A_high', 'KQ_high', 'paired', 'mono'], mid_high: ['A_high', 'KQ_high', 'mid_high', 'paired', 'mono'], low: BT_KEYS, paired: ['paired', 'mono'], mono: ['mono']};
@@ -58,6 +58,7 @@ function splitCl(cl) {
   return {grp: k === '全部' ? '' : k, tx: k === '全部' ? '全部' : null};
 }
 function isCtRow(r) { return (r.c && r.c.ct) || (r.rn && r.rn.k === 'ct'); }
+function isHiSplitEx(r) { return /(^|・)最高張 (9 以下|T 以上)$/.test(r.cl || ''); }
 function btTitle(nd, r, e) {
   const st = stOf(nd); if (!st) return '';
   const key = (r && r.c && r.c.bt) || (e && textureNow(e.b, st));
@@ -222,10 +223,11 @@ function cellMain(r, nd) {
   const act = actText(r.a, r), face = isVs(nd) ? faceTag(r.cl) : '';
   return (face ? '面對' + face + ' ' : '') + act + (r.ok && r.ok.length ? '≈' : '');
 }
-function cellInner(r, nd, href) {
+function cellInner(r, nd, href, note) {
   const main = cellMain(r, nd), b = basisOf(r);
   const act = href ? `<a class="jmp" href="#${href}">${esc(main)}</a>` : esc(main);
-  return `${act} <small class="df" data-df="${esc(b)}">${esc(b)}</small>`;
+  const miss = note ? '<span class="noln">（無後續表）</span>' : '';
+  return `${act}${miss} <small class="df" data-df="${esc(b)}">${esc(b)}</small>`;
 }
 function navHtml(cat, item) {
   if (!cat || !item) return '';
@@ -248,7 +250,7 @@ function gridHtml(sp, nd, me, line, ro, cat) {
 function gridMw(sp, nd, me, line, cat) {
   const reached = (r, h) => rowReached(r, h, line);
   const R = L.rows.filter(r => r.sp === sp && r.nd === nd), base = R.filter(r => !r.x);
-  const ex = R.filter(r => r.x && (!me || r.id === me.id) && r.hc.some(h => reached(r, h)));
+  const ex = R.filter(r => r.x && !isHiSplitEx(r) && (!me || r.id === me.id) && r.hc.some(h => reached(r, h)));
   const conds = [];
   base.forEach(r => { const k = r.cl || '全部'; if (!conds.includes(k)) conds.push(k); });
   const cols = HCO.filter(h => base.some(r => r.hc.includes(h) && reached(r, h)));
@@ -262,7 +264,8 @@ function gridMw(sp, nd, me, line, cat) {
     const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
     if (!r || !reached(r, h)) return '<td class="na">—</td>';
     const href = item ? hrefNext(cat, item, r.a) : '';
-    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, href)}</td>`;
+    const note = !!(cat && stOf(nd) < 2 && !href && r.a !== 'f');
+    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, href, note)}</td>`;
   };
   let html = `<div class="tw"><table class="rt lt"><tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>` +
     condsShown.map(k => `<tr data-cl="${esc(k)}"><th class="cl">${dfl(k)}</th>${cols.map(c => cell(k, c)).join('')}</tr>`).join('') + '</table></div>';
@@ -274,7 +277,7 @@ function gridOne(sp, nd, me, line, ro, cat) {
   const reached = (r, h) => rowReached(r, h, line);
   const R = L.rows.filter(r => r.sp === sp && r.nd === nd);
   const base = R.filter(r => !r.x && !isCtRow(r));
-  const ex = R.filter(r => (r.x || isCtRow(r)) && (!me || r.id === me.id) && r.hc.some(h => reached(r, h)));
+  const ex = R.filter(r => (r.x || isCtRow(r)) && !isHiSplitEx(r) && (!me || r.id === me.id) && r.hc.some(h => reached(r, h)));
   const groups = [];
   const seenG = new Set();
   for (const r of base) {
@@ -301,7 +304,8 @@ function gridOne(sp, nd, me, line, ro, cat) {
     const r = findR(g, zh, h);
     if (!r || !reached(r, h)) return '<td class="na">—</td>';
     const href = item ? hrefNext(cat, item, r.a, btOf(zh)) : '';
-    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, href)}</td>`;
+    const note = !!(cat && stOf(nd) < 2 && !href && r.a !== 'f');
+    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, href, note)}</td>`;
   };
   const head = `<tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>`;
   let body = '';
@@ -309,7 +313,7 @@ function gridOne(sp, nd, me, line, ro, cat) {
     const g = groupsShown[i];
     if (groupsShown.length > 1 || g) body += `<tr class="grp"><th class="cl" colspan="${1 + cols.length}">${dfl(g || '全部')}</th></tr>`;
     if (i === 0 || groupsShown.length > 1) body += (i === 0 ? '' : head);
-    body += BT_ROWS.map(([, zh]) => `<tr data-cl="${esc(g ? g + '・' + zh : zh)}"${item && !g && i === 0 && btOf(zh) ? ` id="${item.id}-${btOf(zh)}"` : ''}><th class="cl">${dfl(zh)}</th>${cols.map(c => cell(g, zh, c)).join('')}</tr>`).join('');
+    body += BT_ROWS.map(([, zh]) => `<tr data-cl="${esc(g ? g + '・' + zh : zh)}"${item && i === 0 && btOf(zh) ? ` id="${item.id}-${btOf(zh)}"` : ''}><th class="cl">${dfl(zh)}</th>${cols.map(c => cell(g, zh, c)).join('')}</tr>`).join('');
   }
   let html = `<div class="tw"><table class="rt lt">${head}${body}</table></div>`;
   if (ex.length) html += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => hlabel(c, r.nd)).join('、')} → <b>${esc(cellMain(r, nd))}</b><small class="df" data-df="${esc(basisOf(r))}">${esc(basisOf(r))}</small></span>`).join('；')}</p>`;
@@ -342,7 +346,7 @@ function lines() {
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
     return `${esc(nodeLabel(sp, nd))} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(nodeLabel(s2, n2))}」`; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
-  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔；池估是牌池實際下注均值再靠檔，不是精確到 1%。格子只寫動作和「GTO」或「剝削」（剝削＝牌池估算比 GTO 更賺，不是封閉證明），不列樣本數或頻率。下注、加注會標尺寸（⅓、½、¾、1、1½ 或全下）。面對下注時，格子會寫門檻（例：面對小注 跟、面對 ≥¾ 棄）。點動作或「→ 下一步」會跳到下一街同一條線的表，對得到就停在同一種牌面列；後面的表有「↑ 上一步」。棄牌沒有下一步。同一條行動線一張表。橫列固定、跟翻牌同一套：9 以下低牌面、成對面、單色面、A 高面、J/T 高面、K/Q 高面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽併入該牌面列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。詳細樣本與頻率在「顯示每格的數據」。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔；池估是牌池實際下注均值再靠檔，不是精確到 1%。格子只寫動作和「GTO」或「剝削」（剝削＝牌池估算比 GTO 更賺，不是封閉證明），不列樣本數或頻率。下注、加注會標尺寸（⅓、½、¾、1、1½ 或全下）。面對下注時，格子會寫門檻（例：面對小注 跟、面對 ≥¾ 棄）。點動作或「→ 下一步」會跳到下一街同一條線的表，對得到就停在同一種牌面列；後面的表有「↑ 上一步」。棄牌沒有下一步。同一條行動線一張表。橫列固定、跟翻牌同一套，順序是：9 以下低牌面、J/T 高面、K/Q 高面、A 高面、成對面、單色面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽，以及舊的「最高張 9 以下／T 以上」分半，都併入這六列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。翻牌、轉牌若這一步之後資料裡沒有下一街的表，格子會標「（無後續表）」。詳細樣本與頻率在「顯示每格的數據」。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>` + defsHtml(false) + `
