@@ -17,7 +17,13 @@
   }
   function bareKind(kind) { return String(kind || '').replace(/^[ftr]_/, ''); }
   function verb(a) {
-    return { x: '過', c: '跟', f: '棄', b: '下注', r: '加注', a: '全下' }[String(a || '')[0]] || a;
+    const s = String(a || ''), k = s[0];
+    if (k === 'b') {
+      const n = parseFloat(s.slice(1).replace(',', '.'));
+      if (n >= 1.45) return '超池下注';
+      return '下注';
+    }
+    return { x: '過', c: '跟', f: '棄', r: '加注', a: '全下' }[k] || a;
   }
   function actsOfSeg(seg, me) {
     return String(seg || '').split(' ').filter(Boolean).map(tok => {
@@ -131,7 +137,9 @@
 
   function questionFor(kind, curSeg) { // 照本街實際狀態問：面對下注／加注 → 你要怎麼做；否則下注或過牌
     const bits = String(curSeg || '').split('、').filter(Boolean);
-    if (bits.length && /^對手(下注|加注|全下|超池下注)/.test(bits[bits.length - 1])) return '你要怎麼做？';
+    const last = bits[bits.length - 1] || '';
+    const faced = bits.some(b => /^對手(下注|加注|全下|超池下注)$/.test(b));
+    if (/^對手(下注|加注|全下|超池下注)$/.test(last) || (last === '對手跟' && faced)) return '你要怎麼做？';
     if (bits.length) return '輪到你，下注或過牌？';
     return '你先行動，下注或過牌？';
   }
@@ -204,15 +212,24 @@
     if (!e) return '';
     const typ = e.t || 'SRP';
     const hero = e.me && e.me === e.pa ? (typ === '3BP' ? '你是3-bet者' : '你是開池者') : '你是跟注者';
-    return typ + '\t' + hero;
+    return typ + '\t' + hero + '\t' + (e.pa || '') + '\t' + (e.me || '');
+  }
+  function pretLegal(e) {
+    if (!e) return true;
+    const t = String(e.pretext || '');
+    return !/你（(?:UTG|HJ|CO|BTN)）\s*過牌/.test(t);
   }
 function canonAct(k) {
     k = String(k || '');
     if (k === 'x' || k === 'f' || k === 'c' || k === 'r' || k === 'small' || k === 'big') return k;
-    if (k === 'b33' || k === 'b50' || k === 'b66') return 'small';
-    if (k === 'b75' || k === 'b100' || k === 'b150') return 'big';
+    if (k === 'b33' || k === 'b50' || k === 'b66' || k === 'b75' || k === 'b100' || k === 'b150') return k;
     if (/^allin/.test(k) || /^raise/.test(k)) return 'r';
     return '';
+  }
+  function actClass(a) {
+    if (a === 'b33' || a === 'b50' || a === 'b66' || a === 'small') return 'small';
+    if (a === 'b75' || a === 'b100' || a === 'b150' || a === 'big') return 'big';
+    return a;
   }
   function actsOfRow(r) {
     if (r.b === 'est') {
@@ -252,7 +269,8 @@ function canonAct(k) {
     }
     let best = r.a, bestF = -1;
     for (const [a, f] of Object.entries(mass)) if (f > bestF) { best = a; bestF = f; }
-    return { a: best, mix: acts.size > 1 };
+    const classes = new Set([...acts].map(actClass));
+    return { a: actClass(best) || r.a, mix: classes.size > 1 };
   }
   const STRONG = new Set(['S', 'TPG', 'TPW']), WEAK = new Set(['AIR', 'WDRAW']);
   function chainOk(q) {
@@ -321,6 +339,20 @@ function canonAct(k) {
       nodeIndex.get(key).rows.push(r);
     }
     const rowsOf = (sp, nd) => (nodeIndex.get(sp + '|' + nd) || { rows: [] }).rows;
+    const sigPf = e => JSON.stringify({ t: e.t, me: e.me, pa: e.pa, pc: e.pc, pretext: e.pretext || '' });
+    const pfEgs = new Map();
+    for (const r of L.rows) if (r.eg) for (const e of r.eg) {
+      const pf = pfKey(e); if (!pf) continue;
+      if (!pfEgs.has(pf)) pfEgs.set(pf, []);
+      pfEgs.get(pf).push(e);
+    }
+    function canonEg(pf) {
+      const all = pfEgs.get(pf) || [];
+      const legal = all.filter(pretLegal);
+      const pool = legal.length ? legal : all;
+      const top = (mostCommon(pool.map(sigPf)) || [])[0];
+      return top ? pool.find(e => sigPf(e) === top) : null;
+    }
     // 決定點：情境＋前綴＋街＋這個決定之前的完整行動（來自各節點例題）→ 節點
     const DECI = new Map();
     for (const rec of nodeList) for (const r of nodeIndex.get(rec.key).rows) for (const e of (r.eg || [])) {
@@ -361,8 +393,13 @@ function canonAct(k) {
       const buckets = new Map();
       for (const r of rows) for (const e of (r.eg || [])) {
         if (String(e.l || '').split('/').length !== rec.st + 1) continue;
-        const post = lineKeyFromEg(e, rec.st);
-        const pf = rec.sp === 'mw' ? pfKey(e) : '';
+        let post = lineKeyFromEg(e, rec.st);
+        if (/over/.test(rec.nd) || /over/.test(rec.kind || '')) {
+          const segs = post.split('|');
+          segs[segs.length - 1] = (segs[segs.length - 1] || '').replace(/對手下注/g, '對手超池下注');
+          post = segs.join('|');
+        }
+        const pf = pfKey(e);
         const bkey = pf ? pf + '##' + post : post;
         if (!buckets.has(bkey)) buckets.set(bkey, { key: post, pf, egs: [], er: [] });
         buckets.get(bkey).egs.push(e); buckets.get(bkey).er.push({ e, r });
@@ -390,7 +427,7 @@ function canonAct(k) {
             for (const s of states) {
               if (!rowFits(r, s, rec.st, F)) continue;
               if (!r.x && rows.some(x => x.x && !isHiSplitEx(x) && x.hc.includes(h) && rowFits(x, s, rec.st, F) === true)) continue; // 這個牌面由（非最高張分半）例外列代表
-              const pass = (d, c) => { const pk = d.st + '|' + d.prefix + '|' + c + '|' + s.tx + s.hi.join(''); if (!pcache.has(pk)) pcache.set(pk, d.nds.some(nd => [...primary(rec.sp, nd, c, s, d.st, F)].some(a => d.need.includes(a)))); return pcache.get(pk); };
+              const pass = (d, c) => { const pk = d.st + '|' + d.prefix + '|' + c + '|' + s.tx + s.hi.join(''); if (!pcache.has(pk)) pcache.set(pk, d.nds.some(nd => [...primary(rec.sp, nd, c, s, d.st, F)].some(a => d.need.includes(a) || d.need.includes(actClass(a))))); return pcache.get(pk); };
               if (chains(h, s, rec.st).some(q => decs.every(d => pass(d, q[d.st])))) { ok = true; break; }
             }
           }
@@ -398,14 +435,12 @@ function canonAct(k) {
           return ok;
         }
         const hands = HANDS.filter(h => rows.some(r => !r.x && rowOk(r, h)));
-        // 標題翻前位置改用「走得到的格」的例題（例題才對得上標題）；翻前角色不同就不換
+        // 同一翻前桶共用一個合法例題當標題，避免下一街翻前文字對不上
         let eUse = eObj, tUse = titles;
-        const egR = b.er.filter(x => x.r.hc.some(h => rowOk(x.r, h))).map(x => x.e);
-        const top2 = (mostCommon(egR.map(sig)) || [])[0];
-        if (top2 && top2 !== (eObj && sig(eObj))) {
-          const e2 = egR.find(e => sig(e) === top2), p2 = preflopTokens(e2);
-          if (lineFacts(segs, p2).pfr === F.pfr) { eUse = e2; tUse = buildTitle(p2, segs, rec.kind, rec.st); }
-        }
+        const eCanon = canonEg(b.pf);
+        if (eCanon) { eUse = eCanon; tUse = buildTitle(preflopTokens(eCanon), segs, rec.kind, rec.st); }
+        const fixPre = (t) => String(t || '').replace(/你 (UTG|HJ|CO|BTN) 過/g, '你 $1 未開');
+        if (tUse) { tUse = { titleText: fixPre(tUse.titleText), titleHtml: fixPre(tUse.titleHtml) }; }
         const visible = hands.length > 0;
         if (!visible) {
           const miss = decs.filter(d => !d.nds.length);

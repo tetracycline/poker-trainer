@@ -222,10 +222,14 @@ function rowCondOf(t, row) {
 function canonAct(k) {
   k = String(k || '');
   if (k === 'x' || k === 'f' || k === 'c' || k === 'r' || k === 'small' || k === 'big') return k;
-  if (k === 'b33' || k === 'b50' || k === 'b66') return 'small';
-  if (k === 'b75' || k === 'b100' || k === 'b150') return 'big';
+  if (k === 'b33' || k === 'b50' || k === 'b66' || k === 'b75' || k === 'b100' || k === 'b150') return k;
   if (/^allin/.test(k) || /^raise/.test(k)) return 'r';
   return '';
+}
+function actClass(a) {
+  if (a === 'b33' || a === 'b50' || a === 'b66' || a === 'small') return 'small';
+  if (a === 'b75' || a === 'b100' || a === 'b150' || a === 'big') return 'big';
+  return a;
 }
 function displayA(r) {
   if (!r || r.b === 'est') return r && r.a;
@@ -238,7 +242,7 @@ function displayA(r) {
   }
   let best = r.a, bestF = -1;
   for (const [a, f] of Object.entries(mass)) if (f > bestF) { best = a; bestF = f; }
-  return best;
+  return actClass(best) || best;
 }
 function actsOfRow(r) {
   if (r.b === 'est') {
@@ -313,7 +317,7 @@ function reachable(sp, nd, streets, F, r, h) {
   for (const s of states(S)) {
     if (!condFit(r, s, S, F)) continue;
     if (!r.x && rows.some(x => x.x && !isHiSplitEx(x) && x.hc.includes(h) && condFit(x, s, S, F) === true)) continue;
-    const ok = (d, c) => d.nodes.some(n => [...answersAt(sp, n, c, s, d.street, F)].some(a => d.need.includes(a)));
+    const ok = (d, c) => d.nodes.some(n => [...answersAt(sp, n, c, s, d.street, F)].some(a => d.need.includes(a) || d.need.includes(actClass(a))));
     if (seqs(h, s, S).some(q => decs.every(d => ok(d, q[d.street])))) return true;
   }
   return false;
@@ -406,7 +410,7 @@ for (const spot of L.spots) {
           const ok = new Set();
           for (const c of HC) {
             const A = new Set(); for (const nd of d.nodes) for (const a of answersAt(t.sp, nd, c, s, d.street, F)) A.add(a);
-            if ([...A].some(a => d.need.includes(a))) ok.add(c);
+            if ([...A].some(a => d.need.includes(a) || d.need.includes(actClass(a)))) ok.add(c);
           }
           return ok;
         });

@@ -148,7 +148,6 @@ function catItem(sp, nd, ln) {
 }
 function pfOk(a, b) {
   if (!a || !b) return true;
-  if (a.sp !== 'mw' && b.sp !== 'mw') return true;
   if (!a.pf || !b.pf) return true;
   return a.pf === b.pf;
 }
@@ -161,7 +160,7 @@ function lineCatalog(sp) {
   }
   return out;
 }
-function facingOk(face) { return !/你(下注|跟|加注|全下)/.test(face || ''); }
+function facingOk(face) { return !/你(超池下注|下注|跟|加注|全下)/.test(face || ''); }
 function nextEntries(cat, item, verb) {
   if (!verb || !cat || !item) return [];
   const segs0 = (item.key || '').split('|');
@@ -181,8 +180,11 @@ function nextEntries(cat, item, verb) {
     if (x.st === item.st && segs.length === segs0.length
         && segs.slice(0, -1).join('|') === segs0.slice(0, -1).join('|')) {
       const rest = afterHero(segs[segs.length - 1] || '');
-      if (verb === '過' && rest && rest.length && rest[rest.length - 1] === '對手下注' && oppOnly(rest.slice(0, -1), ['對手過'])) found.push(x);
-      else if ((verb === '下注' || verb === '加注') && rest && rest.length && rest[rest.length - 1] === '對手加注' && oppOnly(rest.slice(0, -1), ['對手跟', '對手過'])) found.push(x);
+      if (verb === '過' && rest && rest.length) {
+        const i = rest.findIndex(b => b === '對手下注' || b === '對手超池下注');
+        if (i >= 0 && oppOnly(rest.slice(0, i), ['對手過']) && oppOnly(rest.slice(i + 1), ['對手跟'])) found.push(x);
+      }
+      else if ((verb === '下注' || verb === '加注' || verb === '超池下注') && rest && rest.length && rest[rest.length - 1] === '對手加注' && oppOnly(rest.slice(0, -1), ['對手跟', '對手過'])) found.push(x);
     } else if (item.st < 2 && x.st === item.st + 1 && segs.length === item.st + 2
         && segs.slice(0, -1).slice(0, segs0.length - 1).join('|') === segs0.slice(0, -1).join('|')
         && facingOk(segs[segs.length - 1])) {
@@ -190,19 +192,19 @@ function nextEntries(cat, item, verb) {
       if (bits === null) continue;
       if (verb === '跟' && oppOnly(bits, ['對手跟'])) found.push(x);
       else if (verb === '過' && oppOnly(bits, ['對手過'])) found.push(x);
-      else if ((verb === '下注' || verb === '加注') && bits.length && oppOnly(bits, ['對手跟'])) found.push(x);
+      else if ((verb === '下注' || verb === '加注' || verb === '超池下注') && bits.length && oppOnly(bits, ['對手跟'])) found.push(x);
     }
   }
   const seen = new Set();
-  return found.sort((a, b) => (a.st - b.st) || rank((a.key || '').split('|').pop()) - rank((b.key || '').split('|').pop()) || a.nd.localeCompare(b.nd))
+  return found.sort((a, b) => (b.st - a.st) || rank((a.key || '').split('|').pop()) - rank((b.key || '').split('|').pop()) || a.nd.localeCompare(b.nd))
     .filter(x => seen.has(x.id) ? false : (seen.add(x.id), true));
 }
 function prevEntry(cat, item) {
   if (!cat || !item) return null;
   const segs = (item.key || '').split('|');
   const last = segs[segs.length - 1] || '';
-  const m = last.match(/^(?:(.*)、)?你(過|下注|跟|加注)(?:、對手.*)?$/);
-  if (m && /你(過|下注|跟|加注)/.test(last)) {
+  const m = last.match(/^(?:(.*)、)?你(過|超池下注|下注|跟|加注)(?:、對手.*)?$/);
+  if (m && /你(過|超池下注|下注|跟|加注)/.test(last)) {
     const prevFace = m[1] || '';
     const want = segs.slice(0, -1).concat([prevFace]).join('|');
     for (const x of cat) {
@@ -231,10 +233,31 @@ function nextLab(x) {
     vs_xr: '被加注', vs_donk: '面對領打', vs_over: '面對超池下注', cbet: 'c-bet', bet: '下注或過牌', lead: '領打'};
   return STN_NAV[x.st] + (km[kind] ? '・' + km[kind] : '');
 }
+function hrefOf(x, bt) { return x ? x.id + (bt ? '-' + bt : '') : ''; }
+function secLab(x) {
+  const face = ((x && x.key) || '').split('|').pop() || '';
+  const kind = (x && x.nd) || '';
+  if (/vs_xr|vs_3b/.test(kind) || /對手加注/.test(face)) return '若被加注';
+  if (/over/.test(kind) || /超池/.test(face)) return '若面對超池';
+  return '若面對下注';
+}
+function isThrough(x) {
+  const face = ((x && x.key) || '').split('|').pop() || '';
+  return !face || face === '對手過' || (/(^|、)對手過$/.test(face) && !/下注|加注/.test(face));
+}
+function nextLinks(cat, item, a, bt) {
+  const verb = VERB_OF[a] || (a === 'big' || a === 'small' ? '下注' : '');
+  const nx = nextEntries(cat, item, verb);
+  const through = nx.filter(x => x.st === item.st + 1 && isThrough(x));
+  const secondary = nx.filter(x => !through.includes(x));
+  return {
+    href: through[0] ? hrefOf(through[0], bt) : '',
+    extras: secondary.map(x => ({ href: hrefOf(x, bt), lab: secLab(x) })),
+    all: nx
+  };
+}
 function hrefNext(cat, item, a, bt) {
-  const nx = nextEntries(cat, item, VERB_OF[a]);
-  if (!nx.length) return '';
-  return nx[0].id + (bt ? '-' + bt : '');
+  return nextLinks(cat, item, a, bt).href;
 }
 function basisOf(r) { return r.b === 'est' ? '剝削' : 'GTO'; }
 function faceTag(cl) {
@@ -259,16 +282,52 @@ function actText(a, r) {
   return lab;
 }
 function shownOf(r) { return (TITLES && TITLES.topAct) ? TITLES.topAct(r) : { a: r.a, mix: !!(r.ok && r.ok.length) }; }
+function clsAct(a) {
+  if (a === 'b33' || a === 'b50' || a === 'b66' || a === 'small') return 'small';
+  if (a === 'b75' || a === 'b100' || a === 'b150' || a === 'big') return 'big';
+  return a;
+}
+function gtoMass(freq) {
+  const mass = {};
+  for (const [k, v] of Object.entries(freq || {})) {
+    const a = clsAct(k), n = Number(v);
+    if (a && n > 0) mass[a] = (mass[a] || 0) + n;
+  }
+  return mass;
+}
+function lowConf(r) {
+  if (!r) return false;
+  const freq = (r.solver && (r.solver.exact_freqs || r.solver.freq)) || {};
+  const boards = Number(r.solver && r.solver.boards);
+  const src = String((r.solver && r.solver.src) || '');
+  const rnG = r.rn && Number(r.rn.g);
+  const crude = src.includes('parent mix') || (Number.isFinite(boards) && boards >= 0 && boards < 3) || (Number.isFinite(rnG) && rnG >= 0 && rnG < 3);
+  if (r.b !== 'est') return !!crude && (src.includes('parent mix') || boards === 0 || boards === 1 || rnG === 0 || rnG === 1);
+  const ev = String(r.ev || '');
+  const n = Number((ev.match(/n=(\d+)/) || [])[1] || 0);
+  const samples = (r.solver && r.solver.samples || []).length;
+  const a = clsAct(shownOf(r).a);
+  const mass = gtoMass(freq);
+  const f = Number(mass[a] || 0);
+  const best = Object.entries(mass).sort((x, y) => y[1] - x[1])[0];
+  if (n && n < 20) return true;
+  if (samples && samples < 3 && n && n < 200) return true;
+  if (Object.keys(mass).length && f < 0.15) return true;
+  if (best && a && clsAct(best[0]) !== a) return true;
+  if (crude && (boards < 3 || rnG < 3 || src.includes('parent mix'))) return true;
+  return false;
+}
 function cellMain(r, nd) {
   const sh = shownOf(r);
   const act = actText(sh.a, r), face = isVs(nd) ? faceTag(r.cl) : '';
   return (face ? '面對' + face + ' ' : '') + act + (sh.mix ? '≈' : '');
 }
-function cellInner(r, nd, href, note) {
+function cellInner(r, nd, href, extras) {
   const main = cellMain(r, nd), b = basisOf(r);
   const act = href ? `<a class="jmp" href="#${href}">${esc(main)}</a>` : esc(main);
-  const miss = note ? '<span class="noln">（無後續表）</span>' : '';
-  return `${act}${miss} <small class="df" data-df="${esc(b)}">${esc(b)}</small>`;
+  const sec = (extras || []).map(x => `<a class="jmp sub" href="#${x.href}">${esc(x.lab)}→</a>`).join(' ');
+  const lo = lowConf(r) ? '<small class="lo" title="樣本少或與 GTO 頻率差很多">低把握</small>' : '';
+  return `${act}${sec ? ' ' + sec : ''} <small class="df" data-df="${esc(b)}">${esc(b)}</small>${lo ? ' ' + lo : ''}`;
 }
 function navHtml(cat, item) {
   if (!cat || !item) return '';
@@ -305,9 +364,8 @@ function gridMw(sp, nd, me, line, cat) {
     const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
     if (!r || !reached(r, h)) return '<td class="na">—</td>';
     const sh = shownOf(r);
-    const href = item ? hrefNext(cat, item, sh.a) : '';
-    const note = !!(cat && !href && sh.a !== 'f');
-    return `<td class="${ACL(sh.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, href, note)}</td>`;
+    const nl = item ? nextLinks(cat, item, sh.a) : { href: '', extras: [] };
+    return `<td class="${ACL(sh.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, nl.href, nl.extras)}</td>`;
   };
   let html = `<div class="tw"><table class="rt lt"><tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>` +
     condsShown.map(k => `<tr data-cl="${esc(k)}"><th class="cl">${dfl(k)}</th>${cols.map(c => cell(k, c)).join('')}</tr>`).join('') + '</table></div>';
@@ -353,9 +411,8 @@ function gridOne(sp, nd, me, line, ro, cat) {
     const r = findR(g, zh, h);
     if (!r || !reached(r, h)) return '<td class="na">—</td>';
     const sh = shownOf(r);
-    const href = item ? hrefNext(cat, item, sh.a, btOf(zh)) : '';
-    const note = !!(cat && !href && sh.a !== 'f');
-    return `<td class="${ACL(sh.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, href, note)}</td>`;
+    const nl = item ? nextLinks(cat, item, sh.a, btOf(zh)) : { href: '', extras: [] };
+    return `<td class="${ACL(sh.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, nl.href, nl.extras)}</td>`;
   };
   const head = `<tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>`;
   let body = '';
@@ -396,7 +453,7 @@ function lines() {
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
     return `${esc(nodeLabel(sp, nd))} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(nodeLabel(s2, n2))}」`; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
-  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、2/3、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔（⅔ 也在這組裡）；池估是牌池實際下注均值再靠檔，不是精確到 1%。格子只寫動作和「GTO」或「剝削」（剝削＝牌池估算比 GTO 更賺，不是封閉證明），不列樣本數或頻率。下注、加注會標尺寸（⅓、½、⅔、¾、1、1½ 或全下）。面對下注時，若資料有尺寸分檔，格子會寫門檻（例：面對小注 跟、面對 ≥¾ 棄）；翻牌／轉牌資料沒有分檔時不另造門檻。點動作或「→ 下一步」會跳到同一街的後續表（過→面對下注、下注／加注→被加注）或下一街同一條線的表，對得到就停在同一種牌面列；多人會對在同一條翻前線。後面的表有「↑ 上一步」。棄牌沒有下一步。同一條行動線一張表。橫列固定、跟翻牌同一套，順序是：9 以下低牌面、J/T 高面、K/Q 高面、A 高面、成對面、單色面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽，以及舊的「最高張 9 以下／T 以上」分半，都併入這六列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。若這一步之後資料裡沒有同一街或下一街的表（真的走到終點），格子會標「（無後續表）」。詳細樣本與頻率在「顯示每格的數據」。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、2/3、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔（⅔ 也在這組裡）；池估是牌池實際下注均值再靠檔，不是精確到 1%。格子只寫動作和「GTO」或「剝削」（剝削＝牌池估算比 GTO 更賺，不是封閉證明），不列樣本數或頻率。下注、加注會標尺寸（⅓、½、⅔、¾、1、1½ 或全下）。面對下注時，若資料有尺寸分檔，格子會寫門檻（例：面對小注 跟、面對 ≥¾ 棄）；翻牌／轉牌資料沒有分檔時不另造門檻。點動作或「→ 下一步」會跳到同一街的後續表（過→面對下注、下注／加注→被加注）或下一街同一條線的表，對得到就停在同一種牌面列；多人會對在同一條翻前線。後面的表有「↑ 上一步」。棄牌沒有下一步。同一條行動線一張表。橫列固定、跟翻牌同一套，順序是：9 以下低牌面、J/T 高面、K/Q 高面、A 高面、成對面、單色面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽，以及舊的「最高張 9 以下／T 以上」分半，都併入這六列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。格子的主連結是「這一步被跟或過完之後」的下一街；同一街的被加注／面對下注用旁邊的小連結「若被加注→」「若面對下注→」。棄牌、全下、河牌已結束的格子不再標「（無後續表）」。若資料還沒有下一街的表，格子不標終點，只保留同一街小連結（若有）。樣本很少或剝削動作與 GTO 頻率差很多的格子會標「低把握」。詳細樣本與頻率在「顯示每格的數據」。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>` + defsHtml(false) + `
@@ -578,7 +635,7 @@ app.addEventListener('click', e => {
 if (window.__LINES_QA) window.__linesQA = { tableOnly, egCond, egInException, egOk,
   answer: a => lanswer(a, {classList: {add() {}}}),
   render: sp => { LS.sp = sp; lines(); }, pool, card, DEF, defsHtml, drill, gridHtml, story, nodesOf, stOf, nodeVisible, rowReached, REACH, TITLES, lineList,
-  lineCatalog, nextEntries, prevEntry, catItem, lid, keyForLid, shownOf, VERB_OF
+  lineCatalog, nextEntries, prevEntry, nextLinks, catItem, lid, keyForLid, shownOf, VERB_OF, isThrough
 };
 window.addEventListener('hashchange', route); route();
 })();
