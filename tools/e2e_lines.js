@@ -44,7 +44,7 @@ async function main() {
       return;
     }
     const html = context.__linesQA.gridHtml(sp, nd);
-    if (!html || !/<table class="rt lt">/.test(html)) failures.push(`${sp}/${nd}: missing table`);
+    if (!html || !/<table class="rt lt"/.test(html)) failures.push(`${sp}/${nd}: missing table`);
     if (/所有牌型|其餘牌型|class="leg"|class="diff"/.test(html)) failures.push(`${sp}/${nd}: compact-table leftover`);
     const rows = context.NLL.rows.filter(r => r.sp === sp && r.nd === nd && !r.x);
     for (const r of rows) for (const h of r.hc) {

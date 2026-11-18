@@ -129,31 +129,55 @@ const TITLES = (window.NL2TITLES && window.NL2TITLES.build(L)) || null;
 const lineList = (sp, nd) => TITLES ? TITLES.lines(sp, nd) : [];
 const nodeVisible = (sp, nd) => TITLES ? TITLES.nodeVisible(sp, nd) : (!REACH.usesReach || !REACH.usesReach(sp, nd) || REACH.visible(sp, nd));
 const rowReached = (r, h, line) => TITLES ? TITLES.rowReached(r, h, line) : (!REACH.usesReach(r.sp, r.nd) || REACH.classReached(r.sp, r.nd, h, r));
+const RO_SHORT = {over: '高張落下', pair: '成對', flush: '同花完成', straight: '順子完成', draw: '補聽', brick: '空白'};
+const roHead = rv => `<span class="df" data-df="${esc(RO_CN[rv])}" role="button" tabindex="0">${esc(RO_SHORT[rv])}</span>`;
 function gridHtml(sp, nd, me, line, ro) {
   const lines = line ? [line] : (lineList(sp, nd).length ? lineList(sp, nd) : [null]);
   return lines.map(ln => gridOne(sp, nd, me, ln, ro)).join('');
 }
 function gridOne(sp, nd, me, line, ro) {
   const reached = (r, h) => rowReached(r, h, line);
-  const R = L.rows.filter(r => r.sp === sp && r.nd === nd && roOk(r, ro)), base = R.filter(r => !r.x);
+  const ros = rosOf(sp, nd), split = ros[0] != null;
+  const R = L.rows.filter(r => r.sp === sp && r.nd === nd), base = R.filter(r => !r.x);
   const ex = R.filter(r => r.x && (!me || r.id === me.id) && r.hc.some(h => reached(r, h)));
   const conds = [];
   base.forEach(r => { const k = r.cl || '全部'; if (!conds.includes(k)) conds.push(k); });
-  const cols = HCO.filter(h => base.some(r => r.hc.includes(h) && reached(r, h)));
-  const condsShown = conds.filter(k => cols.some(h => {
-    const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
-    return r && reached(r, h);
-  }));
-  if (!cols.length || !condsShown.length) return '';
-  const cell = (k, h) => {
-    const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
+  if (!split) {
+    const cols = HCO.filter(h => base.some(r => r.hc.includes(h) && reached(r, h)));
+    const condsShown = conds.filter(k => cols.some(h => {
+      const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
+      return r && reached(r, h);
+    }));
+    if (!cols.length || !condsShown.length) return '';
+    const cell = (k, h) => {
+      const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
+      if (!r || !reached(r, h)) return '<td class="na">—</td>';
+      return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${short(r.a, r)}${r.ok.length ? '≈' : ''}${cellSmall(r)}</td>`;
+    };
+    let h = `<div class="tw"><table class="rt lt"><tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>` +
+      condsShown.map(k => `<tr><th class="cl">${dfl(k)}</th>${cols.map(c => cell(k, c)).join('')}</tr>`).join('') + '</table></div>';
+    if (ex.length) h += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => hlabel(c, r.nd)).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}${cellSmall(r)}</span>`).join('；')}</p>`;
+    return h;
+  }
+  const findR = (k, h, rv) => base.find(r => (r.cl || '全部') === k && r.hc.includes(h) && rowRo(r) === rv)
+    || base.find(r => (r.cl || '全部') === k && r.hc.includes(h) && !rowRo(r));
+  const colsH = HCO.filter(h => conds.some(k => ros.some(rv => { const r = findR(k, h, rv); return r && reached(r, h); })));
+  const condsShown = conds.filter(k => colsH.some(h => ros.some(rv => { const r = findR(k, h, rv); return r && reached(r, h); })));
+  if (!colsH.length || !condsShown.length) return '';
+  const cell = (k, h, rv) => {
+    const r = findR(k, h, rv);
     if (!r || !reached(r, h)) return '<td class="na">—</td>';
-    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}">${short(r.a, r)}${r.ok.length ? '≈' : ''}${cellSmall(r)}</td>`;
+    return `<td class="${ACL(r.a)}${me && me.id === r.id ? ' me' : ''}" data-ro="${rv}" data-h="${h}">${short(r.a, r)}${r.ok.length ? '≈' : ''}${cellSmall(r)}</td>`;
   };
-  let h = `<div class="tw"><table class="rt lt"><tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>` +
-    condsShown.map(k => `<tr><th class="cl">${dfl(k)}</th>${cols.map(c => cell(k, c)).join('')}</tr>`).join('') + '</table></div>';
-  if (ex.length) h += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => hlabel(c, r.nd)).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}${cellSmall(r)}</span>`).join('；')}</p>`;
-  return h;
+  const heads = `<tr><th></th>${ros.map(rv => `<th class="ro" data-ro="${rv}">${roHead(rv)}</th>`).join('')}</tr>`;
+  const body = condsShown.map(k => {
+    const grp = (condsShown.length > 1 || k !== '全部') ? `<tr class="grp"><th class="cl" colspan="${1 + ros.length}">${dfl(k)}</th></tr>` : '';
+    const hs = colsH.filter(h => ros.some(rv => { const r = findR(k, h, rv); return r && reached(r, h); }));
+    return grp + hs.map(h => `<tr data-cl="${esc(k)}" data-h="${h}"><th class="cl">${dfs(hlabel(h, nd))}</th>${ros.map(rv => cell(k, h, rv)).join('')}</tr>`).join('');
+  }).join('');
+  let html = `<div class="tw"><table class="rt lt" data-kind="runout">${heads}${body}</table></div>`;
+  if (ex.length) html += `<p class="small"><span class="lab">${dfs('例外')}</span>　${ex.map(r => `<span class="${me && me.id === r.id ? 'mex' : ''}">${rowRo(r) ? roHead(rowRo(r)) + '・' : ''}${dfl(r.cl)}：${r.hc.filter(c => reached(r, c)).map(c => hlabel(c, r.nd)).join('、')} → <b>${short(r.a, r)}</b>${r.ok.length ? '≈' : ''}${cellSmall(r)}</span>`).join('；')}</p>`;
+  return html;
 }
 function faceHtml(sp, nd, line, ro) { // 這個節點你面對什麼：例題的完整行動線（翻前＋先前各街＋這街）
   // 例題只用來顯示行動線（位置、尺寸、底池），不顯示手牌，所以同一條線的任何例題都可以
@@ -182,14 +206,14 @@ function lines() {
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
     return `${esc(nodeLabel(sp, nd))} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(nodeLabel(s2, n2))}」`; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
-  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔；池估是牌池實際下注均值再靠檔，不是精確到 1%。點「池估」可看說明。轉牌、河牌按這一街新發的那張牌分類（高張落下（A/K 或新最大牌）、公牌成對、同花完成、順子完成、補聽牌、空白牌），每類一張表，標題後面藍字是類別。小字的 n＝這類落牌的牌池決策數（池估，或池估確認 GTO 仍最賺）；「盤」＝這類落牌的解算牌面數；「沿用」＝兩種資料都不夠，沿用沒分落牌的答案。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔；池估是牌池實際下注均值再靠檔，不是精確到 1%。點「池估」可看說明。轉牌、河牌同一條行動線還是一張表：列是牌型，欄是這一街新發的那張牌（高張落下、成對、同花完成、順子完成、補聽、空白）。小字的 n＝這類落牌的牌池決策數（池估，或池估確認 GTO 仍最賺）；「盤」＝這類落牌的解算牌面數；「沿用」＝兩種資料都不夠，沿用沒分落牌的答案。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>` + defsHtml(false) + `
   <div class="sec"><b class="h">${esc(S.t)}</b><span class="ev">${esc(S.sub)}</span>${cv && cv.by[sp] ? `<span class="ev">你 ${cv.by[sp][0]}/${cv.by[sp][1]} 個決定在表上</span>` : ''}</div>` +
   nodesOf(sp).filter(nd => nodeVisible(sp, nd)).flatMap(nd => {
     const use = lineList(sp, nd).length ? lineList(sp, nd) : [null];
-    return use.flatMap(ln => rosOf(sp, nd).map(ro => { const g = gridHtml(sp, nd, null, ln, ro); return (g || !ro) ? `<div class="sec" data-node="${sp}/${nd}"><b class="ttl">${ln ? ln.titleHtml : esc(nodeLabel(sp, nd))}</b>${roTitle(nd, ro)}${faceHtml(sp, nd, ln, ro)}${g}${LS.data ? dataHtml(sp, nd, ln, ro) : ''}</div>` : ''; }));
+    return use.map(ln => { const g = gridHtml(sp, nd, null, ln); return g ? `<div class="sec" data-node="${sp}/${nd}"><b class="ttl">${ln ? ln.titleHtml : esc(nodeLabel(sp, nd))}</b>${faceHtml(sp, nd, ln)}${g}${LS.data ? dataHtml(sp, nd, ln) : ''}</div>` : ''; });
   }).join('') +
   (alias.length ? `<div class="sec small"><span class="lab">其他點</span>　${aln ? esc(aln) + '。' : ''}沒有自己的數據，照下面的表：<ul>${alias.map(a => `<li>${a}</li>`).join('')}</ul></div>` : '');
 }
@@ -310,7 +334,7 @@ function lanswer(a, el) {
   $('#ans').innerHTML = `<div class="sec"><p class="res ${good || alt ? 'ok' : 'no'}">${res}：${esc(alab(r.a, r))}${r.ok.length ? `（${r.ok.map(x => alab(x, r)).join('、')} 也可以）` : ''}</p><button class="nx" data-next>下一題 →</button>
   <p class="small">這手是<b>${esc(clsName(q))}</b>，表上：${esc(r.cl || '全部牌面')} → <b>${esc(alab(r.a, r))}</b>。${esc(r.why)}</p>
   <p class="small muted">${esc(L.basis[r.b])}｜${esc(r.ev)}</p>
-  <p class="small"><b class="ttl">${(TITLES && TITLES.titleForEg(r.sp, r.nd, q.e) || {}).titleHtml || esc(nodeLabel(r.sp, r.nd))}</b>${roTitle(r.nd, rowRo(r) || rcat(q.e.b, stOf(r.nd)))}（框起來的是這題）</p>${gridHtml(r.sp, r.nd, r, TITLES && TITLES.titleForEg(r.sp, r.nd, q.e), stOf(r.nd) ? (rowRo(r) || rcat(q.e.b, stOf(r.nd))) : null)}<p class="small"><a href="#lines" data-go="${r.sp}">看完整對照表</a></p></div>${defsHtml(false)}`;
+  <p class="small"><b class="ttl">${(TITLES && TITLES.titleForEg(r.sp, r.nd, q.e) || {}).titleHtml || esc(nodeLabel(r.sp, r.nd))}</b>${roTitle(r.nd, rowRo(r) || rcat(q.e.b, stOf(r.nd)))}（框起來的是這題）</p>${gridHtml(r.sp, r.nd, r, TITLES && TITLES.titleForEg(r.sp, r.nd, q.e))}<p class="small"><a href="#lines" data-go="${r.sp}">看完整對照表</a></p></div>${defsHtml(false)}`;
 }
 function clsName(q) { return q.row.hc.map(h => stOf(q.row.nd) === 2 && ['DRAW', 'WDRAW'].includes(h) ? hlabel(h, q.row.nd) : L.hc[h]).join('／'); }
 // ---------- 路由 ----------

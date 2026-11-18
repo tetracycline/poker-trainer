@@ -46,6 +46,7 @@ const strip = s => String(s).replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').repl
 const rowsOf = (sp, nd) => L.rows.filter(r => r.sp === sp && r.nd === nd);
 // run 005 落牌分類：表只含同類列（未分的 CERT 列每類都列；河牌 ct 列歸到對應類）
 const RO_CN = { over: '高張落下（A/K 或新最大牌）', pair: '公牌成對', flush: '同花完成', straight: '順子完成', draw: '補聽牌', brick: '空白牌' };
+const RO_SHORT = { over: '高張落下', pair: '成對', flush: '同花完成', straight: '順子完成', draw: '補聽', brick: '空白' };
 const rowRo = r => (r.c && r.c.ro) || (r.c && ({ flush: 'flush', str4: 'straight' })[r.c.ct]) || null;
 
 // ---------- 3. 自己的動作正規化（原始例題 → 你/對手＋動作）----------
@@ -104,20 +105,41 @@ function parseSections(html, sp) {
     const tm = seg.match(/<b class="ttl">([\s\S]*?)<\/b>/);
     const titleHtml = tm ? tm[1] : '';
     const face = (seg.match(/<p class="small muted">你面對（例）：([\s\S]*?)<\/p>/) || [])[1] || '';
-    const tab = (seg.match(/<table class="rt lt">([\s\S]*?)<\/table>/) || [])[1] || '';
-    const trs = [...tab.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map(m => m[1]);
-    const cols = trs.length ? [...trs[0].matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].slice(1).map(m => strip(m[1])) : [];
-    const rows = trs.slice(1).map(tr => {
-      const cond = strip((tr.match(/<th class="cl">([\s\S]*?)<\/th>/) || [])[1] || '');
-      const cells = [...tr.matchAll(/<td class="([^"]*)">([\s\S]*?)<\/td>/g)].map(m => ({ cls: m[1], text: strip(m[2].replace(/<small[\s\S]*?<\/small>/g, '')), basis: strip((m[2].match(/<small[^>]*>([\s\S]*?)<\/small>/) || [])[1] || '') }));
-      return { cond, cells };
-    });
+    const tabm = seg.match(/<table\b([^>]*)>([\s\S]*?)<\/table>/) || [];
+    const kind = /data-kind="runout"/.test(tabm[1] || '') ? 'runout' : 'class';
+    const tab = tabm[2] || '';
+    const trs = [...tab.matchAll(/<tr([^>]*)>([\s\S]*?)<\/tr>/g)].map(m => ({ attr: m[1], body: m[2] }));
+    const parseCells = body => [...body.matchAll(/<td class="([^"]*)"[^>]*>([\s\S]*?)<\/td>/g)].map(m => ({ cls: m[1], ro: (m[0].match(/data-ro="([^"]+)"/) || [])[1] || null, text: strip(m[2].replace(/<small[\s\S]*?<\/small>/g, '')), basis: strip((m[2].match(/<small[^>]*>([\s\S]*?)<\/small>/) || [])[1] || '') }));
+    let cols, rows, ros = null;
+    if (kind === 'runout') {
+      ros = trs.length ? [...trs[0].body.matchAll(/<th[^>]*data-ro="([^"]+)"[^>]*>/g)].map(m => m[1]) : [];
+      cols = ros.map(k => RO_CN[k] || k);
+      let gcond = '全部';
+      rows = [];
+      for (const tr of trs.slice(1)) {
+        if (/\bgrp\b/.test(tr.attr) || /colspan=/.test(tr.body)) { gcond = strip((tr.body.match(/<th[^>]*>([\s\S]*?)<\/th>/) || [])[1] || ''); continue; }
+        const cond = (tr.attr.match(/data-cl="([^"]*)"/) || [])[1] || gcond;
+        const h = (tr.attr.match(/data-h="([^"]*)"/) || [])[1] || HCODE[strip((tr.body.match(/<th class="cl">([\s\S]*?)<\/th>/) || [])[1] || '')];
+        rows.push({ cond: cond.replace(/&amp;/g, '&'), h, hlab: HNAME[h] || h, cells: parseCells(tr.body) });
+      }
+    } else {
+      cols = trs.length ? [...trs[0].body.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].slice(1).map(m => strip(m[1])) : [];
+      rows = trs.slice(1).map(tr => {
+        const cond = strip((tr.body.match(/<th class="cl">([\s\S]*?)<\/th>/) || [])[1] || '');
+        return { cond, cells: parseCells(tr.body) };
+      });
+    }
     const exm = seg.match(/<span class="lab"><span class="df"[^>]*>例外<\/span><\/span>　([\s\S]*?)<\/p>/);
-    const exc = exm ? exm[1].split('；').map(x => { const t = strip(x); const m = t.match(/^(.*)：(.*) → (.*)$/); return m ? { cond: m[1], classes: m[2].split('、'), text: m[3].replace(/(池估|池|GTO|兩人 GTO 近似)$/, '') } : { raw: t }; }) : [];
+    const exc = exm ? exm[1].split('；').map(x => {
+      const t = strip(x);
+      const m = t.match(/^(?:(高張落下|成對|同花完成|順子完成|補聽|空白|公牌成對|補聽牌|空白牌)・)?(.*?)：(.*) → (.*)$/);
+      if (!m) return { raw: t };
+      const roLab = m[1] || '';
+      const ro = Object.keys(RO_SHORT).find(k => RO_SHORT[k] === roLab) || Object.keys(RO_CN).find(k => RO_CN[k] === roLab) || null;
+      return { ro, cond: m[2], classes: m[3].split('、'), text: m[4].replace(/(沿用 ?n[\d.]*·?[\d.]*盤|池估|池|GTO|兩人 GTO 近似).*$/, '').trim() };
+    }) : [];
     const [nsp, nd] = starts[k].node.split('/');
-    const rom = seg.match(/<b class="ro">｜(?:轉牌|河牌)：([\s\S]*?)<\/b>/); // run 005：每類落牌一張表
-    const ro = rom ? (Object.keys(RO_CN).find(k => RO_CN[k] === strip(rom[1])) || '?' + strip(rom[1])) : null;
-    out.push({ sp: nsp || sp, nd, titleHtml, title: strip(titleHtml), ro, face: strip(face), cols, rows, exc });
+    out.push({ sp: nsp || sp, nd, titleHtml, title: strip(titleHtml), kind, ro: null, ros, face: strip(face), cols, rows, exc });
   }
   return out;
 }
@@ -278,8 +300,8 @@ for (const spot of L.spots) {
       });
     }
     t.decisions = decisions;
-    // (f) 每一格（分落牌的表只看同類列）
-    const nodeRows = rowsOf(t.sp, t.nd).filter(r => !t.ro || !rowRo(r) || rowRo(r) === t.ro);
+    // (f) 每一格（同一條線一張表；分落牌的欄只對同類列）
+    const nodeRows = rowsOf(t.sp, t.nd);
     const SS = states(S);
     function checkCell(r, h, label, txt) {
       const lines = [];
@@ -348,41 +370,49 @@ for (const spot of L.spots) {
       return { ok: okAll, lines, wtxt, witnesses, reason };
     }
     let nCells = 0;
+    const rowsFor = rv => nodeRows.filter(r => !rv || !rowRo(r) || rowRo(r) === rv);
+    const labOf = (row, ci) => t.kind === 'runout' ? `${row.cond}×${row.hlab}×${RO_SHORT[t.ros[ci]] || t.cols[ci]}` : `${row.cond}×${t.cols[ci]}`;
+    const hOf = (row, ci) => t.kind === 'runout' ? row.h : HCODE[t.cols[ci]];
+    const roOf = (row, ci, c) => t.kind === 'runout' ? (c.ro || t.ros[ci]) : t.ro;
     for (const row of t.rows) {
       row.cells.forEach((c, ci) => {
-        const lab = t.cols[ci], h = HCODE[lab];
+        const h = hOf(row, ci), lab = labOf(row, ci), rv = roOf(row, ci, c);
         if (/\bna\b/.test(c.cls)) return;
         nCells++;
-        const r = nodeRows.find(x => !x.x && (x.cl || '全部') === row.cond && x.hc.includes(h));
-        if (!r) { V(t, '資料', `${row.cond}×${lab}：資料裡找不到這一格`); return; }
+        const pool = rowsFor(rv);
+        const r = pool.find(x => !x.x && (x.cl || '全部') === row.cond && x.hc.includes(h));
+        if (!r) { V(t, '資料', `${lab}：資料裡找不到這一格`); return; }
         const want = ANS[r.a];
-        if (!c.text.startsWith(want === '下注' ? '' : want) && !(r.a === 'r' && /^全下/.test(c.text))) V(t, '答案', `${row.cond}×${lab}：畫面「${c.text}」與資料答案 ${r.a} 不一致`);
-        const res = checkCell(r, h, `${row.cond}×${lab}`, c.text);
-        t.checks.push({ cell: `${row.cond}×${lab}＝${c.text}`, ...res });
-        if (!res.ok) V(t, '走不到的格', `${row.cond}×${lab}（${c.text}）：${res.lines.filter(x => /✗|（無）/.test(x)).join('；') || res.wtxt}`);
+        if (!c.text.startsWith(want === '下注' ? '' : want) && !(r.a === 'r' && /^全下/.test(c.text))) V(t, '答案', `${lab}：畫面「${c.text}」與資料答案 ${r.a} 不一致`);
+        const res = checkCell(r, h, lab, c.text);
+        t.checks.push({ cell: `${lab}＝${c.text}`, ...res });
+        if (!res.ok) V(t, '走不到的格', `${lab}（${c.text}）：${res.lines.filter(x => /✗|（無）/.test(x)).join('；') || res.wtxt}`);
       });
     }
     for (const e of t.exc) {
       if (e.raw) { V(t, '資料', '例外列無法解析：' + e.raw); continue; }
       for (const lab of e.classes) {
         const h = Object.keys(HNAME).find(k => HNAME[k] === lab) || HCODE[lab];
-        const r = nodeRows.find(x => x.x && x.cl === e.cond && x.hc.includes(h));
-        if (!r) { V(t, '資料', `例外「${e.cond}」×${lab} 在資料裡找不到`); continue; }
+        const pool = rowsFor(e.ro);
+        const r = pool.find(x => x.x && x.cl === e.cond && x.hc.includes(h));
+        if (!r) { V(t, '資料', `例外「${e.ro ? (RO_SHORT[e.ro] + '・') : ''}${e.cond}」×${lab} 在資料裡找不到`); continue; }
         nCells++;
         const res = checkCell(r, h, `例外 ${e.cond}×${lab}`, e.text);
         t.checks.push({ cell: `例外 ${e.cond}×${lab}＝${e.text}`, ...res });
         if (!res.ok) V(t, '走不到的格', `例外 ${e.cond}×${lab}：${res.lines.filter(x => /✗|（無）/.test(x)).join('；') || res.wtxt}`);
       }
     }
-    // (g) 反查漏格：這個節點資料裡每一列 × 每個牌型，走得到卻沒顯示
+    // (g) 反查漏格：這個節點資料裡每一列 × 每個牌型（分落牌則再 × 落牌類），走得到卻沒顯示
     const shownBase = new Set(), shownEx = new Set();
-    for (const row of t.rows) row.cells.forEach((c, ci) => { if (!/\bna\b/.test(c.cls)) shownBase.add(row.cond + '|' + HCODE[t.cols[ci]]); });
-    for (const e of t.exc) for (const lab of (e.classes || [])) shownEx.add(e.cond + '|' + (Object.keys(HNAME).find(k => HNAME[k] === lab) || HCODE[lab]));
+    for (const row of t.rows) row.cells.forEach((c, ci) => { if (!/\bna\b/.test(c.cls)) shownBase.add(row.cond + '|' + hOf(row, ci) + '|' + (roOf(row, ci, c) || '')); });
+    for (const e of t.exc) for (const lab of (e.classes || [])) shownEx.add(e.cond + '|' + (Object.keys(HNAME).find(k => HNAME[k] === lab) || HCODE[lab]) + '|' + (e.ro || ''));
     const canonSt = P.streets.map(b => canon(b));
     for (const r of nodeRows) for (const h of r.hc) {
-      const k = (r.x ? r.cl : (r.cl || '全部')) + '|' + h;
+      const k = (r.x ? r.cl : (r.cl || '全部')) + '|' + h + '|' + (rowRo(r) || '');
       if ((r.x ? shownEx : shownBase).has(k)) continue;
-      if (reachable(t.sp, t.nd, canonSt, F, r, h)) V(t, '漏格', `${r.x ? '例外 ' : ''}${r.cl || '全部'}×${HNAME[h]}（${ANS[r.a]}）走得到卻沒有顯示`);
+      // CERT 列（無 ro）出現在每一欄，任一欄有顯示即可
+      if (!rowRo(r) && [...(r.x ? shownEx : shownBase)].some(x => x.startsWith((r.x ? r.cl : (r.cl || '全部')) + '|' + h + '|'))) continue;
+      if (reachable(t.sp, t.nd, canonSt, F, r, h)) V(t, '漏格', `${r.x ? '例外 ' : ''}${r.cl || '全部'}×${HNAME[h]}${rowRo(r) ? '×' + RO_SHORT[rowRo(r)] : ''}（${ANS[r.a]}）走得到卻沒有顯示`);
     }
     t.key = canonSt.map(b => b.join('、')).join('|');
     t.nCells = nCells;
