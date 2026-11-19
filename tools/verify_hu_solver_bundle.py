@@ -29,7 +29,8 @@ def verify_downloads(root,run_id):
     kinds=set()
     for ad in sorted(root.iterdir()):
         if not ad.is_dir() or not (ad.name.startswith('nl2-new-branches-') or
-                                   ad.name.startswith('nl2-derived-')):
+                                   ad.name.startswith('nl2-derived-') or
+                                   ad.name.startswith('nl2-stage2-')):
             continue
         manifests=list((ad/'evidence').glob('*.json'))
         if len(manifests)!=1:
@@ -69,6 +70,12 @@ def verify_downloads(root,run_id):
                     if expected is None or abs(expected-observed)>1e-5:
                         raise ValueError('Turn/river node SPR mismatch '+k)
                 rp=reach(data,str(subfile),case['sub_sha256'],str(run_id))
+                if not rp['converged_for_cert']:
+                    raise ValueError('CFR not converged to <=0.5% source gap')
+                if case.get('combo_reach_report_sha256'):
+                    cr=ad/case['combo_reach_report']
+                    if not cr.exists() or checksum(cr)!=case['combo_reach_report_sha256']:
+                        raise ValueError('Combo reach original sha256 mismatch')
                 count=rp['summary']
                 n_subgames+=1
                 reach_combos+=count['combos_reachable']
