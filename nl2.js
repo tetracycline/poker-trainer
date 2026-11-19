@@ -477,6 +477,7 @@ function lines() {
       return `<div class="sec" data-node="${sp}/${nd}" id="${item.id}"><b class="ttl">${ln ? ln.titleHtml : esc(nodeLabel(sp, nd))}</b>${navHtml(cat, item)}${faceHtml(sp, nd, ln)}${g}${LS.data ? dataHtml(sp, nd, ln) : ''}</div>`; });
   }).join(''); })() +
   (alias.length ? `<div class="sec small"><span class="lab">其他點</span>　${aln ? esc(aln) + '。' : ''}沒有自己的數據，照下面的表：<ul>${alias.map(a => `<li>${a}</li>`).join('')}</ul></div>` : '');
+  if (window.NL2HUModel) app.innerHTML = window.NL2HUModel.repair(app.innerHTML,sp,lineCatalog(sp));
 }
 const f0 = x => Number(x).toLocaleString('en-US'), pc = (a, b) => Math.round(a / b * 1000) / 10 + '%';
 // 例子 → 畫面上的行動線
