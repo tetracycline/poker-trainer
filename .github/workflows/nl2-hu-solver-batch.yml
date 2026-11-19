@@ -1,4 +1,4 @@
-name: NL2 authentic HU solver batch (requires 16GB self-hosted runner)
+name: NL2 authentic HU solver batch (GitHub-hosted 16GB)
 on:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
@@ -7,11 +7,6 @@ on:
       - '.github/workflows/nl2-hu-solver-batch.yml'
   workflow_dispatch:
     inputs:
-      spot:
-        description: 'One exact HU spot'
-        type: choice
-        options: [BTN_BB, CO_BB, SB_BB, UTG_BB, HJ_BB, SB3_BTN, BB3_BTN]
-        default: BTN_BB
       start:
         description: 'First deterministic representative flop index'
         required: true
@@ -28,18 +23,23 @@ on:
 
 concurrency:
   group: nl2-hu-solver-${{ github.ref }}-${{ inputs.spot || 'BTN_BB' }}-${{ inputs.start || '0' }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   authentic-solver:
-    # Do not run on standard ubuntu-latest (~7 GB), risking OOM and false success.
-    # Supply a Linux x64 self-hosted runner with >=16 GiB memory and label poker-solver-16gb.
-    runs-on: [self-hosted, linux, x64, poker-solver-16gb]
-    timeout-minutes: 360
+    # Public repository's standard Linux GitHub-hosted runner: 4 vCPU / 16 GB RAM.
+    # Each job solves one flop at a time; raw JSON is uploaded as resumable artifact.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        spot: [BTN_BB, CO_BB, SB_BB, UTG_BB, HJ_BB, SB3_BTN, BB3_BTN]
+    timeout-minutes: 330
     permissions:
       contents: read
     env:
-      SPOT: ${{ inputs.spot || 'BTN_BB' }}
+      SPOT: ${{ matrix.spot }}
       START: ${{ inputs.start || '0' }}
       COUNT: ${{ inputs.count || '1' }}
       VERSION: ${{ inputs.version || 'gto' }}
