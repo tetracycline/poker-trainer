@@ -456,7 +456,7 @@ const reviewText = mdReview();
 const mdPath = opt('--md'), reviewPath = opt('--review'), jsonPath = opt('--json');
 if (mdPath) fs.writeFileSync(mdPath, auditText);
 if (reviewPath) fs.writeFileSync(reviewPath, reviewText);
-if (jsonPath) fs.writeFileSync(jsonPath, JSON.stringify({ counts, byKind, misses: misses }, null, 2));
+if (jsonPath) fs.writeFileSync(jsonPath, JSON.stringify({ counts, byKind, misses: misses, missingNext: [...missingNext.values()].sort((a,b)=>b.n-a.n), noRiverExamples: [...noREx.values()].sort((a,b)=>b.n-a.n) }, null, 2));
 if (!QUIET) {
   console.log(JSON.stringify(counts));
   if (misses.length) console.log('misses by kind', byKind);
