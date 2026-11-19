@@ -14,14 +14,20 @@ def digest(p):
         for buf in iter(lambda:f.read(1024*1024),b''):h.update(buf)
     return h.hexdigest()
 
-def node_compact(node,raw):
-    player=node['player']
-    hands=raw['hands'][player]
-    w=node['w'][player]
-    f=node['strat'];act=node['acts'];nh=len(hands)
-    if len(w)!=nh or len(f)!=nh*len(act):raise ValueError('Malformed per-combo source')
-    masks=bytearray(nh)
-    sums=[0.0]*len(act);total=0.0;live=mixed=0
+def node_compact(node, raw):
+    """Compact and fully auditable per-combo actions and relative action EVs."""
+    import math,statistics
+    player=node['player'];hands=raw['hands'][player]
+    w=node['w'][player];f=node['strat'];act=node['acts'];nh=len(hands)
+    e=node.get('ev',[]);qeq=node.get('eq',[])
+    if len(w)!=nh or len(f)!=nh*len(act) or len(e)!=nh*len(act) or len(qeq)!=nh:
+        raise ValueError('Malformed combo/strategy/action EV dimensions')
+    if len(act)>8:raise ValueError('At most 8 source actions supported')
+    masks=bytearray(nh);best_ev=bytearray([255]*nh)
+    sums=[0.]*len(act);total=0.;live=mixed=0
+    weights=[];b50_candidates=[]
+    ev_gaps=[]
+    b50_idx=act.index('b50') if 'b50' in act else None
     for h in range(nh):
         weight=float(w[h])
         if weight<=1e-4:continue
@@ -32,22 +38,62 @@ def node_compact(node,raw):
         highest=max(range(len(prob)),key=lambda i:prob[i])
         kept=[highest]+[i for i,p in enumerate(prob) if i!=highest and
                p>=0.4-1e-7 and p>=0.7*prob[highest]-1e-7]
-        if max(kept)>7:raise ValueError('At most 8 source actions supported')
         masks[h]=sum(1<<i for i in kept)
-        live+=1;mixed+=int(len(kept)>1)
-        total+=weight
+        live+=1;mixed+=int(len(kept)>1);total+=weight
         for i,p in enumerate(prob):sums[i]+=weight*p
+        # Action EV is in the solver's original 1/100 bb units. Record the
+        # maximum for the same actual board and opponent, never a generic pool.
+        values=[float(e[j*nh+h]) for j in range(len(act))]
+        if any(not math.isfinite(x) for x in values):
+            raise ValueError('Nonfinite action EV')
+        ranked=sorted(range(len(values)),key=lambda i:(values[i],prob[i]),reverse=True)
+        best_ev[h]=ranked[0]
+        if len(values)>1:ev_gaps.append((values[ranked[0]]-values[ranked[1]])/100.)
+        eq=float(qeq[h])
+        if not math.isfinite(eq) or eq<0 or eq>1.001:
+            raise ValueError('Invalid relative equity of actual combo')
+        weights.append((eq,weight))
+        if b50_idx is not None and b50_idx in kept:
+            b50_candidates.append((eq,weight,h,highest,values[b50_idx]))
+    low=middle=high=0
+    lowmass=midmass=highmass=0.
+    if weights and b50_idx is not None:
+        sorted_w=sorted(weights)
+        def weighted_quantile(frac):
+            target=total*frac;acc=0.
+            for eq,weight in sorted_w:
+                acc+=weight
+                if acc>=target:return eq
+            return sorted_w[-1][0]
+        first,second=weighted_quantile(1/3),weighted_quantile(2/3)
+        for eq,weight,h,highest,ev50 in b50_candidates:
+            if eq<first:low+=1;lowmass+=weight
+            elif eq>second:high+=1;highmass+=weight
+            else:middle+=1;midmass+=weight
+    b50mass=lowmass+midmass+highmass
+    merged=bool(len(b50_candidates)>=20 and middle>=10
+                and midmass>=b50mass*0.2 and (high>=5 or low>=5))
     return {'line':node['line'],'board':node['board'],'acting_seat':player,
        'actions':act,'pot_units':node['pot'],'bets_units':node['bets'],
        'remaining_stack_units':raw['stack']-max(node['bets']),
        'node_spr':round((raw['stack']-max(node['bets']))/node['pot'],6),
        'reachable_combos':live,'near_mixed_combos':mixed,
-       'reach_weighted_action_pct':{a:round(100*s/total,3) if total else 0.
-                                     for a,s in zip(act,sums)},
-       'eligibility_encoding':'base64(uint8 per combo in hands[acting_seat], bit(i) for eligible action i, zero if absent)',
+       'reach_weighted_action_pct':{a:round(100*x/total,3) if total else 0.
+                                     for a,x in zip(act,sums)},
+       'eligibility_encoding':'base64 uint8 bitmask in exact hands[acting_seat] order; highest always kept; second iff f>=40% and >=70%*fmax; absent zero',
        'eligible_action_masks_b64':base64.b64encode(masks).decode('ascii'),
-       'medium_50pct_eligible_combos':sum(bool(x&(1<<act.index('b50'))) for x in masks)
-                                           if 'b50' in act else 0}
+       'best_ev_action_indices_b64':base64.b64encode(best_ev).decode('ascii'),
+       'best_ev_encoding':'base64 uint8 index into original actions in exact hands[acting_seat] order, 255 if unreachable; conditional solver EV, not universal NL2 recommendation',
+       'median_best_vs_next_ev_gap_bb':round(statistics.median(ev_gaps),5) if ev_gaps else None,
+       'medium_50pct_eligible_combos':len(b50_candidates),
+       'b50_relative_equity_mix':None if b50_idx is None else {
+           'low_count':low,'middle_count':middle,'high_count':high,
+           'middle_eligible_weight_share_pct':round(100*midmass/b50mass,2) if b50mass else 0.,
+           'definition':'Relative to current spot reach-weighted equity terciles, not fixed hand classes',
+           'nonpolarized_medium_bet_candidate':merged,
+           'candidate_threshold':'b50 eligible >=20 combos; middle equity >=10 combos and >=20% of b50 reach mass; low or high tail >=5 combos',
+           'status':'SOURCE_ONLY_NOT_GENERALIZABLE_TO_TEXTURE_OR_ANOTHER_SPR'
+       }}
 
 def build(root,proof):
     all_verified={}
