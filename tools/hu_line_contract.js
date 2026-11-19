@@ -14,7 +14,7 @@ const ctx = {
 };
 ctx.window = ctx;
 vm.createContext(ctx);
-for (const name of ['lines_data.js','nl2_rules.js','hwrange.js','nl2_reach.js','nl2_titles.js','nl2.js']) {
+for (const name of ['lines_data.js','nl2_rules.js','hwrange.js','nl2_reach.js','nl2_titles.js','nl2_hu_model.js','nl2.js']) {
   vm.runInContext(fs.readFileSync(path.join(root,name),'utf8'),ctx,{filename:name});
 }
 if (!ctx.__linesQA || !ctx.NLL) throw new Error('NL2 renderer/data unavailable');
