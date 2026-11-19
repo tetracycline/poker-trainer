@@ -48,6 +48,16 @@ for(const spot of ctx.NLL.spots){
  function locate(href,bt){const target=targetFor(href),s=target&&secs.find(x=>x.id===target.id);if(!s)return null;
    return {s,row:s.rows.find(x=>x.bt===((href.match(/-(low|mid_high|KQ_high|A_high|paired|mono)$/)||[])[1]||bt))};}
  for(const s of secs){
+   if(s.model){
+     if(s.rows.length!==6)errs.push({kind:'MODEL_ROW_COUNT',table:s.id,rows:s.rows.length});
+     if(!s.part.includes('MODEL／待真實 CFR')||!s.part.includes('根 SPR')||!s.part.includes('SPR 約')||!s.part.includes('100bb'))
+       errs.push({kind:'MODEL_ASSUMPTION_DISCLOSURE_MISSING',table:s.id});
+     for(const row of s.rows){
+       if(row.cells.length!==5)errs.push({kind:'MODEL_COL_COUNT',table:s.id,board:row.bt,cols:row.cells.length});
+       for(const c of row.cells)if(!c.na && !c.html.includes('ASSUMED（非 GTO，非 CERT）'))
+         errs.push({kind:'MODEL_ACTION_NOT_CLEARY_MARKED_UNCERTIFIED',table:s.id,board:row.bt});
+     }
+   }
    for(const row of s.rows)for(let ci=0;ci<row.cells.length;ci++){
      const c=row.cells[ci];if(c.na)continue;
      for(const ext of c.html.matchAll(/<a class="jmp sub" href="#([^"]+)"/g)){
