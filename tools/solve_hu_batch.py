@@ -49,6 +49,24 @@ def main():
                 "external_engine_commit": "9d1509fe5077d019825f833eed04b16d342dfda1",
                 "source_pipeline_sha256": sha256(pf / "py/pipeline.py"),
                 "results": [], "failures": [], "files": []}
+    # The upstream solve_sub() builds a CFR subgame from reach-weighted
+    # flop descendants. Zero weight for either player is an unreachable path,
+    # never a solved river node (upstream Rust otherwise panics at unwrap()).
+    evidence["unreachable_subgames"] = []
+    def check_reach(fr, line, turn):
+        node = next((n for n in fr["nodes"]
+                     if n["line"] == line + "/" and n["board"][-2:] == turn), None)
+        if node is None:
+            return False, "MISSING_TURN_NODE"
+        ranges = node.get("wr", ())
+        if len(ranges) != 2:
+            return False, "MISSING_RANGE_WEIGHTS"
+        weights = [sum(float(w) for w in side if float(w) > 1e-4)
+                   for side in ranges]
+        if weights[0] <= 0 or weights[1] <= 0:
+            return False, ("OOP_RANGE_EMPTY" if weights[0] <= 0
+                           else "IP_RANGE_EMPTY")
+        return True, None
     started = time.monotonic()
     for flop in selected:
         try:
@@ -59,6 +77,12 @@ def main():
             lines = list(dict.fromkeys((ml, "x x")))
             for line in lines:
                 for turn in fr.get("turns", pipeline.turns_for(flop)):
+                    reachable, reason = check_reach(fr, line, turn)
+                    if not reachable:
+                        evidence["unreachable_subgames"].append({
+                            "flop": flop, "line": line, "turn": turn,
+                            "reason": reason, "status": "NOT_SOLVED_UNREACHABLE"})
+                        continue
                     pipeline.solve_sub(opts.spot, opts.version, flop, fr, line, turn)
             evidence["results"].append({"flop": flop, "flop_lines": lines,
                                         "turns": fr.get("turns", []),
@@ -74,6 +98,7 @@ def main():
     evidence["elapsed_seconds"] = round(time.monotonic() - started, 2)
     evidence["solved_flops"] = len(evidence["results"])
     evidence["failed_flops"] = len(evidence["failures"])
+    evidence["unreachable_subgame_count"] = len(evidence["unreachable_subgames"])
     evidence["nl2_verified_river_coverage_delta"] = 0
     opts.manifest.parent.mkdir(parents=True, exist_ok=True)
     opts.manifest.write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + "\n", encoding="utf8")
