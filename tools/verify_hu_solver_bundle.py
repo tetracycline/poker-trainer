@@ -18,6 +18,66 @@ def checksum(p):
         for c in iter(lambda:f.read(1024*1024),b''):h.update(c)
     return h.hexdigest()
 
+import re
+
+def audit_pool_locks(data, subfile, ver):
+    # An observed aggregate NL2 node frequency is not an observed combo range.
+    if ver=='gto':return {'version':'GTO_NO_POOL_LOCK','villain_nodes':0,'matched_nodes':0,'coverage_pct':None}
+    jobfile=subfile.with_suffix('.job.json')
+    if not jobfile.is_file():raise ValueError('Missing source CFR job: '+str(jobfile))
+    job=json.loads(jobfile.read_text())
+    pats=[re.compile(x['pat']) for x in job.get('locks',[])]
+    villain=0 if ver=='exp_ip' else 1
+    valid=matched=0;unknown=[]
+    for node in data['nodes']:
+        if node['player']!=villain or len(node['acts'])<2:continue
+        if not any(float(x)>1e-4 for x in node['w'][villain]):continue
+        valid+=1
+        if any(p.search(node['line']) for p in pats):matched+=1
+        else:unknown.append({'board':node['board'],'line':node['line']})
+    return {'version':'NL2_AGGREGATE_NODE_LOCKS_NOT_DIRECT_COMBO_OBSERVATIONS',
+      'villain_nodes':valid,'matched_nodes':matched,'unmatched_nodes':valid-matched,
+      'coverage_pct':round(100*matched/valid,2) if valid else None,
+      'source_pattern_count':len(pats),'unmatched_examples':unknown[:25],
+      'fully_locked_in_sample':bool(valid>0 and matched==valid),
+      'interpretation':'Regex match is source coverage, not observed combo evidence; unmatched villain nodes remain unlocked.'}
+
+def exact_medium_action_candidates(data, ver):
+    # Eligible only on the exact public cards and action history, never on
+    # every board with the same texture or a different family/SPR.
+    hero=1 if ver=='exp_ip' else 0 if ver=='exp_oop' else None
+    out=[]
+    for node in data['nodes']:
+        actor=node['player']
+        if hero is not None and actor!=hero:continue
+        acts=node['acts']
+        if 'b50' not in acts:continue
+        nh=len(data['hands'][actor])
+        w=node['w'][actor];strategy=node['strat']
+        if len(strategy)!=nh*len(acts):raise ValueError('CFR strategy dimensions invalid')
+        bj=acts.index('b50');cnt=0;freq_sum=reach_sum=0.
+        for h in range(nh):
+            wt=float(w[h])
+            if wt<=1e-4:continue
+            q=[max(0,float(strategy[i*nh+h])) for i in range(len(acts))]
+            t=sum(q)
+            if t<=0:continue
+            q=[v/t for v in q];reach_sum+=wt;freq_sum+=wt*q[bj]
+            if q[bj]>=0.4-1e-7 and q[bj]>=0.7*max(q)-1e-7:cnt+=1
+        if cnt:
+            out.append({'board':node['board'],'exact_line':node['line'],'hero':hero,
+              'actor':actor,'node_spr':round((data['stack']-max(node['bets']))/node['pot'],6),
+              'eligible_combos':cnt,'reach_weighted_b50_pct':round(100*freq_sum/reach_sum,3) if reach_sum else 0})
+    return out[:150]
+
+def locked_response_gain(data,ver):
+    if ver=='gto':return None
+    a=data['info'].get('ev_exploit');b=data['info'].get('ev_gto_vs_pool')
+    if not isinstance(a,list) or not isinstance(b,list) or len(a)!=2 or len(b)!=2:
+        return None
+    hero=1 if ver=='exp_ip' else 0
+    return round((float(a[hero])-float(b[hero]))/100,5)
+
 def verify_downloads(root,run_id):
     reach=importlib.import_module('hu_action_reach').audit
     results=[]
@@ -87,6 +147,9 @@ def verify_downloads(root,run_id):
                     cr=ad/case['combo_reach_report']
                     if not cr.exists() or checksum(cr)!=case['combo_reach_report_sha256']:
                         raise ValueError('Combo reach original sha256 mismatch')
+                pool_support=audit_pool_locks(data,subfile,ver)
+                med=exact_medium_action_candidates(data,ver)
+                gain=locked_response_gain(data,ver)
                 count=rp['summary']
                 n_subgames+=1
                 reach_combos+=count['combos_reachable']
@@ -100,6 +163,10 @@ def verify_downloads(root,run_id):
                   'solver_validated_for':'GTO_EXACT_BOARD_ONLY' if ver=='gto' else 'LOCKED_POOL_RESPONSE_PROVISIONAL_GTO_BASELINE',
                   'hero_gap_pct':data['info'].get('hero_gap_pct'),
                   'pool_lock_patterns':len(data['info'].get('lock_stats',{})),
+                  'villain_pool_lock_coverage':pool_support,
+                  'hero_gain_vs_locked_pool_bb':gain,
+                  'medium50_exact_board_candidates':med,
+                  'medium50_not_a_generic_MODEL_cert':True,
                   'source_sha256':case['sub_sha256'],
                   'reach_summary':count,
                   'certified_nl2_cells':0})
