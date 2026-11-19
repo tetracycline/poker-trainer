@@ -1,0 +1,33 @@
+name: NL2 verify new UTG_CO and CO3_BTN solver lineage
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-derived-validation.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify-new-positions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve all six exact-position CFR artifacts from frozen run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p evidence/downloads evidence/output
+          gh run download 44499874094 --repo "$GITHUB_REPOSITORY" --dir evidence/downloads
+      - name: Independently verify each actual board, action, exact pot/SPR, source sha and combo reach
+        run: |
+          python3 tools/verify_hu_solver_bundle.py \
+            --downloads evidence/downloads --run-id 44499874094 \
+            --out evidence/output/derived-position-proof.json
+      - name: Archive verified solver provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-derived-position-proof
+          path: evidence/output/
+          retention-days: 30
