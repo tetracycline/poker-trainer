@@ -244,7 +244,10 @@ function repair(html,sp,catalog){
     const base=href.replace(/-(?:low|mid_high|KQ_high|A_high|paired|mono)$/,'');
     return ids.has(base) ? all : '<small class="lo" title="無可達來源，未建立該支線">'+strip(label).replace(/→$/,'')+'（待證）</small>';
   });
-  root.__HU_MODEL_LAST={spot:sp,synthetic:created.length,assumption:true,sourceSections:sections.length};
+  root.__HU_MODEL_LAST={spot:sp,synthetic:created.length,assumption:true,sourceSections:sections.length,
+    nodes:created.map(n=>({id:n.id,source:n.source,sp:n.sp,nd:n.nd,st:n.st,
+      pre:n.pre,action:n.action,size:n.size,key:n.key,allowed:[...n.allowed].sort(),
+      facts:n.facts}))};
   return patched;
 }
 root.NL2HUModel={repair,version:'hu-nl2-100bb-assumption-v1'};
