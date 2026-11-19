@@ -76,6 +76,27 @@ def main():
         ranges.SPOTS[profile]=config
         pipeline.NFLOP[profile]=8
         pipeline.OFFS[profile]=0.31 if profile=='UTG_CO' else 0.69
+    # The NL2 34-55% size bucket has actual observed fold/raise frequencies.
+    # The pinned solver only handles b33 and b75 by default; add b50
+    # when its exact measured n>=500. Never treat unobserved combos as data.
+    default_lock_list=pipeline.lock_list
+    def size_aware_locks(spot,version,board):
+        dl,meta=default_lock_list(spot,version,board)
+        if version!='gto' and a.flop_bet_sizes=='33%,50%,75%':
+            import locks as LK
+            sp=pipeline.SPOTS[spot]
+            villain_pfr=(sp['pfr']=='ip')!=(version=='exp_ip')
+            if not villain_pfr and sp['kind'] in ('SRP','3BP'):
+                P='IP' if sp['pfr']=='ip' else 'OOP'
+                src=sp['kind']+'_PFR_'+P+'.vs_cbet_by_size[34-55%]'
+                d=LK.PH[sp['kind']+'_PFR_'+P]['vs_cbet_by_size']['34-55%']
+                if int(d['n'])>=500:
+                    pat='^x b50$' if sp['pfr']=='ip' else '^b50$'
+                    dl.append({'pat':pat,'fold':d['fold']/100,'raise':d['raise']/100})
+                    meta.append({'pat':pat,'n':d['n'],'src':src,
+                                 'fold':d['fold']/100,'raise_':d['raise']/100})
+        return dl,meta
+    pipeline.lock_list=size_aware_locks
     sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
     reach_audit=importlib.import_module('hu_action_reach').audit
     if a.flop is not None:
@@ -122,7 +143,10 @@ def main():
         extracts=[dict(prefix=[],street=True)] + [
           dict(prefix=line.split()+[turn],street=False,raw=True)
           for line in lines for turn in turns]
-        locks,_=pipeline.lock_list(a.spot,a.version,flop)
+        locks,lock_sources=pipeline.lock_list(a.spot,a.version,flop)
+        manifest.setdefault('pool_lock_evidence',{})[flop]={
+          'pattern_count':len(locks),'source_patterns':lock_sources,
+          'limitation':'Observed node frequencies only; no observed NL2 combo-specific pool strategy.'}
         j=job.make_job(a.spot,a.version,flop,str(fpath)+'.tmp',
           extract=extracts,locks=locks,compress=True,target=0.5,
           rank=0.5 if a.strict_stage1 else 1.5,
