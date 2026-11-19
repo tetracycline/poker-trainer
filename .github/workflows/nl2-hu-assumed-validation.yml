@@ -1,0 +1,42 @@
+name: NL2 verify assumed ISO and limp real CFR
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-assumed-validation.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify-assumed-isolimp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve exact two frozen 100bb genuine CFR solver archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p evidence/downloads evidence/output
+          for spot in ISO_BTN_CO LMP_CO_BB; do
+            gh api -H 'Accept: application/vnd.github+json' \
+              "/repos/$GITHUB_REPOSITORY/actions/runs/44508547280/artifacts?per_page=100" \
+              --jq '.artifacts[] | [.id, .name] | @tsv' > evidence/archived-ids.txt
+            artifact="$(awk -v name="nl2-assumed-$spot" '$2==name {print $1}' evidence/archived-ids.txt)"
+            test -n "$artifact"
+            gh api -H 'Accept: application/vnd.github+json' \
+              "/repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact/zip" \
+              > "evidence/downloads/$spot.zip"
+          done
+      - name: Independently verify actual engine pot/stack/rake, per-169 hand weights, CFR convergence, hashes and river nodes
+        run: |
+          python3 tools/verify_hu_assumed_pots.py \
+            --zip evidence/downloads/ISO_BTN_CO.zip evidence/downloads/LMP_CO_BB.zip \
+            --out evidence/output/assumed-isolimp-CFR-proof.json
+      - name: Publish exact proof without claiming CERT or EST for website
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-assumed-iso-lmp-verified
+          path: evidence/output/
+          retention-days: 30
