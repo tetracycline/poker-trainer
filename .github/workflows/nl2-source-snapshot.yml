@@ -1,0 +1,26 @@
+name: NL2 audited source snapshot
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-source-snapshot.yml']
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload complete PR source for independent audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-source-snapshot
+          path: |
+            .github/workflows
+            tools
+            data
+            *.js
+            *.html
+            docs
+          retention-days: 1
+          compression-level: 6
