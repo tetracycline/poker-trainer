@@ -26,6 +26,20 @@ BRANCHES = {
     "SB_BB": ("b33 r c", "b75 r c"),
     "SB3_BTN": ("b33 r c", "b75 r c"),
     "BB3_BTN": ("b33 r c", "b75 r c"),
+    "UTG_CO": ("b33 r c", "b75 r c"),
+    "CO3_BTN": ("x b33 r c", "x b75 r c"),
+}
+# Verified against poker-solver/preflop/pfsolve.py's exact 100bb abstract tree:
+# RFI UTG/CO 2.5; first IP 3bet 3x (7.5); dead SB+BB=1.5.
+# Both player action-chain ranges come from the actual preflop CFR output.
+EXTRA_SPOTS = {
+    "UTG_CO": dict(oop="UTG",ip="CO",
+        oopc=[("UTGrfi","open")],ipc=[("UTGopen>CO","call")],
+        pot=6.5,stack=97.5,pfr="oop",kind="SRP"),
+    "CO3_BTN": dict(oop="CO",ip="BTN",
+        oopc=[("COrfi","open"),("COopen>BTN3b","call")],
+        ipc=[("COopen>BTN","3bet")],
+        pot=16.5,stack=92.5,pfr="ip",kind="3BP"),
 }
 def digest(p):
     h=hashlib.sha256()
@@ -51,6 +65,14 @@ def main():
     sys.path.insert(0,str(pf/'py'))
     pipeline=importlib.import_module('pipeline')
     job=importlib.import_module('job')
+    ranges=importlib.import_module('ranges')
+    for profile,config in EXTRA_SPOTS.items():
+        for node,action in config['oopc']+config['ipc']:
+            if node not in ranges.ACTS or action not in ranges.ACTS[node]:
+                raise SystemExit('INVALID_PREFLOP_CFR_RANGE: '+profile+' '+node+' '+action)
+        ranges.SPOTS[profile]=config
+        pipeline.NFLOP[profile]=8
+        pipeline.OFFS[profile]=0.31 if profile=='UTG_CO' else 0.69
     sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
     reach_audit=importlib.import_module('hu_action_reach').audit
     flops=pipeline.flops_for(a.spot)[a.start:a.start+a.count]
@@ -67,6 +89,8 @@ def main():
       'source':'tetracycline/poker-solver',
       'source_pipeline_sha256':digest(pf/'py/pipeline.py'),
       'source_ranges_sha256':digest(pf/'py/ranges.py'),
+      'source_preflop_tree_sha256':digest(a.solver_root.resolve()/'preflop/pfsolve.py'),
+      'derived_spot_profile':EXTRA_SPOTS.get(a.spot),
       'solver_output_is_not_nl2_certification':True,
       'cases':[],'failures':[],'skipped_unreachable':[],
     }
