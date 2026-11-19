@@ -62,7 +62,7 @@ GitHub Actions [44508555478](https://github.com/tetracycline/poker-trainer/actio
 - 既有原始解算 [44447817452](https://github.com/tetracycline/poker-trainer/actions/runs/44447817452)、[44481771702](https://github.com/tetracycline/poker-trainer/actions/runs/44481771702)；證據來源存檔完整性經 [44499274720](https://github.com/tetracycline/poker-trainer/actions/runs/44499274720) PASS；但 **90 代表翻牌不能自動覆蓋 ISO、3BP 等不同 pot/SPRs**。
 - 新多街 CFR [44498509066](https://github.com/tetracycline/poker-trainer/actions/runs/44498509066) 與 [44499874094](https://github.com/tetracycline/poker-trainer/actions/runs/44499874094)：共 24 個真實 turn–river CFR 子局，來源／SPR／可達性驗證 [44500729006](https://github.com/tetracycline/poker-trainer/actions/runs/44500729006) 和 [44500957474](https://github.com/tetracycline/poker-trainer/actions/runs/44500957474) 均 PASS。
 - 真實 50% pot 去極化配對 [44493984447](https://github.com/tetracycline/poker-trainer/actions/runs/44493984447)：經驗證尚無可直接發布到英雄策略格的 50% pot 決策；不能把對手的 50% pot 頻率錯標為英雄最佳下注。
-- 新 assumed ISO/LMP pilot 工作流程 `[nl2-hu-assumed-iso-lmp.yml](../.github/workflows/nl2-hu-assumed-iso-lmp.yml)`（本文件建立時進行中），產物仍以原始資料為主，不自動將 392 個 MODEL 表格改為 CERT／EST。
+- 已完成真實 ISO/LMP、100bb 假設範圍的 Rust CFR pilot：[44508547280](https://github.com/tetracycline/poker-trainer/actions/runs/44508547280) **PASS**，ISO BTN vs CO（AsKh6d／7d、根 SPR 10.105）和 CO limp vs BB check（AsQh3s／7h、根 SPR 39.6）各 2 個真實 turn+river 子局，總共 **4 個子局**，包含原始 CFR、固定 169 類範圍、action/board lineage、原始 SHA 與收斂資料。獨立來源／SPR／河牌節點驗證 [44509623733](https://github.com/tetracycline/poker-trainer/actions/runs/44509623733) **PASS**；GTO exploitability 為 0.267%、0.286%、0.285%、0.293%，皆在 0.5% 以下。**此 4 子局只代表真實 solver 在明示假設下求解成功，仍不能自動將 392 個 MODEL 表格改為 CERT／EST。**
 
 ## 距離『解算內容 100%』仍需完成
 
