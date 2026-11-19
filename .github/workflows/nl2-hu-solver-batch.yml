@@ -1,0 +1,89 @@
+name: NL2 authentic HU solver batch (requires 16GB self-hosted runner)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/solve_hu_batch.py'
+      - '.github/workflows/nl2-hu-solver-batch.yml'
+  workflow_dispatch:
+    inputs:
+      spot:
+        description: 'One exact HU spot'
+        type: choice
+        options: [BTN_BB, CO_BB, SB_BB, UTG_BB, HJ_BB, SB3_BTN, BB3_BTN]
+        default: BTN_BB
+      start:
+        description: 'First deterministic representative flop index'
+        required: true
+        default: '0'
+      count:
+        description: 'Number of flops in this batch'
+        required: true
+        default: '1'
+      version:
+        description: 'GTO or solved opponent-locked BR'
+        type: choice
+        options: [gto, exp_ip, exp_oop]
+        default: gto
+
+concurrency:
+  group: nl2-hu-solver-${{ github.ref }}-${{ inputs.spot || 'BTN_BB' }}-${{ inputs.start || '0' }}
+  cancel-in-progress: false
+
+jobs:
+  authentic-solver:
+    # Do not run on standard ubuntu-latest (~7 GB), risking OOM and false success.
+    # Supply a Linux x64 self-hosted runner with >=16 GiB memory and label poker-solver-16gb.
+    runs-on: [self-hosted, linux, x64, poker-solver-16gb]
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    env:
+      SPOT: ${{ inputs.spot || 'BTN_BB' }}
+      START: ${{ inputs.start || '0' }}
+      COUNT: ${{ inputs.count || '1' }}
+      VERSION: ${{ inputs.version || 'gto' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: main
+          path: solver
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Python dependencies
+        run: python -m pip install numpy matplotlib
+      - name: Checkout exact external Rust CFR engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+      - name: Build solver driver
+        working-directory: solver/postflop/pfdriver
+        run: cargo build --release --locked
+      - name: Run real CFR solve and emit hash manifest (no fabricated NL2 cells)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-commit.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/engine-commit.txt
+          python trainer/tools/solve_hu_batch.py \
+            --solver-root solver --spot "$SPOT" --start "$START" --count "$COUNT" \
+            --version "$VERSION" --manifest evidence/solver-manifest.json
+      - name: Preserve raw CFR output and reproducibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-real-solver-${{ env.SPOT }}-${{ env.VERSION }}-${{ env.START }}
+          path: |
+            evidence/
+            solver/postflop/out/
+          retention-days: 30
+          if-no-files-found: warn
