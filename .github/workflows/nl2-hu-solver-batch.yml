@@ -204,8 +204,11 @@ jobs:
           set -euo pipefail
           git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
           git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
-      - name: Build solver driver
+      - name: Build solver driver (legacy upstream Rust lint compatibility)
         working-directory: solver/postflop/pfdriver
+        env:
+          RUSTFLAGS: '-A dangerous_implicit_autorefs'
+          CARGO_BUILD_JOBS: '2'
         run: cargo build --release --locked
       - name: Run real CFR solve and emit hash manifest (no fabricated NL2 cells)
         shell: bash
