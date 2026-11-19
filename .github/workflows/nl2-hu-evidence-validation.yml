@@ -1,0 +1,50 @@
+name: NL2 verify archived CFR lineage and medium bet gate
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-evidence-validation.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify-authentic-CFR:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download ALL prior seven spot/version genuine CFR artifacts from completed solver run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p evidence/downloads evidence/output
+          gh run download 44498509066 --repo "$GITHUB_REPOSITORY" --dir evidence/downloads
+      - name: Verify every parent+subgame SHA-256, exact node SPR and combo reach
+        run: |
+          python3 tools/verify_hu_solver_bundle.py \
+            --downloads evidence/downloads --run-id 44498509066 \
+            --out evidence/output/river-solver-proof.json
+      - name: Download paired real CFR for medium-size bet decision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for ver in gto exp_ip exp_oop; do
+            mkdir -p "evidence/depol/BTN_BB-$ver"
+            gh run download 44493984447 --repo "$GITHUB_REPOSITORY" \
+              --name "depol-real-cfr-BTN_BB-$ver" \
+              --dir "evidence/depol/BTN_BB-$ver"
+          done
+      - name: Gate non-polarized flop bet publication on eligible hero combos
+        run: |
+          for ver in gto exp_ip exp_oop; do
+            python3 tools/gate_depolarized_cfr.py \
+              --folder "evidence/depol/BTN_BB-$ver" \
+              --out "evidence/output/depol-$ver.json"
+          done
+      - name: Archive auditable data including blockers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-verified-evidence
+          path: evidence/output
+          retention-days: 30
