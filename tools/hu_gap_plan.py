@@ -15,6 +15,10 @@ PROFILES = {
     'BTN_BB': (5.5, 97.5), 'CO_BB': (5.5, 97.5),
     'SB_BB': (6.0, 97.0), 'BB3_BTN': (20.5, 90.0),
     'SB3_BTN': (21.0, 90.0),
+    # From poker-solver/preflop/pfsolve.py: UTG opens 2.5, CO calls, blinds 1.5.
+    'UTG_CO': (6.5, 97.5),
+    # CO opens 2.5, BTN 3-bets IP to 7.5; CO calls, blinds 1.5.
+    'CO3_BTN': (16.5, 92.5),
 }
 
 def pot_family(pre):
@@ -28,9 +32,11 @@ def spot(pre, family):
         if 'BTN 開' in pre and 'BB 跟' in pre: return 'BTN_BB'
         if 'CO 開' in pre and 'BB 跟' in pre: return 'CO_BB'
         if 'SB 開' in pre and 'BB 跟' in pre: return 'SB_BB'
+        if 'UTG 開' in pre and 'CO 跟' in pre: return 'UTG_CO'
     if family == '3BP':
         if 'BTN 開' in pre and 'BB 3-bet' in pre: return 'BB3_BTN'
         if 'BTN 開' in pre and 'SB 3-bet' in pre: return 'SB3_BTN'
+        if 'CO 開' in pre and 'BTN 3-bet' in pre: return 'CO3_BTN'
     return None
 
 def build(audit):
