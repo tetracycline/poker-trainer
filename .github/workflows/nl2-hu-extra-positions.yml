@@ -1,0 +1,67 @@
+name: NL2 newly exact UTG_CO and CO3_BTN 100bb CFR
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-extra-positions.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  authentic-derived-profiles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - { spot: UTG_CO, version: gto }
+          - { spot: UTG_CO, version: exp_ip }
+          - { spot: UTG_CO, version: exp_oop }
+          - { spot: CO3_BTN, version: gto }
+          - { spot: CO3_BTN, version: exp_ip }
+          - { spot: CO3_BTN, version: exp_oop }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: main
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: dtolnay/rust-toolchain@stable
+      - run: python -m pip install numpy matplotlib
+      - name: Get exact upstream Rust solver engine
+        run: |
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+      - name: Compile pinned engine
+        working-directory: solver/postflop/pfdriver
+        env:
+          RUSTFLAGS: '-A dangerous_implicit_autorefs'
+          CARGO_BUILD_JOBS: '2'
+        run: cargo build --release --locked
+      - name: Solve exact new starting profiles with CFR-derived preflop ranges
+        run: |
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/solver-commit.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/engine-commit.txt
+          python trainer/tools/solve_hu_missing_branches.py \
+            --solver-root solver --spot "${{ matrix.spot }}" \
+            --version "${{ matrix.version }}" --start 0 --count 1 --turn-count 1 \
+            --manifest "evidence/${{ matrix.spot }}-${{ matrix.version }}.json"
+      - name: Archive exact flop, turn, river and per-combo range/SPR proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-derived-${{ matrix.spot }}-${{ matrix.version }}
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
