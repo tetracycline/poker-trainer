@@ -27,7 +27,10 @@ def verify_downloads(root,run_id):
     reach_combos=0
     near_mixed=0
     kinds=set()
-    for ad in sorted(root.glob('nl2-new-branches-*')):
+    for ad in sorted(root.iterdir()):
+        if not ad.is_dir() or not (ad.name.startswith('nl2-new-branches-') or
+                                   ad.name.startswith('nl2-derived-')):
+            continue
         manifests=list((ad/'evidence').glob('*.json'))
         if len(manifests)!=1:
             errors.append({'artifact':ad.name,'reason':'Expected exactly one solver manifest'})
