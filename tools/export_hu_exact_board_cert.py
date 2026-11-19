@@ -56,7 +56,7 @@ def build(root,proof):
             all_verified[(a['artifact'],c['source_sha256'],c['flop'],c['line'],c['turn'])]=c
     result=[]
     for ad in sorted(root.iterdir()):
-        if not ad.is_dir() or not ad.name.startswith('nl2-stage2-'):continue
+        if not ad.is_dir() or not ad.name.startswith('nl2-stage2-') or '-verified-provenance' in ad.name:continue
         ms=list((ad/'evidence').glob('*.json'))
         if len(ms)!=1:raise ValueError('Exactly one batch manifest required: '+ad.name)
         m=json.loads(ms[0].read_text())
