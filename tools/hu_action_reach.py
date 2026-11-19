@@ -60,6 +60,8 @@ def audit(raw, origin, sha256, source_run=None):
                 frequencies={acts[i]:round(fq[i]/den,5) for i in selected}))
         totals['nodes']+=int(active>0)
         records.append(dict(line=n['line'],board=n['board'],pot=n['pot'],bets=n['bets'],
+          remaining_effective_stack_units=max(0,raw['stack']-max(n['bets'])),
+          node_spr=round(max(0,raw['stack']-max(n['bets']))/n['pot'],6) if n['pot']>0 else None,
           actor=p,action_labels=acts,reachable_combos=active,
           branches=branches,combos=combos))
     return dict(schema='HU_CFR_REACH_V1',source=origin,source_sha256=sha256,
