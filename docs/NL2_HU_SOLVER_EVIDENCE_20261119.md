@@ -26,7 +26,7 @@
 
 共 **24 份真實多街 CFR 子局**，為（位置、版本、代表翻牌、翻牌 raise-call、轉牌）組合數，不代表 24 個已可直接發布的網頁格。兩個 GTO 子局（BB3_BTN 與 SB3_BTN 的 75% c-bet 後加注被跟）因來源行動後雙方 range 之一為零而排除，未創造假節點。
 
-完整證據含 raw CFR、原始 job、sha256、每條後續牌面、投注額、當時底池與正確剩餘籌碼／SPR、GTO exploitability 或 locked hero gap。獨立審核 [44500729006](https://github.com/tetracycline/poker-trainer/actions/runs/44500729006) **PASS**：驗證第一批 7 jobs、12 子局之來源 SHA、全部節點 SPR 及對應牌面與 action lineage；39,357 個有可達權重的 combo×node、2,254 個符合接近混合頻率的 combo×node。最新新增位置另外由 `nl2-hu-derived-validation.yml` 驗證。
+完整證據含 raw CFR、原始 job、sha256、每條後續牌面、投注額、當時底池與正確剩餘籌碼／SPR、GTO exploitability 或 locked hero gap。獨立審核 [44500729006](https://github.com/tetracycline/poker-trainer/actions/runs/44500729006) **PASS**：驗證第一批 7 jobs、12 子局之來源 SHA、全部節點 SPR 及對應牌面與 action lineage；39,357 個有可達權重的 combo×node、2,254 個符合接近混合頻率的 combo×node。新位置由獨立原始資料審核 [44500957474](https://github.com/tetracycline/poker-trainer/actions/runs/44500957474) **PASS**：6 份 artifact、12 個新位置子局，全部 SHA 與逐節點 SPR 核對成功，15,588 個可達 combo×node、1,034 個接近混合 combo×node。兩次來源審核合計 **24 個已驗證新子局、54,945 個可達 combo×node、3,288 個近混合 combo×node**；這些不是獨立手牌數，也仍未跨到 UI 格的 CERT。
 
 **行動到達規則：** 每個 solver node 的每個有權重 combo，只保留最高頻動作；其他動作只有同時達到 `f(a) ≥ 40%` 與 `f(a) ≥ 70% × f_max` 才保留。此處不把強／弱頂對等牌類整體視為必然可達，也不將 pool aggregate 的頻率冒充每個 combo 的已觀測頻率。
 
