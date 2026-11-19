@@ -1,0 +1,53 @@
+name: NL2 HU stage-2 frozen 392-model CFR queue
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-stage2-inventory.yml'
+      - 'tools/hu_cert_inventory.js'
+      - 'nl2_hu_model.js'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Freeze every MODEL, action, root SPR and blocker
+        run: node tools/hu_cert_inventory.js data/nl2_hu_stage2_queue.json
+      - name: Independently reject synthetic CERT claims and inconsistent counts
+        run: |
+          python3 - <<'PY'
+          import json,collections
+          d=json.load(open('data/nl2_hu_stage2_queue.json'))
+          r=d['records']
+          assert len(r)==392 and len(set(x['model_id'] for x in r))==392
+          assert collections.Counter(x['street'] for x in r)=={1:79,2:313}
+          assert sum(x['certified_cells'] for x in r)==0
+          assert all(x['status']=='MODEL_UNCERTIFIED' for x in r)
+          assert all(x['exact_node_spr'] is None and x['source_run_id'] is None for x in r)
+          assert sum(1 for x in r if x['family'] in ('SRP','3BP'))==294
+          print('Verified frozen 392 MODEL CFR queue; 294 priority SRP/3-bet')
+          PY
+      - name: Commit deterministic model backlog only to Draft PR branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_stage2_queue.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'evidence: freeze 392-node priority CFR queue (no CERT without exact board)'
+            git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+          fi
+      - name: Preserve full queue evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-stage2-model-inventory
+          path: data/nl2_hu_stage2_queue.json
+          retention-days: 30
