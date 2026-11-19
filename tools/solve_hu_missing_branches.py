@@ -7,6 +7,7 @@ positions/pot histories. Preserve original board, pot, bet sizes, reach and hash
 """
 import argparse
 import hashlib
+import gzip
 import importlib
 import json
 import os
@@ -50,6 +51,8 @@ def main():
     sys.path.insert(0,str(pf/'py'))
     pipeline=importlib.import_module('pipeline')
     job=importlib.import_module('job')
+    sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
+    reach_audit=importlib.import_module('hu_action_reach').audit
     flops=pipeline.flops_for(a.spot)[a.start:a.start+a.count]
     if not flops:raise SystemExit('No selected flops')
     out=pf/'out'/a.spot/a.version
@@ -110,8 +113,19 @@ def main():
                     for n in src.get('nodes',[]):
                         bb=int(src['stack'])-max(n.get('bets',[0,0]))
                         mem[n['line']+'|'+n['board']]=None if n['pot']<=0 else round(max(bb,0)/n['pot'],5)
+                    rproof=reach_audit(src,str(sub.relative_to(pf)),digest(sub),
+                        os.environ.get('GITHUB_RUN_ID'))
+                    rpath=a.manifest.parent / (
+                        f"combo-reach-{a.spot}-{a.version}-{flop}-{line.replace(' ','')}-{turn}.json.gz")
+                    rpath.parent.mkdir(parents=True,exist_ok=True)
+                    with gzip.open(rpath,'wt',encoding='utf8') as h:
+                        json.dump(rproof,h,ensure_ascii=False,separators=(',',':'))
                     manifest['cases'].append({
                        'flop':flop,'line':line,'turn':turn,
+                       'combo_reach_report':str(rpath),
+                       'combo_reach_report_sha256':digest(rpath),
+                       'combo_reach_summary':rproof['summary'],
+                       'combo_reach_converged_for_cert':rproof['converged_for_cert'],
                        'root_pot_bb':fr['pot']/100,'root_stack_bb':fr['stack']/100,
                        'turn_node_pot_bb':node['pot']/100,
                        'turn_node_stack_bb':(fr['stack']-max(node['bets']))/100,
