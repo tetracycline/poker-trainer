@@ -50,10 +50,10 @@ def node_compact(node,raw):
                                            if 'b50' in act else 0}
 
 def build(root,proof):
-    all_verified=set()
+    all_verified={}
     for a in proof['artifacts']:
         for c in a['cases']:
-            all_verified.add((a['artifact'],c['source_sha256'],c['flop'],c['line'],c['turn']))
+            all_verified[(a['artifact'],c['source_sha256'],c['flop'],c['line'],c['turn'])]=c
     result=[]
     for ad in sorted(root.iterdir()):
         if not ad.is_dir() or not ad.name.startswith('nl2-stage2-'):continue
@@ -63,8 +63,10 @@ def build(root,proof):
         if m['failures']:raise ValueError('Source solver reported failure')
         versions=m['version']
         for c in m['cases']:
-            if (ad.name,c['sub_sha256'],c['flop'],c['line'],c['turn']) not in all_verified:
+            key=(ad.name,c['sub_sha256'],c['flop'],c['line'],c['turn'])
+            if key not in all_verified:
                 raise ValueError('No independently verified proof: '+ad.name+'/'+c['line'])
+            verified=all_verified[key]
             rawfile=ad/'solver/postflop'/c['sub_json']
             if digest(rawfile)!=c['sub_sha256']:raise ValueError('Solver SHA mismatch')
             raw=json.loads(rawfile.read_text())
@@ -81,7 +83,11 @@ def build(root,proof):
                'flop_line':raw.get('line0'),'flop_root_pot_bb':c['root_pot_bb'],
                'flop_root_stack_bb':c['root_stack_bb'],
                'turn_spr':c['turn_node_spr'],'source_sha256':c['sub_sha256'],
-               'gto_gap_pct':gap,'hero_gap_pct':hero,'status':
+               'gto_gap_pct':gap,'hero_gap_pct':hero,
+               'nl2_pool_lock_coverage':verified.get('villain_pool_lock_coverage'),
+               'hero_gain_vs_locked_pool_bb':verified.get('hero_gain_vs_locked_pool_bb'),
+               'lock_frequency_proof_incomplete':not bool((verified.get('villain_pool_lock_coverage') or {}).get('fully_locked_in_sample')),
+               'status':
                   'CERT_EXACT_BOARD_GTO' if cert else 'EXPERIMENTAL_POOL_LOCKED',
                'hands_by_seat':raw['hands'],'nodes':nodes})
     return {'schema':'HU_NL2_EXACT_BOARD_CFR_V1',
