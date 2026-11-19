@@ -196,11 +196,26 @@ function walkRiverFrom(cell, s) {
 }
 
 let cont = 0, reachR = 0, noR = 0;
+// Immutable cell-level gap evidence. Never infer reach from a texture-only match.
+const unresolvedCells = [];
+function recordRiverGap(s, row, c, ri, ci, reason, at, chain) {
+  const item = itemById.get(s.id);
+  unresolvedCells.push({
+    id: [s.id, row.id || ri, ci].join('::'), sp: s.sp, nd: s.nd,
+    stage: s.st, table: s.id, row: row.id, rowIndex: ri,
+    boardTexture: row.bt, column: ci, action: c.act, text: c.text,
+    href: c.href || null, title: s.title,
+    preflop: s.title.split('→')[0].trim(), history: item && item.key,
+    breakReason: reason, blockedAt: at && { sp: at.sp, nd: at.nd, table: at.id },
+    linkChain: chain || [s.id], evidence: 'UNSOLVED'
+  });
+}
 const noREx = new Map();
 for (const s of allSecs.filter(x => x.st < 2)) {
-  for (const row of s.rows) for (const c of row.cells) {
+  for (const [ri, row] of s.rows.entries()) for (const [ci, c] of row.cells.entries()) {
     if (c.na || c.act === 'fold' || !c.text || c.text === '—') continue;
-    if (!c.href && s.st < 2) { cont++; noR++; 
+    if (!c.href && s.st < 2) { cont++; noR++;
+      recordRiverGap(s, row, c, ri, ci, 'NO_PRIMARY_LINK', s, [s.id]); 
       const k = s.sp + '/' + s.nd + ' ' + (itemById.get(s.id) || {}).key + ' ' + c.act;
       if (!noREx.has(k)) noREx.set(k, { title: s.title, n: 0, why: '格子沒有下一街主連結' });
       noREx.get(k).n++;
@@ -214,6 +229,9 @@ for (const s of allSecs.filter(x => x.st < 2)) {
     if (w.ok) reachR++;
     else {
       noR++;
+      recordRiverGap(s, row, c, ri, ci,
+        w.at && w.at.st === 1 ? 'NO_TURN_TO_RIVER_LINK' : 'NOT_NEXT_STREET',
+        w.at, [s.id, w.at && w.at.id].filter(Boolean));
       const item = itemById.get(s.id);
       const k = s.sp + '/' + s.nd + ' ' + JSON.stringify(item && item.key) + ' ' + c.act;
       if (!noREx.has(k)) noREx.set(k, { title: s.title, n: 0, why: w.at ? ('走到 ' + w.at.sp + '/' + w.at.nd + ' 之後沒有河牌主連結') : '中斷' });
@@ -222,6 +240,8 @@ for (const s of allSecs.filter(x => x.st < 2)) {
   }
 }
 
+if (unresolvedCells.length !== noR || noR + reachR !== cont)
+  throw new Error('Cell-level river-gap ledger not aligned with the coverage denominator');
 const counts = {
   tables: allSecs.length,
   flop: allSecs.filter(s => s.st === 0).length,
@@ -456,7 +476,8 @@ const reviewText = mdReview();
 const mdPath = opt('--md'), reviewPath = opt('--review'), jsonPath = opt('--json');
 if (mdPath) fs.writeFileSync(mdPath, auditText);
 if (reviewPath) fs.writeFileSync(reviewPath, reviewText);
-if (jsonPath) fs.writeFileSync(jsonPath, JSON.stringify({ counts, byKind, misses: misses, missingNext: [...missingNext.values()].sort((a,b)=>b.n-a.n), noRiverExamples: [...noREx.values()].sort((a,b)=>b.n-a.n) }, null, 2));
+if (jsonPath) fs.writeFileSync(jsonPath, JSON.stringify({ counts, byKind, misses: misses, missingNext: [...missingNext.values()].sort((a,b)=>b.n-a.n), noRiverExamples: [...noREx.values()].sort((a,b)=>b.n-a.n),
+  unresolvedCells }, null, 2));
 if (!QUIET) {
   console.log(JSON.stringify(counts));
   if (misses.length) console.log('misses by kind', byKind);
