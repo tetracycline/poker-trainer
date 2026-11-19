@@ -51,21 +51,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: trainer
-      - name: Check cross-repository solver access
-        shell: bash
-        env:
-          SOLVER_TOKEN: ${{ secrets.POKER_SOLVER_READ_TOKEN }}
-        run: |
-          if [ -z "$SOLVER_TOKEN" ]; then
-            echo '::error::POKER_SOLVER_READ_TOKEN is absent. Add a fine-grained PAT (read-only Contents) for tetracycline/poker-solver in poker-trainer Actions secrets.'
-            exit 1
-          fi
       - uses: actions/checkout@v4
         with:
           repository: tetracycline/poker-solver
           ref: main
           path: solver
-          token: ${{ secrets.POKER_SOLVER_READ_TOKEN }}
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
