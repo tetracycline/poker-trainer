@@ -33,6 +33,8 @@ function selectNode(){
  '<p>精確公牌 <strong>'+esc(n.board)+'</strong>；完整動作線 <strong>'+esc(n.line)+'</strong>；動作玩家 '+(n.acting_seat===0?'OOP':'IP')+'；此節點剩餘 SPR <strong>'+fmt(n.node_spr)+'</strong></p>',
  '<p>可選動作：'+n.actions.map(esc).join('、')+'；CFR 權重加總頻率：'+Object.entries(n.reach_weighted_action_pct).map(([k,v])=>esc(k)+':'+v+'%').join('、')+'</p>',
  '<p>可達 combos × node：'+fmt(n.reachable_combos)+'；接近混合策略：'+fmt(n.near_mixed_combos)+'；50% pot 中等尺寸符合雙門檻的 combos：<strong>'+fmt(eligible)+'</strong>（只適用本公牌／線／角色）</p>',
+ n.b50_relative_equity_mix?'<p>50% pot（中等尺寸）合格組合的相對 equity 構成：低／中／高 = '+n.b50_relative_equity_mix.low_count+'／'+n.b50_relative_equity_mix.middle_count+'／'+n.b50_relative_equity_mix.high_count+'；中段權重 '+fmt(n.b50_relative_equity_mix.middle_eligible_weight_share_pct)+'%。'+(n.b50_relative_equity_mix.nonpolarized_medium_bet_candidate?'<strong>存在去極化／合併下注候選</strong>（精確公牌研究用，未跨牌面證實）。':'無足夠去極化下注證據。')+'</p>':'',
+ game.version==='gto'?'':('<p>NL2 實際頻率可匹配對手節點：'+fmt(game.nl2_pool_lock_coverage?.matched_nodes)+'／'+fmt(game.nl2_pool_lock_coverage?.villain_nodes)+'（'+fmt(game.nl2_pool_lock_coverage?.coverage_pct)+'%）。未匹配節點未鎖定；本子局模型化鎖頻的英雄 EV 差值 '+fmt(game.hero_gain_vs_locked_pool_bb)+' bb，<b>不能稱為完整 NL2 池最優策略。</b></p>'),
  game.version==='gto'?'<p>GTO exploitability：'+fmt(game.gto_gap_pct)+'%</p>':
  '<p>對手頻率鎖定試驗：hero gap '+fmt(game.hero_gap_pct)+'%，初始平衡 gap '+fmt(game.gto_gap_pct)+'%；不代表未匹配節點也被鎖定。</p>',
  '<div class="meta">原始 GitHub Actions：<a href="https://github.com/tetracycline/poker-trainer/actions/runs/'+Number(game.source_run_id)+'" target="_blank" rel="noopener">Run '+Number(game.source_run_id)+'</a>；JSON SHA-256 <code>'+esc(game.source_sha256)+'</code></div>'
@@ -42,13 +44,13 @@ function selectNode(){
 }
 function renderCombos(){
  if(!current||!game)return;
- const n=current,hand=game.hands_by_seat[n.acting_seat],raw=atob(n.eligible_action_masks_b64),allrows=[];
- if(raw.length!==hand.length){by('combos').textContent='來源資料維度不一致；禁止顯示。';return;}
+ const n=current,hand=game.hands_by_seat[n.acting_seat],raw=atob(n.eligible_action_masks_b64),best=atob(n.best_ev_action_indices_b64||''),allrows=[];
+ if(raw.length!==hand.length||best.length!==hand.length){by('combos').textContent='來源頻率或 EV 資料維度不一致；禁止顯示。';return;}
  for(let i=0;i<raw.length;i++)if(raw.charCodeAt(i)!==0){
    const mask=raw.charCodeAt(i),acts=[];
    for(let j=0;j<n.actions.length;j++)if((mask&(1<<j))!==0)acts.push(n.actions[j]);
    if(acts.length<1||acts.length>2){by('combos').textContent='不符合雙動作可達性規則；禁止顯示。';return;}
-   allrows.push([hand[i],acts.join(' / ')]);
+   const evIndex=best.charCodeAt(i);if(evIndex===255||evIndex>=n.actions.length){by('combos').textContent='EV 行動證據不完整，禁止顯示。';return;}allrows.push([hand[i],acts.join(' / '),n.actions[evIndex]]);
  }
  const displayed=by('showall').checked?allrows:allrows.slice(0,100);
  const fragment=document.createDocumentFragment();
