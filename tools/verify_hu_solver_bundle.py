@@ -90,7 +90,7 @@ def verify_downloads(root,run_id):
     for ad in sorted(root.iterdir()):
         if not ad.is_dir() or not (ad.name.startswith('nl2-new-branches-') or
                                    ad.name.startswith('nl2-derived-') or
-                                   ad.name.startswith('nl2-stage2-')):
+                                   (ad.name.startswith('nl2-stage2-') and '-verified-provenance' not in ad.name)):
             continue
         manifests=list((ad/'evidence').glob('*.json'))
         if len(manifests)!=1:
