@@ -17,17 +17,17 @@ import time
 import traceback
 
 BRANCHES = {
-    # OOP caller check-raises PFR's bet; PFR calls.
-    "BTN_BB": ("x b33 r c", "x b75 r c"),
-    "CO_BB": ("x b33 r c", "x b75 r c"),
-    "UTG_BB": ("x b33 r c", "x b75 r c"),
-    "HJ_BB": ("x b33 r c", "x b75 r c"),
-    # OOP preflop raiser c-bets, IP caller raises; raiser calls.
-    "SB_BB": ("b33 r c", "b75 r c"),
-    "SB3_BTN": ("b33 r c", "b75 r c"),
-    "BB3_BTN": ("b33 r c", "b75 r c"),
-    "UTG_CO": ("b33 r c", "b75 r c"),
-    "CO3_BTN": ("x b33 r c", "x b75 r c"),
+    # Root FLOP exact action lines in a 100bb HU game. Subgame ranges are
+    # inherited from the actual weighted parent combos, not the UI MODEL.
+    "BTN_BB": ("x x", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "CO_BB":  ("x x", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "UTG_BB": ("x x", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "HJ_BB":  ("x x", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "SB_BB":  ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c"),
+    "SB3_BTN": ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c"),
+    "BB3_BTN": ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c"),
+    "UTG_CO": ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c"),
+    "CO3_BTN": ("x x", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
 }
 # Verified against poker-solver/preflop/pfsolve.py's exact 100bb abstract tree:
 # RFI UTG/CO 2.5; first IP 3bet 3x (7.5); dead SB+BB=1.5.
