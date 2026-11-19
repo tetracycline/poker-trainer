@@ -26,7 +26,7 @@ on:
         default: gto
 
 concurrency:
-  group: nl2-hu-solver-${{ github.ref }}-${{ inputs.spot || 'BTN_BB' }}-${{ inputs.start || '0' }}
+  group: nl2-hu-solver-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
@@ -36,17 +36,152 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 4
       matrix:
-        spot: [BTN_BB, CO_BB, SB_BB, UTG_BB, HJ_BB, SB3_BTN, BB3_BTN]
+        include:
+        - {spot: BTN_BB, start: 0, count: 2, version: gto}
+        - {spot: BTN_BB, start: 0, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 0, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 2, count: 2, version: gto}
+        - {spot: BTN_BB, start: 2, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 2, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 4, count: 2, version: gto}
+        - {spot: BTN_BB, start: 4, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 4, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 6, count: 2, version: gto}
+        - {spot: BTN_BB, start: 6, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 6, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 8, count: 2, version: gto}
+        - {spot: BTN_BB, start: 8, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 8, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 10, count: 2, version: gto}
+        - {spot: BTN_BB, start: 10, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 10, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 12, count: 2, version: gto}
+        - {spot: BTN_BB, start: 12, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 12, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 14, count: 2, version: gto}
+        - {spot: BTN_BB, start: 14, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 14, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 16, count: 2, version: gto}
+        - {spot: BTN_BB, start: 16, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 16, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 18, count: 2, version: gto}
+        - {spot: BTN_BB, start: 18, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 18, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 20, count: 2, version: gto}
+        - {spot: BTN_BB, start: 20, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 20, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 22, count: 2, version: gto}
+        - {spot: BTN_BB, start: 22, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 22, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 24, count: 2, version: gto}
+        - {spot: BTN_BB, start: 24, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 24, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 26, count: 2, version: gto}
+        - {spot: BTN_BB, start: 26, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 26, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 28, count: 2, version: gto}
+        - {spot: BTN_BB, start: 28, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 28, count: 2, version: exp_oop}
+        - {spot: CO_BB, start: 0, count: 2, version: gto}
+        - {spot: CO_BB, start: 0, count: 2, version: exp_ip}
+        - {spot: CO_BB, start: 0, count: 2, version: exp_oop}
+        - {spot: CO_BB, start: 2, count: 2, version: gto}
+        - {spot: CO_BB, start: 2, count: 2, version: exp_ip}
+        - {spot: CO_BB, start: 2, count: 2, version: exp_oop}
+        - {spot: CO_BB, start: 4, count: 2, version: gto}
+        - {spot: CO_BB, start: 4, count: 2, version: exp_ip}
+        - {spot: CO_BB, start: 4, count: 2, version: exp_oop}
+        - {spot: CO_BB, start: 6, count: 2, version: gto}
+        - {spot: CO_BB, start: 6, count: 2, version: exp_ip}
+        - {spot: CO_BB, start: 6, count: 2, version: exp_oop}
+        - {spot: CO_BB, start: 8, count: 2, version: gto}
+        - {spot: CO_BB, start: 8, count: 2, version: exp_ip}
+        - {spot: CO_BB, start: 8, count: 2, version: exp_oop}
+        - {spot: CO_BB, start: 10, count: 2, version: gto}
+        - {spot: CO_BB, start: 10, count: 2, version: exp_ip}
+        - {spot: CO_BB, start: 10, count: 2, version: exp_oop}
+        - {spot: SB_BB, start: 0, count: 2, version: gto}
+        - {spot: SB_BB, start: 0, count: 2, version: exp_ip}
+        - {spot: SB_BB, start: 0, count: 2, version: exp_oop}
+        - {spot: SB_BB, start: 2, count: 2, version: gto}
+        - {spot: SB_BB, start: 2, count: 2, version: exp_ip}
+        - {spot: SB_BB, start: 2, count: 2, version: exp_oop}
+        - {spot: SB_BB, start: 4, count: 2, version: gto}
+        - {spot: SB_BB, start: 4, count: 2, version: exp_ip}
+        - {spot: SB_BB, start: 4, count: 2, version: exp_oop}
+        - {spot: SB_BB, start: 6, count: 2, version: gto}
+        - {spot: SB_BB, start: 6, count: 2, version: exp_ip}
+        - {spot: SB_BB, start: 6, count: 2, version: exp_oop}
+        - {spot: SB_BB, start: 8, count: 2, version: gto}
+        - {spot: SB_BB, start: 8, count: 2, version: exp_ip}
+        - {spot: SB_BB, start: 8, count: 2, version: exp_oop}
+        - {spot: SB_BB, start: 10, count: 2, version: gto}
+        - {spot: SB_BB, start: 10, count: 2, version: exp_ip}
+        - {spot: SB_BB, start: 10, count: 2, version: exp_oop}
+        - {spot: UTG_BB, start: 0, count: 2, version: gto}
+        - {spot: UTG_BB, start: 0, count: 2, version: exp_ip}
+        - {spot: UTG_BB, start: 0, count: 2, version: exp_oop}
+        - {spot: UTG_BB, start: 2, count: 2, version: gto}
+        - {spot: UTG_BB, start: 2, count: 2, version: exp_ip}
+        - {spot: UTG_BB, start: 2, count: 2, version: exp_oop}
+        - {spot: UTG_BB, start: 4, count: 2, version: gto}
+        - {spot: UTG_BB, start: 4, count: 2, version: exp_ip}
+        - {spot: UTG_BB, start: 4, count: 2, version: exp_oop}
+        - {spot: UTG_BB, start: 6, count: 2, version: gto}
+        - {spot: UTG_BB, start: 6, count: 2, version: exp_ip}
+        - {spot: UTG_BB, start: 6, count: 2, version: exp_oop}
+        - {spot: HJ_BB, start: 0, count: 2, version: gto}
+        - {spot: HJ_BB, start: 0, count: 2, version: exp_ip}
+        - {spot: HJ_BB, start: 0, count: 2, version: exp_oop}
+        - {spot: HJ_BB, start: 2, count: 2, version: gto}
+        - {spot: HJ_BB, start: 2, count: 2, version: exp_ip}
+        - {spot: HJ_BB, start: 2, count: 2, version: exp_oop}
+        - {spot: HJ_BB, start: 4, count: 2, version: gto}
+        - {spot: HJ_BB, start: 4, count: 2, version: exp_ip}
+        - {spot: HJ_BB, start: 4, count: 2, version: exp_oop}
+        - {spot: HJ_BB, start: 6, count: 2, version: gto}
+        - {spot: HJ_BB, start: 6, count: 2, version: exp_ip}
+        - {spot: HJ_BB, start: 6, count: 2, version: exp_oop}
+        - {spot: SB3_BTN, start: 0, count: 2, version: gto}
+        - {spot: SB3_BTN, start: 0, count: 2, version: exp_ip}
+        - {spot: SB3_BTN, start: 0, count: 2, version: exp_oop}
+        - {spot: SB3_BTN, start: 2, count: 2, version: gto}
+        - {spot: SB3_BTN, start: 2, count: 2, version: exp_ip}
+        - {spot: SB3_BTN, start: 2, count: 2, version: exp_oop}
+        - {spot: SB3_BTN, start: 4, count: 2, version: gto}
+        - {spot: SB3_BTN, start: 4, count: 2, version: exp_ip}
+        - {spot: SB3_BTN, start: 4, count: 2, version: exp_oop}
+        - {spot: SB3_BTN, start: 6, count: 2, version: gto}
+        - {spot: SB3_BTN, start: 6, count: 2, version: exp_ip}
+        - {spot: SB3_BTN, start: 6, count: 2, version: exp_oop}
+        - {spot: SB3_BTN, start: 8, count: 2, version: gto}
+        - {spot: SB3_BTN, start: 8, count: 2, version: exp_ip}
+        - {spot: SB3_BTN, start: 8, count: 2, version: exp_oop}
+        - {spot: BB3_BTN, start: 0, count: 2, version: gto}
+        - {spot: BB3_BTN, start: 0, count: 2, version: exp_ip}
+        - {spot: BB3_BTN, start: 0, count: 2, version: exp_oop}
+        - {spot: BB3_BTN, start: 2, count: 2, version: gto}
+        - {spot: BB3_BTN, start: 2, count: 2, version: exp_ip}
+        - {spot: BB3_BTN, start: 2, count: 2, version: exp_oop}
+        - {spot: BB3_BTN, start: 4, count: 2, version: gto}
+        - {spot: BB3_BTN, start: 4, count: 2, version: exp_ip}
+        - {spot: BB3_BTN, start: 4, count: 2, version: exp_oop}
+        - {spot: BB3_BTN, start: 6, count: 2, version: gto}
+        - {spot: BB3_BTN, start: 6, count: 2, version: exp_ip}
+        - {spot: BB3_BTN, start: 6, count: 2, version: exp_oop}
+        - {spot: BB3_BTN, start: 8, count: 2, version: gto}
+        - {spot: BB3_BTN, start: 8, count: 2, version: exp_ip}
+        - {spot: BB3_BTN, start: 8, count: 2, version: exp_oop}
     timeout-minutes: 330
     permissions:
       contents: read
     env:
       SPOT: ${{ matrix.spot }}
-      START: ${{ inputs.start || '0' }}
-      COUNT: ${{ inputs.count || '1' }}
-      VERSION: ${{ inputs.version || 'gto' }}
+      START: ${{ matrix.start }}
+      COUNT: ${{ matrix.count }}
+      VERSION: ${{ matrix.version }}
     steps:
       - uses: actions/checkout@v4
         with:
