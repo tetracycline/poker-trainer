@@ -1,0 +1,58 @@
+name: NL2 medium-size betting real CFR comparison
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/compare_depolarized_cfr.py'
+      - '.github/workflows/nl2-depolarized-cfr.yml'
+  workflow_dispatch:
+
+jobs:
+  paired-depolarized:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        spot: [BTN_BB]
+        version: [gto, exp_ip, exp_oop]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: main
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: dtolnay/rust-toolchain@stable
+      - run: python -m pip install numpy
+      - name: Get pinned external CFR engine
+        run: |
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+      - name: Build driver
+        working-directory: solver/postflop/pfdriver
+        env:
+          RUSTFLAGS: '-A dangerous_implicit_autorefs'
+          CARGO_BUILD_JOBS: '2'
+        run: cargo build --release --locked
+      - name: Paired baseline versus medium-size real CFR (no synthetic decisions)
+        run: |
+          python trainer/tools/compare_depolarized_cfr.py --solver-root solver \
+            --spot "${{ matrix.spot }}" --flop Ks7h2d --version "${{ matrix.version }}" \
+            --out "evidence/${{ matrix.spot }}-${{ matrix.version }}"
+      - name: Preserve solver and comparison evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: depol-real-cfr-${{ matrix.spot }}-${{ matrix.version }}
+          path: evidence/
+          if-no-files-found: warn
