@@ -21,7 +21,7 @@ function loadRenderer() {
   const ctx = { console, __LINES_QA: true, location: { hash: '#lines' }, scrollTo() {}, addEventListener() {},
     document: { querySelector: () => app, querySelectorAll: () => [], getElementById: () => null } };
   ctx.window = ctx; if (args.includes('--nofilter')) ctx.__NL2_NOFILTER = true; vm.createContext(ctx);
-  for (const n of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js', 'nl2_titles.js', 'nl2.js']) {
+  for (const n of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js', 'nl2_titles.js', 'nl2_hu_model.js', 'nl2.js']) {
     const f = path.join(root, n); if (!fs.existsSync(f)) continue;
     let src = fs.readFileSync(f, 'utf8');
     if (n === 'nl2.js' && !src.includes('data-node=')) // 舊版沒有節點標記：只為了讀出節點，補上屬性（不改任何邏輯）
@@ -150,6 +150,10 @@ function parseSections(html, sp) {
       return { ro, cond: m[2], classes: m[3].split('、'), text: m[4].replace(/(沿用 ?n[\d.]*·?[\d.]*盤|池估|兩人 GTO 近似|GTO|剝削).*$/, '').trim() };
     }) : [];
     const [nsp, nd] = starts[k].node.split('/');
+    // Modeled fallback tables are independently checked, class-by-class,
+    // by hu_model_path_audit.js. This proof verifies only evidence-backed
+    // original NL2 decision trees; never calls modeled hands CERT.
+    if (nd.endsWith('_model')) continue;
     out.push({ sp: nsp || sp, nd, titleHtml, title: strip(titleHtml), kind, ro: null, ros, face: strip(face), cols, rows, exc });
   }
   return out;
