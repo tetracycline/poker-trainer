@@ -64,7 +64,21 @@ jobs:
           print({'subgames':len(items),'status_counts':dict(statuses),
                  'generic_MODEL_Cert':0,'size_bytes':p.stat().st_size})
           PY
+          python3 -m py_compile tools/export_hu_exact_board_cert.py
           node --check nl2-cfr.js
+          python3 - <<'PY'
+          import json,base64
+          d=json.load(open('data/nl2_hu_exact_boards.json'))
+          assert d['exact_subgame_count']==266
+          for r in d['subgames']:
+              for n in r['nodes']:
+                  actor=n['acting_seat']; expected=len(r['hands_by_seat'][actor])
+                  a=base64.b64decode(n['eligible_action_masks_b64'])
+                  b=base64.b64decode(n['best_ev_action_indices_b64'])
+                  assert len(a)==len(b)==expected
+                  assert n['b50_relative_equity_mix'] is None or n['b50_relative_equity_mix']['status']=='SOURCE_ONLY_NOT_GENERALIZABLE_TO_TEXTURE_OR_ANOTHER_SPR'
+          print('Verified exact action frequency + best EV arrays, no generic MODEL promotion')
+          PY
       - name: Commit verified original source proof and exact-board combo-viewer data to the Draft PR, never merge
         run: |
           set -euo pipefail
