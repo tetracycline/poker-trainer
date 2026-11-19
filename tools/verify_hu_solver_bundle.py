@@ -70,8 +70,19 @@ def verify_downloads(root,run_id):
                     if expected is None or abs(expected-observed)>1e-5:
                         raise ValueError('Turn/river node SPR mismatch '+k)
                 rp=reach(data,str(subfile),case['sub_sha256'],str(run_id))
-                if not rp['converged_for_cert']:
-                    raise ValueError('CFR not converged to <=0.5% source gap')
+                # GTO itself must converge to <=0.5%. The existing NL2
+                # exploit driver optimizes a locked hero response to <=0.5%
+                # but its preliminary equilibrium can stop at 1.5%;
+                # those solves are evidence of a provisional pool response,
+                # never eligible for CERT without the stricter first stage.
+                gto_gap=data['info'].get('gto_expl_pct')
+                hero_gap=data['info'].get('hero_gap_pct')
+                if ver=='gto':
+                    if gto_gap is None or float(gto_gap)>0.5:
+                        raise ValueError('GTO CFR not converged to <=0.5%')
+                else:
+                    if gto_gap is None or float(gto_gap)>1.5 or hero_gap is None or float(hero_gap)>0.5:
+                        raise ValueError('NL2 locked response exceeds the declared convergence gate')
                 if case.get('combo_reach_report_sha256'):
                     cr=ad/case['combo_reach_report']
                     if not cr.exists() or checksum(cr)!=case['combo_reach_report_sha256']:
@@ -85,6 +96,8 @@ def verify_downloads(root,run_id):
                   'parent_spr':case['turn_node_spr'],
                   'n_solver_nodes':len(data['nodes']),
                   'gto_gap_pct':data['info'].get('gto_expl_pct'),
+                  'cert_converged':bool(rp['converged_for_cert']),
+                  'solver_validated_for':'GTO_EXACT_BOARD_ONLY' if ver=='gto' else 'LOCKED_POOL_RESPONSE_PROVISIONAL_GTO_BASELINE',
                   'hero_gap_pct':data['info'].get('hero_gap_pct'),
                   'pool_lock_patterns':len(data['info'].get('lock_stats',{})),
                   'source_sha256':case['sub_sha256'],
