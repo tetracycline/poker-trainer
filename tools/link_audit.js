@@ -17,7 +17,7 @@ function loadRenderer() {
   const ctx = { console, __LINES_QA: true, location: { hash: '#lines' }, scrollTo() {}, addEventListener() {},
     document: { querySelector: () => app, querySelectorAll: () => [], getElementById: () => null } };
   ctx.window = ctx; vm.createContext(ctx);
-  for (const n of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js', 'nl2_titles.js', 'nl2.js']) {
+  for (const n of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js', 'nl2_titles.js', 'nl2_hu_model.js', 'nl2.js']) {
     const f = path.join(root, n); if (!fs.existsSync(f)) continue;
     vm.runInContext(fs.readFileSync(f, 'utf8'), ctx, { filename: n });
   }
@@ -30,12 +30,14 @@ function stOf(nd) {
 }
 function ndPfx(nd) { return ND_PFX.find(p => String(nd).startsWith(p)) || ''; }
 function strip(t) { return String(t || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(); }
-function actOf(text) {
-  if (/棄/.test(text)) return 'fold';
-  if (/跟/.test(text)) return 'call';
-  if (/加注|全下/.test(text)) return 'raise';
-  if (/過/.test(text)) return 'check';
-  if (/下注/.test(text)) return 'bet';
+function actOf(text) { // classify PRIMARY action, never secondary navigation text
+  const t=String(text||'').trim();
+  if (/^棄/.test(t)) return 'fold';
+  if (/^全下|^加注\s*全下/.test(t)) return 'allin';
+  if (/^跟/.test(t)) return 'call';
+  if (/^加注/.test(t)) return 'raise';
+  if (/^過/.test(t)) return 'check';
+  if (/^下注/.test(t)) return 'bet';
   return '?';
 }
 function parseSecs(html) {
@@ -63,7 +65,9 @@ function parseSecs(html) {
         const href = (tm[2].match(/<a class="jmp" href="#([^"]+)"/) || [])[1] || '';
         const extras = [...tm[2].matchAll(/<a class="jmp sub" href="#([^"]+)"/g)].map(x => x[1]);
         const note = /（無後續表）/.test(tm[2]) || /（無後續表）/.test(text);
-        cells.push({ na, text, href, extras, note, act: actOf(text) });
+        const primary = strip((tm[2].match(/<a class="jmp" href="#[^"]+">([\s\S]*?)<\/a>/)||[])[1] ||
+          tm[2].split(/<a class="jmp sub"|<small\b/)[0]);
+        cells.push({ na, text, href, extras, note, primary, act: actOf(primary) });
       }
       rows.push({ lab, id: rid, bt, cells });
     }
@@ -85,7 +89,7 @@ for (const spot of L.spots) {
 }
 
 const misses = [];
-const ok = { linked: 0, noted: 0, fold: 0, na: 0, sub: 0 };
+const ok = { linked: 0, noted: 0, fold: 0, allin: 0, na: 0, sub: 0 };
 function baseId(href) { return String(href || '').replace(BT_RE, ''); }
 function addMiss(kind, s, row, cell, detail) {
   misses.push({ kind, sp: s.sp, nd: s.nd, table: s.id, row: row && (row.lab || row.id), text: cell && cell.text, href: cell && cell.href, detail });
@@ -124,6 +128,7 @@ for (const s of allSecs) {
   for (const row of s.rows) for (const c of row.cells) {
     if (c.na || c.text === '—' || !c.text) { ok.na++; continue; }
     if (c.act === 'fold') { ok.fold++; continue; }
+    if (c.act === 'allin') { ok.allin++; continue; }
     const hrefs = [];
     // parse from original? we only stored first href. Need all hrefs!
     // We'll re-parse below if needed. For now c.href is first.
@@ -213,7 +218,7 @@ function recordRiverGap(s, row, c, ri, ci, reason, at, chain) {
 const noREx = new Map();
 for (const s of allSecs.filter(x => x.st < 2)) {
   for (const [ri, row] of s.rows.entries()) for (const [ci, c] of row.cells.entries()) {
-    if (c.na || c.act === 'fold' || !c.text || c.text === '—') continue;
+    if (c.na || c.act === 'fold' || c.act === 'allin' || !c.text || c.text === '—') continue;
     if (!c.href && s.st < 2) { cont++; noR++;
       recordRiverGap(s, row, c, ri, ci, 'NO_PRIMARY_LINK', s, [s.id]); 
       const k = s.sp + '/' + s.nd + ' ' + (itemById.get(s.id) || {}).key + ' ' + c.act;
@@ -247,7 +252,7 @@ const counts = {
   flop: allSecs.filter(s => s.st === 0).length,
   turn: allSecs.filter(s => s.st === 1).length,
   river: allSecs.filter(s => s.st === 2).length,
-  linked: ok.linked, fold: ok.fold, na: ok.na,
+  linked: ok.linked, fold: ok.fold, allin: ok.allin, na: ok.na,
   misses: misses.length,
   continuing: cont, reachRiver: reachR, noRiver: noR,
   riverShare: cont ? Math.round(reachR / cont * 1000) / 10 : 0
