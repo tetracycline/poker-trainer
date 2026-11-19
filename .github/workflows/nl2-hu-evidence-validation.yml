@@ -38,7 +38,7 @@ jobs:
         run: |
           for ver in gto exp_ip exp_oop; do
             python3 tools/gate_depolarized_cfr.py \
-              --folder "evidence/depol/BTN_BB-$ver" \
+              --folder "evidence/depol/BTN_BB-$ver/BTN_BB-$ver" \
               --out "evidence/output/depol-$ver.json"
           done
       - name: Archive auditable data including blockers
