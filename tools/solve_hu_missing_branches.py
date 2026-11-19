@@ -54,6 +54,9 @@ def main():
     p.add_argument('--start',type=int,default=0)
     p.add_argument('--count',type=int,default=1)
     p.add_argument('--turn-count',type=int,default=1)
+    p.add_argument('--flop',default=None,help='Exact three cards; overrides sampled start/count')
+    p.add_argument('--flop-bet-sizes',choices=['33%,75%','33%,50%,75%'],default='33%,75%')
+    p.add_argument('--strict-stage1',action='store_true',help='Require <=0.5% preliminary GTO for locked response too')
     p.add_argument('--version',choices=['gto','exp_ip','exp_oop'],default='gto')
     p.add_argument('--manifest',type=pathlib.Path,required=True)
     a=p.parse_args()
@@ -75,7 +78,15 @@ def main():
         pipeline.OFFS[profile]=0.31 if profile=='UTG_CO' else 0.69
     sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
     reach_audit=importlib.import_module('hu_action_reach').audit
-    flops=pipeline.flops_for(a.spot)[a.start:a.start+a.count]
+    if a.flop is not None:
+        import re
+        cards=[a.flop[i:i+2] for i in (0,2,4)]
+        if len(a.flop)!=6 or len(set(cards))!=3 or not all(
+            re.fullmatch('[23456789TJQKA][cdhs]',c) for c in cards):
+            raise SystemExit('INVALID_EXACT_FLOP')
+        flops=[a.flop]
+    else:
+        flops=pipeline.flops_for(a.spot)[a.start:a.start+a.count]
     if not flops:raise SystemExit('No selected flops')
     out=pf/'out'/a.spot/a.version
     out.mkdir(parents=True,exist_ok=True)
@@ -86,6 +97,8 @@ def main():
       'branches':BRANCHES[a.spot],
       'selected_flops':flops,
       'turn_count':a.turn_count,
+      'flop_bet_sizes':a.flop_bet_sizes,
+      'strict_preliminary_equilibrium':bool(a.strict_stage1),
       'source':'tetracycline/poker-solver',
       'source_pipeline_sha256':digest(pf/'py/pipeline.py'),
       'source_ranges_sha256':digest(pf/'py/ranges.py'),
@@ -97,7 +110,12 @@ def main():
     for flop in flops:
         t0=time.monotonic()
         turns=pipeline.turns_for(flop)[:a.turn_count]
-        lines=BRANCHES[a.spot]
+        lines=list(BRANCHES[a.spot])
+        if a.flop_bet_sizes=='33%,50%,75%':
+            if pipeline.SPOTS[a.spot]['pfr']=='ip':
+                lines.extend(('x b50 c','x b50 r c'))
+            else:
+                lines.extend(('b50 c','b50 r c'))
         fpath=out/f'{flop}_extra_branch.json'
         # Extract actual combo reach at each exact line; source GTO/locked ranges,
         # not guessed class reach or blanket continuation probability.
@@ -106,7 +124,21 @@ def main():
           for line in lines for turn in turns]
         locks,_=pipeline.lock_list(a.spot,a.version,flop)
         j=job.make_job(a.spot,a.version,flop,str(fpath)+'.tmp',
-          extract=extracts,locks=locks,compress=True,target=0.5,rank=1.5)
+          extract=extracts,locks=locks,compress=True,target=0.5,
+          rank=0.5 if a.strict_stage1 else 1.5,
+          iters=2500 if a.strict_stage1 else 1000)
+        if a.flop_bet_sizes!='33%,75%':
+            j['flop_ip']=a.flop_bet_sizes
+            if pipeline.SPOTS[a.spot]['pfr']=='oop':
+                j['flop_oop']=a.flop_bet_sizes
+        if a.strict_stage1:
+            default_maker=pipeline.make_job
+            def stricter_make(*pos,**kw):
+                kw['target']=0.5
+                kw['rank']=0.5
+                kw['iters']=2500
+                return default_maker(*pos,**kw)
+            pipeline.make_job=stricter_make
         jpath=out/f'{flop}_extra_branch.job.json'
         try:
             log=job.run(j,str(jpath))
