@@ -10,7 +10,7 @@ import argparse,hashlib,json,pathlib,shutil,sys,time,traceback
 from solve_hu_multiboard_100bb import make_fallbacks,sha,SIZES
 from solve_hu_assumed_pots import RULES,w_lmp_ip
 
-R=pathlib.Path('data')
+R=pathlib.Path(__file__).resolve().parents[1]/'data'
 PIN=R/'nl2_hu_b98_lmp_8s8h3d_gto_parent_pin.json'
 B3=R/'solver_evidence/NL2_MULTIBOARD_B3.index.json'
 SPOT='LMP_CO_BB';FLOP='8s8h3d';TURN='5s';LINE='x x'
