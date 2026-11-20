@@ -61,7 +61,8 @@ CFR outcomes cannot be used to tune this cutoff.
 | B51_UTG_XX | 44808905109 | 1 | 1 |
 | B52_TWO_IP_LOCKS | 44809135555 | 0 | 1 |
 | B56_SB_B50_XX | PENDING | 0 | 0 |
-| B66_SB_B100_IP | PENDING | 0 | 0 |
+| B66_SB_B100_IP | 44809135555 | 0 | 1 |
+| B99_LMP_XX_RIVER | PENDING | 0 | 0 |
 
 ## Top-24 preregistered game histories
 
