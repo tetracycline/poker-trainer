@@ -183,7 +183,8 @@ def verify(root,source_pin,run_id):
                 raise ValueError('Unexpected source profile or version')
             if m.get('turn_sizing_mode','default') not in ('default','river-gaps','exact-b66-only'):
                 raise ValueError('Unregistered turn subgame size menu')
-            permitted_flop_lines={'oop-b33only':'b33 c','oop-b50only':'b50 c','oop-b75only':'b75 c'}
+            permitted_flop_lines={'oop-b33only':'b33 c','oop-b50only':'b50 c',
+                'oop-b75only':'b75 c','checked-b50only':'x b50 c'}
             policy=m.get('flop_line_policy','all')
             if policy in permitted_flop_lines:
                 if m.get('selected_lines')!=[permitted_flop_lines[policy]]:
@@ -205,18 +206,41 @@ def verify(root,source_pin,run_id):
                     if len(r[seat])!=169 or any(not 0<=float(x)<=1 for x in r[seat].values()) or not sum(r[seat].values()):
                         raise ValueError('Frozen assumed 169 class range invalid')
             else:
-                if m.get('pinned_official_legacy_source_id')==44654973894:
+                if m.get('pinned_official_legacy_source_id') in (44654973894,44525865923):
                     r=m['preflop_ranges']
                     if r.get('source')!='PINNED_LEGACY_OFFICIAL_GTO_FLOP_WEIGHTS':
                         raise ValueError('Official source GTO parent mislabeled as current preflop CFR')
-                    if m['spot']!='SB_BB' or m['flop']!='Ks7h2d' or m['version']!='exp_oop':
-                        raise ValueError('Unregistered legacy official parent configuration')
-                    if r.get('original_official_manifest_sha256')!='beef22e291953c2d7ecfef8b1eecf2c66495507c5a3ac02e69a8ba8ec6f13ab8':
-                        raise ValueError('Original legacy official manifest SHA differs')
-                    if r.get('original_official_root_sha256')!='8765d6b5ddfc47fdb29ac38c3675941e6fcaf51371b8f569c59ed3c3c5065897':
-                        raise ValueError('Original weighted GTO root hash changed')
-                    if r.get('original_official_root_job_sha256')!='87ab0e76fde687c0cd51d5358b7b97acc1fe35f15b5af8581510f1d59b47cfb0':
-                        raise ValueError('Original legacy GTO job hash changed')
+                    pinned_origins={
+                      (44654973894,'SB_BB','Ks7h2d'):(
+                        'beef22e291953c2d7ecfef8b1eecf2c66495507c5a3ac02e69a8ba8ec6f13ab8',
+                        '8765d6b5ddfc47fdb29ac38c3675941e6fcaf51371b8f569c59ed3c3c5065897',
+                        '87ab0e76fde687c0cd51d5358b7b97acc1fe35f15b5af8581510f1d59b47cfb0'),
+                      (44525865923,'BTN_BB','Ks7s2s'):(
+                        '543ee8b77cd22e27488c9d2f491259990f7743013f9843a6486c04864e819925',
+                        '50216984f138dc4404f206547ee9c07c05dc4f1e4e9e3af655235bc75ebc74d5',
+                        'e0d38da008131f1b9a6d6ce679b08167f160f541a1d9b0e2079fd583e6f3c774'),
+                      (44525865923,'BTN_BB','9s6h3d'):(
+                        'dad046881f9837e3b3c62fd3c0298db426f0ab731456ecde57651312d527841c',
+                        '259105deb64e55228bb6f85b1a3a479c54c4b3f149b697cd74e22bf0a7a18321',
+                        '00987298491613f9728d3b97bb6ae28352ff9582bb3e8f3dca725b8d6911d2ce')}
+                    key=(m['pinned_official_legacy_source_id'],m['spot'],m['flop'])
+                    original=pinned_origins.get(key)
+                    if original is None:raise ValueError('Original historical GTO source not preregistered')
+                    if (r.get('original_official_manifest_sha256'),
+                        r.get('original_official_root_sha256'),
+                        r.get('original_official_root_job_sha256'))!=original:
+                        raise ValueError('Original GTO parent SHA differs from audited B28/B31 pins')
+                    if m.get('gto_parent_source_run_id')!=key[0]:
+                        raise ValueError('Original source GitHub run differs')
+                    if m['spot']=='SB_BB':
+                        if m['version']!='exp_oop' or m.get('selected_lines') not in (
+                            ['b50 c'],['b75 c'],['x x']):
+                            raise ValueError('Wrong original SB_BB actor/line')
+                    else:
+                        if (m['version'] not in ('exp_oop','exp_ip') or
+                            m.get('selected_lines') not in (['x x'],['x b50 c']) or
+                            m.get('selected_lines')==['x b50 c'] and m['version']!='exp_oop'):
+                            raise ValueError('Wrong original BTN_BB hero actor/action')
                     if r.get('do_not_claim_same_preflop_tree_as_current') is not True:
                         raise ValueError('Missing disclosure that historical preflop source differs')
                     if not isinstance(r.get('legacy_dependency_mismatches'),list) or not r['legacy_dependency_mismatches']:
@@ -246,7 +270,9 @@ def verify(root,source_pin,run_id):
                     # The previously verified GTO flop solves a larger action
                     # set; the new EXP proof solves ONLY the declared downstream
                     # continuation. The GTO parent must contain our requested line.
-                    if not any(p[:2]==expected_flop for p in actual_flop_extract):
+                    if not any(p[:len(expected_flop)]==expected_flop for p in actual_flop_extract) and not any(
+                            n.get('line')==' '.join(expected_flop)+'/' and n.get('wr')
+                            for n in fr.get('nodes',[])):
                         raise ValueError('Exact requested line absent from pinned GTO flop parent')
                 elif not actual_flop_extract or not all(p[:2]==expected_flop for p in actual_flop_extract):
                     raise ValueError('Actual flop job has unexpected or missing focused action extraction')
@@ -267,7 +293,7 @@ def verify(root,source_pin,run_id):
                 if not all(x in j.get('flop_ip','') for x in ('33%','50%','75%','100%')):
                     raise ValueError('Missing actual IP bet sizes')
             elif fp=='legacy-official-pinned':
-                if m.get('pinned_official_legacy_source_id')!=44654973894 or not partial_gto_parent:
+                if m.get('pinned_official_legacy_source_id') not in (44654973894,44525865923) or not partial_gto_parent:
                     raise ValueError('Historical bet menu not authorized for current GTO tree')
                 actual={'oop':j.get('flop_oop'),'ip':j.get('flop_ip'),
                         'raise_sizes':j.get('flop_raise')}
@@ -387,7 +413,7 @@ def verify(root,source_pin,run_id):
                   source_sha256=c['source_sha256'],gto_exploitability_pct=gg,
                   locked_hero_gap_pct=hh,flop_size_menu=(
                       [p.strip() for p in j['flop_oop'].split(',')]
-                      if m.get('pinned_official_legacy_source_id')==44654973894
+                      if m.get('pinned_official_legacy_source_id') in (44654973894,44525865923)
                       else ['33%','50%','75%','100%']),
                   NL2_pool_source_sha256=expected_pool,
                   lock_patterns=m['locks'] if m['version']!='gto' else [],
@@ -399,7 +425,7 @@ def verify(root,source_pin,run_id):
                   medium50_strict_merged_research_nodes=sum(bool(n['b50_nonpolarized_relative_equity_research_candidate']) for n in nodes),
                   assumed_missing_rate_policy=m['unknown_action_frequency_policy'],
                   empirical_scope=('ASSUMED_PREFLOP_RANGES' if fam in ('ISO','LMP')
-                      else 'PINNED_LEGACY_OFFICIAL_GTO_FLOP_WEIGHTS' if m.get('pinned_official_legacy_source_id')==44654973894
+                      else 'PINNED_LEGACY_OFFICIAL_GTO_FLOP_WEIGHTS' if m.get('pinned_official_legacy_source_id') in (44654973894,44525865923)
                       else 'PINNED_PREFLOP_CFR'),
                   certified_scope=('EXACT_BOARD_ONLY_GTO' if m['version']=='gto'
                       else 'TURN_ONLY_NL2_MARGINAL_LOCK_FROM_PINNED_GTO_FLOP_PARENT'
