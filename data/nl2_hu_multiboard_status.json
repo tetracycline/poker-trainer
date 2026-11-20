@@ -1,7 +1,7 @@
 {
   "schema": "NL2_HU_392_MULTIBOARD_CERT_STATUS_V1",
-  "CERT_MULTIBOARD": 14,
-  "APPROX": 378,
+  "CERT_MULTIBOARD": 16,
+  "APPROX": 376,
   "TOTAL": 392,
   "top_N_rank_cutoff": 24,
   "exact_board_min": 3,
@@ -19,17 +19,18 @@
   ],
   "source_evidence": {
     "official_subgames": 644,
-    "new_subgames": 678,
+    "new_subgames": 749,
     "source_files": [
       "data/solver_evidence/NL2_MULTIBOARD_B1.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B2_REPAIRED_GTO.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B3.json.gz",
-      "data/solver_evidence/NL2_MULTIBOARD_B4_MICRO.json.gz"
+      "data/solver_evidence/NL2_MULTIBOARD_B4_MICRO.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B5_SBGAPS.json.gz"
     ]
   },
   "nonupgrade_reasons": {
-    "NOT_ENOUGH_DISTINCT_AUTHENTIC_FLOPS_WITH_HERO_LOCKED_SOURCE": 10,
+    "NOT_ENOUGH_DISTINCT_AUTHENTIC_FLOPS_WITH_HERO_LOCKED_SOURCE": 8,
     "LOWER_FREQUENCY_BELOW_PREREGISTERED_TOP24_CUTOFF": 368
   },
   "records": {
@@ -56,7 +57,7 @@
     "ln-opfr-t_model-19esov6": {
       "model_id": "ln-opfr-t_model-19esov6",
       "source_model_id": "ln-opfr-f_cbet-milqtu",
-      "label": "APPROX",
+      "label": "CERT-MULTIBOARD",
       "must_not_extrapolate_to_all_texture_cards": true,
       "model_frequencies_are_not_observed_combo_counts": true,
       "frequency_rank": 2,
@@ -68,9 +69,139 @@
       "preflop_text": "翻前： 你 SB 開 ，BB 跟",
       "abstract_action_history": "你下注、對手跟|",
       "assumed_model_node_spr": 5.056,
-      "certified_3_to_5_exact_flop_boards": [],
-      "proven_exact_board_count": 0,
-      "blocked_reason": "NOT_ENOUGH_DISTINCT_AUTHENTIC_FLOPS_WITH_HERO_LOCKED_SOURCE",
+      "certified_3_to_5_exact_flop_boards": [
+        {
+          "flop": "KsQh4d",
+          "turn": "Tc",
+          "public_board": "4dQhKsTc",
+          "actual_exact_action_line": "b100 c/",
+          "acting_seat": 0,
+          "exact_flop_action": "b100 c",
+          "actual_pot_bb": 18.0,
+          "actual_effective_stack_bb": 91.0,
+          "actual_spr": 5.055556,
+          "model_assumed_spr": 5.056,
+          "relative_spr_error_pct": 0.0088,
+          "genuine_gto_exploitability_pct": 0.39724665880203247,
+          "source_run_id": 44736420272,
+          "source_sha256": "bb3659138eacb511fd7e09346f312577399bbe98f96a37a760170ce45e2d53cc",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 337,
+          "strict_full_street_combo_reachable": 82,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b100"
+          ],
+          "medium_50pct_eligible_combos": 44,
+          "b50_nonpolarized_relative_equity_research_candidate": true,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 44736420272,
+              "sha256": "2ccea8ae2e5eed369901d6dc68d59dc939eaa8bd57740b83a5e4bcbb8399d011",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "villain_observed_pattern_node_share_pct": 55.319,
+              "source_not_real_per_combo_observation": true,
+              "unknown_history_frequency_filled_with_default": true,
+              "observed_marginal_source_nodes": 17,
+              "assumed_default_source_nodes": 9,
+              "unlocked_source_nodes": 21,
+              "hero_model_gain_bb": 2.64494
+            }
+          ],
+          "flop_texture": "KQ_HIGH"
+        },
+        {
+          "flop": "As9h2d",
+          "turn": "Kd",
+          "public_board": "2d9hAsKd",
+          "actual_exact_action_line": "b100 c/",
+          "acting_seat": 0,
+          "exact_flop_action": "b100 c",
+          "actual_pot_bb": 18.0,
+          "actual_effective_stack_bb": 91.0,
+          "actual_spr": 5.055556,
+          "model_assumed_spr": 5.056,
+          "relative_spr_error_pct": 0.0088,
+          "genuine_gto_exploitability_pct": 0.46016865968704224,
+          "source_run_id": 44666285424,
+          "source_sha256": "f5f32522db935fbe30d72095c1b1c6eae80ae36f5ed32d51d320deb3ebd5004d",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 291,
+          "strict_full_street_combo_reachable": 33,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b100"
+          ],
+          "medium_50pct_eligible_combos": 0,
+          "b50_nonpolarized_relative_equity_research_candidate": false,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 44666285424,
+              "sha256": "c735404a2e864d40cdda0fb131c19829b05cdbcdc544fc0a13c405bbfcb671f6",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "villain_observed_pattern_node_share_pct": 63.636,
+              "source_not_real_per_combo_observation": true,
+              "unknown_history_frequency_filled_with_default": true,
+              "observed_marginal_source_nodes": 11,
+              "assumed_default_source_nodes": 10,
+              "unlocked_source_nodes": 12,
+              "hero_model_gain_bb": 3.04576
+            }
+          ],
+          "flop_texture": "ACE_HIGH"
+        },
+        {
+          "flop": "9s6h3d",
+          "turn": "Ts",
+          "public_board": "3d6h9sTs",
+          "actual_exact_action_line": "b100 c/",
+          "acting_seat": 0,
+          "exact_flop_action": "b100 c",
+          "actual_pot_bb": 18.0,
+          "actual_effective_stack_bb": 91.0,
+          "actual_spr": 5.055556,
+          "model_assumed_spr": 5.056,
+          "relative_spr_error_pct": 0.0088,
+          "genuine_gto_exploitability_pct": 0.42017120122909546,
+          "source_run_id": 44732810327,
+          "source_sha256": "becac810e57cc46710469a02a941080ab410e878844b164aab9bba32bb2d8a36",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 301,
+          "strict_full_street_combo_reachable": 7,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b100"
+          ],
+          "medium_50pct_eligible_combos": 5,
+          "b50_nonpolarized_relative_equity_research_candidate": false,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 44732810327,
+              "sha256": "828d5f79ce48ed92c0af7099ce4fbb7939feab672cbbd01589c473d77c2fd9ec",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "villain_observed_pattern_node_share_pct": 55.102,
+              "source_not_real_per_combo_observation": true,
+              "unknown_history_frequency_filled_with_default": true,
+              "observed_marginal_source_nodes": 17,
+              "assumed_default_source_nodes": 10,
+              "unlocked_source_nodes": 22,
+              "hero_model_gain_bb": 2.3958
+            }
+          ],
+          "flop_texture": "LOW"
+        }
+      ],
+      "proven_exact_board_count": 3,
+      "blocked_reason": null,
       "source_credibility": "GITHUB_ACTIONS_AUTHENTIC_CFR_SHA256_AND_FULL_STREET_COMBO_REACH"
     },
     "ln-opfr-t_model-1wej9w5": {
@@ -216,6 +347,49 @@
           "flop_texture": "LOW"
         },
         {
+          "flop": "Jh9d6s",
+          "turn": "3c",
+          "public_board": "6s9dJh3c",
+          "actual_exact_action_line": "x x/",
+          "acting_seat": 0,
+          "exact_flop_action": "x x",
+          "actual_pot_bb": 6.0,
+          "actual_effective_stack_bb": 97.0,
+          "actual_spr": 16.166667,
+          "model_assumed_spr": 16.167,
+          "relative_spr_error_pct": 0.0021,
+          "genuine_gto_exploitability_pct": 0.47028976678848267,
+          "source_run_id": 44736420272,
+          "source_sha256": "879018ab88453eac5f9f195b42051c6319e0a5a411bafc00f11b033a2cf524ea",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 575,
+          "strict_full_street_combo_reachable": 470,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b100"
+          ],
+          "medium_50pct_eligible_combos": 35,
+          "b50_nonpolarized_relative_equity_research_candidate": false,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 44736420272,
+              "sha256": "33ad85bd72f01c990a9def554ea9a26d54c410f6c9afd9453b90b3ceafb1efaf",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "villain_observed_pattern_node_share_pct": 81.481,
+              "source_not_real_per_combo_observation": true,
+              "unknown_history_frequency_filled_with_default": true,
+              "observed_marginal_source_nodes": 14,
+              "assumed_default_source_nodes": 8,
+              "unlocked_source_nodes": 5,
+              "hero_model_gain_bb": 3.67939
+            }
+          ],
+          "flop_texture": "JT_HIGH"
+        },
+        {
           "flop": "Ks7h2d",
           "turn": "9d",
           "public_board": "2d7hKs9d",
@@ -257,49 +431,6 @@
             }
           ],
           "flop_texture": "KQ_HIGH"
-        },
-        {
-          "flop": "Js9h4d",
-          "turn": "Ts",
-          "public_board": "4d9hJsTs",
-          "actual_exact_action_line": "x x/",
-          "acting_seat": 0,
-          "exact_flop_action": "x x",
-          "actual_pot_bb": 6.0,
-          "actual_effective_stack_bb": 97.0,
-          "actual_spr": 16.166667,
-          "model_assumed_spr": 16.167,
-          "relative_spr_error_pct": 0.0021,
-          "genuine_gto_exploitability_pct": 0.48963475227355957,
-          "source_run_id": 44666285424,
-          "source_sha256": "c582868523c7a931e39ba19aa957beb25c160f14bd748ac567972b0ceb9cac61",
-          "source_kind": "PINNED_PREFLOP_CFR",
-          "assumed_preflop_ranges": false,
-          "exact_combo_reachable": 563,
-          "strict_full_street_combo_reachable": 389,
-          "exact_node_actions": [
-            "x",
-            "b50",
-            "b100"
-          ],
-          "medium_50pct_eligible_combos": 252,
-          "b50_nonpolarized_relative_equity_research_candidate": true,
-          "nl2_locked_variants": [
-            {
-              "version": "exp_oop",
-              "run_id": 44666285424,
-              "sha256": "54ce62384d6a30c7286701c60ea90c43abba8e2d5a13c1a371eb282e91424152",
-              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
-              "villain_observed_pattern_node_share_pct": 49.02,
-              "source_not_real_per_combo_observation": true,
-              "unknown_history_frequency_filled_with_default": true,
-              "observed_marginal_source_nodes": 14,
-              "assumed_default_source_nodes": 11,
-              "unlocked_source_nodes": 26,
-              "hero_model_gain_bb": 3.30269
-            }
-          ],
-          "flop_texture": "JT_HIGH"
         },
         {
           "flop": "AsTh4d",
@@ -969,6 +1100,47 @@
           "flop_texture": "LOW"
         },
         {
+          "flop": "Jh9d6s",
+          "turn": "3c",
+          "public_board": "6s9dJh3c",
+          "actual_exact_action_line": "x b50 c/",
+          "acting_seat": 0,
+          "exact_flop_action": "x b50 c",
+          "actual_pot_bb": 12.0,
+          "actual_effective_stack_bb": 94.0,
+          "actual_spr": 7.833333,
+          "model_assumed_spr": 7.583,
+          "relative_spr_error_pct": 3.1957,
+          "genuine_gto_exploitability_pct": 0.4501006603240967,
+          "source_run_id": 44736420272,
+          "source_sha256": "a66651ad80215f3143a60aa410013a33dc3f96ee1de156d9f50c4b55c5ab2cbe",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 415,
+          "strict_full_street_combo_reachable": 298,
+          "exact_node_actions": [
+            "x"
+          ],
+          "medium_50pct_eligible_combos": 0,
+          "b50_nonpolarized_relative_equity_research_candidate": false,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 44736420272,
+              "sha256": "c59c5b786e41cc9b4f97cfc4cd1c14c09edbeb352b36c45406d3e16af2828532",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "villain_observed_pattern_node_share_pct": 40.741,
+              "source_not_real_per_combo_observation": true,
+              "unknown_history_frequency_filled_with_default": true,
+              "observed_marginal_source_nodes": 4,
+              "assumed_default_source_nodes": 7,
+              "unlocked_source_nodes": 16,
+              "hero_model_gain_bb": 3.27279
+            }
+          ],
+          "flop_texture": "JT_HIGH"
+        },
+        {
           "flop": "Ks7h2d",
           "turn": "9d",
           "public_board": "2d7hKs9d",
@@ -1049,47 +1221,6 @@
             }
           ],
           "flop_texture": "PAIRED"
-        },
-        {
-          "flop": "Js9h4d",
-          "turn": "Ts",
-          "public_board": "4d9hJsTs",
-          "actual_exact_action_line": "x b50 c/",
-          "acting_seat": 0,
-          "exact_flop_action": "x b50 c",
-          "actual_pot_bb": 12.0,
-          "actual_effective_stack_bb": 94.0,
-          "actual_spr": 7.833333,
-          "model_assumed_spr": 7.583,
-          "relative_spr_error_pct": 3.1957,
-          "genuine_gto_exploitability_pct": 0.43974611163139343,
-          "source_run_id": 44666285424,
-          "source_sha256": "25ab1b180433747248d7c0e39ae786b0ec717b9c84ece39a59a8220597fcbff2",
-          "source_kind": "PINNED_PREFLOP_CFR",
-          "assumed_preflop_ranges": false,
-          "exact_combo_reachable": 412,
-          "strict_full_street_combo_reachable": 239,
-          "exact_node_actions": [
-            "x"
-          ],
-          "medium_50pct_eligible_combos": 0,
-          "b50_nonpolarized_relative_equity_research_candidate": false,
-          "nl2_locked_variants": [
-            {
-              "version": "exp_oop",
-              "run_id": 44666285424,
-              "sha256": "8cc556d02af701587971637888a190584716f463f5214740056ac2c59af3b15d",
-              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
-              "villain_observed_pattern_node_share_pct": 40.741,
-              "source_not_real_per_combo_observation": true,
-              "unknown_history_frequency_filled_with_default": true,
-              "observed_marginal_source_nodes": 4,
-              "assumed_default_source_nodes": 7,
-              "unlocked_source_nodes": 16,
-              "hero_model_gain_bb": 2.1764
-            }
-          ],
-          "flop_texture": "JT_HIGH"
         },
         {
           "flop": "As9h2d",
@@ -2030,7 +2161,7 @@
     "ln-opfr-r_model-j55znd": {
       "model_id": "ln-opfr-r_model-j55znd",
       "source_model_id": "ln-opfr-t_model-19esov6",
-      "label": "APPROX",
+      "label": "CERT-MULTIBOARD",
       "must_not_extrapolate_to_all_texture_cards": true,
       "model_frequencies_are_not_observed_combo_counts": true,
       "frequency_rank": 16,
@@ -2042,9 +2173,142 @@
       "preflop_text": "翻前： 你 SB 開 ，BB 跟",
       "abstract_action_history": "你下注、對手跟|你下注、對手跟|",
       "assumed_model_node_spr": 2.278,
-      "certified_3_to_5_exact_flop_boards": [],
-      "proven_exact_board_count": 0,
-      "blocked_reason": "NOT_ENOUGH_DISTINCT_AUTHENTIC_FLOPS_WITH_HERO_LOCKED_SOURCE",
+      "certified_3_to_5_exact_flop_boards": [
+        {
+          "flop": "KsQh4d",
+          "turn": "Tc",
+          "public_board": "4dQhKsTc4c",
+          "actual_exact_action_line": "b100 c/b50 c/",
+          "acting_seat": 0,
+          "exact_flop_action": "b100 c",
+          "actual_pot_bb": 36.0,
+          "actual_effective_stack_bb": 82.0,
+          "actual_spr": 2.277778,
+          "model_assumed_spr": 2.278,
+          "relative_spr_error_pct": 0.0097,
+          "genuine_gto_exploitability_pct": 0.39724665880203247,
+          "source_run_id": 44736420272,
+          "source_sha256": "bb3659138eacb511fd7e09346f312577399bbe98f96a37a760170ce45e2d53cc",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 249,
+          "strict_full_street_combo_reachable": 43,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "medium_50pct_eligible_combos": 26,
+          "b50_nonpolarized_relative_equity_research_candidate": true,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 44736420272,
+              "sha256": "2ccea8ae2e5eed369901d6dc68d59dc939eaa8bd57740b83a5e4bcbb8399d011",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "villain_observed_pattern_node_share_pct": 55.319,
+              "source_not_real_per_combo_observation": true,
+              "unknown_history_frequency_filled_with_default": true,
+              "observed_marginal_source_nodes": 17,
+              "assumed_default_source_nodes": 9,
+              "unlocked_source_nodes": 21,
+              "hero_model_gain_bb": 2.64494
+            }
+          ],
+          "flop_texture": "KQ_HIGH"
+        },
+        {
+          "flop": "9s6h3d",
+          "turn": "Ts",
+          "public_board": "3d6h9sTs7c",
+          "actual_exact_action_line": "b100 c/b50 c/",
+          "acting_seat": 0,
+          "exact_flop_action": "b100 c",
+          "actual_pot_bb": 36.0,
+          "actual_effective_stack_bb": 82.0,
+          "actual_spr": 2.277778,
+          "model_assumed_spr": 2.278,
+          "relative_spr_error_pct": 0.0097,
+          "genuine_gto_exploitability_pct": 0.42017120122909546,
+          "source_run_id": 44732810327,
+          "source_sha256": "becac810e57cc46710469a02a941080ab410e878844b164aab9bba32bb2d8a36",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 264,
+          "strict_full_street_combo_reachable": 5,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "medium_50pct_eligible_combos": 0,
+          "b50_nonpolarized_relative_equity_research_candidate": false,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 44732810327,
+              "sha256": "828d5f79ce48ed92c0af7099ce4fbb7939feab672cbbd01589c473d77c2fd9ec",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "villain_observed_pattern_node_share_pct": 55.102,
+              "source_not_real_per_combo_observation": true,
+              "unknown_history_frequency_filled_with_default": true,
+              "observed_marginal_source_nodes": 17,
+              "assumed_default_source_nodes": 10,
+              "unlocked_source_nodes": 22,
+              "hero_model_gain_bb": 2.3958
+            }
+          ],
+          "flop_texture": "LOW"
+        },
+        {
+          "flop": "Ks7h2d",
+          "turn": "9d",
+          "public_board": "2d7hKs9d5s",
+          "actual_exact_action_line": "b50 c/b100 c/",
+          "acting_seat": 0,
+          "exact_flop_action": "b50 c",
+          "actual_pot_bb": 36.0,
+          "actual_effective_stack_bb": 82.0,
+          "actual_spr": 2.277778,
+          "model_assumed_spr": 2.278,
+          "relative_spr_error_pct": 0.0097,
+          "genuine_gto_exploitability_pct": 0.41801199316978455,
+          "source_run_id": 44654973894,
+          "source_sha256": "a699d063c7e38e45b9cc76c703075851876cab9fe831827c27c68a853cbf9132",
+          "source_kind": "PINNED_PREFLOP_CFR_OFFICIAL",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 209,
+          "strict_full_street_combo_reachable": 33,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "medium_50pct_eligible_combos": 104,
+          "b50_nonpolarized_relative_equity_research_candidate": true,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 44654973894,
+              "sha256": "a92c266adff9862eace8e49dce5012945b4b0985092c144bc88c1a1cd8d4e8ac",
+              "source_scope": "PARTIAL_NL2_OBSERVED_AGGREGATE_LOCK",
+              "villain_observed_pattern_node_share_pct": 28.85,
+              "source_not_real_per_combo_observation": true,
+              "unknown_history_frequency_filled_with_default": false,
+              "observed_marginal_source_nodes": null,
+              "assumed_default_source_nodes": null,
+              "unlocked_source_nodes": null,
+              "hero_model_gain_bb": 4.34054
+            }
+          ],
+          "flop_texture": "KQ_HIGH"
+        }
+      ],
+      "proven_exact_board_count": 3,
+      "blocked_reason": null,
       "source_credibility": "GITHUB_ACTIONS_AUTHENTIC_CFR_SHA256_AND_FULL_STREET_COMBO_REACH"
     },
     "ln-opfr-r_model-j5b75a": {
@@ -2106,6 +2370,50 @@
             }
           ],
           "flop_texture": "ACE_HIGH"
+        },
+        {
+          "flop": "Jh9d6s",
+          "turn": "3c",
+          "public_board": "6s9dJh3c4h",
+          "actual_exact_action_line": "b33 c/b50 c/",
+          "acting_seat": 0,
+          "exact_flop_action": "b33 c",
+          "actual_pot_bb": 19.92,
+          "actual_effective_stack_bb": 90.04,
+          "actual_spr": 4.52008,
+          "model_assumed_spr": 4.5,
+          "relative_spr_error_pct": 0.4442,
+          "genuine_gto_exploitability_pct": 0.49236249923706055,
+          "source_run_id": 44736420272,
+          "source_sha256": "1c2ae3987487cc4cb5085c8c2c176db468354d76a423cf7e9f859061e2ca7302",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 415,
+          "strict_full_street_combo_reachable": 32,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "medium_50pct_eligible_combos": 32,
+          "b50_nonpolarized_relative_equity_research_candidate": true,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 44736420272,
+              "sha256": "b3b3a87b3572690ccac6bacbf1792b563d746ac3c3fb92be5cde0fe0ef702144",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "villain_observed_pattern_node_share_pct": 100.0,
+              "source_not_real_per_combo_observation": true,
+              "unknown_history_frequency_filled_with_default": false,
+              "observed_marginal_source_nodes": 3,
+              "assumed_default_source_nodes": 0,
+              "unlocked_source_nodes": 0,
+              "hero_model_gain_bb": 7.27476
+            }
+          ],
+          "flop_texture": "JT_HIGH"
         },
         {
           "flop": "8s8h3d",
@@ -2238,50 +2546,6 @@
             }
           ],
           "flop_texture": "LOW"
-        },
-        {
-          "flop": "AsTh4d",
-          "turn": "4s",
-          "public_board": "4dThAs4s6c",
-          "actual_exact_action_line": "b33 c/b50 c/",
-          "acting_seat": 0,
-          "exact_flop_action": "b33 c",
-          "actual_pot_bb": 19.92,
-          "actual_effective_stack_bb": 90.04,
-          "actual_spr": 4.52008,
-          "model_assumed_spr": 4.5,
-          "relative_spr_error_pct": 0.4442,
-          "genuine_gto_exploitability_pct": 0.2861626148223877,
-          "source_run_id": 44522421850,
-          "source_sha256": "8e666f7400ce5e4aa9341b4ebda65fa5115fc03955192dab5340f69302f5707f",
-          "source_kind": "PINNED_PREFLOP_CFR_OFFICIAL",
-          "assumed_preflop_ranges": false,
-          "exact_combo_reachable": 400,
-          "strict_full_street_combo_reachable": 63,
-          "exact_node_actions": [
-            "x",
-            "b50",
-            "b100",
-            "a"
-          ],
-          "medium_50pct_eligible_combos": 126,
-          "b50_nonpolarized_relative_equity_research_candidate": false,
-          "nl2_locked_variants": [
-            {
-              "version": "exp_oop",
-              "run_id": 44522421850,
-              "sha256": "0146b556c96009ff46b855ca966ee938f5d7e85fd191483944aa4b1870d79775",
-              "source_scope": "PARTIAL_NL2_OBSERVED_AGGREGATE_LOCK",
-              "villain_observed_pattern_node_share_pct": 31.82,
-              "source_not_real_per_combo_observation": true,
-              "unknown_history_frequency_filled_with_default": false,
-              "observed_marginal_source_nodes": null,
-              "assumed_default_source_nodes": null,
-              "unlocked_source_nodes": null,
-              "hero_model_gain_bb": 2.06606
-            }
-          ],
-          "flop_texture": "ACE_HIGH"
         }
       ],
       "proven_exact_board_count": 5,
@@ -2843,9 +3107,9 @@
           "flop_texture": "ACE_HIGH"
         },
         {
-          "flop": "AsTh4d",
-          "turn": "Td",
-          "public_board": "4dThAsTd3h",
+          "flop": "Jh9d6s",
+          "turn": "3c",
+          "public_board": "6s9dJh3cJd",
           "actual_exact_action_line": "x x/b50 c/",
           "acting_seat": 0,
           "exact_flop_action": "x x",
@@ -2854,40 +3118,84 @@
           "actual_spr": 7.833333,
           "model_assumed_spr": 7.833,
           "relative_spr_error_pct": 0.0043,
-          "genuine_gto_exploitability_pct": 0.28490734100341797,
-          "source_run_id": 44522421850,
-          "source_sha256": "1b34014fa2bbb399c033c32f73449582ef2590a780c110e936d344b40f881fd6",
-          "source_kind": "PINNED_PREFLOP_CFR_OFFICIAL",
+          "genuine_gto_exploitability_pct": 0.47028976678848267,
+          "source_run_id": 44736420272,
+          "source_sha256": "879018ab88453eac5f9f195b42051c6319e0a5a411bafc00f11b033a2cf524ea",
+          "source_kind": "PINNED_PREFLOP_CFR",
           "assumed_preflop_ranges": false,
-          "exact_combo_reachable": 347,
-          "strict_full_street_combo_reachable": 26,
+          "exact_combo_reachable": 547,
+          "strict_full_street_combo_reachable": 35,
           "exact_node_actions": [
             "x",
             "b50",
             "b100",
             "a"
           ],
-          "medium_50pct_eligible_combos": 166,
+          "medium_50pct_eligible_combos": 12,
           "b50_nonpolarized_relative_equity_research_candidate": false,
           "nl2_locked_variants": [
             {
               "version": "exp_oop",
-              "run_id": 44522421850,
-              "sha256": "226f22615f1d27a2b87d8e3def516296e177efad75b82509810d76271c0eeb66",
-              "source_scope": "PARTIAL_NL2_OBSERVED_AGGREGATE_LOCK",
-              "villain_observed_pattern_node_share_pct": 3.85,
+              "run_id": 44736420272,
+              "sha256": "33ad85bd72f01c990a9def554ea9a26d54c410f6c9afd9453b90b3ceafb1efaf",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "villain_observed_pattern_node_share_pct": 81.481,
               "source_not_real_per_combo_observation": true,
-              "unknown_history_frequency_filled_with_default": false,
-              "observed_marginal_source_nodes": null,
-              "assumed_default_source_nodes": null,
-              "unlocked_source_nodes": null,
-              "hero_model_gain_bb": 0.70014
+              "unknown_history_frequency_filled_with_default": true,
+              "observed_marginal_source_nodes": 14,
+              "assumed_default_source_nodes": 8,
+              "unlocked_source_nodes": 5,
+              "hero_model_gain_bb": 3.67939
             }
           ],
-          "flop_texture": "ACE_HIGH"
+          "flop_texture": "JT_HIGH"
+        },
+        {
+          "flop": "KsQh4d",
+          "turn": "Tc",
+          "public_board": "4dQhKsTc3h",
+          "actual_exact_action_line": "x x/b50 c/",
+          "acting_seat": 0,
+          "exact_flop_action": "x x",
+          "actual_pot_bb": 12.0,
+          "actual_effective_stack_bb": 94.0,
+          "actual_spr": 7.833333,
+          "model_assumed_spr": 7.833,
+          "relative_spr_error_pct": 0.0043,
+          "genuine_gto_exploitability_pct": 0.4987699091434479,
+          "source_run_id": 44736420272,
+          "source_sha256": "fb2c93ae0175391b16c526e35386807f8e59107fd3a25035593792298c976c19",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 482,
+          "strict_full_street_combo_reachable": 168,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "medium_50pct_eligible_combos": 64,
+          "b50_nonpolarized_relative_equity_research_candidate": false,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 44736420272,
+              "sha256": "7501bfcbc3875b3bcab84f0b5c3f3d2d462ab28c1a317faef9ffb1ac524c9e34",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "villain_observed_pattern_node_share_pct": 75.0,
+              "source_not_real_per_combo_observation": true,
+              "unknown_history_frequency_filled_with_default": true,
+              "observed_marginal_source_nodes": 13,
+              "assumed_default_source_nodes": 8,
+              "unlocked_source_nodes": 7,
+              "hero_model_gain_bb": 2.49535
+            }
+          ],
+          "flop_texture": "KQ_HIGH"
         }
       ],
-      "proven_exact_board_count": 4,
+      "proven_exact_board_count": 5,
       "blocked_reason": null,
       "source_credibility": "GITHUB_ACTIONS_AUTHENTIC_CFR_SHA256_AND_FULL_STREET_COMBO_REACH"
     },
@@ -10362,7 +10670,13 @@
       "gzip_sha256": "98c405d0a04cb94c855d2634a30f4f1a01a77681adeb2234aea7ebb4bc7ab786"
     },
     "B5_SBGAPS": {
-      "status": "PENDING_NOT_CERTIFIED"
+      "status": "VERIFIED",
+      "run_id": 44736420272,
+      "authentic_jobs": 5,
+      "gto_cases": 45,
+      "locked_cases": 26,
+      "new_subgames": 71,
+      "gzip_sha256": "9a408c6f3932e9d12763ae6e026188dc346e8b7505446275145f2419d78e1bfc"
     },
     "B6_REMAIN": {
       "status": "PENDING_NOT_CERTIFIED"

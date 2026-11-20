@@ -8,8 +8,8 @@ Every unlisted board/texture action remains APPROX, not GTO.
 
 | status | nodes |
 | --- | ---: |
-| CERT-MULTIBOARD | 14 |
-| APPROX approximate | 378 |
+| CERT-MULTIBOARD | 16 |
+| APPROX approximate | 376 |
 | Total | 392 |
 
 ## Fixed frequency ranking and disclosure
@@ -31,7 +31,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B2_REPAIRED_GTO | 44731732467 | 7 | 0 |
 | B3 | 44666294821 | 43 | 90 |
 | B4_MICRO | 44732810327 | 30 | 30 |
-| B5_SBGAPS | PENDING | 0 | 0 |
+| B5_SBGAPS | 44736420272 | 45 | 26 |
 | B6_REMAIN | PENDING | 0 | 0 |
 | B7_RIVER | PENDING | 0 | 0 |
 | B8_LOCK | PENDING | 0 | 0 |
@@ -41,26 +41,26 @@ CFR outcomes cannot be used to tune this cutoff.
 | rank | model ID | family/spot | original SPR | label | named GTO flop boards |
 | ---: | --- | --- | ---: | --- | --- |
 | 1 | ln-iso-lmp_t_model-19hfq8v | LMP/LMP_CO_BB | 19.55 | APPROX | not enough authentic proof |
-| 2 | ln-opfr-t_model-19esov6 | SRP/SB_BB | 5.056 | APPROX | not enough authentic proof |
+| 2 | ln-opfr-t_model-19esov6 | SRP/SB_BB | 5.056 | CERT-MULTIBOARD | KsQh4d Tc, As9h2d Kd, 9s6h3d Ts |
 | 3 | ln-opfr-t_model-1wej9w5 | SRP/SB_BB | 6.167 | APPROX | not enough authentic proof |
 | 4 | ln-opfr-t_model-trdt3w | SRP/SB_BB | 7.833 | APPROX | not enough authentic proof |
-| 5 | ln-opfr-t_model-id38uf | SRP/SB_BB | 16.167 | CERT-MULTIBOARD | 8s8h3d 5s, 9s6h3d Ts, Ks7h2d 9d, Js9h4d Ts, AsTh4d 4s |
+| 5 | ln-opfr-t_model-id38uf | SRP/SB_BB | 16.167 | CERT-MULTIBOARD | 8s8h3d 5s, 9s6h3d Ts, Jh9d6s 3c, Ks7h2d 9d, AsTh4d 4s |
 | 6 | ln-bb-t_model-1n6d5u3 | SRP/BTN_BB | 17.727 | CERT-MULTIBOARD | 8s8h3d 5s, Ks7s2s 9d, 9s6h3d Ts, Js9h4d Ts, KsQh4d Tc |
 | 7 | ln-iso-lmp_t_model-1e9jvm0 | LMP/LMP_CO_BB | 39.6 | CERT-MULTIBOARD | 8s8h3d 5s, 9s6h3d Ts, KsQh4d Tc |
 | 8 | ln-ipfr-t_model-qcljc6 | SRP/BTN_BB | 8.364 | CERT-MULTIBOARD | Jh9d6s 3c, KsQh4d Tc, As9h2d Kd |
-| 9 | ln-opfr-t_model-4t8fsk | SRP/SB_BB | 7.583 | CERT-MULTIBOARD | 9s6h3d Ts, Ks7h2d 9d, 8s8h3d 5s, Js9h4d Ts, As9h2d Kd |
+| 9 | ln-opfr-t_model-4t8fsk | SRP/SB_BB | 7.583 | CERT-MULTIBOARD | 9s6h3d Ts, Jh9d6s 3c, Ks7h2d 9d, 8s8h3d 5s, As9h2d Kd |
 | 10 | ln-iso-lmp_t_model-1nf06ka | LMP/LMP_CO_BB | 19.3 | CERT-MULTIBOARD | 9s6h3d Ts, KsQh4d Tc, 8s8h3d 5s |
 | 11 | ln-bb-t_model-1c7tu96 | SRP/BTN_BB | 8.364 | CERT-MULTIBOARD | Ks7s2s 9d, Js9h4d Ts, KsQh4d Tc, As9h2d Kd, 9s6h3d Ts |
 | 12 | ln-ipc-t_model-btptzw | SRP/SB_BB | 7.583 | CERT-MULTIBOARD | Js9h4d Ts, As9h2d Kd, Ks7h2d 9d, 8s8h3d 5s |
 | 13 | ln-iso-lmp_t_model-10v4wiz | LMP/LMP_CO_BB | 19.3 | CERT-MULTIBOARD | 9s6h3d Ts, KsQh4d Tc, 8s8h3d 5s |
 | 14 | ln-bb-t_model-cge9jz | SRP/CO_BB | 8.364 | CERT-MULTIBOARD | Js9h4d Ts, As9h2d Kd, 8s8h3d 5s |
 | 15 | ln-opfr-r_model-1bv0680 | SRP/SB_BB | 2.833 | APPROX | not enough authentic proof |
-| 16 | ln-opfr-r_model-j55znd | SRP/SB_BB | 2.278 | APPROX | not enough authentic proof |
-| 17 | ln-opfr-r_model-j5b75a | SRP/SB_BB | 4.5 | CERT-MULTIBOARD | As9h2d Kd, 8s8h3d 5s, Ks7h2d 9d, 9s6h3d Ts, AsTh4d 4s |
+| 16 | ln-opfr-r_model-j55znd | SRP/SB_BB | 2.278 | CERT-MULTIBOARD | KsQh4d Tc, 9s6h3d Ts, Ks7h2d 9d |
+| 17 | ln-opfr-r_model-j5b75a | SRP/SB_BB | 4.5 | CERT-MULTIBOARD | As9h2d Kd, Jh9d6s 3c, 8s8h3d 5s, Ks7h2d 9d, 9s6h3d Ts |
 | 18 | ln-opfr-r_model-ka3vbv | SRP/SB_BB | 2.833 | APPROX | not enough authentic proof |
 | 19 | ln-3bp-3b_t_model-1gg0bw | 3BP/SB3_BTN | 1.414 | CERT-MULTIBOARD | 8s8h3d 5s, As7h3d Jh, Ks7h2d 9d |
 | 20 | ln-ipfr-t_model-xbvh6 | SRP/BTN_BB | 17.727 | CERT-MULTIBOARD | Ks7s2s 9d, AsQh8d 3c, Jh9d6s 3c, AsAh5h 8s, 9s6h3d Ts |
-| 21 | ln-opfr-r_model-1eyhxd9 | SRP/SB_BB | 7.833 | CERT-MULTIBOARD | 9s6h3d Ts, Ks7h2d 9d, As9h2d Kd, AsTh4d Td |
+| 21 | ln-opfr-r_model-1eyhxd9 | SRP/SB_BB | 7.833 | CERT-MULTIBOARD | 9s6h3d Ts, Ks7h2d 9d, As9h2d Kd, Jh9d6s 3c, KsQh4d Tc |
 | 22 | ln-opfr-r_model-bkt7sm | SRP/SB_BB | 6.167 | APPROX | not enough authentic proof |
 | 23 | ln-opfr-r_model-f6iab7 | SRP/SB_BB | 9.5 | APPROX | not enough authentic proof |
 | 24 | ln-opfr-r_model-iry60z | SRP/SB_BB | 6.643 | APPROX | not enough authentic proof |
@@ -68,7 +68,7 @@ CFR outcomes cannot be used to tune this cutoff.
 ## Reasons some MODEL nodes are not CERT
 
 - LOWER_FREQUENCY_BELOW_PREREGISTERED_TOP24_CUTOFF: 368
-- NOT_ENOUGH_DISTINCT_AUTHENTIC_FLOPS_WITH_HERO_LOCKED_SOURCE: 10
+- NOT_ENOUGH_DISTINCT_AUTHENTIC_FLOPS_WITH_HERO_LOCKED_SOURCE: 8
 
 ## Convergence, combo reach and NL2 lock limits
 
