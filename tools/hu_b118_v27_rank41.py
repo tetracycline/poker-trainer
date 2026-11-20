@@ -67,7 +67,7 @@ def main():
     sources=[pathlib.Path(s) for s in base['source_evidence']['source_files']]
     if (ROOT/'solver_evidence/NL2_MULTIBOARD_B113_UTG_B75_XB50.json.gz').is_file():
         prev=ROOT/'solver_evidence/NL2_MULTIBOARD_B113_UTG_B75_XB50.json.gz'
-        six=jread(prev.with_suffix('.index.json'))
+        six=jread(prev.with_suffix('').with_suffix('.index.json'))
         assert six['schema']=='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1'
         assert six['gzip_sha256']==sha(prev) and six['immediate_CERT_upgrades']==0
         sources.append(prev)
