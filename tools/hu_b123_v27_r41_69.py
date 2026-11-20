@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""TASK-HYBRID B123. Promote ONLY preregistered B112 one-board gaps 41,
-69 and 236, from SHA-verified original GTO with genuine actor-IP NL2 locks.
+"""TASK-HYBRID B123. Promote ONLY preregistered B112 one-board gaps 41
+and 236, from SHA-verified original GTO with genuine actor-IP NL2 locks.
 No generic board/GTO claims; every CERT example is exact named public cards,
 actual full-street action path, preflop 100bb, actor seat, SPR and strict reach.
 """
@@ -13,7 +13,7 @@ BASE=D/'nl2_hu_multiboard_status_v26_b111_rank215_220.json'
 QUEUE=D/'nl2_hu_b112_all_approx_frozen_frequency_gaps.json'
 RANK=D/'nl2_hu_multiboard_prerank.json'
 STAGE=D/'nl2_hu_stage2_queue.json'
-OUT=D/'nl2_hu_multiboard_status_v27_b123_r41_69_236.json'
+OUT=D/'nl2_hu_multiboard_status_v27_b123_r41_236.json'
 MATRIX=D/'nl2_hu_cert_lock_medium_matrix_v27_b123.json'
 DOC=pathlib.Path('docs/NL2_HU_B123_V27_R41_69_REAL_CERT.md')
 LOCKDOC=pathlib.Path('docs/NL2_HU_B123_V27_ALL_CERT_LOCK_MEDIUM.md')
@@ -27,10 +27,6 @@ TARGETS=[
       line='x x/x',seat=1,flops={'8s8h3d','As9h2d','Js9h4d'},
       old_locked={'As9h2d','Js9h4d'},new_flop='8s8h3d',
       source='B121_CO_XX_XB50',source_version='exp_ip'),
- dict(rank=69,model_id='ln-ipfr-r_model-159a6z6',spot='BTN_BB',street=2,
-      line='b33 c/x x/x',seat=1,flops={'8s8h3d','Jh9d6s','KsQh4d'},
-      old_locked={'Jh9d6s','KsQh4d'},new_flop='8s8h3d',
-      source='B115_R69_BTN_B33XX',source_version='exp_ip'),
  dict(rank=236,model_id='ln-ipc-r_model-1nz4lt1',spot='UTG_CO',street=2,
       line='b75 c/x b50 c/x',seat=1,flops={'AsKh3d','Ks7h2d','Jh9d6s'},
       old_locked={'AsKh3d','Ks7h2d'},new_flop='Jh9d6s',
@@ -85,6 +81,13 @@ def main():
     assert b121['exact_actor_IP_turn_nodes']>0 and b121['strict_failure_reason'] is None
     b115=idx['B115_R69_BTN_B33XX']
     assert (b115['run_id'],b115['gto_cases'],b115['locked_cases'])==(44837218223,1,1)
+    # B115 EXP_IP reaches x-x river, but the actual GTO source does not;
+    # no cross-policy promotion without GTO's sequential hero proof.
+    assert not any(n['exact_node_line']=='b33 c/x x/x'
+        and n['acting_seat']==1 and n['strictly_reachable_combos']>0
+        for a in proof['B115_R69_BTN_B33XX']['artifacts'] if a['version']=='gto'
+        for c in a['cases'] for n in c['nodes'])
+    assert base['records']['ln-ipfr-r_model-159a6z6']['label']=='APPROX'
     b120=idx['B120_R236_UTG_B75XB50']
     assert (b120['run_id'],b120['gto_cases'],b120['locked_cases'])==(44837903807,1,1)
     for t in TARGETS:strict_hero(proof[t['source']],t['source_version'],t)
@@ -146,14 +149,14 @@ def main():
             board_flops=sorted(t['flops']),run_id=idx[t['source']]['run_id']))
     changed={k for k in base['records'] if base['records'][k]!=out['records'][k]}
     assert changed=={t['model_id'] for t in TARGETS}
-    assert sum(x['label']=='CERT-MULTIBOARD' for x in out['records'].values())==140
-    assert sum(x['label']=='APPROX' for x in out['records'].values())==252
+    assert sum(x['label']=='CERT-MULTIBOARD' for x in out['records'].values())==139
+    assert sum(x['label']=='APPROX' for x in out['records'].values())==253
     assert all(x['label'] in ('CERT-MULTIBOARD','APPROX') for x in out['records'].values())
-    out.update(schema='NL2_HU_392_MULTIBOARD_CERT_STATUS_V27_B123_R41_69_236',
-        CERT_MULTIBOARD=140,APPROX=252,EST=0,
+    out.update(schema='NL2_HU_392_MULTIBOARD_CERT_STATUS_V27_B123_R41_236',
+        CERT_MULTIBOARD=139,APPROX=253,EST=0,
         original_v26_cert=137,original_v26_approx=255,
-        source_evidence=meta,source_blind_expansion_ranks=[41,69,236],
-        supplementary_cert_count=116,parent_v26_sha256=digest(BASE),
+        source_evidence=meta,source_blind_expansion_ranks=[41,236],
+        supplementary_cert_count=115,parent_v26_sha256=digest(BASE),
         B112_frozen_gap_sha256=digest(QUEUE),
         B115_source_index_sha256=digest(SOURCES['B115_R69_BTN_B33XX'].with_suffix('').with_suffix('.index.json')),
         B120_source_index_sha256=digest(SOURCES['B120_R236_UTG_B75XB50'].with_suffix('').with_suffix('.index.json')),
@@ -170,9 +173,9 @@ def main():
             'new_subgames':ix['verified_cases'],'gzip_sha256':ix['gzip_sha256'],
             'no_generic_texture_GTO':True}
     matrix=create(out)
-    assert (matrix['CERT_MULTIBOARD'],matrix['APPROX'])==(140,252)
-    assert len(matrix['models'])==140
-    assert len(matrix['boards'])==548 and matrix['strict_aggregate']['named_board_proofs']==548
+    assert (matrix['CERT_MULTIBOARD'],matrix['APPROX'])==(139,253)
+    assert len(matrix['models'])==139
+    assert len(matrix['boards'])==545 and matrix['strict_aggregate']['named_board_proofs']==545
     assert all(z['hero_lock_proofs'] and z['strictly_reachable_combo_count']>0
                and z['no_general_bet_size_recommendation'] for z in matrix['boards'])
     OUT.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
@@ -182,22 +185,22 @@ def main():
         no_observed_private_card_conditionals=True,
         PR2_remains_draft_never_merge=True)
     MATRIX.write_text(json.dumps(matrix,ensure_ascii=False,indent=2)+'\n')
-    DOC.write_text('# B123 V27 genuine rank41/69/236 actor-IP 3-board GTO lock promotion\n\n'
-        '**140 CERT-MULTIBOARD / 252 APPROX / 0 EST** from unchanged 392 nodes.\n\n'
+    DOC.write_text('# B123 V27 genuine rank41/236 actor-IP 3-board GTO lock promotion\n\n'
+        '**139 CERT-MULTIBOARD / 253 APPROX / 0 EST** from unchanged 392 nodes.\n\n'
         'rank 41: CO_BB turn x x/x, exact flops 8s8h3d, As9h2d, Js9h4d. '
         'New source B121 actor-IP Rust turn-only, original GTO flop SHA pinned, run 44838577146.\n\n'
-        'rank 69: BTN_BB river b33 c/x x/x, exact flops 8s8h3d, Jh9d6s, KsQh4d. '
-        'New source B115 exact GTO + actor-IP Rust run 44837218223.\n\n'
+        'rank 69 remains APPROX: B115 real EXP-IP x-x river has NO matching strictly '
+        'reachable GTO hero-IP river; source retained without false certification.\\n\\n'
         'rank 236: UTG_CO river b75 c/x b50 c/x, exact flops AsKh3d, Ks7h2d, Jh9d6s. '
         'New source B120 exact GTO + actor-IP Rust run 44837903807; earlier B113 failed path retained.\n\n'
         'No generic GTO inference to other flop textures, no observed '
-        'NL2 per-private-card conditional rates. Failed B113 rank236 and '
+        'NL2 per-private-card conditional rates. Failed B113 alternative rank236 flop and '
         'B114 full-tree EXP-IP rank41 paths remain negative evidence. '
         'Batch E VERIFIED (44732810327). Original 2,475/2,475 river routing preserved.\n'
         'Draft PR #2: NEVER MERGE.\n')
     LOCKDOC.write_text('# B123 V27 per-board node-lock/50pct research flags\n\n'+write_md(matrix))
-    print(json.dumps({'PASS':True,'CERT':140,'APPROX':252,'EST':0,
-        'ranks':[41,69,236],'named_boards':len(matrix['boards']),
+    print(json.dumps({'PASS':True,'CERT':139,'APPROX':253,'EST':0,
+        'ranks':[41,236],'named_boards':len(matrix['boards']),
         'node_lock_variants':matrix['strict_aggregate']['hero_lock_variants'],
         'b50_candidate_boards':matrix['strict_aggregate']['b50_research_candidate_boards'],
         'source_runs':[44838577146,44837218223,44837903807]}))
