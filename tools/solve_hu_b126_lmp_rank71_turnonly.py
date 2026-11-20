@@ -98,7 +98,7 @@ def main():
         restricted_tree_assumption=False,allow_OOP_flop_leads=True,
         turn_sizing_mode='default',
         turn_subgame_sizing={'oop':pipeline.SUB['turn_oop'],'ip':pipeline.SUB['turn_ip']},
-        selected_lines=[LINE],flop_line_policy='checkcheck',
+        selected_lines=[LINE],flop_line_policy='oop-b50only',
         selected_turn_lines=[TURNLINE],turn_line_policy='xb50only',turns=[TURN],
         flop_parent_mode='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK',
         file_flop=str(clone.relative_to(pf)),file_flop_sha256=sha(clone),
