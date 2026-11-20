@@ -1,0 +1,58 @@
+name: TASK-HYBRID B49 independently validate rank31 third real UTG_CO board after B43 salvage
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b49-rank31-proof.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  validate-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify B43 immutable GTO/EXP archive SHA and rank31 three authentic matched flops
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b49_rank31_proof.py
+          python3 tools/hu_b49_rank31_proof.py
+      - name: Forbid premature V3 relabel or fabricated NL2 private combo results
+        run: |
+          python3 - <<'PY'
+          import json
+          r=json.load(open('data/nl2_hu_b49_rank31_third_flop_proof.json'))
+          v=json.load(open('data/nl2_hu_multiboard_status_v3_rank28.json'))
+          assert r['source_blind_B42_rank']==31
+          assert r['qualifies_for_next_separate_versioned_CERT']
+          assert len(r['real_GTO_and_hero_lock_flops'])==3
+          assert v['CERT_MULTIBOARD']==27 and v['APPROX']==365
+          assert v['records'][r['model_id']]['label']=='APPROX'
+          assert r['no_generic_class_texture_GTO'] and r['no_private_combo_pool_frequency_claim']
+          print('PASS B49 original V3 unchanged; rank31 source verification')
+          PY
+      - name: Commit exact proof report to Draft PR#2; no merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b49_rank31_third_flop_proof.json docs/NL2_HU_B49_RANK31_PROOF.md
+          git commit -m 'TASK-HYBRID B49: rank31 has 3 exact GTO + actor-correct NL2 lock flops, source proof pass'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B49-authentic-rank31-third-flop
+          path: |
+            data/nl2_hu_b49_rank31_third_flop_proof.json
+            docs/NL2_HU_B49_RANK31_PROOF.md
+          retention-days: 30
