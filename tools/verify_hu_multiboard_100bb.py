@@ -362,8 +362,17 @@ def verify(root,source_pin,run_id):
                          m.get('gto_parent_source_run_id')==44666294821 and
                          m.get('gto_parent_source_sha256')=='c5861d2bbcc0361f095b13a8ed3e393785c48ec2a517cee1cafb7c52567ed61c' and
                          m.get('flop_root_jobfile_sha256')=='bbed120f68c2e295febc4715fc2a8f987bf46d2d2802a7e410809fea66ca7907' and
-                         m.get('gto_parent_source_manifest_sha256')=='f6922cc27956249d6d69e1c4a184956dc356f67ba8b577194a88a2eccebd3bb7')):
-                        raise ValueError('x-x turn extraction outside explicitly pinned BTN_BB or B98 LMP GTO sources')
+                         m.get('gto_parent_source_manifest_sha256')=='f6922cc27956249d6d69e1c4a184956dc356f67ba8b577194a88a2eccebd3bb7')
+                        or
+                        # B101: single B5 original full-size SB_BB As7h3d GTO
+                        # parent, actor OOP. Original EXP timeout is NOT reused.
+                        (m['spot']=='SB_BB' and m['version']=='exp_oop' and
+                         m['flop']=='As7h3d' and m.get('selected_lines')==['b50 c'] and
+                         m.get('gto_parent_source_run_id')==44736420272 and
+                         m.get('gto_parent_source_sha256')=='af894c256528d482110eea24682467970fdb2d90cafec6de677cfd46a664b0d3' and
+                         m.get('flop_root_jobfile_sha256')=='b86009ee8f620defbf9645bc5219c24b128e103ca6d95bf483b2748735b8ea44' and
+                         m.get('gto_parent_source_manifest_sha256')=='af789ac9a2811e81672c59690913ac380bc47124fb9060be5466ce179f73a8f9')):
+                        raise ValueError('x-x turn extraction outside specifically SHA-pinned BTN_BB, B98 LMP or B101 SB_BB parent')
                     if m.get('selected_turn_lines')!=[' '.join(token)]:
                         raise ValueError('Focused turn extraction differs from predeclared line')
                     subjobfile=rawfile.with_suffix('.job.json')
