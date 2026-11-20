@@ -205,10 +205,27 @@ def verify(root,source_pin,run_id):
                     if len(r[seat])!=169 or any(not 0<=float(x)<=1 for x in r[seat].values()) or not sum(r[seat].values()):
                         raise ValueError('Frozen assumed 169 class range invalid')
             else:
-                if m['preflop_ranges']['source']!='PINNED_POKER_SOLVER_PREFLOP_CFR':
-                    raise ValueError('Known SRP/3BP profile without real preflop CFR')
-                if m['preflop_ranges']['full_sha256']!=sha(src/'v8_build/build/pf_data.json'):
-                    raise ValueError('Preflop combo weights underlying file changed')
+                if m.get('pinned_official_legacy_source_id')==44654973894:
+                    r=m['preflop_ranges']
+                    if r.get('source')!='PINNED_LEGACY_OFFICIAL_GTO_FLOP_WEIGHTS':
+                        raise ValueError('Official source GTO parent mislabeled as current preflop CFR')
+                    if m['spot']!='SB_BB' or m['flop']!='Ks7h2d' or m['version']!='exp_oop':
+                        raise ValueError('Unregistered legacy official parent configuration')
+                    if r.get('original_official_manifest_sha256')!='beef22e291953c2d7ecfef8b1eecf2c66495507c5a3ac02e69a8ba8ec6f13ab8':
+                        raise ValueError('Original legacy official manifest SHA differs')
+                    if r.get('original_official_root_sha256')!='8765d6b5ddfc47fdb29ac38c3675941e6fcaf51371b8f569c59ed3c3c5065897':
+                        raise ValueError('Original weighted GTO root hash changed')
+                    if r.get('original_official_root_job_sha256')!='87ab0e76fde687c0cd51d5358b7b97acc1fe35f15b5af8581510f1d59b47cfb0':
+                        raise ValueError('Original legacy GTO job hash changed')
+                    if r.get('do_not_claim_same_preflop_tree_as_current') is not True:
+                        raise ValueError('Missing disclosure that historical preflop source differs')
+                    if not isinstance(r.get('legacy_dependency_mismatches'),list) or not r['legacy_dependency_mismatches']:
+                        raise ValueError('Mismatch report inconsistent with original pinned legacy source')
+                else:
+                    if m['preflop_ranges']['source']!='PINNED_POKER_SOLVER_PREFLOP_CFR':
+                        raise ValueError('Known SRP/3BP profile without real preflop CFR')
+                    if m['preflop_ranges']['full_sha256']!=sha(src/'v8_build/build/pf_data.json'):
+                        raise ValueError('Preflop combo weights underlying file changed')
             if m['failures'] or m['solved_cases']!=len(m['cases']) or not m['cases']:
                 raise ValueError('Original solver source incomplete')
             base=ad/'solver/postflop'
@@ -369,7 +386,9 @@ def verify(root,source_pin,run_id):
                   medium50_strict_eligible_total=sum(n['medium_50pct_eligible_combos'] for n in nodes),
                   medium50_strict_merged_research_nodes=sum(bool(n['b50_nonpolarized_relative_equity_research_candidate']) for n in nodes),
                   assumed_missing_rate_policy=m['unknown_action_frequency_policy'],
-                  empirical_scope=('ASSUMED_PREFLOP_RANGES' if fam in ('ISO','LMP') else 'PINNED_PREFLOP_CFR'),
+                  empirical_scope=('ASSUMED_PREFLOP_RANGES' if fam in ('ISO','LMP')
+                      else 'PINNED_LEGACY_OFFICIAL_GTO_FLOP_WEIGHTS' if m.get('pinned_official_legacy_source_id')==44654973894
+                      else 'PINNED_PREFLOP_CFR'),
                   certified_scope=('EXACT_BOARD_ONLY_GTO' if m['version']=='gto'
                       else 'TURN_ONLY_NL2_MARGINAL_LOCK_FROM_PINNED_GTO_FLOP_PARENT'
                       if partial_gto_parent else 'PARTIALLY_LOCKED_NL2_MARGINAL_PROXY'),

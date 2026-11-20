@@ -52,12 +52,22 @@ def main():
         legacy.get('spot')!='SB_BB' or legacy.get('version')!='gto' or
         'Ks7h2d' not in str(legacy.get('selected_flops')) or legacy.get('failures')):
         raise ValueError('Wrong historical official CFR source manifest')
-    # Protect against silently swapping the ranges/tree/pool for official GTO.
-    for k,p in (('source_preflop_tree_sha256',src/'v8_build/build/pf_data.json'),
-                ('source_ranges_sha256',pf/'py/ranges.py'),
-                ('source_pipeline_sha256',pf/'py/pipeline.py')):
-        if legacy.get(k) and legacy[k]!=sha(p):
-            raise ValueError('Original official GTO dependency pin changed: '+k)
+    # The original GTO weighted 169 range was solved under its OWN historical
+    # dependencies, not necessarily the currently pinned poker-solver files.
+    # Preserve both sets of SHA hashes and disclose all differences; the
+    # original complete flop weights are copied byte-for-byte from the B28
+    # verified artifact, so no source tree/range substitution occurs.
+    original_deps={k:legacy.get(k) for k in (
+        'source_preflop_tree_sha256','source_ranges_sha256','source_pipeline_sha256')}
+    current_deps={
+        'source_preflop_tree_sha256':sha(src/'v8_build/build/pf_data.json'),
+        'source_ranges_sha256':sha(pf/'py/ranges.py'),
+        'source_pipeline_sha256':sha(pf/'py/pipeline.py')}
+    if any(not isinstance(v,str) or len(v)!=64 for v in original_deps.values()):
+        raise ValueError('Historical source hashes missing, cannot preserve original GTO lineage')
+    legacy_mismatch=[k for k in original_deps if original_deps[k]!=current_deps[k]]
+    print(json.dumps(dict(legacy_original_dependency_differences=legacy_mismatch,
+        reuse_policy='GTO weighted parent byte-for-byte original; NOT labeled as current preflop CFR')),flush=True)
     m=dict(schema='NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1',
         version='gto',spot='SB_BB',flop='Ks7h2d',failures=[],
         no_generic_certification=True,root_pot_bb=6.,root_remaining_bb=97.,
@@ -128,8 +138,17 @@ def main():
     report=dict(schema='NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1',
         spot=args.spot,version=args.version,flop=args.flop,
         pot_family='SRP',root_pot_bb=6.,root_remaining_bb=97.,root_spr=round(97/6,6),
-        preflop_ranges=dict(source='PINNED_POKER_SOLVER_PREFLOP_CFR',spot=args.spot,
-                            full_sha256=sha(src/'v8_build/build/pf_data.json')),
+        preflop_ranges=dict(
+            source='PINNED_LEGACY_OFFICIAL_GTO_FLOP_WEIGHTS',
+            spot=args.spot,
+            original_official_preflop_tree_sha256=original_deps['source_preflop_tree_sha256'],
+            original_official_manifest_sha256=expected['manifest'],
+            original_official_root_sha256=expected['flop'],
+            original_official_root_job_sha256=expected['job'],
+            old_source_dependencies=original_deps,
+            currently_pinned_solver_dependencies=current_deps,
+            legacy_dependency_mismatches=legacy_mismatch,
+            do_not_claim_same_preflop_tree_as_current=bool(legacy_mismatch)),
         n_NL2_hands=pool['hands'],pool_source_sha256=sha(src/'inputs/pool_stats.json'),
         solver_pin=sha(pf/'py/pipeline.py'),solver_ranges_sha256=sha(pf/'py/ranges.py'),
         flop_action_sizes=SIZES,allow_OOP_flop_leads=True,
