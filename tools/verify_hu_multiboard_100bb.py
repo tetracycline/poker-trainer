@@ -181,7 +181,7 @@ def verify(root,source_pin,run_id):
                 raise ValueError('Not a genuine auditable multi-board solver record')
             if m['spot'] not in REPO_SPOTS or m['version'] not in ('gto','exp_ip','exp_oop'):
                 raise ValueError('Unexpected source profile or version')
-            if m.get('turn_sizing_mode','default') not in ('default','river-gaps'):
+            if m.get('turn_sizing_mode','default') not in ('default','river-gaps','exact-b66-only'):
                 raise ValueError('Unregistered turn subgame size menu')
             permitted_flop_lines={'oop-b33only':'b33 c','oop-b50only':'b50 c','oop-b75only':'b75 c'}
             policy=m.get('flop_line_policy','all')
@@ -288,6 +288,17 @@ def verify(root,source_pin,run_id):
                     j2=json.loads(real_job.read_text())
                     if j2.get('turn_oop')!='33%,66%,75%' or j2.get('turn_ip')!='33%,66%,75%':
                         raise ValueError('Actual solved turn sizes differ from predeclared river-gaps menu')
+                if m.get('turn_sizing_mode')=='exact-b66-only':
+                    if m['spot']!='SB_BB' or m['version']!='gto' or m.get('selected_lines')!=['x x'] or m.get('selected_turn_lines')!=['b66 c']:
+                        raise ValueError('Exact 66% source requires predeclared SB_BB x-x GTO')
+                    exact_job=rawfile.with_suffix('.job.json')
+                    if not exact_job.is_file():raise ValueError('Missing exact b66 Rust turn job')
+                    cfg=json.loads(exact_job.read_text())
+                    if cfg.get('turn_oop')!='66%' or cfg.get('turn_ip')!='66%':
+                        raise ValueError('Actual Rust menu not exclusive 66%, may merge with 75')
+                    ex=[z.get('prefix',[]) for z in cfg.get('extract',[]) if z.get('prefix',[])]
+                    if not ex or not all(z[:2]==['b66','c'] for z in ex):
+                        raise ValueError('Exact b66 river extraction missing')
                 if partial_gto_parent:
                     actual_subjob=rawfile.with_suffix('.job.json')
                     if not actual_subjob.is_file():raise ValueError('No genuine downstream Rust EXP job')
@@ -298,6 +309,11 @@ def verify(root,source_pin,run_id):
                     if abs(sj.get('rake_rate',-1)-0.05)>1e-8 or sj.get('rake_cap')!=1000:
                         raise ValueError('Turn-only true Rust job rake differs from NL2')
                 d=json.loads(rawfile.read_text())
+                if m.get('turn_sizing_mode')=='exact-b66-only':
+                    if not any(n['line']=='x x/' and 'b66' in n.get('acts',[]) for n in d['nodes']):
+                        raise ValueError('Actual Rust root lacks distinct b66 action')
+                    if not any(n['line']=='x x/b66 c/' and len(n['board'])==10 for n in d['nodes']):
+                        raise ValueError('Actual Rust river lacks exact b66 call branch')
                 if d['flop']!=m['flop'] or d['turn']!=c['turn'] or d['line0']!=c['line']:
                     raise ValueError('Wrong flop-to-turn lineage')
                 parent=next((n for n in fr['nodes'] if n['line']==c['line']+'/' and n['board'][-2:]==c['turn']),None)

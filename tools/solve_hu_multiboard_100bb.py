@@ -108,11 +108,14 @@ def main():
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
     a.add_argument('--turn-line-policy',choices=('default','b100only'),default='default',
         help='Extract only exact b100-call river continuations; never alter the full underlying solved tree')
-    a.add_argument('--turn-size-menu',choices=('default','river-gaps'),default='default',
+    a.add_argument('--turn-size-menu',choices=('default','river-gaps','exact-b66-only'),default='default',
         help='river-gaps: predeclared 33/66/75pct turn size tree for x x / turn bet-call river MODEL proofs')
     a.add_argument('--manifest',required=True,type=pathlib.Path)
     args=a.parse_args()
     if not 1<=args.turn_count<=3:a.error('turn-count 1..3')
+    if args.turn_size_menu=='exact-b66-only':
+        if args.spot!='SB_BB' or args.version!='gto' or args.flop_line_policy!='checkcheck' or args.flop_size_profile!='full':
+            a.error('Exact b66 GTO solve requires SB_BB x-x with full flop menu')
     if args.flop_size_profile=='lmp-50-only':
         if args.spot!='LMP_CO_BB' or args.flop_line_policy!='oop-b50only':
             a.error('Restricted flop 50pct policy requires LMP_CO_BB with exact b50 c line')
@@ -179,6 +182,11 @@ def main():
         pipeline.SUB.update(turn_oop='33%,66%,75%',turn_ip='33%,66%,75%')
         pipeline.TURN_LINES=['x b33 c','x b66 c','x b75 c','x x',
                              'b33 c','b66 c','b75 c']
+    elif args.turn_size_menu=='exact-b66-only':
+        # Genuine Rust driver merges 66 and 75 when both are present:
+        # tree_config.merging_threshold=0.1. Remove 75; do not relabel.
+        pipeline.SUB.update(turn_oop='66%',turn_ip='66%')
+        pipeline.TURN_LINES=['b66 c']
     if args.turn_line_policy=='b100only':
         if args.turn_size_menu!='default':
             a.error('b100only requires default turn size menu (50/100)')
