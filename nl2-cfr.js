@@ -124,7 +124,14 @@ async function loadOffline(){
  for(const x of paths)if(x.status==='fulfilled')Object.assign(pathReach,x.value);
  return {exact,missingPath:paths.some(x=>x.status==='rejected')};
 }
-Promise.allSettled([loadOffline(),loadBase(),...independentSources.map(f=>loadIndex(f,true))]).then(([offline,...sourceResults])=>{
+async function loadOfficialSequential(){
+ const sources=['data/nl2_hu_sequential_reach_official_b04.json.gz','data/nl2_hu_sequential_reach_official_b05.json.gz'];
+ const results=await Promise.allSettled(sources.map(loadPathOverlay));
+ for(const entry of results)if(entry.status==='fulfilled')Object.assign(pathReach,entry.value);
+ return {missingPath:results.some(x=>x.status==='rejected'),
+         completed:results.filter(x=>x.status==='fulfilled').length};
+}
+Promise.allSettled([loadOffline(),loadOfficialSequential(),loadBase(),...independentSources.map(f=>loadIndex(f,true))]).then(([offline,official,...sourceResults])=>{
  const results=[...sourceResults,...(offline.status==='fulfilled'?offline.value.exact:[offline])];
  if(results.every(x=>x.status==='rejected'))throw results[0].reason;
  const loaded=results.flatMap(x=>x.status==='fulfilled'?x.value:[]);
@@ -135,7 +142,7 @@ Promise.allSettled([loadOffline(),loadBase(),...independentSources.map(f=>loadIn
  });
  const counts={};for(const c of all)counts[c.status]=(counts[c.status]||0)+1;
  const candidateNodes=all.reduce((k,c)=>k+c.nodes.filter(mediumCandidate).length,0);
- const msg='已載入 '+all.length+' 個實際公牌多街子局'+(results.some(x=>x.status==='rejected')||offline.value?.missingPath?'（有一批未能載入）':'')+'；50% pot 去極化研究候選節點 '+candidateNodes+'；GTO 精確公牌 CERT：'+(counts['CERT_EXACT_BOARD_GTO']||0)
+ const msg='已載入 '+all.length+' 個實際公牌多街子局'+(results.some(x=>x.status==='rejected')||offline.value?.missingPath||official.value?.missingPath?'（有一批未能載入）':'')+'；50% pot 去極化研究候選節點 '+candidateNodes+'；GTO 精確公牌 CERT：'+(counts['CERT_EXACT_BOARD_GTO']||0)
    +'；對手頻率鎖定試驗：'+(counts['EXPERIMENTAL_POOL_LOCKED']||0)
    +'；392 張通用 MODEL 仍不是 CERT（0/392）。只在同一公牌、同一完整下注歷史及節點 SPR 有效。';
  setText(by('status'),msg);
