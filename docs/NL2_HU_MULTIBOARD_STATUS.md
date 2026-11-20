@@ -46,7 +46,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B17_RIVER_PINNED | 44752647498 | 0 | 1 |
 | B18_RIVERPAIR | 44758653460 | 0 | 2 |
 | B19_LMP50_RESTRICTED | 44762388523 | 2 | 3 |
-| B20_B66_GTO | PENDING | 0 | 0 |
+| B20_B66_GTO | 44763159052 | 3 | 0 |
 | B22_B66_EXP | PENDING | 0 | 0 |
 | B23_LMP_NEXT | PENDING | 0 | 0 |
 

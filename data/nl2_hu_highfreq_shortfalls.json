@@ -20,11 +20,12 @@
     "NL2_MULTIBOARD_B16_GTO_PARENT_TWO.json.gz",
     "NL2_MULTIBOARD_B17_RIVER_PINNED.json.gz",
     "NL2_MULTIBOARD_B18_RIVERPAIR.json.gz",
-    "NL2_MULTIBOARD_B19_LMP50_RESTRICTED.json.gz"
+    "NL2_MULTIBOARD_B19_LMP50_RESTRICTED.json.gz",
+    "NL2_MULTIBOARD_B20_B66_GTO.json.gz"
   ],
   "sources": {
     "official_subgames": 644,
-    "new_subgames": 860,
+    "new_subgames": 863,
     "source_files": [
       "data/solver_evidence/NL2_MULTIBOARD_B1.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json.gz",
@@ -42,7 +43,8 @@
       "data/solver_evidence/NL2_MULTIBOARD_B16_GTO_PARENT_TWO.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B17_RIVER_PINNED.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B18_RIVERPAIR.json.gz",
-      "data/solver_evidence/NL2_MULTIBOARD_B19_LMP50_RESTRICTED.json.gz"
+      "data/solver_evidence/NL2_MULTIBOARD_B19_LMP50_RESTRICTED.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B20_B66_GTO.json.gz"
     ]
   },
   "missing_by_spot": {
@@ -1087,13 +1089,6 @@
       ],
       "recorded_line_examples": [
         {
-          "flop": "As9h2d",
-          "source_run_id": 44737532081,
-          "node_spr": 2.833333,
-          "line": "b50 c/b75 c/",
-          "lock_count": 0
-        },
-        {
           "flop": "AsTh4d",
           "source_run_id": 44522421850,
           "node_spr": 2.833333,
@@ -1106,6 +1101,13 @@
           "node_spr": 2.833333,
           "line": "b75 c/b50 c/",
           "lock_count": 1
+        },
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 2.833333,
+          "line": "b75 c/b50 c/",
+          "lock_count": 0
         },
         {
           "flop": "Js9h4d",
@@ -1336,13 +1338,6 @@
       ],
       "recorded_line_examples": [
         {
-          "flop": "As9h2d",
-          "source_run_id": 44737532081,
-          "node_spr": 2.833333,
-          "line": "b50 c/b75 c/",
-          "lock_count": 0
-        },
-        {
           "flop": "AsTh4d",
           "source_run_id": 44522421850,
           "node_spr": 2.833333,
@@ -1355,6 +1350,13 @@
           "node_spr": 2.833333,
           "line": "b75 c/b50 c/",
           "lock_count": 1
+        },
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 2.833333,
+          "line": "b75 c/b50 c/",
+          "lock_count": 0
         },
         {
           "flop": "Js9h4d",
@@ -1798,18 +1800,45 @@
       "street": 2,
       "original_model_spr": 6.643,
       "current_label": "APPROX",
-      "exact_matching_flops": [],
+      "exact_matching_flops": [
+        "9s6h3d",
+        "As7h3d",
+        "KsQh4d"
+      ],
       "flops_with_hero_lock": [],
-      "flops_without_hero_lock": [],
-      "distinct_matching_gto_flop_count": 0,
+      "flops_without_hero_lock": [
+        "9s6h3d",
+        "As7h3d",
+        "KsQh4d"
+      ],
+      "distinct_matching_gto_flop_count": 3,
       "distinct_gto_plus_hero_lock_count": 0,
       "missing_required_flops": 3,
       "texture_labels_seen": [],
-      "recorded_line_examples": [],
+      "recorded_line_examples": [
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44763159052,
+          "node_spr": 6.683908,
+          "line": "x x/b66 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "As7h3d",
+          "source_run_id": 44763159052,
+          "node_spr": 6.683908,
+          "line": "x x/b66 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44763159052,
+          "node_spr": 6.683908,
+          "line": "x x/b66 c/",
+          "lock_count": 0
+        }
+      ],
       "upcoming_preregistered_board_examples": [
-        "KsQh4d",
-        "9s6h3d",
-        "As7h3d",
         "Jh9d6s"
       ],
       "unproven_until_gto_and_hero_lock_solved": true,
