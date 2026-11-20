@@ -34,7 +34,7 @@ def discover(root):
         # instead report the VERIFIED number of separate solver artifacts.
         # B5 retains five successful originals; the sixth timed out, and is EXCLUDED.
         # Repair only this KNOWN metadata defect, never infer extra GTO games.
-        expected_new_jobs={'B5_SBGAPS':5,'B6_REMAIN':6,'B7_RIVER':5,'B8_LOCK':1,'B9_LMP_FAST':6,'B10_RIVER_EXP':1,'B11_RIVER_FAST':4,'B12_LOCK_FAST':2,'B13_LMP_B50':6}
+        expected_new_jobs={'B5_SBGAPS':5,'B6_REMAIN':6,'B7_RIVER':5,'B8_LOCK':1,'B9_LMP_FAST':2,'B10_RIVER_EXP':1,'B11_RIVER_FAST':4,'B12_LOCK_FAST':2,'B13_LMP_B50':6}
         if code in expected_new_jobs and ix['actual_spot_flop_version_jobs']!=expected_new_jobs[code]:
             n=expected_new_jobs[code]
             if not (ix['actual_spot_flop_version_jobs']==4 and
