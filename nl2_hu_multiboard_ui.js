@@ -118,7 +118,6 @@ function fetchCertifiedRegistry(){
   }).catch(()=>fetch('data/nl2_hu_multiboard_status.json',{cache:'no-store'}).then(open));
 }
 fetchCertifiedRegistry()
- .then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json()})
  .then(d=>{
    if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V1','NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE'].includes(d.schema)||d.TOTAL!==392||
       d.CERT_MULTIBOARD+d.APPROX!==392||Object.keys(d.records).length!==392){

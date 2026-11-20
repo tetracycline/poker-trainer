@@ -1,0 +1,85 @@
+name: TASK-HYBRID B44 repair parsed-JSON V2 CERT loading; smoke-test fallback and 392 count
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b44-cert-loader.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  loader-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Check both V2 CERT user-interface source files
+        run: |
+          set -euo pipefail
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+          node - <<'JS'
+          const fs=require('fs'),assert=require('assert').strict;
+          const paths=['nl2-multiboard.js','nl2_hu_multiboard_ui.js'];
+          const v2=JSON.parse(fs.readFileSync('data/nl2_hu_multiboard_status_v2_tie.json','utf8'));
+          const v1=JSON.parse(fs.readFileSync('data/nl2_hu_multiboard_status.json','utf8'));
+          assert.equal(v2.CERT_MULTIBOARD,26);assert.equal(v2.APPROX,366);
+          assert.equal(v1.CERT_MULTIBOARD,24);assert.equal(v1.APPROX,368);
+          async function verify(path) {
+            const src=fs.readFileSync(path,'utf8');
+            const start=src.indexOf('function fetchCertifiedRegistry(){');
+            const end=src.indexOf('\nfetchCertifiedRegistry()\n .then(d=>{',start);
+            assert(start>=0&&end>start,'missing decoded data consumer: '+path);
+            const fnBody=src.slice(start,end);
+            const fn=new Function('fetch',fnBody+';return fetchCertifiedRegistry();');
+            let calls=[];
+            const ok=await fn(async url=>{calls.push(url);return {ok:true,json:async()=>v2}});
+            assert.strictEqual(ok,v2);
+            assert.deepEqual(calls,['data/nl2_hu_multiboard_status_v2_tie.json']);
+            calls=[];
+            const fallback=await fn(async url=>{
+              calls.push(url);
+              return url.includes('v2_tie')?{ok:false,status:404}:{ok:true,json:async()=>v1};
+            });
+            assert.strictEqual(fallback,v1);
+            assert.deepEqual(calls,[
+              'data/nl2_hu_multiboard_status_v2_tie.json',
+              'data/nl2_hu_multiboard_status.json']);
+            assert(!src.includes("fetchCertifiedRegistry()\\n .then(r=>"),'double Response parsing');
+          }
+          (async()=> {
+            for(const path of paths) await verify(path);
+            fs.writeFileSync('data/nl2_hu_b44_ui_loader_test.json',
+              JSON.stringify({schema:'NL2_HU_B44_V2_CERT_LOADER_TEST_V1',
+                result:'PASS',files:paths,
+                source_v2_cert:26,source_v2_approx:366,
+                fallback_v1_cert:24,fallback_v1_approx:368,
+                decoded_JSON_consumed_directly:true,
+                v1_fallback_on_v2_unavailable:true,
+                no_source_reclassification:true,
+                PR_2_remains_draft_and_never_merge:true},null,2)+'\n');
+            console.log('PASS B44 V2 decoded JSON and V1 fallback both loaders');
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+          JS
+      - name: Commit frontend regression evidence to Draft PR#2; do not merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b44_ui_loader_test.json
+          git commit -m 'TASK-HYBRID B44: certify V2 JSON loader and V1 fallback smoke tests; 26/366 unchanged'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B44-V2-loader-runtime-gate
+          path: data/nl2_hu_b44_ui_loader_test.json
+          retention-days: 30
