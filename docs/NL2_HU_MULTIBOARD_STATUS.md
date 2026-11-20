@@ -8,8 +8,8 @@ Every unlisted board/texture action remains APPROX, not GTO.
 
 | status | nodes |
 | --- | ---: |
-| CERT-MULTIBOARD | 12 |
-| APPROX approximate | 380 |
+| CERT-MULTIBOARD | 13 |
+| APPROX approximate | 379 |
 | Total | 392 |
 
 ## Fixed frequency ranking and disclosure
@@ -27,8 +27,8 @@ CFR outcomes cannot be used to tune this cutoff.
 | --- | --- | ---: | ---: |
 | B1 | 44666285424 | 88 | 159 |
 | B2 | PENDING | 0 | 0 |
-| B2_PARTIAL | PENDING | 0 | 0 |
-| B2_REPAIRED_GTO | PENDING | 0 | 0 |
+| B2_PARTIAL | 44666290556 | 65 | 166 |
+| B2_REPAIRED_GTO | 44731732467 | 7 | 0 |
 | B3 | 44666294821 | 43 | 90 |
 
 ## Top-24 preregistered game histories
@@ -48,7 +48,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | 11 | ln-bb-t_model-1c7tu96 | SRP/BTN_BB | 8.364 | CERT-MULTIBOARD | Ks7s2s 9d, Js9h4d Ts, KsQh4d Tc, As9h2d Kd, 9s6h3d Ts |
 | 12 | ln-ipc-t_model-btptzw | SRP/SB_BB | 7.583 | CERT-MULTIBOARD | Js9h4d Ts, As9h2d Kd, Ks7h2d 9d, 8s8h3d 5s |
 | 13 | ln-iso-lmp_t_model-10v4wiz | LMP/LMP_CO_BB | 19.3 | CERT-MULTIBOARD | 9s6h3d Ts, KsQh4d Tc, 8s8h3d 5s |
-| 14 | ln-bb-t_model-cge9jz | SRP/CO_BB | 8.364 | APPROX | not enough authentic proof |
+| 14 | ln-bb-t_model-cge9jz | SRP/CO_BB | 8.364 | CERT-MULTIBOARD | Js9h4d Ts, As9h2d Kd, 8s8h3d 5s |
 | 15 | ln-opfr-r_model-1bv0680 | SRP/SB_BB | 2.833 | APPROX | not enough authentic proof |
 | 16 | ln-opfr-r_model-j55znd | SRP/SB_BB | 2.278 | APPROX | not enough authentic proof |
 | 17 | ln-opfr-r_model-j5b75a | SRP/SB_BB | 4.5 | CERT-MULTIBOARD | As9h2d Kd, 8s8h3d 5s, Ks7h2d 9d, AsTh4d 4s |
@@ -63,7 +63,7 @@ CFR outcomes cannot be used to tune this cutoff.
 ## Reasons some MODEL nodes are not CERT
 
 - LOWER_FREQUENCY_BELOW_PREREGISTERED_TOP24_CUTOFF: 368
-- NOT_ENOUGH_DISTINCT_AUTHENTIC_FLOPS_WITH_HERO_LOCKED_SOURCE: 12
+- NOT_ENOUGH_DISTINCT_AUTHENTIC_FLOPS_WITH_HERO_LOCKED_SOURCE: 11
 
 ## Convergence, combo reach and NL2 lock limits
 
