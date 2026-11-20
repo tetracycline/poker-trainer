@@ -1,0 +1,79 @@
+name: NL2 stage3 continuously integrate completed authentic multiboard source batches
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-stage3-consolidate.yml'
+      - 'tools/hu_multiboard_consolidate.py'
+      - 'data/solver_evidence/NL2_MULTIBOARD_B*.index.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: nl2-hu-stage3-consolidate-draft
+  cancel-in-progress: false
+jobs:
+  evidence-gated-classification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Cross-check every finished genuine Rust CFR batch SHA+run against 392 frozen NL2 rank histories
+        run: |
+          python3 tools/hu_multiboard_consolidate.py \
+            --root data \
+            --out data/nl2_hu_multiboard_status.json \
+            --doc docs/NL2_HU_MULTIBOARD_STATUS.md
+      - name: Independently ensure no false CERT and all 392 are accounted
+        run: |
+          python3 - <<'PY'
+          import json,collections,pathlib
+          src=json.load(open('data/nl2_hu_multiboard_status.json'))
+          q=json.load(open('data/nl2_hu_multiboard_prerank.json'))
+          assert src['schema']=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V1'
+          assert src['TOTAL']==len(src['records'])==q['summary']['models']==392
+          assert src['CERT_MULTIBOARD']+src['APPROX']==392
+          assert sum(x['high_frequency_preregistered'] for x in src['records'].values())==24
+          assert sum(x['label']=='CERT-MULTIBOARD' for x in src['records'].values())==src['CERT_MULTIBOARD']
+          assert all(x['label']=='APPROX' for x in src['records'].values() if not x['high_frequency_preregistered'])
+          for x in src['records'].values():
+              if x['label']!='CERT-MULTIBOARD': continue
+              refs=x['certified_3_to_5_exact_flop_boards']
+              assert 3<=len(refs)<=5 and len(set(y['flop'] for y in refs))==len(refs)
+              assert len(set(y['flop_texture'] for y in refs))>=2
+              assert all(y['strict_full_street_combo_reachable']>0 and
+                         y['relative_spr_error_pct']<=5 and
+                         y['genuine_gto_exploitability_pct']<=0.5 and
+                         y['nl2_locked_variants'] and len(y['source_sha256'])==64 for y in refs)
+          print('PASS',src['CERT_MULTIBOARD'],'CERT-MULTIBOARD and',src['APPROX'],'APPROX, 392 accounted')
+          PY
+      - name: Push evidence-backed current status and exact named-board report to Draft PR #2 only
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status.json docs/NL2_HU_MULTIBOARD_STATUS.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'stage3: publish high-frequency exact multiboard CERT vs APPROX for all 392 NL2 training nodes'
+            for retry in 1 2 3 4 5; do
+              git fetch origin fix/nl2-hu-lines-audit-20261118
+              git rebase origin/fix/nl2-hu-lines-audit-20261118
+              if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+              sleep "$retry"
+            done
+            exit 1
+          fi
+      - name: Retain independent status and report if branch push is blocked
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-392-stage3-actual-certified-vs-approx
+          path: |
+            data/nl2_hu_multiboard_status.json
+            docs/NL2_HU_MULTIBOARD_STATUS.md
+          retention-days: 30
