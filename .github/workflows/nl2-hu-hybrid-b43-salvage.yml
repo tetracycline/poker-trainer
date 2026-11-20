@@ -1,0 +1,91 @@
+name: TASK-HYBRID B43 salvage two successful original Rust jobs (without rerun, max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b43-salvage.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  salvage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - name: Download exactly two immutable Rust CFR job artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p downloads
+          gh run download 44806967313 --repo "$GITHUB_REPOSITORY" --dir downloads
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d -name 'nl2-multiboard-B43_UTG_B75-*' | wc -l)" -eq 2
+      - name: Independently inspect source hashes, node pot/SPR/rake, all combo reach and real/imputed pool-lock provenance
+        run: |
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py \
+            --downloads downloads --solver-root solver --run-id 44806967313 \
+            --out trainer/data/solver_evidence/NL2_MULTIBOARD_B43_UTG_B75.json
+      - name: Validate exactly two successful independent solves, hash-compress them, no generic model CERT
+        run: |
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B43_UTG_B75.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert not d['errors'] and len(d['artifacts'])==2
+          assert sum(x['version']=='gto' for x in d['artifacts'])==1
+          assert sum(x['version']=='exp_oop' for x in d['artifacts'])==1
+          assert d['exact_board_gto_sources']>0 and d['imputed_pool_locked_sources']>0
+          assert d['source_run_id']>0
+          assert {(x['spot'],x['flop'],x['version']) for x in d['artifacts']}=={
+             ('UTG_CO','9s6h3d','gto'),('UTG_CO','9s6h3d','exp_oop')}
+          assert all(x['cases'] and not x['errors'] for x in d['artifacts'])
+          assert all(c['flop_line']=='b75 c' for x in d['artifacts'] for c in x['cases'])
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          idx={'schema':'NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+               'run_id':d['source_run_id'],'batch':'B43_UTG_B75',
+               'actual_spot_flop_version_jobs':2,
+               'verified_cases':d['new_authentic_board_cases'],
+               'gto_cases':d['exact_board_gto_sources'],
+               'locked_cases':d['imputed_pool_locked_sources'],
+               'source_sha256':hashlib.sha256(raw).hexdigest(),
+               'gzip_sha256':hashlib.sha256(gz.read_bytes()).hexdigest(),
+               'generic_model_certification':0,
+               'target_sources':['UTG_CO 9s6h3d GTO+EXP_OOP','rank31 single missing flop b75 c/']}
+          p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          print('PASS B43 salvage 2 authentic pinned Rust solve jobs',idx)
+          PY
+      - name: Push a finished <=28-minute true CFR batch to PR #2 Draft, never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B43_UTG_B75.json.gz data/solver_evidence/NL2_MULTIBOARD_B43_UTG_B75.index.json
+          git commit -m 'TASK-HYBRID B43: solve rank31 third distinct UTG_CO b75 c flop with pinned GTO+actor-correct NL2 hero lock'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - name: Retain raw source evidence on push rejection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B43-verified-original-UTG-B75
+          path: trainer/data/solver_evidence/NL2_MULTIBOARD_B43_UTG_B75*
+          retention-days: 30
