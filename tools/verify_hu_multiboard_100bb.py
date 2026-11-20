@@ -225,7 +225,13 @@ def verify(root,source_pin,run_id):
             if m.get('flop_line_policy') in permitted_flop_lines:
                 actual_flop_extract=[e.get('prefix',[]) for e in j.get('extract',[]) if e.get('prefix',[])]
                 expected_flop=permitted_flop_lines[m['flop_line_policy']].split()
-                if not actual_flop_extract or not all(p[:2]==expected_flop for p in actual_flop_extract):
+                if m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK':
+                    # The previously verified GTO flop solves a larger action
+                    # set; the new EXP proof solves ONLY the declared downstream
+                    # continuation. The GTO parent must contain our requested line.
+                    if not any(p[:2]==expected_flop for p in actual_flop_extract):
+                        raise ValueError('Exact requested line absent from pinned GTO flop parent')
+                elif not actual_flop_extract or not all(p[:2]==expected_flop for p in actual_flop_extract):
                     raise ValueError('Actual flop job has unexpected or missing focused action extraction')
             if abs(j['rake_rate']-0.05)>1e-8 or j['rake_cap']!=1000:
                 raise ValueError('Unstated rake vs expected NL2 5% max10bb')
