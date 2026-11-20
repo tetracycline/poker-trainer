@@ -64,7 +64,7 @@ def main():
     assert (base['CERT_MULTIBOARD'],base['APPROX'],base.get('EST',0),base['TOTAL'])==(137,255,0,392)
     assert base['independently_verified_completed_batches']['B4_MICRO']['status']=='VERIFIED'
     assert base['independently_verified_completed_batches']['B4_MICRO']['run_id']==44732810327
-    assert frozen['schema']=='NL2_HU_B112_ALL_APPROX_SOURCE_BLIND_GAP_AUDIT_V1'
+    assert frozen['schema']=='NL2_HU_B112_V26_ALL_APPROX_SOURCE_BLIND_FREQUENCY_AUDIT_V1'
     assert frozen['candidate_count']==255
     assert frozen['one_board_short_ranks']==[41,69,71,88,236,313]
     assert frozen['parent_V26_sha256']==digest(BASE)
