@@ -252,6 +252,7 @@ def verify(root,source_pin,run_id):
                     raise ValueError('Actual flop job has unexpected or missing focused action extraction')
             if abs(j['rake_rate']-0.05)>1e-8 or j['rake_cap']!=1000:
                 raise ValueError('Unstated rake vs expected NL2 5% max10bb')
+            partial_gto_parent=m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK'
             fp=m.get('flop_size_profile','full')
             if fp=='lmp-50-only':
                 if m['spot']!='LMP_CO_BB' or m.get('flop_line_policy')!='oop-b50only':
@@ -277,7 +278,6 @@ def verify(root,source_pin,run_id):
             else: raise ValueError('Unknown flop size proof profile')
             if m['version']=='gto' and j.get('hero') is not None:
                 raise ValueError('GTO job unexpectedly locks a hero')
-            partial_gto_parent=m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK'
             if partial_gto_parent:
                 if m['version']=='gto' or j.get('hero') is not None or j.get('locks'):
                     raise ValueError('Copied GTO flop root mislabeled as locked flop')
