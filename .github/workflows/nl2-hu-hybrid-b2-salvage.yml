@@ -32,7 +32,7 @@ jobs:
           test -d downloads/nl2-multiboard-B2-SB3_BTN-gto-8s8h3d
           rm -rf downloads/nl2-multiboard-B2-SB3_BTN-gto-8s8h3d
           test "$(find downloads -mindepth 1 -maxdepth 1 -type d -name 'nl2-multiboard-B2-*' | wc -l)" -eq 17
-      - name: Independently audit all 17 prior successes: SHA, Rust GTO convergence, source pot/SPR, actual combo and NL2 lock
+      - name: Independently audit all 17 prior successes using SHA and source pot SPR combo and lock evidence
         run: |
           mkdir -p trainer/data/solver_evidence
           python3 trainer/tools/verify_hu_multiboard_100bb.py \
