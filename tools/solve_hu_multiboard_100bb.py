@@ -102,7 +102,7 @@ def main():
     a.add_argument('--version',choices=('gto','exp_ip','exp_oop'),default='gto')
     a.add_argument('--flop',required=True)
     a.add_argument('--turn-count',type=int,default=1)
-    a.add_argument('--flop-line-policy',choices=('all','oop-betcall','checkcheck'),default='all',
+    a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','checkcheck'),default='all',
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
     a.add_argument('--turn-size-menu',choices=('default','river-gaps'),default='default',
         help='river-gaps: predeclared 33/66/75pct turn size tree for x x / turn bet-call river MODEL proofs')
@@ -170,6 +170,7 @@ def main():
                              'b33 c','b66 c','b75 c']
     turns=pipeline.turns_for(flop)[:args.turn_count]
     lines=(['b33 c','b50 c','b75 c','b100 c'] if args.flop_line_policy=='oop-betcall'
+           else ['b50 c'] if args.flop_line_policy=='oop-b50only'
            else ['x x'] if args.flop_line_policy=='checkcheck'
            else list(FLOP_ACTIONS))
     out=pf/'out'/args.spot/args.version
