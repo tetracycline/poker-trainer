@@ -191,7 +191,7 @@ def verify(root,source_pin,run_id):
             if policy in permitted_flop_lines:
                 if m.get('selected_lines')!=[permitted_flop_lines[policy]]:
                     raise ValueError('Focused flop policy not identical to source action line')
-            if m.get('turn_line_policy','default') not in ('default','b100only','b66only','xxonly','xb100only'):
+            if m.get('turn_line_policy','default') not in ('default','b100only','b66only','xxonly','xb100only','xb50only'):
                 raise ValueError('Unregistered focused turn continuation')
             fam,pot,stack=REPO_SPOTS[m['spot']]
             if m['pot_family']!=fam or abs(m['root_pot_bb']-pot)>1e-6 or abs(m['root_remaining_bb']-stack)>1e-6:
@@ -335,7 +335,7 @@ def verify(root,source_pin,run_id):
                     raise ValueError('Pinned GTO parent raw flop SHA changed')
                 if int(m.get('gto_parent_source_run_id',0))<=0:
                     raise ValueError('Missing immutable original GTO run ID')
-                if m.get('turn_line_policy') not in ('b100only','b66only','xxonly','xb100only'):
+                if m.get('turn_line_policy') not in ('b100only','b66only','xxonly','xb100only','xb50only'):
                     raise ValueError('Partial GTO parent lock requires fixed turn continuation')
             else:
                 if m['version']!='gto' and j.get('hero')!=(1 if m['version']=='exp_ip' else 0):
@@ -347,8 +347,9 @@ def verify(root,source_pin,run_id):
                 if sha(rawfile)!=c['source_sha256']:
                     raise ValueError('Subgame SHA mismatch '+c['source_path'])
                 turn_policy=m.get('turn_line_policy')
-                if turn_policy in ('b100only','b66only','xxonly','xb100only'):
+                if turn_policy in ('b100only','b66only','xxonly','xb100only','xb50only'):
                     token=(['x','x'] if turn_policy=='xxonly' else
+                           ['x','b50','c'] if turn_policy=='xb50only' else
                            ['x','b100','c'] if turn_policy=='xb100only' else
                            ['b66','c'] if turn_policy=='b66only' else ['b100','c'])
                     if turn_policy=='xxonly' and not (
@@ -393,6 +394,15 @@ def verify(root,source_pin,run_id):
                         m.get('flop_root_jobfile_sha256')=='1411f3b3f44d1f2aa2186c3d3ca6bc67042d790bd0be8f3667e0a5f7a8eb39ac' and
                         m.get('gto_parent_source_manifest_sha256')=='113506aa83161e8a3ad8dd98875023c75f8ec4a51e610ba02ea7ab5485fcee52'):
                         raise ValueError('Focused x-b100-call turn allowed ONLY from B107 individually SHA-pinned original B2 CO_BB IP GTO root')
+                    if turn_policy=='xb50only' and not (
+                        m['spot']=='UTG_CO' and m['version']=='exp_ip' and
+                        m['flop']=='9s6h3d' and m.get('selected_lines')==['b75 c'] and
+                        m.get('selected_turn_lines')==['x b50 c'] and
+                        m.get('gto_parent_source_run_id')==44806967313 and
+                        m.get('gto_parent_source_sha256')=='efd7295c361a9a0cb559a004b77f16d2a9ed2e73a19d1c6125659f7a451c6ee6' and
+                        m.get('flop_root_jobfile_sha256')=='8c58597e5114bd178abeb880f3fe4d6912cba8b1fa7b6788853096df6a5d2c62' and
+                        m.get('gto_parent_source_manifest_sha256')=='a8fc7e0d02b5badaa82c56faa54e985ff11075eff023519836034e7ed101812e'):
+                        raise ValueError('Focused x-b50-call turn only from individually SHA-pinned B112 original B43 UTG_CO actor-IP GTO')
                     if m.get('selected_turn_lines')!=[' '.join(token)]:
                         raise ValueError('Focused turn extraction differs from predeclared line')
                     subjobfile=rawfile.with_suffix('.job.json')
