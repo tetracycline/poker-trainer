@@ -1,0 +1,87 @@
+name: NL2 stage2 consolidate five verified CFR batches and 392-model source crosswalk
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage2-consolidate.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  complete-source-index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Merge 347 + 158 + 139 real CFR subgames after checking independent archive SHA
+        run: |
+          mkdir -p evidence data
+          python3 tools/hu_stage2_combine_sources.py --root data \
+            --out evidence/combined-source.json \
+            --summary data/nl2_hu_stage2_status.json
+      - name: Recompute all 392 model history/SPR source blockers against complete 644-case CFR archive
+        run: |
+          python3 tools/hu_model_history_crosswalk.py \
+            --queue data/nl2_hu_stage2_queue.json \
+            --source evidence/combined-source.json \
+            --out data/nl2_hu_model_history_crosswalk.json
+      - name: Refresh real 50% pot hero-only nonpolarized candidates and actual NL2 partial locked EV tables
+        run: |
+          python3 tools/hu_exploit_depol_report.py \
+            --source evidence/combined-source.json \
+            --out data/nl2_hu_exploit_depol_report.json
+      - name: Independently verify source/destination counts and no cross-texture CERT
+        run: |
+          python3 - <<'PY'
+          import json,pathlib,collections
+          root=pathlib.Path('data')
+          source=json.loads(pathlib.Path('evidence/combined-source.json').read_text())
+          stat=json.loads((root/'nl2_hu_stage2_status.json').read_text())
+          cr=json.loads((root/'nl2_hu_model_history_crosswalk.json').read_text())
+          report=json.loads((root/'nl2_hu_exploit_depol_report.json').read_text())
+          assert source['exact_subgame_count']==stat['source_cases']==report['source_subgames']==644
+          assert stat['gto_exact_board_certificates']==219
+          assert stat['nl2_provisional_pool_locked_source_cases']==425
+          assert len(stat['run_ids'])==5
+          assert cr['model_nodes']==len(cr['records'])==392
+          assert cr['generic_CERT']==cr['generic_EST']==0
+          assert report['generic_model_certified']==0
+          assert all(x['generic_model_status']=='MODEL_UNCERTIFIED' for x in cr['records'].values())
+          assert report['medium_nonpolarized_exact_board_candidates']>0
+          assert all(x['eligible_medium_combos']>=20 for x in report['top_medium'])
+          print('PASS 644 immutable exact-board source cases, 219 GTO, 425 pool-locked provisional, 392 MODEL still not CERT')
+          print('CROSSWALK',cr['summary'])
+          print('REPORT medium',report['medium_nonpolarized_exact_board_candidates'],
+                'hero-b50-best-EV',report['nonpolarized_hero_or_gto_ev_preferred_nodes'])
+          PY
+          node --check nl2-cfr.js
+          node --check nl2-exploit.js
+          node --check nl2_hu_cfr_refs.js
+      - name: Commit precise research status and human-readable site data to Draft PR, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_stage2_status.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_exploit_depol_report.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'evidence(stage2): 644 exact CFR cases, partial NL2 lock and 392-model lineage revalidation'
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+          fi
+      - name: Save precise source-backed summary and blockers even on push failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-stage2-644-case-complete-source-proof
+          path: |
+            data/nl2_hu_stage2_status.json
+            data/nl2_hu_model_history_crosswalk.json
+            data/nl2_hu_exploit_depol_report.json
+          retention-days: 30
