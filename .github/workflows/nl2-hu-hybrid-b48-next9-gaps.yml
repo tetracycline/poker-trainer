@@ -2,7 +2,7 @@ name: TASK-HYBRID B48 source-blind ranks33-41 exact-board missing proofs
 on:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
-    paths: ['.github/workflows/nl2-hu-hybrid-b48-next9-gaps.yml']
+    paths: ['.github/workflows/nl2-hu-hybrid-b48-next9-gaps.yml', 'tools/hu_b48_next9_gaps.py']
   workflow_dispatch:
 permissions:
   contents: write
@@ -29,6 +29,7 @@ jobs:
           assert x['source_blind_preselection_ranks']==list(range(33,42))
           assert x['no_current_reclassification'] and x['no_source_outcome_based_rank_selection']
           assert len(x['rows'])==9 and v['CERT_MULTIBOARD']==27 and v['APPROX']==365
+          assert x['status_v3_cert']==27 and x['status_v3_approx']==365
           assert x['fixed_rank_sha256']==hashlib.sha256(
             open('data/nl2_hu_multiboard_prerank.json','rb').read()).hexdigest()
           for r in x['rows']:

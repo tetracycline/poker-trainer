@@ -2,7 +2,7 @@
 """B48: preregister the next nine ranks (33-41) by frozen NL2 frequency ONLY.
 
 CFR source inspection is strictly after source-blind selection. This is not
-permission to lift the original 24- or supplemental 26-node certification limit.
+permission to relax any frozen V1, V2 or V3 certification evidence gate.
 Do not label unproven nodes CERT or pool marginals as private-combo observations.
 """
 import collections
@@ -95,7 +95,7 @@ def main():
        rows=rows)
     OUT.write_text(json.dumps(result,indent=2,ensure_ascii=False)+'\n')
     lines=['# B48 | Frozen NL2 ranks33–41 source-blind gap audit','',
-       'PR #2 remains Draft. Original V1 24/368 and V2 26/366 are unchanged.',
+       'PR #2 stays Draft. Current V3 27 CERT / 365 APPROX; V1 24/368 and V2 26/366 unchanged.',
        'Source-blind cohort: exactly nine consecutive original ranks 33–41.',
        'Frozen rank chosen before any CFR/source inspection, not by EV/profit.','',
        '| Rank | Spot | Model | matched GTO flops | GTO+correct hero lock flops | Missing to 3 | Pre-existing evidence qualifies |',
@@ -109,12 +109,12 @@ def main():
     lines+=['','Each exact board has independently pinned GTO SHA, strict legal reach, pot/SPR and actor-correct hero-side lock.',
        'No absent or invalid source is certified; results are not a generic texture GTO strategy.',
        'NEXT: certify existing authentic 3–5 boards for any qualifying preregistered model; first solve/lock ones missing only one board.',
-       'Use independent approved cohort overlay instead of changing original 24 / 26 node registries.',
+       'Use another independently approved overlay rather than altering the original V1, V2 or V3 registers.',
        'Do NOT merge Draft PR #2.','']
     DOC.write_text('\n'.join(lines))
     print(json.dumps({'cohort':RANKS,
        'gaps':{r['rank']:r['missing_to_three_flops'] for r in rows},
        'source_proof_ready':[r['rank'] for r in rows if r['meets_named_board_certification_evidence']],
-       'CERT':26,'APPROX':366},ensure_ascii=False))
+       'CERT':27,'APPROX':365},ensure_ascii=False))
 
 if __name__=='__main__':main()
