@@ -26,7 +26,8 @@ def audit(data):
                               'NL2_HU_392_MULTIBOARD_CERT_STATUS_V17_BATCH84',
                               'NL2_HU_392_MULTIBOARD_CERT_STATUS_V18_BATCH86',
                               'NL2_HU_392_MULTIBOARD_CERT_STATUS_V19_BATCH88',
-                              'NL2_HU_392_MULTIBOARD_CERT_STATUS_V20_BATCH90')
+                              'NL2_HU_392_MULTIBOARD_CERT_STATUS_V20_BATCH90',
+                              'NL2_HU_392_MULTIBOARD_CERT_STATUS_V21_BATCH92')
     assert data['CERT_MULTIBOARD']+data['APPROX']==data['TOTAL']==392
     models={};tot=collections.Counter();source_set=set()
     for model_id,m in data['records'].items():
