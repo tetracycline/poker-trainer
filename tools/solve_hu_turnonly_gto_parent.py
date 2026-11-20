@@ -17,10 +17,13 @@ def main():
     a.add_argument('--gto-parent-run-id',type=int,required=True)
     a.add_argument('--spot',choices=['SB_BB'],required=True)
     a.add_argument('--flop',required=True)
-    a.add_argument('--flop-line',choices=['b33 c','b50 c','b75 c'],required=True)
+    a.add_argument('--flop-line',choices=['b33 c','b50 c','b75 c','x x'],required=True)
+    a.add_argument('--turn-line',choices=['b100 c','b66 c'],default='b100 c')
     a.add_argument('--version',choices=['exp_oop'],required=True)
     a.add_argument('--manifest',type=pathlib.Path,required=True)
     args=a.parse_args()
+    if args.turn_line=='b66 c' and args.flop_line!='x x':
+        a.error('Pinned exact b66 turn proof requires flop checkcheck')
     if not re.fullmatch(r'(?:[23456789TJQKA][cdhs]){3}',args.flop):
         a.error('Explicit flop 3 cards required')
     root=args.gto_artifact_root.resolve()
@@ -33,6 +36,9 @@ def main():
         raise ValueError('Original flop evidence is not valid pinned GTO')
     if m.get('no_generic_certification') is not True or m.get('root_pot_bb')!=6. or m.get('root_remaining_bb')!=97.:
         raise ValueError('Wrong GTO root assumptions')
+    if args.turn_line=='b66 c':
+        if m.get('turn_sizing_mode')!='exact-b66-only' or m.get('selected_lines')!=['x x'] or m.get('selected_turn_lines')!=['b66 c']:
+            raise ValueError('Pinned GTO flop parent lacks the true unmerged b66 branch')
     original_root=root/'solver/postflop'/m['file_flop']
     original_job=original_root.with_suffix('.job.json')
     if not original_root.is_file() or not original_job.is_file():
@@ -62,7 +68,9 @@ def main():
         j['flop_raise']='3x,a'
         return j
     pipeline.make_job=sized
-    pipeline.TURN_LINES=['b100 c']
+    if args.turn_line=='b66 c':
+        pipeline.SUB.update(turn_oop='66%',turn_ip='66%')
+    pipeline.TURN_LINES=[args.turn_line]
     turns=pipeline.turns_for(args.flop)[:1]
     if len(turns)!=1:raise ValueError('Pinned turn selection vanished')
     turn=turns[0]
@@ -97,10 +105,12 @@ def main():
         n_NL2_hands=pool['hands'],pool_source_sha256=sha(src/'inputs/pool_stats.json'),
         solver_pin=sha(pf/'py/pipeline.py'),solver_ranges_sha256=sha(pf/'py/ranges.py'),
         flop_action_sizes=SIZES,allow_OOP_flop_leads=True,
-        flop_line_policy='oop-'+args.flop_line.split()[0]+'only',
+        flop_line_policy=('checkcheck' if args.flop_line=='x x' else 'oop-'+args.flop_line.split()[0]+'only'),
         selected_lines=[args.flop_line],
-        turn_line_policy='b100only',selected_turn_lines=['b100 c'],
-        turn_sizing_mode='default',turn_subgame_sizing={'oop':pipeline.SUB['turn_oop'],'ip':pipeline.SUB['turn_ip']},
+        turn_line_policy=('b66only' if args.turn_line=='b66 c' else 'b100only'),
+        selected_turn_lines=[args.turn_line],
+        turn_sizing_mode=('exact-b66-only' if args.turn_line=='b66 c' else 'default'),
+        turn_subgame_sizing={'oop':pipeline.SUB['turn_oop'],'ip':pipeline.SUB['turn_ip']},
         turns=turns,
         file_flop=str(dst.relative_to(pf)),file_flop_sha256=sha(dst),
         flop_parent_mode='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK',

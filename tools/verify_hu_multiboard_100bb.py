@@ -188,7 +188,7 @@ def verify(root,source_pin,run_id):
             if policy in permitted_flop_lines:
                 if m.get('selected_lines')!=[permitted_flop_lines[policy]]:
                     raise ValueError('Focused flop policy not identical to source action line')
-            if m.get('turn_line_policy','default') not in ('default','b100only'):
+            if m.get('turn_line_policy','default') not in ('default','b100only','b66only'):
                 raise ValueError('Unregistered focused turn continuation')
             fam,pot,stack=REPO_SPOTS[m['spot']]
             if m['pot_family']!=fam or abs(m['root_pot_bb']-pot)>1e-6 or abs(m['root_remaining_bb']-stack)>1e-6:
@@ -261,7 +261,7 @@ def verify(root,source_pin,run_id):
                     raise ValueError('Pinned GTO parent raw flop SHA changed')
                 if int(m.get('gto_parent_source_run_id',0))<=0:
                     raise ValueError('Missing immutable original GTO run ID')
-                if m.get('turn_line_policy')!='b100only':
+                if m.get('turn_line_policy') not in ('b100only','b66only'):
                     raise ValueError('Partial GTO parent lock requires fixed turn continuation')
             else:
                 if m['version']!='gto' and j.get('hero')!=(1 if m['version']=='exp_ip' else 0):
@@ -272,16 +272,18 @@ def verify(root,source_pin,run_id):
                 rawfile=base/c['source_path']
                 if sha(rawfile)!=c['source_sha256']:
                     raise ValueError('Subgame SHA mismatch '+c['source_path'])
-                if m.get('turn_line_policy')=='b100only':
-                    if m.get('selected_turn_lines')!=['b100 c']:
-                        raise ValueError('Requested turn line not declared exactly')
+                turn_policy=m.get('turn_line_policy')
+                if turn_policy in ('b100only','b66only'):
+                    token=['b66','c'] if turn_policy=='b66only' else ['b100','c']
+                    if m.get('selected_turn_lines')!=[' '.join(token)]:
+                        raise ValueError('Focused turn extraction differs from predeclared line')
                     subjobfile=rawfile.with_suffix('.job.json')
                     if not subjobfile.is_file():
                         raise ValueError('Missing true focused turn Rust job config')
                     subjob=json.loads(subjobfile.read_text())
                     sub_extract=[e.get('prefix',[]) for e in subjob.get('extract',[]) if e.get('prefix',[])]
-                    if not sub_extract or not all(p[:2]==['b100','c'] for p in sub_extract):
-                        raise ValueError('Actual Rust extracted turn line mismatches b100 c')
+                    if not sub_extract or not all(p[:2]==token for p in sub_extract):
+                        raise ValueError('Actual Rust focused turn action extraction mismatch')
                 if m.get('turn_sizing_mode')=='river-gaps':
                     real_job=rawfile.with_suffix('.job.json')
                     if not real_job.exists():raise ValueError('No exact turn-river solver config')
@@ -289,8 +291,11 @@ def verify(root,source_pin,run_id):
                     if j2.get('turn_oop')!='33%,66%,75%' or j2.get('turn_ip')!='33%,66%,75%':
                         raise ValueError('Actual solved turn sizes differ from predeclared river-gaps menu')
                 if m.get('turn_sizing_mode')=='exact-b66-only':
-                    if m['spot']!='SB_BB' or m['version']!='gto' or m.get('selected_lines')!=['x x'] or m.get('selected_turn_lines')!=['b66 c']:
-                        raise ValueError('Exact 66% source requires predeclared SB_BB x-x GTO')
+                    if (m['spot']!='SB_BB' or
+                        (m['version']!='gto' and not partial_gto_parent) or
+                        m.get('selected_lines')!=['x x'] or
+                        m.get('selected_turn_lines')!=['b66 c']):
+                        raise ValueError('Exact 66% source requires predeclared SB_BB x-x and genuine original GTO flop parent')
                     exact_job=rawfile.with_suffix('.job.json')
                     if not exact_job.is_file():raise ValueError('Missing exact b66 Rust turn job')
                     cfg=json.loads(exact_job.read_text())
