@@ -52,7 +52,7 @@ jobs:
           one=json.load(open('evidence/b01.json'));two=json.load(open('evidence/b02.json'));three=json.load(open('evidence/b03.json'))
           items=one['subgames']+two['subgames']+three['subgames']
           assert len(items)==one['exact_subgame_count']+two['exact_subgame_count']+three['exact_subgame_count']==347
-          assert len({(c['source_run_id'],c['spot'],c['version'],c['source_sha256']) for c in items})==266
+          assert len({(c['source_run_id'],c['spot'],c['version'],c['source_sha256']) for c in items})==347
           statuses=collections.Counter(x['status'] for x in items)
           assert statuses['CERT_EXACT_BOARD_GTO']>0 and statuses['EXPERIMENTAL_POOL_LOCKED']>0
           assert one['generic_model_upgrades']==two['generic_model_upgrades']==three['generic_model_upgrades']==0
