@@ -35,7 +35,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B6_REMAIN | PENDING | 0 | 0 |
 | B7_RIVER | 44737532081 | 45 | 26 |
 | B8_LOCK | 44738324702 | 0 | 13 |
-| B9_LMP_FAST | PENDING | 0 | 0 |
+| B9_LMP_FAST | 44740512245 | 7 | 0 |
 | B10_RIVER_EXP | PENDING | 0 | 0 |
 | B11_RIVER_FAST | 44741462253 | 2 | 2 |
 | B12_LOCK_FAST | PENDING | 0 | 0 |

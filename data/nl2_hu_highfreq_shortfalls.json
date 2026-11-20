@@ -12,11 +12,12 @@
     "NL2_MULTIBOARD_B5_SBGAPS.json.gz",
     "NL2_MULTIBOARD_B7_RIVER.json.gz",
     "NL2_MULTIBOARD_B8_LOCK.json.gz",
+    "NL2_MULTIBOARD_B9_LMP_FAST.json.gz",
     "NL2_MULTIBOARD_B11_RIVER_FAST.json.gz"
   ],
   "sources": {
     "official_subgames": 644,
-    "new_subgames": 837,
+    "new_subgames": 844,
     "source_files": [
       "data/solver_evidence/NL2_MULTIBOARD_B1.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json.gz",
@@ -26,6 +27,7 @@
       "data/solver_evidence/NL2_MULTIBOARD_B5_SBGAPS.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B7_RIVER.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B8_LOCK.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B9_LMP_FAST.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B11_RIVER_FAST.json.gz"
     ]
   },
@@ -654,8 +656,10 @@
       "original_model_spr": 19.3,
       "current_label": "CERT-MULTIBOARD",
       "exact_matching_flops": [
+        "4s4h2d",
         "8s8h3d",
         "9s6h3d",
+        "As7h3d",
         "KsQh4d"
       ],
       "flops_with_hero_lock": [
@@ -663,8 +667,11 @@
         "9s6h3d",
         "KsQh4d"
       ],
-      "flops_without_hero_lock": [],
-      "distinct_matching_gto_flop_count": 3,
+      "flops_without_hero_lock": [
+        "4s4h2d",
+        "As7h3d"
+      ],
+      "distinct_matching_gto_flop_count": 5,
       "distinct_gto_plus_hero_lock_count": 3,
       "missing_required_flops": 0,
       "texture_labels_seen": [
@@ -693,12 +700,24 @@
           "node_spr": 19.55,
           "line": "b50 c/x",
           "lock_count": 1
+        },
+        {
+          "flop": "4s4h2d",
+          "source_run_id": 44740512245,
+          "node_spr": 19.55,
+          "line": "b50 c/x",
+          "lock_count": 0
+        },
+        {
+          "flop": "As7h3d",
+          "source_run_id": 44740512245,
+          "node_spr": 19.55,
+          "line": "b50 c/x",
+          "lock_count": 0
         }
       ],
       "upcoming_preregistered_board_examples": [
-        "As7h3d",
-        "Jh9d6s",
-        "4s4h2d"
+        "Jh9d6s"
       ],
       "unproven_until_gto_and_hero_lock_solved": true,
       "no_source_match_reason": null
