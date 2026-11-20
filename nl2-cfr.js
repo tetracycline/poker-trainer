@@ -44,13 +44,13 @@ function selectNode(){
 }
 function renderCombos(){
  if(!current||!game)return;
- const n=current,hand=game.hands_by_seat[n.acting_seat],raw=atob(n.eligible_action_masks_b64),best=atob(n.best_ev_action_indices_b64||''),allrows=[];
- if(raw.length!==hand.length||best.length!==hand.length){by('combos').textContent='來源頻率或 EV 資料維度不一致；禁止顯示。';return;}
+ const n=current,hand=game.hands_by_seat[n.acting_seat],raw=atob(n.eligible_action_masks_b64),best=typeof n.best_ev_action_indices_b64==='string'?atob(n.best_ev_action_indices_b64):null,allrows=[];
+ if(raw.length!==hand.length||(best!==null&&best.length!==hand.length)){by('combos').textContent='來源頻率或 EV 資料維度不一致；禁止顯示。';return;}
  for(let i=0;i<raw.length;i++)if(raw.charCodeAt(i)!==0){
    const mask=raw.charCodeAt(i),acts=[];
    for(let j=0;j<n.actions.length;j++)if((mask&(1<<j))!==0)acts.push(n.actions[j]);
    if(acts.length<1||acts.length>2){by('combos').textContent='不符合雙動作可達性規則；禁止顯示。';return;}
-   const evIndex=best.charCodeAt(i);if(evIndex===255||evIndex>=n.actions.length){by('combos').textContent='EV 行動證據不完整，禁止顯示。';return;}allrows.push([hand[i],acts.join(' / '),n.actions[evIndex]]);
+   const evIndex=best?.charCodeAt(i);if(best!==null&&(evIndex===255||evIndex>=n.actions.length)){by('combos').textContent='EV 行動證據不完整，禁止顯示。';return;}allrows.push([hand[i],acts.join(' / '),best===null?'未收錄':n.actions[evIndex]]);
  }
  const displayed=by('showall').checked?allrows:allrows.slice(0,100);
  const fragment=document.createDocumentFragment();
@@ -58,12 +58,24 @@ function renderCombos(){
  const box=by('combos');box.innerHTML='';box.appendChild(fragment);
 }
 for(const [el,cb] of [[selS,selectSpot],[selV,selectVersion],[selG,selectGame],[selN,selectNode],[by('showall'),renderCombos]])el.addEventListener('change',cb);
-fetch('data/nl2_hu_exact_boards.json',{cache:'no-store'}).then(r=>{
- if(!r.ok)throw Error('真實 CFR 索引尚未由通過驗證的工作流程發布 (HTTP '+r.status+')');return r.json();
-}).then(d=>{
- if(d.schema!=='HU_NL2_EXACT_BOARD_CFR_V1'||!Array.isArray(d.subgames))throw Error('無效的來源資料 schema');
- all=d.subgames;const counts={};for(const c of all)counts[c.status]=(counts[c.status]||0)+1;
- setText(by('status'),'已驗證 '+all.length+' 個精確牌面多街子局。泛化 MODEL 升級：'+d.generic_model_upgrades+'。'+JSON.stringify(counts)+'；本頁逐 combo 可達性來自真實 CFR，而非 100bb 假設策略。');
+async function loadIndex(path,zipped=false){
+ const r=await fetch(path,{cache:'no-store'});
+ if(!r.ok)throw Error('CFR 索引無法載入 (HTTP '+r.status+')');
+ const raw=zipped?await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text():await r.text();
+ // The immutable legacy index ended with a literal backslash-n. Strip only that known suffix.
+ const data=JSON.parse(!zipped&&raw.endsWith('\\n')?raw.slice(0,-2):raw);
+ if(data.schema!=='HU_NL2_EXACT_BOARD_CFR_V1'||data.generic_model_upgrades!==0||!Array.isArray(data.subgames)||data.exact_subgame_count!==data.subgames.length)
+   throw Error('無效的來源資料 schema');
+ return data.subgames;
+}
+Promise.allSettled([loadIndex('data/nl2_hu_exact_boards.json'),loadIndex('data/nl2_hu_exact_boards_b03.json.gz',true)]).then(results=>{
+ if(results.every(x=>x.status==='rejected'))throw results[0].reason;
+ const complete=results.every(x=>x.status==='fulfilled'),seen=new Set();
+ all=results.flatMap(x=>x.status==='fulfilled'?x.value:[]).filter(c=>{
+  const key=[c.spot,c.version,c.source_sha256].join(':');if(seen.has(key))return false;seen.add(key);return true;
+ });
+ const counts={};for(const c of all)counts[c.status]=(counts[c.status]||0)+1;
+ setText(by('status'),'已載入 '+all.length+' 個精確牌面多街子局'+(complete?'':'（有一批未能載入）')+'。泛化 MODEL 升級：0。'+JSON.stringify(counts)+'；本頁逐 combo 可達性來自真實 CFR，而非 100bb 假設策略。');
  const spots=[...new Set(all.map(c=>c.spot))].sort();copyOpts(selS,spots.map(s=>[s,s]));selectSpot();
 }).catch(e=>setText(by('status'),'尚無可公開的獨立驗證 CFR 資料：'+e.message));
 })();
