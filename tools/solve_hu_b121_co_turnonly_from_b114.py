@@ -143,7 +143,7 @@ def main():
     print(json.dumps(dict(spot=SPOT,flop=FLOP,turn=TURN,flop_line=LINE,
         turn_line=TURNLINE,locked_cases=report['solved_cases'],
         failures=report['failures'],elapsed_seconds=report['elapsed_seconds'],
-        original_GTO_root_SHA=pin['full_original_gto_file_sha256']),ensure_ascii=False,flush=True)
+        original_GTO_root_SHA=pin['full_original_gto_file_sha256']),ensure_ascii=False),flush=True)
     if report['failures'] or report['solved_cases']!=1:raise SystemExit(1)
 
 if __name__=='__main__':
