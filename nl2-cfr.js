@@ -90,18 +90,39 @@ async function loadSource(){
    return await loadIndex('data/nl2_hu_exact_boards.json',false);
  }
 }
-async function loadPathOverlay(){
- const r=await fetch('data/nl2_hu_sequential_reach_b04_b06.json.gz',{cache:'no-store'});
+async function loadPathOverlay(path){
+ const r=await fetch(path,{cache:'no-store'});
  if(!r.ok)throw Error('跨街可達性索引無法載入');
  const d=await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).json();
  if(d.schema!=='HU_NL2_SEQUENTIAL_REACH_OVERLAY_V1'||!d.subgames_by_source_sha256)
    throw Error('無效的跨街可達性索引');
  return d.subgames_by_source_sha256;
 }
-Promise.allSettled([loadSource(),loadIndex('data/nl2_hu_exact_boards_b04_local.json.gz',true),
- loadIndex('data/nl2_hu_exact_boards_b05_local.json.gz',true),loadIndex('data/nl2_hu_exact_boards_b06_local.json.gz',true),loadPathOverlay()]).then(done=>{
- const verification=done.at(-1),results=done.slice(0,-1);
- if(verification.status==='fulfilled')pathReach=verification.value;
+async function loadOffline(){
+ const r=await fetch('data/nl2_hu_offline_manifest.json',{cache:'no-store'});
+ if(!r.ok)throw Error('離線解算批次索引無法載入');
+ const d=await r.json();
+ if(d.schema!=='HU_NL2_OFFLINE_SHARDS_V1'||!Array.isArray(d.exact)||!Array.isArray(d.sequential))
+   throw Error('無效的離線批次索引');
+ const check=(entry,pattern)=>pattern.test(entry?.file)&&Number.isSafeInteger(entry.subgames)&&entry.subgames>0;
+ const exactName=/^nl2_hu_exact_boards_b[0-9]+_local[.]json[.]gz$/;
+ const pathName=/^nl2_hu_sequential_reach_b[0-9]+(?:_b[0-9]+)?[.]json[.]gz$/;
+ if(!d.exact.every(e=>check(e,exactName))||!d.sequential.every(e=>check(e,pathName)))
+   throw Error('離線子局檔名或計數有誤');
+ const guarded=async(e,loader,count)=>{
+  const data=await loader('data/'+e.file);
+  if(count(data)!==e.subgames)throw Error('離線子局計數不符');
+  return data;
+ };
+ const [exact,paths]=await Promise.all([
+   Promise.allSettled(d.exact.map(e=>guarded(e,f=>loadIndex(f,true),a=>a.length))),
+   Promise.allSettled(d.sequential.map(e=>guarded(e,loadPathOverlay,o=>Object.keys(o).length)))
+ ]);
+ for(const x of paths)if(x.status==='fulfilled')Object.assign(pathReach,x.value);
+ return {exact,missingPath:paths.some(x=>x.status==='rejected')};
+}
+Promise.allSettled([loadSource(),loadOffline()]).then(([base,offline])=>{
+ const results=[base,...(offline.status==='fulfilled'?offline.value.exact:[offline])];
  if(results.every(x=>x.status==='rejected'))throw results[0].reason;
  const loaded=results.flatMap(x=>x.status==='fulfilled'?x.value:[]);
  const seen=new Set();
@@ -111,7 +132,7 @@ Promise.allSettled([loadSource(),loadIndex('data/nl2_hu_exact_boards_b04_local.j
  });
  const counts={};for(const c of all)counts[c.status]=(counts[c.status]||0)+1;
  const candidateNodes=all.reduce((k,c)=>k+c.nodes.filter(mediumCandidate).length,0);
- const msg='已載入 '+all.length+' 個實際公牌多街子局'+(results.some(x=>x.status==='rejected')?'（有一批未能載入）':'')+'；50% pot 去極化研究候選節點 '+candidateNodes+'；GTO 精確公牌 CERT：'+(counts['CERT_EXACT_BOARD_GTO']||0)
+ const msg='已載入 '+all.length+' 個實際公牌多街子局'+(results.some(x=>x.status==='rejected')||offline.value?.missingPath?'（有一批未能載入）':'')+'；50% pot 去極化研究候選節點 '+candidateNodes+'；GTO 精確公牌 CERT：'+(counts['CERT_EXACT_BOARD_GTO']||0)
    +'；對手頻率鎖定試驗：'+(counts['EXPERIMENTAL_POOL_LOCKED']||0)
    +'；392 張通用 MODEL 仍不是 CERT（0/392）。只在同一公牌、同一完整下注歷史及節點 SPR 有效。';
  setText(by('status'),msg);
