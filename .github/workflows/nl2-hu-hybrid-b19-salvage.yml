@@ -1,0 +1,120 @@
+name: TASK-HYBRID B19 salvage exactly 5 strictly reachable LMP50 true CFR cases (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b19-salvage.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  independently-verify-partial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download SIX immutable successful Rust job originals, not failed job interpretations
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads
+          for flop in As7h3d Jh9d6s 4s4h2d; do
+            for ver in gto exp_oop; do
+              name="nl2-multiboard-B19_LMP50_RESTRICTED-LMP_CO_BB-$flop-$ver"
+              mkdir -p "downloads/$name"
+              gh run download 44762388523 --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$name"
+              test -d "downloads/$name/evidence"
+            done
+          done
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 6
+      - name: Independently verify SHA, full-street strict reach, actor/pot/SPR and honest excluded zero-reach GTO
+        run: |
+          set -euo pipefail
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver \
+            --run-id 44762388523 --out trainer/data/solver_evidence/NL2_MULTIBOARD_B19_LMP50_RESTRICTED.json
+      - name: Freeze 6 jobs but exactly 5 strictly reachable games (2 GTO plus 3 EXP); no invented third GTO
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib,gzip
+          base=pathlib.Path('trainer/data/solver_evidence')
+          p=base/'NL2_MULTIBOARD_B19_LMP50_RESTRICTED.json'
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert not d['errors'] and len(d['artifacts'])==6 and d['source_run_id']==44762388523
+          assert sum(a['version']=='gto' for a in d['artifacts'])==3
+          assert sum(a['version']=='exp_oop' for a in d['artifacts'])==3
+          assert d['exact_board_gto_sources']==2 and d['imputed_pool_locked_sources']==3
+          assert d['new_authentic_board_cases']==5
+          complete=[(a['flop'],a['version']) for a in d['artifacts'] if a['cases']]
+          excluded=[dict(flop=a['flop'],version=a['version'],excluded=a['excludes'])
+                    for a in d['artifacts'] if not a['cases']]
+          assert len(complete)==5 and len(excluded)==1 and excluded[0]['version']=='gto'
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          index=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+             batch='B19_LMP50_RESTRICTED',run_id=44762388523,
+             actual_spot_flop_version_jobs=6,verified_cases=5,gto_cases=2,locked_cases=3,
+             source_sha256=hashlib.sha256(raw).hexdigest(),
+             gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+             generic_model_certification=0,
+             tree='50pct-only predeclared restricted game with ASSUMED LMP 169-class preflop ranges',
+             excluded_unreachable_GTO=excluded,
+             never_claim_unrestricted_poker_GTO=True)
+          p.with_suffix('.index.json').write_text(json.dumps(index,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          recon=dict(schema='TASK_HYBRID_B19_GENUINE_REACH_SALVAGE_V1',
+             job_count=6,strict_subgames=5,gto=2,hero_lock=3,
+             passed_sources=complete,excluded_sources=excluded,
+             no_new_cert_from_fewer_than_three_distinct_gto_boards=True)
+          (base.parent/'nl2_hu_b19_reconciliation.json').write_text(json.dumps(recon,indent=2,ensure_ascii=False)+'\n')
+          print('PASS B19 exact authentic source',recon,flush=True)
+          PY
+      - name: Reclassify frozen 392 against SHA checked source, refresh every CERT lock and b50 audit
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_multiboard_consolidate.py --root data --out data/nl2_hu_multiboard_status.json --doc docs/NL2_HU_MULTIBOARD_STATUS.md
+          python3 tools/hu_highfreq_shortfalls.py data data/nl2_hu_highfreq_shortfalls.json
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status.json --out data/nl2_hu_cert_lock_medium_audit.json
+          python3 tools/hu_cert_lock_medium_coverage_matrix.py
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          a=json.load(open('data/nl2_hu_cert_lock_medium_matrix.json'))
+          assert s['TOTAL']==392 and s['CERT_MULTIBOARD']+s['APPROX']==392
+          assert s['CERT_MULTIBOARD']==22 and s['APPROX']==370
+          assert s['independently_verified_completed_batches']['B19_LMP50_RESTRICTED']['gto_cases']==2
+          assert a['CERT_MULTIBOARD']==s['CERT_MULTIBOARD']
+          print('PASS truthful B19 source only; CERT',s['CERT_MULTIBOARD'],'APPROX',s['APPROX'])
+          PY
+      - name: Commit and push real 5 cases and exact exclusion report to Draft PR #2, NEVER merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B19_LMP50_RESTRICTED.index.json data/solver_evidence/NL2_MULTIBOARD_B19_LMP50_RESTRICTED.json.gz data/nl2_hu_b19_reconciliation.json data/nl2_hu_multiboard_status.json data/nl2_hu_highfreq_shortfalls.json data/nl2_hu_cert_lock_medium_audit.json data/nl2_hu_cert_lock_medium_matrix.json docs/NL2_HU_MULTIBOARD_STATUS.md docs/NL2_HU_CERT_LOCK_MEDIUM_MATRIX.md
+          git commit -m 'TASK-HYBRID B19 salvage: keep 5 verified LMP CFR cases, quarantine 1 unreachable GTO, no false CERT'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - name: Retain recon/audits if push blocked
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B19-five-true-LMP-CFR
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B19_LMP50_RESTRICTED*
+            trainer/data/nl2_hu_b19_reconciliation.json
+          retention-days: 30
