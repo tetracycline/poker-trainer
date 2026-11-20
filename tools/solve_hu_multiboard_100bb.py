@@ -83,6 +83,8 @@ def main():
     a.add_argument('--version',choices=('gto','exp_ip','exp_oop'),default='gto')
     a.add_argument('--flop',required=True)
     a.add_argument('--turn-count',type=int,default=1)
+    a.add_argument('--turn-size-menu',choices=('default','river-gaps'),default='default',
+        help='river-gaps: predeclared 33/66/75pct turn size tree for x x / turn bet-call river MODEL proofs')
     a.add_argument('--manifest',required=True,type=pathlib.Path)
     args=a.parse_args()
     if not 1<=args.turn_count<=3:a.error('turn-count 1..3')
@@ -141,6 +143,10 @@ def main():
         j['flop_raise']='3x,a'
         return j
     pipeline.make_job=sized_make
+    if args.turn_size_menu=='river-gaps':
+        pipeline.SUB.update(turn_oop='33%,66%,75%',turn_ip='33%,66%,75%')
+        pipeline.TURN_LINES=['x b33 c','x b66 c','x b75 c','x x',
+                             'b33 c','b66 c','b75 c']
     turns=pipeline.turns_for(flop)[:args.turn_count]
     lines=list(FLOP_ACTIONS)
     out=pf/'out'/args.spot/args.version
@@ -163,6 +169,8 @@ def main():
       pool_source_sha256=sha(src/'inputs/pool_stats.json'),
       solver_pin=sha(pf/'py/pipeline.py'),solver_ranges_sha256=sha(pf/'py/ranges.py'),
       flop_action_sizes=SIZES,allow_OOP_flop_leads=True,
+      turn_sizing_mode=args.turn_size_menu,
+      turn_subgame_sizing={'oop':pipeline.SUB['turn_oop'],'ip':pipeline.SUB['turn_ip']},
       selected_lines=lines,turns=turns,
       locks=[{'pat':m['pat'],'scope':m.get('scope','PINNED_MEASURED_NL2_SOURCE'),'source':m.get('src'),
          'n':m.get('n')} for m in lock_src],

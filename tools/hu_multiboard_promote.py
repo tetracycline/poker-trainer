@@ -13,7 +13,7 @@ All low-frequency nodes remain APPROX, irrespective of research examples.
 """
 import argparse,base64,collections,gzip,hashlib,itertools,json,pathlib,re
 RANKS='23456789TJQKA'
-VERBS={'過':('x',),'跟':('c',),'加注':('r',),'下注':('b33','b50','b75','b100'),
+VERBS={'過':('x',),'跟':('c',),'加注':('r',),'下注':('b33','b50','b66','b75','b100'),
        '超池下注':('b150',),'全下':('a',),'加注全下':('a',)}
 ORDER={'SB':0,'BB':1,'UTG':2,'HJ':3,'CO':4,'BTN':5}
 PINS={44521980749:'01',44522421850:'02',44525865923:'03',

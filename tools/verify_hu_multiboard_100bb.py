@@ -181,6 +181,8 @@ def verify(root,source_pin,run_id):
                 raise ValueError('Not a genuine auditable multi-board solver record')
             if m['spot'] not in REPO_SPOTS or m['version'] not in ('gto','exp_ip','exp_oop'):
                 raise ValueError('Unexpected source profile or version')
+            if m.get('turn_sizing_mode','default') not in ('default','river-gaps'):
+                raise ValueError('Unregistered turn subgame size menu')
             fam,pot,stack=REPO_SPOTS[m['spot']]
             if m['pot_family']!=fam or abs(m['root_pot_bb']-pot)>1e-6 or abs(m['root_remaining_bb']-stack)>1e-6:
                 raise ValueError('Root pot/SPR assumption mismatch')
@@ -229,6 +231,12 @@ def verify(root,source_pin,run_id):
                 rawfile=base/c['source_path']
                 if sha(rawfile)!=c['source_sha256']:
                     raise ValueError('Subgame SHA mismatch '+c['source_path'])
+                if m.get('turn_sizing_mode')=='river-gaps':
+                    real_job=rawfile.with_suffix('.job.json')
+                    if not real_job.exists():raise ValueError('No exact turn-river solver config')
+                    j2=json.loads(real_job.read_text())
+                    if j2.get('turn_oop')!='33%,66%,75%' or j2.get('turn_ip')!='33%,66%,75%':
+                        raise ValueError('Actual solved turn sizes differ from predeclared river-gaps menu')
                 d=json.loads(rawfile.read_text())
                 if d['flop']!=m['flop'] or d['turn']!=c['turn'] or d['line0']!=c['line']:
                     raise ValueError('Wrong flop-to-turn lineage')
