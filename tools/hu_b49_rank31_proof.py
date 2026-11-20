@@ -53,7 +53,7 @@ def main():
     assert f['actual_exact_action_line']=='b75 c/' and f['source_run_id']==idx['run_id']
     assert f['acting_seat']==0 and f['strict_full_street_combo_reachable']>0
     assert f['relative_spr_error_pct']<=5 and f['genuine_gto_exploitability_pct']<=0.5
-    assert f['source_kind']=='PINNED_POKER_SOLVER_PREFLOP_CFR_OFFICIAL' or f['source_kind']=='PINNED_POKER_SOLVER_PREFLOP_CFR'
+    assert f['source_kind']=='PINNED_PREFLOP_CFR', 'Only genuinely pinned known-position preflop CFR is eligible'
     assert any(x['run_id']==idx['run_id'] and x['version']=='exp_oop' for x in f['nl2_locked_variants'])
     result=dict(schema='NL2_HU_B49_AUTHENTIC_RANK31_THIRD_BOARD_PROOF_V1',
        current_V3_cert=27,current_V3_approx=365,
