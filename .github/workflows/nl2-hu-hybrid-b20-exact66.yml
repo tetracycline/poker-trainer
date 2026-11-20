@@ -1,0 +1,143 @@
+name: TASK-HYBRID B20 three exact b66 GTO boards with no 66-to-75 merge (max29m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b20-exact66.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 21
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - {spot: SB_BB, flop: 9s6h3d, version: gto}
+          - {spot: SB_BB, flop: KsQh4d, version: gto}
+          - {spot: SB_BB, flop: As7h3d, version: gto}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned Rust solver and check source syntax
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_multiboard_100bb.py trainer/tools/verify_hu_multiboard_100bb.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve original exact GTO checkcheck flop and exclusively b66-call turn/rivers
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver --spot SB_BB --version gto --flop "${{ matrix.flop }}" \
+            --flop-line-policy checkcheck --turn-size-menu exact-b66-only --turn-count 1 \
+            --manifest "evidence/SB_BB-${{ matrix.flop }}-b66-gto.json"
+      - name: Preserve raw original Rust CFR even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B20_B66_GTO-SB_BB-${{ matrix.flop }}-gto
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: ${{ needs.solve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - name: Verify 3 immutable jobs, actual 66 percent tree, source SHA, convergence and combo reach
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads trainer/data/solver_evidence
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir downloads
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d -name 'nl2-multiboard-B20_B66_GTO-*' | wc -l)" -eq 3
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver \
+            --run-id "$GITHUB_RUN_ID" --out trainer/data/solver_evidence/NL2_MULTIBOARD_B20_B66_GTO.json
+      - name: Archive exact GTO only, never pretend 3 model CERT without paired hero lock
+        run: |
+          python3 - <<'PY'
+          import pathlib,json,hashlib,gzip
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B20_B66_GTO.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1' and not d['errors']
+          assert len(d['artifacts'])==3
+          assert set(z['flop'] for z in d['artifacts'])=={'9s6h3d','KsQh4d','As7h3d'}
+          assert all(z['version']=='gto' and z['cases'] for z in d['artifacts'])
+          assert d['exact_board_gto_sources']>=3 and d['imputed_pool_locked_sources']==0
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          ix=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+             batch='B20_B66_GTO',run_id=d['source_run_id'],actual_spot_flop_version_jobs=3,
+             verified_cases=d['new_authentic_board_cases'],
+             gto_cases=d['exact_board_gto_sources'],locked_cases=0,
+             source_sha256=hashlib.sha256(raw).hexdigest(),
+             gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+             generic_model_certification=0,
+             true_turn_menu='66% ONLY (75% omitted to defeat Rust merging_threshold=0.1)',
+             no_cert_without_hero_lock=True)
+          p.with_suffix('.index.json').write_text(json.dumps(ix,indent=2,ensure_ascii=False)+'\n')
+          p.unlink()
+          print('PASS independently verified true b66 GTO',ix)
+          PY
+      - name: Strict 392 model registry and ALL CERT node-lock and medium-size audit
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_multiboard_consolidate.py --root data --out data/nl2_hu_multiboard_status.json --doc docs/NL2_HU_MULTIBOARD_STATUS.md
+          python3 tools/hu_highfreq_shortfalls.py data data/nl2_hu_highfreq_shortfalls.json
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status.json --out data/nl2_hu_cert_lock_medium_audit.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          g=json.load(open('data/nl2_hu_highfreq_shortfalls.json'))
+          a=json.load(open('data/nl2_hu_cert_lock_medium_audit.json'))
+          assert s['CERT_MULTIBOARD']>=22 and s['CERT_MULTIBOARD']+s['APPROX']==392
+          assert s['independently_verified_completed_batches']['B20_B66_GTO']['authentic_jobs']==3
+          assert g['certified_from_source']==a['cert_multiboard']==s['CERT_MULTIBOARD']
+          print('PASS source-only b66 without invented lock',s['CERT_MULTIBOARD'],s['APPROX'])
+          PY
+      - name: Commit verified source/status to Draft PR2, never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B20_B66_GTO.index.json data/solver_evidence/NL2_MULTIBOARD_B20_B66_GTO.json.gz data/nl2_hu_multiboard_status.json data/nl2_hu_highfreq_shortfalls.json data/nl2_hu_cert_lock_medium_audit.json docs/NL2_HU_MULTIBOARD_STATUS.md
+          git commit -m 'TASK-HYBRID B20: verify 3 genuine b66 GTO runouts (no 75pct merge), preserve APPROX without hero lock'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - name: Preserve proof on push failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B20-verified-3-flop-source
+          path: trainer/data/solver_evidence/NL2_MULTIBOARD_B20_B66_GTO*
+          retention-days: 30
