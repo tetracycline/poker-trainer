@@ -1,0 +1,94 @@
+{
+  "schema": "TASK_HYBRID_IMMEDIATE_CHECKPOINT_V1",
+  "checkpoint_date": "2026-11-20",
+  "repository": "tetracycline/poker-trainer",
+  "pr": 2,
+  "branch": "fix/nl2-hu-lines-audit-20261118",
+  "pr_must_remain_draft": true,
+  "merge_allowed": false,
+  "scope_frozen": true,
+  "classification_from_committed_registry": "data/nl2_hu_multiboard_status.json",
+  "counts": {
+    "models_total": 392,
+    "models_classified": 392,
+    "cert_multiboard": 4,
+    "approx": 388,
+    "est": 0,
+    "unclassified": 0,
+    "high_frequency_preregistered": 24
+  },
+  "river_navigation": {
+    "reached": 2475,
+    "total": 2475,
+    "coverage_percent": 100,
+    "independent_passing_run": 44668254975,
+    "not_equivalent_to_certified_gto": true
+  },
+  "certified_model_ids": [
+    "ln-bb-t_model-1n6d5u3",
+    "ln-bb-t_model-1c7tu96",
+    "ln-3bp-3b_t_model-1gg0bw",
+    "ln-ipfr-t_model-xbvh6"
+  ],
+  "published_batch_source_proofs": {
+    "B1": {
+      "run_id": 44666285424,
+      "github_actions_status": "success",
+      "verified_raw_cases": 247,
+      "gto_exact_board_cases": 88,
+      "nl2_partial_locked_cases": 159,
+      "index": "data/solver_evidence/NL2_MULTIBOARD_B1.index.json"
+    },
+    "B3": {
+      "run_id": 44666294821,
+      "github_actions_status": "success",
+      "verified_raw_cases": 133,
+      "gto_exact_board_cases": 43,
+      "nl2_partial_locked_cases": 90,
+      "index": "data/solver_evidence/NL2_MULTIBOARD_B3.index.json"
+    }
+  },
+  "quarantined_batch": {
+    "batch": "B2",
+    "run_id": 44666290556,
+    "status": "17 solve jobs succeeded, 1 failed, independent verify/commit skipped",
+    "failed_job": "SB3_BTN / 8s8h3d / GTO",
+    "forbidden_to_count_unverified_sources_as_cert": true
+  },
+  "existing_node_lock_and_depolarization": {
+    "independently_verified_official_exact_board_subgames": 644,
+    "official_gto_cases": 219,
+    "official_partial_nl2_node_locked_cases": 425,
+    "iso_lmp_partial_lock_source_cases": 16,
+    "gto_or_hero_50pct_depolarized_research_candidates": 847,
+    "of_which_at_least_40pct_eligible_have_b50_highest_ev": 769,
+    "these_are_not_generic_model_certifications": true,
+    "summary_source": "data/nl2_hu_exploit_depol_report.json"
+  },
+  "nl2_frequency_ranking": {
+    "source_hands": 2334487,
+    "preregistered_top_n": 24,
+    "srp_percent": 61.7,
+    "limped_percent": 24.5,
+    "threebet_percent": 11.9,
+    "iso_from_limp_proxy_percent": 25,
+    "lmp_from_limp_proxy_percent": 75,
+    "missing_check_to_bet_assumed_percent": 45,
+    "missing_bet_size_mix_percent": {
+      "33": 35,
+      "50": 35,
+      "75": 20,
+      "100": 10
+    },
+    "assumptions_are_not_observed_joint_history_frequencies": true,
+    "ranking_source": "data/nl2_hu_multiboard_prerank.json"
+  },
+  "next_atomic_batches_max_minutes": 30,
+  "remaining": [
+    "Refresh source-gated 392-cell registry against verified completed B1 and B3 proofs; commit only after count/provenance audit.",
+    "Quarantine B2 failing SB3_BTN/8s8h3d GTO source; investigate failed job separately; do not count unverified outputs.",
+    "Complete remaining top-24 high-frequency cells with 3-5 distinct correctly matched real boards plus hero-side node-lock, SPR, and per-combo lineage.",
+    "For certified exact boards, demonstrate node-lock defaults and 50% pot depolarized outputs in training UI; keep generic class/texture actions labeled APPROX.",
+    "Repeat independent 100% river navigation and PR Draft/never-merge audit after each small evidence commit."
+  ]
+}
