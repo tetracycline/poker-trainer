@@ -22,7 +22,7 @@ def main():
     queue=json.loads((root/'nl2_hu_stage2_queue.json').read_text())
     status=json.loads((root/'nl2_hu_multiboard_status.json').read_text())
     by_id={x['model_id']:x for x in queue['records']}
-    proof=[root/'solver_evidence'/('NL2_MULTIBOARD_'+x+'.json.gz') for x in ('B1','B2_PARTIAL','B2_REPAIRED_GTO','B3','B4_MICRO')]
+    proof=[root/'solver_evidence'/('NL2_MULTIBOARD_'+x+'.json.gz') for x in ('B1','B2_PARTIAL','B2_REPAIRED_GTO','B3','B4_MICRO','B5_SBGAPS','B6_REMAIN')]
     proof=[p for p in proof if p.is_file()]
     exact,locked,summ=build_source_index(root,proof)
     result=[]
