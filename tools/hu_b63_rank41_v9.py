@@ -63,7 +63,21 @@ def main():
     candidates_,why=candidates(r,exact,lock,None)
     if why:raise ValueError(str(why))
     boards,gap=choose_3_5(candidates_)
-    if gap or len(boards)!=3:raise ValueError('Rank41 cannot be certified: '+str(gap))
+    if gap or len(boards)!=3:
+        debug=dict(
+          rank=41,spot='CO_BB',candidate_count=len(candidates_),
+          exact_GTO_matches=[dict(flop=x['flop'],turn=x['turn'],line=x['actual_exact_action_line'],
+             actor=x['acting_seat'],spr=x['actual_spr'],
+             locked=[dict(run=v['run_id'],version=v['version']) for v in x['nl2_locked_variants']])
+             for x in candidates_[:40]],
+          archived_EXP_exact_nodes=[
+            dict(turn=c['turn'],flop_line=c['flop_line'],
+              hero_nodes=[dict(board=n['public_board'],line=n['exact_node_line'],
+                 actor=n['acting_seat'],strict=n['strictly_reachable_combos'])
+                 for n in c['nodes'] if n['acting_seat']==1][:30])
+            for c in source['artifacts'][0]['cases']])
+        print('B63_STRICT_SOURCE_DEBUG',json.dumps(debug,ensure_ascii=False),flush=True)
+        raise ValueError('Rank41 cannot be certified: '+str(gap))
     assert {b['flop'] for b in boards}=={'8s8h3d','As9h2d','Js9h4d'}
     assert len({b['flop_texture'] for b in boards})>=2
     hero=hero_seat(m['preflop_text']);assert hero==1
