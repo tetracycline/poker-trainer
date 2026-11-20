@@ -57,6 +57,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B36_BTN_RELOCK | 44798496352 | 0 | 2 |
 | B37_BTN_XB50_XX | 44799855318 | 0 | 2 |
 | B38_BTN_IP_XX | 44800382278 | 0 | 2 |
+| B43_UTG_B75 | PENDING | 0 | 0 |
 
 ## Top-24 preregistered game histories
 
