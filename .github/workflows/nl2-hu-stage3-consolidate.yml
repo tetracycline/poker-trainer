@@ -6,6 +6,7 @@ on:
       - '.github/workflows/nl2-hu-stage3-consolidate.yml'
       - 'tools/hu_multiboard_consolidate.py'
       - 'data/solver_evidence/NL2_MULTIBOARD_B*.index.json'
+      - 'data/TASK_HYBRID_CHECKPOINT_20261120.json'
   workflow_dispatch:
 permissions:
   contents: write
@@ -16,7 +17,7 @@ concurrency:
 jobs:
   evidence-gated-classification:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
