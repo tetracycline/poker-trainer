@@ -15,7 +15,7 @@ def sha(path):
 
 def discover(root):
     ready=[];batches={}
-    for code in ('B1','B2','B2_PARTIAL','B2_REPAIRED_GTO','B3','B4_MICRO','B5_SBGAPS','B6_REMAIN','B7_RIVER','B8_LOCK','B9_LMP_FAST','B10_RIVER_EXP','B11_RIVER_FAST','B12_LOCK_FAST','B13_LMP_B50','B14_FOCUS_EXP'):
+    for code in ('B1','B2','B2_PARTIAL','B2_REPAIRED_GTO','B3','B4_MICRO','B5_SBGAPS','B6_REMAIN','B7_RIVER','B8_LOCK','B9_LMP_FAST','B10_RIVER_EXP','B11_RIVER_FAST','B12_LOCK_FAST','B13_LMP_B50','B14_FOCUS_EXP','B15_GTO_PARENT_EXP':
         prefix='NL2_MULTIBOARD_'+code
         base=root/'solver_evidence'
         gz=base/(prefix+'.json.gz')

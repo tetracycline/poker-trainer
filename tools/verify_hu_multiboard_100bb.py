@@ -235,10 +235,23 @@ def verify(root,source_pin,run_id):
                 raise ValueError('Missing actual IP bet sizes')
             if m['version']=='gto' and j.get('hero') is not None:
                 raise ValueError('GTO job unexpectedly locks a hero')
-            if m['version']!='gto' and j.get('hero')!=(1 if m['version']=='exp_ip' else 0):
-                raise ValueError('Locked hero seat is wrong')
-            if m['version']!='gto' and not j.get('locks'):
-                raise ValueError('Pool locked variant has no lock patterns')
+            partial_gto_parent=m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK'
+            if partial_gto_parent:
+                if m['version']=='gto' or j.get('hero') is not None or j.get('locks'):
+                    raise ValueError('Copied GTO flop root mislabeled as locked flop')
+                if m.get('flop_root_jobfile_sha256')!=sha(jobfile):
+                    raise ValueError('Pinned GTO root Rust job SHA changed')
+                if m.get('gto_parent_source_sha256')!=sha(flopfile):
+                    raise ValueError('Pinned GTO parent raw flop SHA changed')
+                if int(m.get('gto_parent_source_run_id',0))<=0:
+                    raise ValueError('Missing immutable original GTO run ID')
+                if m.get('turn_line_policy')!='b100only':
+                    raise ValueError('Partial GTO parent lock requires fixed turn continuation')
+            else:
+                if m['version']!='gto' and j.get('hero')!=(1 if m['version']=='exp_ip' else 0):
+                    raise ValueError('Locked hero seat is wrong')
+                if m['version']!='gto' and not j.get('locks'):
+                    raise ValueError('Pool locked variant has no lock patterns')
             for c in m['cases']:
                 rawfile=base/c['source_path']
                 if sha(rawfile)!=c['source_sha256']:
@@ -259,6 +272,15 @@ def verify(root,source_pin,run_id):
                     j2=json.loads(real_job.read_text())
                     if j2.get('turn_oop')!='33%,66%,75%' or j2.get('turn_ip')!='33%,66%,75%':
                         raise ValueError('Actual solved turn sizes differ from predeclared river-gaps menu')
+                if partial_gto_parent:
+                    actual_subjob=rawfile.with_suffix('.job.json')
+                    if not actual_subjob.is_file():raise ValueError('No genuine downstream Rust EXP job')
+                    sj=json.loads(actual_subjob.read_text())
+                    hero=1 if m['version']=='exp_ip' else 0
+                    if sj.get('hero')!=hero or not sj.get('locks'):
+                        raise ValueError('Turn-only lock lacks correct hero/real subgame locks')
+                    if abs(sj.get('rake_rate',-1)-0.05)>1e-8 or sj.get('rake_cap')!=1000:
+                        raise ValueError('Turn-only true Rust job rake differs from NL2')
                 d=json.loads(rawfile.read_text())
                 if d['flop']!=m['flop'] or d['turn']!=c['turn'] or d['line0']!=c['line']:
                     raise ValueError('Wrong flop-to-turn lineage')
@@ -311,7 +333,9 @@ def verify(root,source_pin,run_id):
                   medium50_strict_merged_research_nodes=sum(bool(n['b50_nonpolarized_relative_equity_research_candidate']) for n in nodes),
                   assumed_missing_rate_policy=m['unknown_action_frequency_policy'],
                   empirical_scope=('ASSUMED_PREFLOP_RANGES' if fam in ('ISO','LMP') else 'PINNED_PREFLOP_CFR'),
-                  certified_scope='EXACT_BOARD_ONLY_GTO' if m['version']=='gto' else 'PARTIALLY_LOCKED_NL2_MARGINAL_PROXY',
+                  certified_scope=('EXACT_BOARD_ONLY_GTO' if m['version']=='gto'
+                      else 'TURN_ONLY_NL2_MARGINAL_LOCK_FROM_PINNED_GTO_FLOP_PARENT'
+                      if partial_gto_parent else 'PARTIALLY_LOCKED_NL2_MARGINAL_PROXY'),
                   hands_by_seat=d['hands'],
                   strict_combo_path_summary=dict(proof),nodes=nodes)
                 info['cases'].append(source)
