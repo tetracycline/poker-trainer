@@ -350,10 +350,20 @@ def verify(root,source_pin,run_id):
                     token=(['x','x'] if turn_policy=='xxonly' else
                            ['b66','c'] if turn_policy=='b66only' else ['b100','c'])
                     if turn_policy=='xxonly' and not (
-                        m['spot']=='BTN_BB' and m['version']=='exp_oop' and
-                        m.get('selected_lines')==['x b50 c'] and
-                        m.get('pinned_official_legacy_source_id') in (44525865923,44653774402)):
-                        raise ValueError('x-x turn extraction outside B31 pinned BTN_BB hero OOP')
+                        (m['spot']=='BTN_BB' and m['version']=='exp_oop' and
+                         m.get('selected_lines')==['x b50 c'] and
+                         m.get('pinned_official_legacy_source_id') in (44525865923,44653774402))
+                        or
+                        # B98 pinned *full original* B3 GTO LMP root. This is
+                        # one source-run+SHA+actor+line exemption, NOT an
+                        # authorization to relabel other check-check locks.
+                        (m['spot']=='LMP_CO_BB' and m['version']=='exp_oop' and
+                         m['flop']=='8s8h3d' and m.get('selected_lines')==['x x'] and
+                         m.get('gto_parent_source_run_id')==44666294821 and
+                         m.get('gto_parent_source_sha256')=='c5861d2bbcc0361f095b13a8ed3e393785c48ec2a517cee1cafb7c52567ed61c' and
+                         m.get('flop_root_jobfile_sha256')=='bbed120f68c2e295febc4715fc2a8f987bf46d2d2802a7e410809fea66ca7907' and
+                         m.get('gto_parent_source_manifest_sha256')=='f6922cc27956249d6d69e1c4a184956dc356f67ba8b577194a88a2eccebd3bb7')):
+                        raise ValueError('x-x turn extraction outside explicitly pinned BTN_BB or B98 LMP GTO sources')
                     if m.get('selected_turn_lines')!=[' '.join(token)]:
                         raise ValueError('Focused turn extraction differs from predeclared line')
                     subjobfile=rawfile.with_suffix('.job.json')
