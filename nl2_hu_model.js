@@ -242,7 +242,7 @@ function repair(html,sp,catalog){
           link='<a class="jmp" href="#'+r.id+'-'+bt+'">'+esc(label)+'</a>';
         } else link=esc(label);
         return '<td class="'+(a==='check'?'x':'b')+'">'+link+
-          ' <small class="df" data-df="ASSUMED（非 GTO，非 CERT）">MODEL</small></td>';
+          ' <small class="df hu-approx-cell" data-df="ASSUMED（非 GTO，非 CERT）">APPROX 近似</small></td>';
       }).join('');
       return '<tr data-cl="'+esc(zh)+'" id="'+n.id+'-'+bt+'"><th class="cl"><span class="df" data-df="'+esc(zh)+'">'+esc(zh)+'</span></th>'+cells+'</tr>';
     }).join('');
@@ -254,10 +254,11 @@ function repair(html,sp,catalog){
       ? '<p class="small"><a href="nl2-cfr.html?spot='+encodeURIComponent(rootP.spot)+'&version=gto">研究用：相同位置／底池家族的真實公牌 CFR 範例</a>（須另核對牌面、動作線、實際 SPR，<b>此 MODEL 格並未因此取得 CERT</b>）</p>'
       : '<p class="small">ISO／Limp 有 100bb 真實解算樣本，但目前無精確公牌／尺寸映射；原始證據 <a href="https://github.com/tetracycline/poker-trainer/actions/runs/44508547280">GitHub Actions 44508547280</a>，<b>此 MODEL 未獲 CERT</b>。</p>';
     const exactHistoryRef='<p class="small"><span class="hu-cfr-lineage" data-hu-model="'+esc(n.id)+'">來源稽核：目前僅 MODEL，待核對精確公牌與下注歷史。</span></p>';
-    patched+='<div class="sec" data-node="'+n.sp+'/'+n.nd+'" id="'+n.id+'"><b class="ttl">'+esc(n.title)+'</b>'+
+    const statusBanner='<p class="small"><b class="hu-board-cert-status" data-hu-model="'+esc(n.id)+'">APPROX 近似解</b>　<span class="hu-board-proof" data-hu-model="'+esc(n.id)+'">尚無 3–5 組同一位置、行動線、SPR 的真實多公牌來源。現有決策為估計，非 GTO。</span></p>';
+    patched+='<div class="sec" data-node="'+n.sp+'/'+n.nd+'" id="'+n.id+'"><b class="ttl">'+esc(n.title)+'</b>'+statusBanner+
       '<p class="navln"><a class="jmp" href="#'+n.source+'">↑ 上一步</a></p>'+
       '<p class="small muted"><b>MODEL／待真實 CFR：</b>'+esc(sizeDesc)+
-      ' 預設代表同分類（brick）延續；實際發牌轉換分類應重新判斷，不能視為 CERT 或 EST。</p>'+sourceRef+exactHistoryRef+
+      ' 預設代表同分類（brick）延續；實際發牌轉換分類應重新判斷，不能視為 CERT 或 EST。未列入專門公牌時依 APPROX 近似策略。</p>'+sourceRef+exactHistoryRef+
       '<div class="tw"><table class="rt lt"><tr><th></th>'+HC.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr>'+tr+'</table></div></div>';
   }
   // A few legacy secondary action links point to filtered-out/unpublished
