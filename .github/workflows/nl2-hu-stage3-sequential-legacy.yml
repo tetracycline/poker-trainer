@@ -1,0 +1,79 @@
+name: NL2 stage3 independent per-combo full-street proof for original 347 CFR
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage3-sequential-legacy.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  legacy-sequential:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - {batch: '01', run: 44521980749, count: 118}
+          - {batch: '02', run: 44522421850, count: 148}
+          - {batch: '03', run: 44525865923, count: 81}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Retrieve frozen genuine Rust CFR with sha256 provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p evidence/downloads
+          gh run download "${{ matrix.run }}" --repo "$GITHUB_REPOSITORY" --dir evidence/downloads
+      - name: Independently filter every source combo via highest/near action on all previous streets
+        run: |
+          python3 tools/hu_sequential_cfr_reach.py \
+            --downloads evidence/downloads \
+            --proof data/solver_evidence/STAGE2_BATCH${{ matrix.batch }}.json \
+            --out data/nl2_hu_sequential_reach_official_b${{ matrix.batch }}.json.gz
+      - name: Fail closed if subgame count or original source mismatch
+        run: |
+          python3 - <<'PY'
+          import json,gzip,pathlib,os
+          b=os.environ['BATCH'];run=int(os.environ['RUN']);n=int(os.environ['CNT'])
+          f=pathlib.Path(f'data/nl2_hu_sequential_reach_official_b{b}.json.gz')
+          d=json.loads(gzip.decompress(f.read_bytes()))
+          assert d['schema']=='HU_NL2_SEQUENTIAL_REACH_OVERLAY_V1'
+          assert d['source_proof_run_id']==run
+          assert len(d['subgames_by_source_sha256'])==n
+          assert d['generic_model_CERT']==0
+          print('PASS old genuine board/SPR/combo sequential reach',d['aggregate_stats'])
+          PY
+        env:
+          BATCH: '${{ matrix.batch }}'
+          RUN: '${{ matrix.run }}'
+          CNT: '${{ matrix.count }}'
+      - name: Preserve certified-only exact board combo ancestry in Draft PR
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_sequential_reach_official_b${{ matrix.batch }}.json.gz
+          if ! git diff --cached --quiet; then
+            git commit -m 'audit(stage3): original batch ${{ matrix.batch }} exact-board per-combo full-street ancestry proof'
+            for attempt in 1 2 3 4; do
+              git fetch origin fix/nl2-hu-lines-audit-20261118
+              git rebase origin/fix/nl2-hu-lines-audit-20261118
+              if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+              sleep "$attempt"
+            done
+            exit 1
+          fi
+      - name: Preserve evidence if GitHub push collided
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-stage3-legacy-sequential-${{ matrix.batch }}
+          path: data/nl2_hu_sequential_reach_official_b${{ matrix.batch }}.json.gz
+          retention-days: 30
