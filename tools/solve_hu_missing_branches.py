@@ -23,10 +23,10 @@ BRANCHES = {
     "CO_BB":  ("x x", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
     "UTG_BB": ("x x", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
     "HJ_BB":  ("x x", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
-    "SB_BB":  ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c"),
-    "SB3_BTN": ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c"),
-    "BB3_BTN": ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c"),
-    "UTG_CO": ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c"),
+    "SB_BB":  ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "SB3_BTN": ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "BB3_BTN": ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "UTG_CO": ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
     "CO3_BTN": ("x x", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
 }
 # Verified against poker-solver/preflop/pfsolve.py's exact 100bb abstract tree:
@@ -136,7 +136,7 @@ def main():
             if pipeline.SPOTS[a.spot]['pfr']=='ip':
                 lines.extend(('x b50 c','x b50 r c'))
             else:
-                lines.extend(('b50 c','b50 r c'))
+                lines.extend(('b50 c','b50 r c','x b50 c','x b50 r c'))
         fpath=out/f'{flop}_extra_branch.json'
         # Extract actual combo reach at each exact line; source GTO/locked ranges,
         # not guessed class reach or blanket continuation probability.
