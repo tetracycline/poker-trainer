@@ -15,7 +15,7 @@ def sha(path):
 
 def discover(root):
     ready=[];batches={}
-    for code in ('B1','B2','B2_PARTIAL','B2_REPAIRED_GTO','B3','B4_MICRO','B5_SBGAPS','B6_REMAIN','B7_RIVER','B8_LOCK','B9_LMP_FAST'):
+    for code in ('B1','B2','B2_PARTIAL','B2_REPAIRED_GTO','B3','B4_MICRO','B5_SBGAPS','B6_REMAIN','B7_RIVER','B8_LOCK','B9_LMP_FAST','B10_RIVER_EXP'):
         prefix='NL2_MULTIBOARD_'+code
         base=root/'solver_evidence'
         gz=base/(prefix+'.json.gz')
@@ -34,7 +34,7 @@ def discover(root):
         # instead report the VERIFIED number of separate solver artifacts.
         # B5 retains five successful originals; the sixth timed out, and is EXCLUDED.
         # Repair only this KNOWN metadata defect, never infer extra GTO games.
-        expected_new_jobs={'B5_SBGAPS':5,'B6_REMAIN':6,'B7_RIVER':5,'B8_LOCK':2,'B9_LMP_FAST':6}
+        expected_new_jobs={'B5_SBGAPS':5,'B6_REMAIN':6,'B7_RIVER':5,'B8_LOCK':2,'B9_LMP_FAST':6,'B10_RIVER_EXP':1}
         if code in expected_new_jobs and ix['actual_spot_flop_version_jobs']!=expected_new_jobs[code]:
             n=expected_new_jobs[code]
             if not (ix['actual_spot_flop_version_jobs']==4 and
