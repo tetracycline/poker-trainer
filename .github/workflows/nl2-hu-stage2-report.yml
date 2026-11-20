@@ -1,0 +1,59 @@
+name: NL2 stage2 exact-board locked exploit and nonpolarized bet evidence
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage2-report.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Generate exact-board hero EV partial-lock and nonpolarized-bet research table
+        run: |
+          python3 tools/hu_exploit_depol_report.py \
+            --source data/nl2_hu_exact_boards.json \
+            --out data/nl2_hu_exploit_depol_report.json
+      - name: Verify no generic MODEL CERT, n>=20 and real source linkage
+        run: |
+          python3 - <<'PY'
+          import json
+          d=json.load(open('data/nl2_hu_exploit_depol_report.json'))
+          ix=json.load(open('data/nl2_hu_exact_boards_index.json'))
+          assert d['schema']=='NL2_HU_EXACT_BOARD_EXPLOIT_MEDIUM_REPORT_V1'
+          assert d['generic_model_certified']==0
+          assert d['source_subgames']==ix['genuine_exact_board_subgames']==347
+          assert d['medium_nonpolarized_exact_board_candidates']==ix['nonpolarized_50pct_exact_board_candidate_nodes']
+          assert d['partial_locked_cases']<=ix['nl2_pool_locked_provisional_subgames']
+          for x in d['top_medium']:
+              assert x['eligible_medium_combos']>=20
+              assert len(x['source_sha256'])==64 and x['node_spr']>=0
+              assert x['status']=='EXACT_BOARD_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERAL_RECOMMENDATION'
+          print('PASS exact-board locked and medium-size evidence; generic CERT=0')
+          PY
+      - name: Commit report to Draft PR, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_exploit_depol_report.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'stage2: record in-sample NL2 partial lock EV and exact-board 50% nonpolarized candidates'
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+          fi
+      - name: Save evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-stage2-exploit-medium-evidence
+          path: data/nl2_hu_exploit_depol_report.json
+          retention-days: 30
