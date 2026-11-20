@@ -86,6 +86,52 @@ def source_nodes(d,seq):
           b50_nonpolarized_relative_equity_research_candidate=medium['candidate'],
           medium_50pct_strict_evidence=medium))
     return out
+def lock_scope(d,patterns,version):
+    if version=='gto':
+        return dict(villain_decision_nodes=0,pattern_matched_nodes=0,
+            observed_marginal_source_nodes=0,imputed_assumption_nodes=0,
+            unmatched_nodes=0,coverage_pct=None,all_villain_nodes_locked=False)
+    villain=1 if version=='exp_oop' else 0
+    candidates=[]
+    for n in d['nodes']:
+        if n['player']!=villain or len(n['acts'])<2:continue
+        if not any(float(w)>1e-4 for w in n['w'][villain]):continue
+        candidates.append(n)
+    observed=imputed=matched=0
+    samples=[]
+    for n in candidates:
+        hits=[item for item in patterns if re.search(item['pat'],n['line'])]
+        if not hits:continue
+        matched+=1
+        # A coarse empirical marginal is NOT a direct conditional observation
+        # of this exact bet-size, board, SPR and prior action history.
+        first=hits[0]
+        scope=first.get('scope','PINNED_MEASURED_NL2_SOURCE')
+        if scope.startswith('ASSUMED') or first.get('n',0)<500:
+            imputed+=1
+        else:observed+=1
+        if len(samples)<12:
+            samples.append(dict(line=n['line'],board=n['board'],
+                first_pattern=first['pat'],source=first.get('source'),
+                source_observed_count=first.get('n'),scope=scope))
+    total=len(candidates)
+    return dict(villain_decision_nodes=total,pattern_matched_nodes=matched,
+        observed_marginal_source_nodes=observed,imputed_assumption_nodes=imputed,
+        unmatched_nodes=total-matched,
+        coverage_pct=round(100*matched/total,3) if total else None,
+        all_villain_nodes_locked=bool(total and matched==total),
+        matching_examples=samples,
+        caveat='Regex/source bucket matching does not prove the Rust driver locked every combo nor its conditional opponent behavior.')
+
+def locked_model_gain(d,version):
+    if version=='gto':return None
+    info=d.get('info',{})
+    before=info.get('ev_gto_vs_pool');after=info.get('ev_exploit')
+    seat=1 if version=='exp_ip' else 0
+    if isinstance(before,list) and isinstance(after,list) and len(before)==len(after)==2:
+        return round((float(after[seat])-float(before[seat]))/100,5)
+    return None
+
 def verify(root,source_pin,run_id):
     sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
     from hu_sequential_cfr_reach import game_reach
@@ -177,6 +223,8 @@ def verify(root,source_pin,run_id):
                 if not proof['sequential_actor_combo_nodes']:
                     raise ValueError('All combos became unreachable after strict action gates')
                 nodes=source_nodes(d,dict(nodes=sequential))
+                locked=lock_scope(d,m['locks'],m['version'])
+                gain=locked_model_gain(d,m['version'])
                 if not nodes:
                     raise ValueError('No reachable legal action in verified multi-street game')
                 source=dict(run_id=run_id,artifact=ad.name,
@@ -188,6 +236,12 @@ def verify(root,source_pin,run_id):
                   locked_hero_gap_pct=hh,flop_size_menu=['33%','50%','75%','100%'],
                   NL2_pool_source_sha256=expected_pool,
                   lock_patterns=m['locks'] if m['version']!='gto' else [],
+                  lock_coverage_pct=locked['coverage_pct'],
+                  villain_lock_scope=locked,
+                  hero_model_gain_bb=gain,
+                  rust_source_lock_stats=d['info'].get('lock_stats',{}),
+                  medium50_strict_eligible_total=sum(n['medium_50pct_eligible_combos'] for n in nodes),
+                  medium50_strict_merged_research_nodes=sum(bool(n['b50_nonpolarized_relative_equity_research_candidate']) for n in nodes),
                   assumed_missing_rate_policy=m['unknown_action_frequency_policy'],
                   empirical_scope=('ASSUMED_PREFLOP_RANGES' if fam in ('ISO','LMP') else 'PINNED_PREFLOP_CFR'),
                   certified_scope='EXACT_BOARD_ONLY_GTO' if m['version']=='gto' else 'PARTIALLY_LOCKED_NL2_MARGINAL_PROXY',
@@ -197,6 +251,11 @@ def verify(root,source_pin,run_id):
                 accum['gto' if m['version']=='gto' else 'pool_locked_experimental']+=1
                 accum['sequential_actor_combo_nodes']+=proof['sequential_actor_combo_nodes']
                 accum['individually_proved_nodes']+=len(nodes)
+                accum['medium50_strict_eligible_combo_nodes']+=sum(n['medium_50pct_eligible_combos'] for n in nodes)
+                accum['medium50_strict_research_candidate_nodes']+=sum(bool(n['b50_nonpolarized_relative_equity_research_candidate']) for n in nodes)
+                accum['vil_observed_marginal_lock_match_nodes']+=locked['observed_marginal_source_nodes']
+                accum['vil_assumed_default_lock_match_nodes']+=locked['imputed_assumption_nodes']
+                accum['vil_unlocked_nodes']+=locked['unmatched_nodes']
         except Exception as exc:
             info['errors'].append(str(exc))
             rejects.append(dict(artifact=ad.name,reason=str(exc)))
@@ -212,6 +271,11 @@ def verify(root,source_pin,run_id):
       imputed_pool_locked_sources=accum['pool_locked_experimental'],
       verified_source_nodes=accum['individually_proved_nodes'],
       strictly_reachable_combo_nodes=accum['sequential_actor_combo_nodes'],
+      medium50_strict_eligible_combo_nodes=accum['medium50_strict_eligible_combo_nodes'],
+      medium50_strict_nonpolarized_research_candidate_nodes=accum['medium50_strict_research_candidate_nodes'],
+      villain_nodes_with_measured_NL2_marginal_lock_source=accum['vil_observed_marginal_lock_match_nodes'],
+      villain_nodes_matched_assumed_default=accum['vil_assumed_default_lock_match_nodes'],
+      villain_nodes_unlocked=accum['vil_unlocked_nodes'],
       errors=rejects,artifacts=reports)
 
 def main():
