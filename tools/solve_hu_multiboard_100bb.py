@@ -185,7 +185,40 @@ def main():
                     sum(max(0,float(y)) for y in arr)<1e-4 for arr in parent['wr']):
                     info['skipped'].append(dict(line=line,turn=turn,reason='NO_BOTH_PLAYER_REACH'))
                     continue
-                pipeline.solve_sub(args.spot,args.version,flop,fr,line,turn)
+                # The parent stores raw weighted hands. A branch can have
+                # positive total weight but zero legal hands once turn-card
+                # blockers are removed. Never feed that into the Rust driver:
+                # it aborts with "OOP range is empty" or "IP range is empty".
+                boardcards={flop[i:i+2] for i in (0,2,4)}
+                boardcards.add(turn)
+                retained=[]
+                for player in (0,1):
+                    legal=0.0
+                    for hole,weight in zip(fr['hands'][player],parent['wr'][player]):
+                        if float(weight)<=1e-4:continue
+                        holecards=(hole[:2],hole[2:4])
+                        if holecards[0] in boardcards or holecards[1] in boardcards:
+                            continue
+                        legal+=float(weight)
+                    retained.append(legal)
+                if min(retained)<=1e-4:
+                    info['skipped'].append(dict(line=line,turn=turn,
+                        reason='ZERO_LEGAL_PLAYER_RANGE_AFTER_TURN_CARD_BLOCKERS',
+                        legal_weight_by_seat=retained))
+                    continue
+                try:
+                    pipeline.solve_sub(args.spot,args.version,flop,fr,line,turn)
+                except RuntimeError as err:
+                    # A solver-specific empty-range rejection after its own
+                    # internal prune is a genuine unreachability, not a GTO
+                    # solve. Log explicitly, keep other branches untouched.
+                    if 'OOP range is empty' in str(err) or 'IP range is empty' in str(err):
+                        info['skipped'].append(dict(line=line,turn=turn,
+                            reason='RUST_ENGINE_EXCLUDED_EMPTY_REACH_RANGE',
+                            legal_weight_by_seat=retained,
+                            solver_error=str(err)[-400:]))
+                        continue
+                    raise
                 sub=out/(flop+'_'+line.replace(' ','')+'_'+turn+'.json')
                 if not sub.exists():raise FileNotFoundError('Missing true Rust subgame '+str(sub))
                 d=json.loads(sub.read_text())
