@@ -102,8 +102,10 @@ def main():
     a.add_argument('--version',choices=('gto','exp_ip','exp_oop'),default='gto')
     a.add_argument('--flop',required=True)
     a.add_argument('--turn-count',type=int,default=1)
-    a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','checkcheck'),default='all',
+    a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','oop-b75only','oop-b33only','checkcheck'),default='all',
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
+    a.add_argument('--turn-line-policy',choices=('default','b100only'),default='default',
+        help='Extract only exact b100-call river continuations; never alter the full underlying solved tree')
     a.add_argument('--turn-size-menu',choices=('default','river-gaps'),default='default',
         help='river-gaps: predeclared 33/66/75pct turn size tree for x x / turn bet-call river MODEL proofs')
     a.add_argument('--manifest',required=True,type=pathlib.Path)
@@ -168,9 +170,15 @@ def main():
         pipeline.SUB.update(turn_oop='33%,66%,75%',turn_ip='33%,66%,75%')
         pipeline.TURN_LINES=['x b33 c','x b66 c','x b75 c','x x',
                              'b33 c','b66 c','b75 c']
+    if args.turn_line_policy=='b100only':
+        if args.turn_size_menu!='default':
+            a.error('b100only requires default turn size menu (50/100)')
+        pipeline.TURN_LINES=['b100 c']
     turns=pipeline.turns_for(flop)[:args.turn_count]
     lines=(['b33 c','b50 c','b75 c','b100 c'] if args.flop_line_policy=='oop-betcall'
            else ['b50 c'] if args.flop_line_policy=='oop-b50only'
+           else ['b75 c'] if args.flop_line_policy=='oop-b75only'
+           else ['b33 c'] if args.flop_line_policy=='oop-b33only'
            else ['x x'] if args.flop_line_policy=='checkcheck'
            else list(FLOP_ACTIONS))
     out=pf/'out'/args.spot/args.version
@@ -195,7 +203,8 @@ def main():
       flop_action_sizes=SIZES,allow_OOP_flop_leads=True,
       turn_sizing_mode=args.turn_size_menu,
       turn_subgame_sizing={'oop':pipeline.SUB['turn_oop'],'ip':pipeline.SUB['turn_ip']},
-      selected_lines=lines,flop_line_policy=args.flop_line_policy,turns=turns,
+      selected_lines=lines,flop_line_policy=args.flop_line_policy,
+      selected_turn_lines=list(pipeline.TURN_LINES),turn_line_policy=args.turn_line_policy,turns=turns,
       locks=[{'pat':m['pat'],'scope':m.get('scope','PINNED_MEASURED_NL2_SOURCE'),'source':m.get('src'),
          'n':m.get('n')} for m in lock_src],
       unknown_action_frequency_policy='Use observed NL2 street/size marginals where available; fallback checked-to bet 45% with 33:35%,50:35%,75:20%,100:10%. No observed private-card behavior.',

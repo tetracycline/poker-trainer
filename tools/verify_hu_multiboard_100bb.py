@@ -183,6 +183,13 @@ def verify(root,source_pin,run_id):
                 raise ValueError('Unexpected source profile or version')
             if m.get('turn_sizing_mode','default') not in ('default','river-gaps'):
                 raise ValueError('Unregistered turn subgame size menu')
+            permitted_flop_lines={'oop-b33only':'b33 c','oop-b50only':'b50 c','oop-b75only':'b75 c'}
+            policy=m.get('flop_line_policy','all')
+            if policy in permitted_flop_lines:
+                if m.get('selected_lines')!=[permitted_flop_lines[policy]]:
+                    raise ValueError('Focused flop policy not identical to source action line')
+            if m.get('turn_line_policy','default') not in ('default','b100only'):
+                raise ValueError('Unregistered focused turn continuation')
             fam,pot,stack=REPO_SPOTS[m['spot']]
             if m['pot_family']!=fam or abs(m['root_pot_bb']-pot)>1e-6 or abs(m['root_remaining_bb']-stack)>1e-6:
                 raise ValueError('Root pot/SPR assumption mismatch')
@@ -215,6 +222,11 @@ def verify(root,source_pin,run_id):
                 raise ValueError('Authentic flop model does not match assumed 100bb pot')
             if j['pot']!=round(100*pot) or j['stack']!=round(100*stack):
                 raise ValueError('Rust job actual pot/stack inconsistent')
+            if m.get('flop_line_policy') in permitted_flop_lines:
+                actual_flop_extract=[e.get('prefix',[]) for e in j.get('extract',[]) if e.get('prefix',[])]
+                expected_flop=permitted_flop_lines[m['flop_line_policy']].split()
+                if not actual_flop_extract or not all(p[:2]==expected_flop for p in actual_flop_extract):
+                    raise ValueError('Actual flop job has unexpected or missing focused action extraction')
             if abs(j['rake_rate']-0.05)>1e-8 or j['rake_cap']!=1000:
                 raise ValueError('Unstated rake vs expected NL2 5% max10bb')
             if not all(x in j.get('flop_oop','') for x in ('33%','50%','75%','100%')):
@@ -231,6 +243,16 @@ def verify(root,source_pin,run_id):
                 rawfile=base/c['source_path']
                 if sha(rawfile)!=c['source_sha256']:
                     raise ValueError('Subgame SHA mismatch '+c['source_path'])
+                if m.get('turn_line_policy')=='b100only':
+                    if m.get('selected_turn_lines')!=['b100 c']:
+                        raise ValueError('Requested turn line not declared exactly')
+                    subjobfile=rawfile.with_suffix('.job.json')
+                    if not subjobfile.is_file():
+                        raise ValueError('Missing true focused turn Rust job config')
+                    subjob=json.loads(subjobfile.read_text())
+                    sub_extract=[e.get('prefix',[]) for e in subjob.get('extract',[]) if e.get('prefix',[])]
+                    if not sub_extract or not all(p[:2]==['b100','c'] for p in sub_extract):
+                        raise ValueError('Actual Rust extracted turn line mismatches b100 c')
                 if m.get('turn_sizing_mode')=='river-gaps':
                     real_job=rawfile.with_suffix('.job.json')
                     if not real_job.exists():raise ValueError('No exact turn-river solver config')
