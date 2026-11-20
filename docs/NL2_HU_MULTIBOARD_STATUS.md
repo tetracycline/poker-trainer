@@ -8,8 +8,8 @@ Every unlisted board/texture action remains APPROX, not GTO.
 
 | status | nodes |
 | --- | ---: |
-| CERT-MULTIBOARD | 23 |
-| APPROX approximate | 369 |
+| CERT-MULTIBOARD | 24 |
+| APPROX approximate | 368 |
 | Total | 392 |
 
 ## Fixed frequency ranking and disclosure
@@ -50,13 +50,13 @@ CFR outcomes cannot be used to tune this cutoff.
 | B22_B66_EXP | 44765475084 | 0 | 3 |
 | B23_LMP_NEXT | 44764901527 | 2 | 2 |
 | B25_LMP_TEXTURES | 44767785255 | 3 | 3 |
-| B26_LMP_NONPAIRED | PENDING | 0 | 0 |
+| B26_LMP_NONPAIRED | 44769773770 | 2 | 3 |
 
 ## Top-24 preregistered game histories
 
 | rank | model ID | family/spot | original SPR | label | named GTO flop boards |
 | ---: | --- | --- | ---: | --- | --- |
-| 1 | ln-iso-lmp_t_model-19hfq8v | LMP/LMP_CO_BB | 19.55 | APPROX | not enough authentic proof |
+| 1 | ln-iso-lmp_t_model-19hfq8v | LMP/LMP_CO_BB | 19.55 | CERT-MULTIBOARD | 4s4h2d 8s, 2s4h6d Kh, 7s5h3d 6c, 8s8h3d 5s |
 | 2 | ln-opfr-t_model-19esov6 | SRP/SB_BB | 5.056 | CERT-MULTIBOARD | KsQh4d Tc, As9h2d Kd, 9s6h3d Ts |
 | 3 | ln-opfr-t_model-1wej9w5 | SRP/SB_BB | 6.167 | CERT-MULTIBOARD | AsTh4d Td, Jh9d6s 3c, Ks7h2d 9d |
 | 4 | ln-opfr-t_model-trdt3w | SRP/SB_BB | 7.833 | CERT-MULTIBOARD | Ks7h2d 9d, As7h3d Kd, As9h2d Kd |
@@ -84,7 +84,6 @@ CFR outcomes cannot be used to tune this cutoff.
 ## Reasons some MODEL nodes are not CERT
 
 - LOWER_FREQUENCY_BELOW_PREREGISTERED_TOP24_CUTOFF: 368
-- NOT_ENOUGH_DISTINCT_AUTHENTIC_FLOPS_WITH_HERO_LOCKED_SOURCE: 1
 
 ## Convergence, combo reach and NL2 lock limits
 

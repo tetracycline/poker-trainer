@@ -6,10 +6,14 @@ Opponent action rates refer only to **observed NL2 pool marginals**, not per-boa
 Unknown historical per-node source counts remain unknown; defaults and unmatched villain nodes are separately counted.
 50% pot is a research candidate on the named runout, not a universal bet size recommendation.
 
-Verified: 23 CERT / 369 APPROX; 84 named boards.
+Verified: 24 CERT / 368 APPROX; 88 named boards.
 
 | rank | model | named board proof | GTO run | lock run(s) | measured / assumed / unlocked nodes | 50% pot |
 | ---: | --- | --- | ---: | --- | --- | --- |
+| 1 | ln-iso-lmp_t_model-19hfq8v | 2s4h6d Kh | 44769773770 | 44769773770 | 14/9/8 | unproven |
+| 1 | ln-iso-lmp_t_model-19hfq8v | 4s4h2d 8s | 44762388523 | 44762388523 | 14/11/15 | candidate |
+| 1 | ln-iso-lmp_t_model-19hfq8v | 7s5h3d 6c | 44769773770 | 44769773770 | 12/11/9 | unproven |
+| 1 | ln-iso-lmp_t_model-19hfq8v | 8s8h3d 5s | 44767785255 | 44666294821,44767785255 | 14/10/14 | unproven |
 | 2 | ln-opfr-t_model-19esov6 | 9s6h3d Ts | 44732810327 | 44732810327 | 17/10/22 | unproven |
 | 2 | ln-opfr-t_model-19esov6 | As9h2d Kd | 44666285424 | 44666285424 | 11/10/12 | unproven |
 | 2 | ln-opfr-t_model-19esov6 | KsQh4d Tc | 44736420272 | 44736420272 | 17/9/21 | candidate |
