@@ -59,7 +59,18 @@ def main():
     src=args.solver_root.resolve();pf=src/'postflop'
     assert (pf/'pfdriver/target/release/pfdriver').is_file()
     sys.path.insert(0,str(pf/'py'))
-    import pipeline
+    import pipeline, ranges
+    from solve_hu_missing_branches import EXTRA_SPOTS
+    # Pinned poker-solver pipeline supports UTG_CO only via the same
+    # explicitly pre-registered 100bb preflop action-chain configuration
+    # used by the authentic multiboard solver; never infer new ranges.
+    cfg=EXTRA_SPOTS[SPOT]
+    for node,action in cfg['oopc']+cfg['ipc']:
+        assert node in ranges.ACTS and action in ranges.ACTS[node], (
+            'Missing pinned preflop action-chain range',node,action)
+    assert (cfg['pot'],cfg['stack'],cfg['pfr'])==(6.5,97.5,'oop')
+    ranges.SPOTS[SPOT]=cfg
+    pipeline.SPOTS[SPOT]=cfg
     spot=pipeline.SPOTS[SPOT]
     assert abs(spot['pot']-6.5)<1e-8 and abs(spot['stack']-97.5)<1e-8
     pool=json.loads((src/'inputs/pool_stats.json').read_text())['NL2']
