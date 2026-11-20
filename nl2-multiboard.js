@@ -222,10 +222,24 @@ el('board').addEventListener('change',selectBoard);
 el('version').addEventListener('change',selectVersion);
 el('node').addEventListener('change',selectNode);
 el('all-combos').addEventListener('change',fillCombos);
-fetch('data/nl2_hu_multiboard_status.json',{cache:'no-store'})
+function fetchCertifiedRegistry(){
+ const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ return fetch('data/nl2_hu_multiboard_status_v2_tie.json',{cache:'no-store'})
+  .then(open).then(d=>{
+    if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE'||
+       d.CERT_MULTIBOARD!==26||d.APPROX!==366||d.TOTAL!==392||
+       d.original_top24_cert!==24||d.original_top24_approx!==368||
+       d.original_top24_cutoff_unchanged!==true||
+       String(d.source_blind_tie_ranks)!=='25,26'||
+       Object.keys(d.records||{}).length!==392)
+      throw Error('B40 2-node evidence ledger failed guard');
+    return d;
+  }).catch(()=>fetch('data/nl2_hu_multiboard_status.json',{cache:'no-store'}).then(open));
+}
+fetchCertifiedRegistry()
  .then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json()})
  .then(d=>{
-   if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V1'||d.CERT_MULTIBOARD+d.APPROX!==392)
+   if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V1','NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE'].includes(d.schema)||d.CERT_MULTIBOARD+d.APPROX!==392)
       throw Error('模型認證來源驗證失敗');
    status=d;
    models=Object.values(d.records).filter(x=>x.label==='CERT-MULTIBOARD')
@@ -233,8 +247,9 @@ fetch('data/nl2_hu_multiboard_status.json',{cache:'no-store'})
    el('model').replaceChildren();
    models.forEach((x,i)=>opt(el('model'),String(i),'#'+x.frequency_rank+' '+x.solver_profile+' '+x.model_id));
    text('summary','CERT-MULTIBOARD '+d.CERT_MULTIBOARD+'／392；APPROX '+d.APPROX+
-        '／392。頻率預先固定前'+d.top_N_rank_cutoff+
-        '個高頻 MODEL；認證僅限下方 3–5 張具名牌面，其他 368 個模型仍為 APPROX。');
+        '／392。原始頻率優先前'+d.top_N_rank_cutoff+
+        '格'+(d.supplementary_cert_count?'；另有 B39 頻率同分補充認證 '+d.supplementary_cert_count+' 格':'')+
+        '；CERT 僅限下方 3–5 張具名牌面，其他 '+d.APPROX+' 個模型仍為 APPROX。');
    const id=q.get('model');
    const i=id?models.findIndex(x=>x.model_id===id):-1;
    if(i>=0)el('model').value=String(i);
