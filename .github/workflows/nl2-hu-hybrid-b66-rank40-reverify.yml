@@ -1,0 +1,101 @@
+name: TASK-HYBRID B66 independently reverify B52 SB_BB original full three-token x-b100-call path
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b66-rank40-reverify.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  salvage-or-exclude:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Retrieve exactly one immutable original B52 Rust turn/river NL2 hero-IP artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          name='nl2-multiboard-B52_TWO_IP_LOCKS-SB_BB-exp_ip-9s6h3d'
+          mkdir -p "downloads/$name"
+          gh run download 44809135555 --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$name"
+          test -d "downloads/$name/evidence"
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 1
+      - name: Verify full 3-action flop prefix, SHA, rake, seat, real pot/SPR and all strict legal combos
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py trainer/tools/hu_b66_rank40_source_reverify.py
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('trainer/tools/verify_hu_multiboard_100bb.py').read_text()
+          assert 'p[:len(expected_flop)]==expected_flop' in s
+          for expected,extracted,ok in [
+              ('x b100 c',['x','b100','c','Ts'],True),
+              ('x b100 c',['x','b50','c','Ts'],False),
+              ('x x',['x','x','Ts'],True),
+              ('x x',['x','b100','c','Ts'],False)]:
+              assert (extracted[:len(expected.split())]==expected.split())==ok
+          print('PASS immutable original full-prefix parser gate')
+          PY
+          mkdir -p trainer/data/solver_evidence
+          if python3 trainer/tools/verify_hu_multiboard_100bb.py              --downloads downloads --solver-root solver --run-id 44809135555              --out trainer/data/solver_evidence/NL2_MULTIBOARD_B66_SB_B100_IP.json; then
+              echo 'Original SB_BB source passed exact verifier'
+          else
+              echo 'Original SB_BB source rejected: preserve raw verifier error as an explicit exclusion'
+          fi
+          test -s trainer/data/solver_evidence/NL2_MULTIBOARD_B66_SB_B100_IP.json
+      - name: Create SHA-locked source index only if genuine; separately test rank40 GTO+hero match
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b66_rank40_source_reverify.py
+          python3 - <<'PY'
+          import json,pathlib
+          p=pathlib.Path('data/nl2_hu_b66_rank40_source_reverification.json')
+          d=json.loads(p.read_text())
+          v=json.load(open('data/nl2_hu_multiboard_status_v8_batch61.json'))
+          assert d['schema']=='NL2_HU_B66_B52_SB_B100_IP_REVERIFICATION_V1'
+          assert d['status'] in ('ELIGIBLE_FOR_NEW_VERSION','SAFE_SOURCE_EXCLUSION')
+          assert (v['CERT_MULTIBOARD'],v['APPROX'])==(56,336)
+          assert v['records'][d['model_id']]['label']=='APPROX'
+          if d['eligible_for_separate_cert_version']:
+              assert d['authentic_source_verifier_pass']
+              assert len(d['matching_real_GTO_and_hero_lock_flops'])>=3
+          if d['authentic_source_verifier_pass']:
+              assert pathlib.Path('data/solver_evidence/NL2_MULTIBOARD_B66_SB_B100_IP.index.json').is_file()
+          print('PASS B66 verified source or safe exclusion, no fabricated CERT')
+          PY
+      - name: Commit independent B66 authentic proof or rejection to Draft PR #2, never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b66_rank40_source_reverification.json docs/NL2_HU_B66_RANK40_SOURCE_REVERIFICATION.md
+          if test -f data/solver_evidence/NL2_MULTIBOARD_B66_SB_B100_IP.index.json; then
+            git add data/solver_evidence/NL2_MULTIBOARD_B66_SB_B100_IP.index.json data/solver_evidence/NL2_MULTIBOARD_B66_SB_B100_IP.json.gz
+          fi
+          git commit -m 'TASK-HYBRID B66: independent x-b100-call actor-IP source revalidation with strict rank40 GTO match gate'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B66-original-B52-SB-rank40-proof-or-safe-rejection
+          path: |
+            trainer/data/nl2_hu_b66_rank40_source_reverification.json
+            trainer/docs/NL2_HU_B66_RANK40_SOURCE_REVERIFICATION.md
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B66_SB_B100_IP*
+          retention-days: 30
