@@ -71,7 +71,7 @@ def main():
         original_v6_cert=42,original_v6_approx=350,original_v3_cert=27,original_v3_approx=365,
         original_v2_cert=26,original_v2_approx=366,original_top24_cert=24,original_top24_approx=368,
         original_top24_cutoff_unchanged=True,source_blind_expansion_ranks=list(FROZEN),
-        b55_certificates=published,supplementary_cert_count=24,parent_v6_sha256=sha(OLD),
+        b59_certificates=published,supplementary_cert_count=24,parent_v6_sha256=sha(OLD),
         source_blind_b57_sha256=sha(B57),source_evidence=sources,
         no_generic_texture_GTO=True,no_per_private_combo_observed_pool_rates=True,
         PR2_remains_draft_never_merge=True)
@@ -89,7 +89,7 @@ def main():
        PR2_remains_draft_never_merge=True)
     MAT.write_text(json.dumps(matrix,ensure_ascii=False,indent=2)+"\n")
     lines=["# B59 | 48 CERT / 344 APPROX source-blind V7","",
-      "PR #2 stays Draft; never merge. V1 24/368, V2 26/366, V3 27/365 and V4 33/359 remain immutable.",
+      "PR #2 stays Draft; never merge. V1 24/368, V2 26/366, V3 27/365, V4 33/359, V5 41/351 and V6 42/350 remain immutable.",
       "Six source-blind preregistered ranks have 3–5 true boards with matching hero locks; no texture-level GTO.",
       "",
       "| Rank | Model | Exact flops | GTO runs | NL2 hero lock runs | Thin-combo warnings |",
@@ -105,7 +105,7 @@ def main():
       "Unmatched, assumed and historical unknown node counts remain separate.",
       "Batch E 44732810327 verified, 2475/2475 river navigation previously verified.",""]
     DOC.write_text("\n".join(lines))
-    MATDOC.write_text("# B59 | All V7 41-model hero-lock and nonpolarized provenance\n\n"+write_md(matrix))
+    MATDOC.write_text("# B59 | All V7 48-model hero-lock and nonpolarized provenance\n\n"+write_md(matrix))
     a=matrix["strict_aggregate"]
     print(json.dumps(dict(PASS=True,CERT=48,APPROX=344,ranks=FROZEN,boards=187,
          locks=a["hero_lock_variants"],b50_candidates=a["b50_research_candidate_boards"],
