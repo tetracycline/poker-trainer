@@ -37,7 +37,8 @@ function render(){
    const note=sec?.querySelector('.hu-board-proof[data-hu-model]');
    if(item.label==='CERT-MULTIBOARD'){
      const cases=item.certified_3_to_5_exact_flop_boards;
-     if(cases.length<3||cases.length>5||new Set(cases.map(z=>z.flop)).size!==cases.length){
+     if(cases.length<3||cases.length>5||new Set(cases.map(z=>z.flop)).size!==cases.length||
+        cases.some(b=>b.strict_full_street_combo_reachable<=0||!b.nl2_locked_variants?.length)){
        tag.textContent='APPROX 來源驗證失敗';continue;
      }
      tag.textContent='CERT-MULTIBOARD — 限 '+cases.length+' 組具名公牌的真實 GTO';
@@ -69,12 +70,20 @@ function render(){
            link.textContent='本公牌真實 GTO 與 NL2 局部鎖頻逐 combo 檢視（Run '+b.source_run_id+'）';
          }
          li.appendChild(link);
+         const countText=(v,k)=>Number.isInteger(v?.[k])&&v[k]>=0?String(v[k]):'來源未記錄';
+         const lockLines=b.nl2_locked_variants.map(v=>
+           'Run '+v.run_id+
+           '：實測聚合節點 '+countText(v,'observed_marginal_source_nodes')+
+           '／假設補值 '+countText(v,'assumed_default_source_nodes')+
+           '／未匹配 '+countText(v,'unlocked_source_nodes')+
+           (String(v.source_scope).includes('TURN_ONLY')?'（僅轉河牌部分鎖定）':'（部分節點鎖）'));
          li.append(document.createTextNode(
-          '｜NL2 英雄鎖頻 '+b.nl2_locked_variants.length+' 版'
-          +(b.nl2_locked_variants.some(x=>x.unknown_history_frequency_filled_with_default)
-             ? '（缺的精細頻率以公開標示預設補齊）':'（可觀測粗分桶頻率，未必覆蓋全節點）')
-          +'｜50% pot '+(b.b50_nonpolarized_relative_equity_research_candidate
-             ? '有非極化研究候選':'無足夠證據，不標為推薦')));
+          '｜NL2 英雄 lock '+b.nl2_locked_variants.length+' 來源：'+lockLines.join('；')+
+          (b.assumed_preflop_ranges?'｜翻前 169 類假設範圍，非實測 LMP 私牌':'')+
+          (b.strict_full_street_combo_reachable<10?'｜警示：嚴格可達 combo 少於 10':'')+
+          '｜50% pot '+(b.b50_nonpolarized_relative_equity_research_candidate
+             ? '具名牌面非極化研究候選':'缺乏足夠非極化證據，不可推薦')+
+          '。聚合頻率非逐牌面／逐私牌實測。'));
          ul.appendChild(li);
        }
        note.append(ul);

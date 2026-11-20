@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const el=id=>document.getElementById(id);
 const text=(id,value)=>{el(id).textContent=String(value??'—');};
-const fmt=(x,places=3)=>Number.isFinite(Number(x))?Number(x).toLocaleString('zh-TW',{maximumFractionDigits:places}):'—';
+const fmt=(x,places=3)=>x!==null&&x!==undefined&&x!==''&&Number.isFinite(Number(x))?Number(x).toLocaleString('zh-TW',{maximumFractionDigits:places}):'—';
 const opt=(parent,value,label)=>{const x=document.createElement('option');x.value=value;x.textContent=label;parent.appendChild(x);};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let status=null,models=[],chosenModel=null,chosenBoard=null,caseData=null,proofCache={};
@@ -9,10 +9,13 @@ const choices=['model','board','version','node'];
 const q=new URLSearchParams(location.search);
 const setMessage=s=>{el('details').textContent=s;el('combo-rows').replaceChildren();};
 function sourceUrl(run){return 'https://github.com/tetracycline/poker-trainer/actions/runs/'+run;}
+function sourceRun(source){return source?.source_run_id??source?.run_id??null;}
+function sourceSha(source){return source?.source_sha256??source?.sha256??null;}
+function nodeCount(v,field){const n=v?.[field];return Number.isInteger(n)&&n>=0?String(n):'未記錄';}
 function buildLinks(caseInfo,actual){
- const base=sourceUrl(caseInfo.source_run_id);
+ const base=sourceUrl(sourceRun(caseInfo));
  const src=document.createElement('a');src.href=base;src.target='_blank';src.rel='noopener';
- src.textContent='原始 GitHub Actions run '+caseInfo.source_run_id;
+ src.textContent='原始 GitHub Actions run '+sourceRun(caseInfo);
  return src;
 }
 function selectedModel(){
@@ -33,20 +36,34 @@ function selectBoard(){
  chosenBoard=chosenModel?.certified_3_to_5_exact_flop_boards[Number(el('board').value)]||null;
  el('version').replaceChildren();
  opt(el('version'),'gto','本公牌 GTO CERT');
- if(chosenBoard)for(const b of chosenBoard.nl2_locked_variants){
-   opt(el('version'),b.version,b.version+' NL2 部分鎖頻（非 GTO）');
+ if(chosenBoard)chosenBoard.nl2_locked_variants.forEach((b,i)=>{
+   opt(el('version'),b.version+'@'+i,b.version+'｜Run '+b.run_id+
+     '｜觀測聚合節點 '+nodeCount(b,'observed_marginal_source_nodes')+
+     '／假設 '+nodeCount(b,'assumed_default_source_nodes')+
+     '（局部 NL2 lock，非 GTO）');
+ });
+ if(q.has('version')){
+   const requested=q.get('version');
+   const versions=[...el('version').options];
+   const selected=versions.find(x=>x.value===requested)||
+      versions.find(x=>x.value.startsWith(requested+'@'));
+   if(selected)el('version').value=selected.value;
  }
- if(q.has('version')&&[...el('version').options].some(x=>x.value===q.get('version')))el('version').value=q.get('version');
  selectVersion();
 }
 function sourceCase(version){
  if(!chosenBoard)return null;
- const selected=(version==='gto')?{
+ if(version==='gto')return {
    source_run_id:chosenBoard.source_run_id,
    source_sha256:chosenBoard.source_sha256,
-   status:'CERT_EXACT_BOARD_GTO'}:
-   chosenBoard.nl2_locked_variants.find(v=>v.version===version);
- return selected||null;
+   version:'gto',status:'CERT_EXACT_BOARD_GTO'};
+ const [kind,index]=String(version).split('@');
+ const numeric=(index!==undefined&&/^\d+$/.test(index))?Number(index):-1;
+ if(numeric>=0){
+   const candidate=chosenBoard.nl2_locked_variants[numeric];
+   return candidate?.version===kind?candidate:null;
+ }
+ return chosenBoard.nl2_locked_variants.find(v=>v.version===kind)||null;
 }
 async function getProof(run){
  const batch=Object.entries(status.independently_verified_completed_batches||{})
@@ -69,7 +86,9 @@ async function getProof(run){
 function verifiedCase(source,proof){
  if(!proof)return null;
  const records=proof.artifacts.flatMap(x=>x.cases);
- const item=records.find(x=>x.source_sha256===source.source_sha256 &&
+ const digest=sourceSha(source);
+ if(!digest||!sourceRun(source))throw Error('來源缺少完整 run id／SHA-256');
+ const item=records.find(x=>x.source_sha256===digest &&
     x.spot===chosenModel.solver_profile&&x.pot_family===chosenModel.family);
  if(!item)throw Error('真實 CFR ZIP 缺指定 SHA／位置／底池來源');
  if(item.flop!==chosenBoard.flop||item.turn!==chosenBoard.turn||
@@ -81,10 +100,13 @@ async function selectVersion(){
  caseData=null;el('node').replaceChildren();
  const version=el('version').value;const source=sourceCase(version);
  if(!source){setMessage('尚無符合的 source');return;}
- if(chosenBoard.source_kind?.includes('OFFICIAL')){
+ const run=sourceRun(source),digest=sourceSha(source);
+ const hasVerifiedBatch=Object.values(status?.independently_verified_completed_batches||{})
+    .some(x=>x?.status==='VERIFIED'&&x.run_id===run);
+ if(chosenBoard.source_kind?.includes('OFFICIAL')&&!hasVerifiedBatch){
    const link=document.createElement('a');
    link.href='nl2-cfr.html?spot='+encodeURIComponent(chosenModel.solver_profile)
-      +'&version='+encodeURIComponent(version)+'&sha='+encodeURIComponent(source.source_sha256)
+      +'&version='+encodeURIComponent(source.version||version)+'&sha='+encodeURIComponent(digest)
       +'&board='+encodeURIComponent(chosenBoard.public_board)
       +'&line='+encodeURIComponent(chosenBoard.actual_exact_action_line);
    link.textContent='開啟已驗證的原始 644 子局逐 combo GTO/EXP 查閱頁（Run '+source.source_run_id+'）';
@@ -92,10 +114,10 @@ async function selectVersion(){
    el('combo-rows').replaceChildren();
    return;
  }
- const url=sourceUrl(source.source_run_id);
- setMessage('正在檢查真正的 GitHub Rust CFR run '+source.source_run_id+' 與來源 SHA……');
+ const url=sourceUrl(run);
+ setMessage('正在檢查真正的 GitHub Rust CFR run '+run+' 與來源 SHA……');
  try{
-   const proof=await getProof(source.source_run_id);
+   const proof=await getProof(run);
    if(!proof){setMessage('來源未由獨立 GitHub Actions 驗證；不可將本頁標示為 CERT。'+url);return;}
    const actual=verifiedCase(source,proof);
    caseData=actual;
@@ -120,8 +142,22 @@ function selectNode(){
  const lock=caseData.villain_lock_scope||{};
  const origin=sourceCase(version);
  const details=el('details');details.replaceChildren();
+ const currentSourceType=chosenBoard.assumed_preflop_ranges?
+     'LMP／ISO 假設 169 起手牌類型；如為 50% 單尺寸限制樹，僅是該樹的條件均衡，非完整 NL2 GTO':
+     '釘定翻前範圍 CFR；僅此具名公牌及決策歷史通過來源認證';
+ const selectedLock=version==='gto'?'本頁為 GTO 基線，沒有套用 NL2 對手鎖頻':
+   '本來源為 NL2 部分 node-lock；'+
+   '實測聚合來源節點 '+nodeCount(origin,'observed_marginal_source_nodes')+
+   '、假設補值 '+nodeCount(origin,'assumed_default_source_nodes')+
+   '、未鎖定 '+nodeCount(origin,'unlocked_source_nodes')+
+   '；來源範圍 '+String(origin?.source_scope||'未記錄')+
+   '。聚合頻率不是該牌面／私有手牌的實測條件頻率。';
  const lines=[
  '具體公牌：'+node.public_board+'；完整動作線 '+node.exact_node_line,
+ '認證範圍：'+currentSourceType,
+ selectedLock,
+ '嚴格可達 combo '+chosenBoard.strict_full_street_combo_reachable+
+   '；GTO／鎖頻來源各自 SHA 為 '+chosenBoard.source_sha256+'／'+sourceSha(origin),
  '座位 '+(node.acting_seat?'IP':'OOP')+'；底池 '+fmt(node.pot_bb)+' bb；剩餘有效籌碼 '+fmt(node.remaining_bb)+' bb；SPR '+fmt(node.node_spr),
  'GTO 基線 exploitability：'+fmt(caseData.gto_exploitability_pct)+'%；NL2 模型 hero gap：'+fmt(caseData.locked_hero_gap_pct)+'%',
  '真正跨街可達 combos：'+fmt(node.strictly_reachable_combos,0)+'；合法動作：'+node.source_actions.join('、'),
@@ -197,7 +233,8 @@ fetch('data/nl2_hu_multiboard_status.json',{cache:'no-store'})
    el('model').replaceChildren();
    models.forEach((x,i)=>opt(el('model'),String(i),'#'+x.frequency_rank+' '+x.solver_profile+' '+x.model_id));
    text('summary','CERT-MULTIBOARD '+d.CERT_MULTIBOARD+'／392；APPROX '+d.APPROX+
-        '／392。截斷點：NL2 池子排名前'+d.top_N_rank_cutoff+'；部分未取得 3–5 個真實公牌的高頻 MODEL 仍是 APPROX。');
+        '／392。頻率預先固定前'+d.top_N_rank_cutoff+
+        '個高頻 MODEL；認證僅限下方 3–5 張具名牌面，其他 368 個模型仍為 APPROX。');
    const id=q.get('model');
    const i=id?models.findIndex(x=>x.model_id===id):-1;
    if(i>=0)el('model').value=String(i);
