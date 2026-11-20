@@ -65,15 +65,754 @@ def make_fallbacks(spot,ver,p,orig,loc):
     if is_assumed:family='SRP';position='IP'
     ph=p['postflop_HU'][family+'_PFR_'+position]
     check_rate=ph['cbet']['pct']/100
+    assumed_sizes=[[33,.35],[50,.35],[75,.20],[100,.10]]
+    # Replace artificial 35/35/20/10 on observed PFR c-bet opportunities with
+    # measured NL2 size marginals. >110% is outside this exact CFR size menu;
+    # renormalize only the four supported buckets, retaining source and n.
+    bins=((33,'≤33%'),(50,'34-55%'),(75,'56-80%'),(100,'81-110%'))
+    measured_sizes=ph.get('cbet_size') or {}
+    eligible=(int(ph['cbet'].get('n',0))>=500 and
+              all(k in measured_sizes and float(measured_sizes[k])>=0 for _,k in bins))
+    size_total=sum(float(measured_sizes[k]) for _,k in bins) if eligible else 0
+    observed_sizes=[[v,float(measured_sizes[k])/size_total] for v,k in bins] if size_total>0 else assumed_sizes
+    observed_scope='NL2_OBSERVED_PFR_CBET_SIZE_AGGREGATE_NOT_EXACT_NODE'
+    if is_assumed:
+        observed_scope='SRP_CBET_SIZE_PROXY_FOR_ASSUMED_ISO_LMP_NOT_OBSERVED_IN_FAMILY'
     for pat,rate,scope in [
-      (r'^$',check_rate,'NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT'),
-      (r'^x$',check_rate,'NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT'),
-      (r'.*/x$',0.45,'ASSUMED_CHECKED_TO_BET_45PCT'),
-      (r'.*/$',0.45,'ASSUMED_STREET_ROOT_BET_45PCT')]:
-        config={'pat':pat,'bet':rate,'sizes':[[33,.35],[50,.35],[75,.20],[100,.10]]}
+      (r'^
+    return base+configs,meta
+
+def main():
+    a=argparse.ArgumentParser()
+    a.add_argument('--solver-root',required=True,type=pathlib.Path)
+    a.add_argument('--spot',choices=SPOTS,required=True)
+    a.add_argument('--version',choices=('gto','exp_ip','exp_oop'),default='gto')
+    a.add_argument('--flop',required=True)
+    a.add_argument('--turn-count',type=int,default=1)
+    a.add_argument('--turn-size-menu',choices=('default','river-gaps'),default='default',
+        help='river-gaps: predeclared 33/66/75pct turn size tree for x x / turn bet-call river MODEL proofs')
+    a.add_argument('--manifest',required=True,type=pathlib.Path)
+    args=a.parse_args()
+    if not 1<=args.turn_count<=3:a.error('turn-count 1..3')
+    flop=args.flop;cards=[flop[i:i+2] for i in (0,2,4)]
+    if len(flop)!=6 or len(set(cards))!=3 or not all(re.fullmatch('[23456789TJQKA][cdhs]',t) for t in cards):
+        a.error('Invalid explicit flop')
+    src=args.solver_root.resolve()
+    pf=src/'postflop'
+    if not (pf/'pfdriver/target/release/pfdriver').exists():
+        raise SystemExit('Authentic Rust CFR driver unavailable')
+    sys.path.insert(0,str(pf/'py'))
+    ranges=importlib.import_module('ranges')
+    pipeline=importlib.import_module('pipeline')
+    job=importlib.import_module('job')
+    LK=importlib.import_module('locks')
+    pool=json.loads((src/'inputs/pool_stats.json').read_text())['NL2']
+    if args.spot in RULES:
+        prof=RULES[args.spot]
+        config={k:prof[k] for k in ('pot','stack','oop','ip','pfr')}
+        config['kind']='SRP' # solver tree geometry only, NOT source pot family.
+        ranges.SPOTS[args.spot]=config
+        pipeline.SPOTS[args.spot]=config
+        fn_pair=(w_iso_oop,w_iso_ip) if args.spot=='ISO_BTN_CO' else (lambda n:1.0,w_lmp_ip)
+        weighted=tuple([[float(fn(n)) for n in ranges.NAMES] for fn in fn_pair])
+        assert len(weighted[0])==len(weighted[1])==169
+        original_range=job.ranges
+        job.ranges=lambda sp,v:weighted if sp==args.spot else original_range(sp,v)
+        # pipeline uses imported "make_job" and shares job.ranges global.
+        extra_range=dict(source='ASSUMED_EXPLICIT_169CLASS',
+            profile=prof,oop_169=dict(zip(ranges.NAMES,weighted[0])),
+            ip_169=dict(zip(ranges.NAMES,weighted[1])))
+    else:
+        if args.spot in EXTRA_SPOTS:
+            pp=EXTRA_SPOTS[args.spot]
+            for place,act in pp['oopc']+pp['ipc']:
+                if place not in ranges.ACTS or act not in ranges.ACTS[place]:
+                    raise ValueError('Preflop range source action missing: '+place+'/'+act)
+            ranges.SPOTS[args.spot]=pp
+            pipeline.SPOTS[args.spot]=pp
+        extra_range=dict(source='PINNED_POKER_SOLVER_PREFLOP_CFR',
+                         spot=args.spot,
+                         full_sha256=sha(src/'v8_build/build/pf_data.json'))
+    spot=pipeline.SPOTS[args.spot]
+    original_locks=pipeline.lock_list
+    def lock_list(spot,ver,board):
+        return make_fallbacks(spot,ver,pool,original_locks,board)
+    pipeline.lock_list=lock_list
+    orig_make=pipeline.make_job
+    def sized_make(*pos,**kwargs):
+        kwargs['target']=0.5
+        kwargs['rank']=0.5 if args.version!='gto' else 1.5
+        kwargs['iters']=1700
+        j=orig_make(*pos,**kwargs)
+        j['flop_oop']=','.join(SIZES) # include donk or OOP-PFR cbet
+        j['flop_ip']=','.join(SIZES)  # include IP stab / IP-PFR cbet
+        j['flop_raise']='3x,a'
+        return j
+    pipeline.make_job=sized_make
+    if args.turn_size_menu=='river-gaps':
+        pipeline.SUB.update(turn_oop='33%,66%,75%',turn_ip='33%,66%,75%')
+        pipeline.TURN_LINES=['x b33 c','x b66 c','x b75 c','x x',
+                             'b33 c','b66 c','b75 c']
+    turns=pipeline.turns_for(flop)[:args.turn_count]
+    lines=list(FLOP_ACTIONS)
+    out=pf/'out'/args.spot/args.version
+    out.mkdir(parents=True,exist_ok=True)
+    path=out/(flop+'_multiboard.json')
+    jpath=out/(flop+'_multiboard.job.json')
+    extracted=[{'prefix':[], 'street':True}]+[
+        dict(prefix=line.split()+[turn],street=False,raw=True)
+        for line in lines for turn in turns]
+    locks,lock_src=pipeline.lock_list(args.spot,args.version,flop)
+    job_input=sized_make(args.spot,args.version,flop,str(path)+'.tmp',
+        extract=extracted,locks=locks,compress=True)
+    info=dict(schema='NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1',
+      spot=args.spot,version=args.version,flop=flop,
+      pot_family='ISO' if args.spot=='ISO_BTN_CO' else 'LMP' if args.spot=='LMP_CO_BB' else '3BP' if '3' in args.spot else 'SRP',
+      root_pot_bb=spot['pot'],root_remaining_bb=spot['stack'],
+      root_spr=round(spot['stack']/spot['pot'],6),
+      preflop_ranges=extra_range,
+      n_NL2_hands=pool['hands'],
+      pool_source_sha256=sha(src/'inputs/pool_stats.json'),
+      solver_pin=sha(pf/'py/pipeline.py'),solver_ranges_sha256=sha(pf/'py/ranges.py'),
+      flop_action_sizes=SIZES,allow_OOP_flop_leads=True,
+      turn_sizing_mode=args.turn_size_menu,
+      turn_subgame_sizing={'oop':pipeline.SUB['turn_oop'],'ip':pipeline.SUB['turn_ip']},
+      selected_lines=lines,turns=turns,
+      locks=[{'pat':m['pat'],'scope':m.get('scope','PINNED_MEASURED_NL2_SOURCE'),'source':m.get('src'),
+         'n':m.get('n')} for m in lock_src],
+      unknown_action_frequency_policy='Use observed NL2 street/size marginals where available; fallback checked-to bet 45% with 33:35%,50:35%,75:20%,100:10%. No observed private-card behavior.',
+      no_generic_certification=True,not_observed_exact_NL2_hero_EV=True,
+      file_flop=str(path.relative_to(pf)),file_flop_sha256=None,
+      cases=[],failures=[],skipped=[],elapsed_seconds=0)
+    t0=time.monotonic()
+    try:
+        job.run(job_input,str(jpath))
+        pathlib.Path(str(path)+'.tmp').rename(path)
+        fr=json.loads(path.read_text())
+        fr['turns']=turns
+        path.write_text(json.dumps(fr,separators=(',',':')))
+        info['file_flop_sha256']=sha(path)
+        for line in lines:
+            for turn in turns:
+                parent=next((n for n in fr['nodes'] if n['line']==line+'/' and n['board'][-2:]==turn),None)
+                if not parent or not parent.get('wr') or any(
+                    sum(max(0,float(y)) for y in arr)<1e-4 for arr in parent['wr']):
+                    info['skipped'].append(dict(line=line,turn=turn,reason='NO_BOTH_PLAYER_REACH'))
+                    continue
+                # The parent stores raw weighted hands. A branch can have
+                # positive total weight but zero legal hands once turn-card
+                # blockers are removed. Never feed that into the Rust driver:
+                # it aborts with "OOP range is empty" or "IP range is empty".
+                boardcards={flop[i:i+2] for i in (0,2,4)}
+                boardcards.add(turn)
+                retained=[]
+                for player in (0,1):
+                    legal=0.0
+                    for hole,weight in zip(fr['hands'][player],parent['wr'][player]):
+                        if float(weight)<=1e-4:continue
+                        holecards=(hole[:2],hole[2:4])
+                        if holecards[0] in boardcards or holecards[1] in boardcards:
+                            continue
+                        legal+=float(weight)
+                    retained.append(legal)
+                if min(retained)<=1e-4:
+                    info['skipped'].append(dict(line=line,turn=turn,
+                        reason='ZERO_LEGAL_PLAYER_RANGE_AFTER_TURN_CARD_BLOCKERS',
+                        legal_weight_by_seat=retained))
+                    continue
+                try:
+                    pipeline.solve_sub(args.spot,args.version,flop,fr,line,turn)
+                except RuntimeError as err:
+                    # A solver-specific empty-range rejection after its own
+                    # internal prune is a genuine unreachability, not a GTO
+                    # solve. Log explicitly, keep other branches untouched.
+                    if 'OOP range is empty' in str(err) or 'IP range is empty' in str(err):
+                        info['skipped'].append(dict(line=line,turn=turn,
+                            reason='RUST_ENGINE_EXCLUDED_EMPTY_REACH_RANGE',
+                            legal_weight_by_seat=retained,
+                            solver_error=str(err)[-400:]))
+                        continue
+                    raise
+                sub=out/(flop+'_'+line.replace(' ','')+'_'+turn+'.json')
+                if not sub.exists():raise FileNotFoundError('Missing true Rust subgame '+str(sub))
+                d=json.loads(sub.read_text())
+                source_nodes=[n for n in d['nodes'] if len(n['board'])>=8]
+                if not any(len(n['board'])==10 for n in source_nodes):
+                    raise ValueError('No authentic river node '+str(sub))
+                info['cases'].append(dict(line=line,turn=turn,
+                    source_path=str(sub.relative_to(pf)),source_sha256=sha(sub),
+                    real_flop_parent_spr=round((fr['stack']-max(parent['bets']))/parent['pot'],6),
+                    flop_parent_pot_bb=parent['pot']/100,
+                    flop_parent_effective_remaining_bb=(fr['stack']-max(parent['bets']))/100,
+                    true_river_nodes=sum(len(n['board'])==10 for n in d['nodes']),
+                    source_node_count=len(d['nodes']),
+                    gto_gap_pct=d['info'].get('gto_expl_pct'),
+                    hero_gap_pct=d['info'].get('hero_gap_pct'),
+                    lock_stats=d['info'].get('lock_stats',{}),
+                    status='GTO_EXACT_ONLY' if args.version=='gto' else 'NL2_IMPUTED_MARGINAL_LOCKED_EXPERIMENT'))
+    except Exception as e:
+        info['failures'].append({'reason':str(e),'traceback':traceback.format_exc()[-2400:]})
+    info['elapsed_seconds']=round(time.monotonic()-t0,2)
+    info['solved_cases']=len(info['cases'])
+    args.manifest.parent.mkdir(parents=True,exist_ok=True)
+    args.manifest.write_text(json.dumps(info,ensure_ascii=False,indent=2)+'\n')
+    print(json.dumps({k:info[k] for k in ('spot','version','flop','solved_cases','elapsed_seconds','failures')},ensure_ascii=False))
+    if info['failures'] or info['solved_cases']==0:raise SystemExit(1)
+if __name__=='__main__':main()
+,check_rate,'NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT'),
+      (r'^x
+    return base+configs,meta
+
+def main():
+    a=argparse.ArgumentParser()
+    a.add_argument('--solver-root',required=True,type=pathlib.Path)
+    a.add_argument('--spot',choices=SPOTS,required=True)
+    a.add_argument('--version',choices=('gto','exp_ip','exp_oop'),default='gto')
+    a.add_argument('--flop',required=True)
+    a.add_argument('--turn-count',type=int,default=1)
+    a.add_argument('--turn-size-menu',choices=('default','river-gaps'),default='default',
+        help='river-gaps: predeclared 33/66/75pct turn size tree for x x / turn bet-call river MODEL proofs')
+    a.add_argument('--manifest',required=True,type=pathlib.Path)
+    args=a.parse_args()
+    if not 1<=args.turn_count<=3:a.error('turn-count 1..3')
+    flop=args.flop;cards=[flop[i:i+2] for i in (0,2,4)]
+    if len(flop)!=6 or len(set(cards))!=3 or not all(re.fullmatch('[23456789TJQKA][cdhs]',t) for t in cards):
+        a.error('Invalid explicit flop')
+    src=args.solver_root.resolve()
+    pf=src/'postflop'
+    if not (pf/'pfdriver/target/release/pfdriver').exists():
+        raise SystemExit('Authentic Rust CFR driver unavailable')
+    sys.path.insert(0,str(pf/'py'))
+    ranges=importlib.import_module('ranges')
+    pipeline=importlib.import_module('pipeline')
+    job=importlib.import_module('job')
+    LK=importlib.import_module('locks')
+    pool=json.loads((src/'inputs/pool_stats.json').read_text())['NL2']
+    if args.spot in RULES:
+        prof=RULES[args.spot]
+        config={k:prof[k] for k in ('pot','stack','oop','ip','pfr')}
+        config['kind']='SRP' # solver tree geometry only, NOT source pot family.
+        ranges.SPOTS[args.spot]=config
+        pipeline.SPOTS[args.spot]=config
+        fn_pair=(w_iso_oop,w_iso_ip) if args.spot=='ISO_BTN_CO' else (lambda n:1.0,w_lmp_ip)
+        weighted=tuple([[float(fn(n)) for n in ranges.NAMES] for fn in fn_pair])
+        assert len(weighted[0])==len(weighted[1])==169
+        original_range=job.ranges
+        job.ranges=lambda sp,v:weighted if sp==args.spot else original_range(sp,v)
+        # pipeline uses imported "make_job" and shares job.ranges global.
+        extra_range=dict(source='ASSUMED_EXPLICIT_169CLASS',
+            profile=prof,oop_169=dict(zip(ranges.NAMES,weighted[0])),
+            ip_169=dict(zip(ranges.NAMES,weighted[1])))
+    else:
+        if args.spot in EXTRA_SPOTS:
+            pp=EXTRA_SPOTS[args.spot]
+            for place,act in pp['oopc']+pp['ipc']:
+                if place not in ranges.ACTS or act not in ranges.ACTS[place]:
+                    raise ValueError('Preflop range source action missing: '+place+'/'+act)
+            ranges.SPOTS[args.spot]=pp
+            pipeline.SPOTS[args.spot]=pp
+        extra_range=dict(source='PINNED_POKER_SOLVER_PREFLOP_CFR',
+                         spot=args.spot,
+                         full_sha256=sha(src/'v8_build/build/pf_data.json'))
+    spot=pipeline.SPOTS[args.spot]
+    original_locks=pipeline.lock_list
+    def lock_list(spot,ver,board):
+        return make_fallbacks(spot,ver,pool,original_locks,board)
+    pipeline.lock_list=lock_list
+    orig_make=pipeline.make_job
+    def sized_make(*pos,**kwargs):
+        kwargs['target']=0.5
+        kwargs['rank']=0.5 if args.version!='gto' else 1.5
+        kwargs['iters']=1700
+        j=orig_make(*pos,**kwargs)
+        j['flop_oop']=','.join(SIZES) # include donk or OOP-PFR cbet
+        j['flop_ip']=','.join(SIZES)  # include IP stab / IP-PFR cbet
+        j['flop_raise']='3x,a'
+        return j
+    pipeline.make_job=sized_make
+    if args.turn_size_menu=='river-gaps':
+        pipeline.SUB.update(turn_oop='33%,66%,75%',turn_ip='33%,66%,75%')
+        pipeline.TURN_LINES=['x b33 c','x b66 c','x b75 c','x x',
+                             'b33 c','b66 c','b75 c']
+    turns=pipeline.turns_for(flop)[:args.turn_count]
+    lines=list(FLOP_ACTIONS)
+    out=pf/'out'/args.spot/args.version
+    out.mkdir(parents=True,exist_ok=True)
+    path=out/(flop+'_multiboard.json')
+    jpath=out/(flop+'_multiboard.job.json')
+    extracted=[{'prefix':[], 'street':True}]+[
+        dict(prefix=line.split()+[turn],street=False,raw=True)
+        for line in lines for turn in turns]
+    locks,lock_src=pipeline.lock_list(args.spot,args.version,flop)
+    job_input=sized_make(args.spot,args.version,flop,str(path)+'.tmp',
+        extract=extracted,locks=locks,compress=True)
+    info=dict(schema='NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1',
+      spot=args.spot,version=args.version,flop=flop,
+      pot_family='ISO' if args.spot=='ISO_BTN_CO' else 'LMP' if args.spot=='LMP_CO_BB' else '3BP' if '3' in args.spot else 'SRP',
+      root_pot_bb=spot['pot'],root_remaining_bb=spot['stack'],
+      root_spr=round(spot['stack']/spot['pot'],6),
+      preflop_ranges=extra_range,
+      n_NL2_hands=pool['hands'],
+      pool_source_sha256=sha(src/'inputs/pool_stats.json'),
+      solver_pin=sha(pf/'py/pipeline.py'),solver_ranges_sha256=sha(pf/'py/ranges.py'),
+      flop_action_sizes=SIZES,allow_OOP_flop_leads=True,
+      turn_sizing_mode=args.turn_size_menu,
+      turn_subgame_sizing={'oop':pipeline.SUB['turn_oop'],'ip':pipeline.SUB['turn_ip']},
+      selected_lines=lines,turns=turns,
+      locks=[{'pat':m['pat'],'scope':m.get('scope','PINNED_MEASURED_NL2_SOURCE'),'source':m.get('src'),
+         'n':m.get('n')} for m in lock_src],
+      unknown_action_frequency_policy='Use observed NL2 street/size marginals where available; fallback checked-to bet 45% with 33:35%,50:35%,75:20%,100:10%. No observed private-card behavior.',
+      no_generic_certification=True,not_observed_exact_NL2_hero_EV=True,
+      file_flop=str(path.relative_to(pf)),file_flop_sha256=None,
+      cases=[],failures=[],skipped=[],elapsed_seconds=0)
+    t0=time.monotonic()
+    try:
+        job.run(job_input,str(jpath))
+        pathlib.Path(str(path)+'.tmp').rename(path)
+        fr=json.loads(path.read_text())
+        fr['turns']=turns
+        path.write_text(json.dumps(fr,separators=(',',':')))
+        info['file_flop_sha256']=sha(path)
+        for line in lines:
+            for turn in turns:
+                parent=next((n for n in fr['nodes'] if n['line']==line+'/' and n['board'][-2:]==turn),None)
+                if not parent or not parent.get('wr') or any(
+                    sum(max(0,float(y)) for y in arr)<1e-4 for arr in parent['wr']):
+                    info['skipped'].append(dict(line=line,turn=turn,reason='NO_BOTH_PLAYER_REACH'))
+                    continue
+                # The parent stores raw weighted hands. A branch can have
+                # positive total weight but zero legal hands once turn-card
+                # blockers are removed. Never feed that into the Rust driver:
+                # it aborts with "OOP range is empty" or "IP range is empty".
+                boardcards={flop[i:i+2] for i in (0,2,4)}
+                boardcards.add(turn)
+                retained=[]
+                for player in (0,1):
+                    legal=0.0
+                    for hole,weight in zip(fr['hands'][player],parent['wr'][player]):
+                        if float(weight)<=1e-4:continue
+                        holecards=(hole[:2],hole[2:4])
+                        if holecards[0] in boardcards or holecards[1] in boardcards:
+                            continue
+                        legal+=float(weight)
+                    retained.append(legal)
+                if min(retained)<=1e-4:
+                    info['skipped'].append(dict(line=line,turn=turn,
+                        reason='ZERO_LEGAL_PLAYER_RANGE_AFTER_TURN_CARD_BLOCKERS',
+                        legal_weight_by_seat=retained))
+                    continue
+                try:
+                    pipeline.solve_sub(args.spot,args.version,flop,fr,line,turn)
+                except RuntimeError as err:
+                    # A solver-specific empty-range rejection after its own
+                    # internal prune is a genuine unreachability, not a GTO
+                    # solve. Log explicitly, keep other branches untouched.
+                    if 'OOP range is empty' in str(err) or 'IP range is empty' in str(err):
+                        info['skipped'].append(dict(line=line,turn=turn,
+                            reason='RUST_ENGINE_EXCLUDED_EMPTY_REACH_RANGE',
+                            legal_weight_by_seat=retained,
+                            solver_error=str(err)[-400:]))
+                        continue
+                    raise
+                sub=out/(flop+'_'+line.replace(' ','')+'_'+turn+'.json')
+                if not sub.exists():raise FileNotFoundError('Missing true Rust subgame '+str(sub))
+                d=json.loads(sub.read_text())
+                source_nodes=[n for n in d['nodes'] if len(n['board'])>=8]
+                if not any(len(n['board'])==10 for n in source_nodes):
+                    raise ValueError('No authentic river node '+str(sub))
+                info['cases'].append(dict(line=line,turn=turn,
+                    source_path=str(sub.relative_to(pf)),source_sha256=sha(sub),
+                    real_flop_parent_spr=round((fr['stack']-max(parent['bets']))/parent['pot'],6),
+                    flop_parent_pot_bb=parent['pot']/100,
+                    flop_parent_effective_remaining_bb=(fr['stack']-max(parent['bets']))/100,
+                    true_river_nodes=sum(len(n['board'])==10 for n in d['nodes']),
+                    source_node_count=len(d['nodes']),
+                    gto_gap_pct=d['info'].get('gto_expl_pct'),
+                    hero_gap_pct=d['info'].get('hero_gap_pct'),
+                    lock_stats=d['info'].get('lock_stats',{}),
+                    status='GTO_EXACT_ONLY' if args.version=='gto' else 'NL2_IMPUTED_MARGINAL_LOCKED_EXPERIMENT'))
+    except Exception as e:
+        info['failures'].append({'reason':str(e),'traceback':traceback.format_exc()[-2400:]})
+    info['elapsed_seconds']=round(time.monotonic()-t0,2)
+    info['solved_cases']=len(info['cases'])
+    args.manifest.parent.mkdir(parents=True,exist_ok=True)
+    args.manifest.write_text(json.dumps(info,ensure_ascii=False,indent=2)+'\n')
+    print(json.dumps({k:info[k] for k in ('spot','version','flop','solved_cases','elapsed_seconds','failures')},ensure_ascii=False))
+    if info['failures'] or info['solved_cases']==0:raise SystemExit(1)
+if __name__=='__main__':main()
+,check_rate,'NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT'),
+      (r'.*/x
+    return base+configs,meta
+
+def main():
+    a=argparse.ArgumentParser()
+    a.add_argument('--solver-root',required=True,type=pathlib.Path)
+    a.add_argument('--spot',choices=SPOTS,required=True)
+    a.add_argument('--version',choices=('gto','exp_ip','exp_oop'),default='gto')
+    a.add_argument('--flop',required=True)
+    a.add_argument('--turn-count',type=int,default=1)
+    a.add_argument('--turn-size-menu',choices=('default','river-gaps'),default='default',
+        help='river-gaps: predeclared 33/66/75pct turn size tree for x x / turn bet-call river MODEL proofs')
+    a.add_argument('--manifest',required=True,type=pathlib.Path)
+    args=a.parse_args()
+    if not 1<=args.turn_count<=3:a.error('turn-count 1..3')
+    flop=args.flop;cards=[flop[i:i+2] for i in (0,2,4)]
+    if len(flop)!=6 or len(set(cards))!=3 or not all(re.fullmatch('[23456789TJQKA][cdhs]',t) for t in cards):
+        a.error('Invalid explicit flop')
+    src=args.solver_root.resolve()
+    pf=src/'postflop'
+    if not (pf/'pfdriver/target/release/pfdriver').exists():
+        raise SystemExit('Authentic Rust CFR driver unavailable')
+    sys.path.insert(0,str(pf/'py'))
+    ranges=importlib.import_module('ranges')
+    pipeline=importlib.import_module('pipeline')
+    job=importlib.import_module('job')
+    LK=importlib.import_module('locks')
+    pool=json.loads((src/'inputs/pool_stats.json').read_text())['NL2']
+    if args.spot in RULES:
+        prof=RULES[args.spot]
+        config={k:prof[k] for k in ('pot','stack','oop','ip','pfr')}
+        config['kind']='SRP' # solver tree geometry only, NOT source pot family.
+        ranges.SPOTS[args.spot]=config
+        pipeline.SPOTS[args.spot]=config
+        fn_pair=(w_iso_oop,w_iso_ip) if args.spot=='ISO_BTN_CO' else (lambda n:1.0,w_lmp_ip)
+        weighted=tuple([[float(fn(n)) for n in ranges.NAMES] for fn in fn_pair])
+        assert len(weighted[0])==len(weighted[1])==169
+        original_range=job.ranges
+        job.ranges=lambda sp,v:weighted if sp==args.spot else original_range(sp,v)
+        # pipeline uses imported "make_job" and shares job.ranges global.
+        extra_range=dict(source='ASSUMED_EXPLICIT_169CLASS',
+            profile=prof,oop_169=dict(zip(ranges.NAMES,weighted[0])),
+            ip_169=dict(zip(ranges.NAMES,weighted[1])))
+    else:
+        if args.spot in EXTRA_SPOTS:
+            pp=EXTRA_SPOTS[args.spot]
+            for place,act in pp['oopc']+pp['ipc']:
+                if place not in ranges.ACTS or act not in ranges.ACTS[place]:
+                    raise ValueError('Preflop range source action missing: '+place+'/'+act)
+            ranges.SPOTS[args.spot]=pp
+            pipeline.SPOTS[args.spot]=pp
+        extra_range=dict(source='PINNED_POKER_SOLVER_PREFLOP_CFR',
+                         spot=args.spot,
+                         full_sha256=sha(src/'v8_build/build/pf_data.json'))
+    spot=pipeline.SPOTS[args.spot]
+    original_locks=pipeline.lock_list
+    def lock_list(spot,ver,board):
+        return make_fallbacks(spot,ver,pool,original_locks,board)
+    pipeline.lock_list=lock_list
+    orig_make=pipeline.make_job
+    def sized_make(*pos,**kwargs):
+        kwargs['target']=0.5
+        kwargs['rank']=0.5 if args.version!='gto' else 1.5
+        kwargs['iters']=1700
+        j=orig_make(*pos,**kwargs)
+        j['flop_oop']=','.join(SIZES) # include donk or OOP-PFR cbet
+        j['flop_ip']=','.join(SIZES)  # include IP stab / IP-PFR cbet
+        j['flop_raise']='3x,a'
+        return j
+    pipeline.make_job=sized_make
+    if args.turn_size_menu=='river-gaps':
+        pipeline.SUB.update(turn_oop='33%,66%,75%',turn_ip='33%,66%,75%')
+        pipeline.TURN_LINES=['x b33 c','x b66 c','x b75 c','x x',
+                             'b33 c','b66 c','b75 c']
+    turns=pipeline.turns_for(flop)[:args.turn_count]
+    lines=list(FLOP_ACTIONS)
+    out=pf/'out'/args.spot/args.version
+    out.mkdir(parents=True,exist_ok=True)
+    path=out/(flop+'_multiboard.json')
+    jpath=out/(flop+'_multiboard.job.json')
+    extracted=[{'prefix':[], 'street':True}]+[
+        dict(prefix=line.split()+[turn],street=False,raw=True)
+        for line in lines for turn in turns]
+    locks,lock_src=pipeline.lock_list(args.spot,args.version,flop)
+    job_input=sized_make(args.spot,args.version,flop,str(path)+'.tmp',
+        extract=extracted,locks=locks,compress=True)
+    info=dict(schema='NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1',
+      spot=args.spot,version=args.version,flop=flop,
+      pot_family='ISO' if args.spot=='ISO_BTN_CO' else 'LMP' if args.spot=='LMP_CO_BB' else '3BP' if '3' in args.spot else 'SRP',
+      root_pot_bb=spot['pot'],root_remaining_bb=spot['stack'],
+      root_spr=round(spot['stack']/spot['pot'],6),
+      preflop_ranges=extra_range,
+      n_NL2_hands=pool['hands'],
+      pool_source_sha256=sha(src/'inputs/pool_stats.json'),
+      solver_pin=sha(pf/'py/pipeline.py'),solver_ranges_sha256=sha(pf/'py/ranges.py'),
+      flop_action_sizes=SIZES,allow_OOP_flop_leads=True,
+      turn_sizing_mode=args.turn_size_menu,
+      turn_subgame_sizing={'oop':pipeline.SUB['turn_oop'],'ip':pipeline.SUB['turn_ip']},
+      selected_lines=lines,turns=turns,
+      locks=[{'pat':m['pat'],'scope':m.get('scope','PINNED_MEASURED_NL2_SOURCE'),'source':m.get('src'),
+         'n':m.get('n')} for m in lock_src],
+      unknown_action_frequency_policy='Use observed NL2 street/size marginals where available; fallback checked-to bet 45% with 33:35%,50:35%,75:20%,100:10%. No observed private-card behavior.',
+      no_generic_certification=True,not_observed_exact_NL2_hero_EV=True,
+      file_flop=str(path.relative_to(pf)),file_flop_sha256=None,
+      cases=[],failures=[],skipped=[],elapsed_seconds=0)
+    t0=time.monotonic()
+    try:
+        job.run(job_input,str(jpath))
+        pathlib.Path(str(path)+'.tmp').rename(path)
+        fr=json.loads(path.read_text())
+        fr['turns']=turns
+        path.write_text(json.dumps(fr,separators=(',',':')))
+        info['file_flop_sha256']=sha(path)
+        for line in lines:
+            for turn in turns:
+                parent=next((n for n in fr['nodes'] if n['line']==line+'/' and n['board'][-2:]==turn),None)
+                if not parent or not parent.get('wr') or any(
+                    sum(max(0,float(y)) for y in arr)<1e-4 for arr in parent['wr']):
+                    info['skipped'].append(dict(line=line,turn=turn,reason='NO_BOTH_PLAYER_REACH'))
+                    continue
+                # The parent stores raw weighted hands. A branch can have
+                # positive total weight but zero legal hands once turn-card
+                # blockers are removed. Never feed that into the Rust driver:
+                # it aborts with "OOP range is empty" or "IP range is empty".
+                boardcards={flop[i:i+2] for i in (0,2,4)}
+                boardcards.add(turn)
+                retained=[]
+                for player in (0,1):
+                    legal=0.0
+                    for hole,weight in zip(fr['hands'][player],parent['wr'][player]):
+                        if float(weight)<=1e-4:continue
+                        holecards=(hole[:2],hole[2:4])
+                        if holecards[0] in boardcards or holecards[1] in boardcards:
+                            continue
+                        legal+=float(weight)
+                    retained.append(legal)
+                if min(retained)<=1e-4:
+                    info['skipped'].append(dict(line=line,turn=turn,
+                        reason='ZERO_LEGAL_PLAYER_RANGE_AFTER_TURN_CARD_BLOCKERS',
+                        legal_weight_by_seat=retained))
+                    continue
+                try:
+                    pipeline.solve_sub(args.spot,args.version,flop,fr,line,turn)
+                except RuntimeError as err:
+                    # A solver-specific empty-range rejection after its own
+                    # internal prune is a genuine unreachability, not a GTO
+                    # solve. Log explicitly, keep other branches untouched.
+                    if 'OOP range is empty' in str(err) or 'IP range is empty' in str(err):
+                        info['skipped'].append(dict(line=line,turn=turn,
+                            reason='RUST_ENGINE_EXCLUDED_EMPTY_REACH_RANGE',
+                            legal_weight_by_seat=retained,
+                            solver_error=str(err)[-400:]))
+                        continue
+                    raise
+                sub=out/(flop+'_'+line.replace(' ','')+'_'+turn+'.json')
+                if not sub.exists():raise FileNotFoundError('Missing true Rust subgame '+str(sub))
+                d=json.loads(sub.read_text())
+                source_nodes=[n for n in d['nodes'] if len(n['board'])>=8]
+                if not any(len(n['board'])==10 for n in source_nodes):
+                    raise ValueError('No authentic river node '+str(sub))
+                info['cases'].append(dict(line=line,turn=turn,
+                    source_path=str(sub.relative_to(pf)),source_sha256=sha(sub),
+                    real_flop_parent_spr=round((fr['stack']-max(parent['bets']))/parent['pot'],6),
+                    flop_parent_pot_bb=parent['pot']/100,
+                    flop_parent_effective_remaining_bb=(fr['stack']-max(parent['bets']))/100,
+                    true_river_nodes=sum(len(n['board'])==10 for n in d['nodes']),
+                    source_node_count=len(d['nodes']),
+                    gto_gap_pct=d['info'].get('gto_expl_pct'),
+                    hero_gap_pct=d['info'].get('hero_gap_pct'),
+                    lock_stats=d['info'].get('lock_stats',{}),
+                    status='GTO_EXACT_ONLY' if args.version=='gto' else 'NL2_IMPUTED_MARGINAL_LOCKED_EXPERIMENT'))
+    except Exception as e:
+        info['failures'].append({'reason':str(e),'traceback':traceback.format_exc()[-2400:]})
+    info['elapsed_seconds']=round(time.monotonic()-t0,2)
+    info['solved_cases']=len(info['cases'])
+    args.manifest.parent.mkdir(parents=True,exist_ok=True)
+    args.manifest.write_text(json.dumps(info,ensure_ascii=False,indent=2)+'\n')
+    print(json.dumps({k:info[k] for k in ('spot','version','flop','solved_cases','elapsed_seconds','failures')},ensure_ascii=False))
+    if info['failures'] or info['solved_cases']==0:raise SystemExit(1)
+if __name__=='__main__':main()
+,0.45,'ASSUMED_CHECKED_TO_BET_45PCT'),
+      (r'.*/
+    return base+configs,meta
+
+def main():
+    a=argparse.ArgumentParser()
+    a.add_argument('--solver-root',required=True,type=pathlib.Path)
+    a.add_argument('--spot',choices=SPOTS,required=True)
+    a.add_argument('--version',choices=('gto','exp_ip','exp_oop'),default='gto')
+    a.add_argument('--flop',required=True)
+    a.add_argument('--turn-count',type=int,default=1)
+    a.add_argument('--turn-size-menu',choices=('default','river-gaps'),default='default',
+        help='river-gaps: predeclared 33/66/75pct turn size tree for x x / turn bet-call river MODEL proofs')
+    a.add_argument('--manifest',required=True,type=pathlib.Path)
+    args=a.parse_args()
+    if not 1<=args.turn_count<=3:a.error('turn-count 1..3')
+    flop=args.flop;cards=[flop[i:i+2] for i in (0,2,4)]
+    if len(flop)!=6 or len(set(cards))!=3 or not all(re.fullmatch('[23456789TJQKA][cdhs]',t) for t in cards):
+        a.error('Invalid explicit flop')
+    src=args.solver_root.resolve()
+    pf=src/'postflop'
+    if not (pf/'pfdriver/target/release/pfdriver').exists():
+        raise SystemExit('Authentic Rust CFR driver unavailable')
+    sys.path.insert(0,str(pf/'py'))
+    ranges=importlib.import_module('ranges')
+    pipeline=importlib.import_module('pipeline')
+    job=importlib.import_module('job')
+    LK=importlib.import_module('locks')
+    pool=json.loads((src/'inputs/pool_stats.json').read_text())['NL2']
+    if args.spot in RULES:
+        prof=RULES[args.spot]
+        config={k:prof[k] for k in ('pot','stack','oop','ip','pfr')}
+        config['kind']='SRP' # solver tree geometry only, NOT source pot family.
+        ranges.SPOTS[args.spot]=config
+        pipeline.SPOTS[args.spot]=config
+        fn_pair=(w_iso_oop,w_iso_ip) if args.spot=='ISO_BTN_CO' else (lambda n:1.0,w_lmp_ip)
+        weighted=tuple([[float(fn(n)) for n in ranges.NAMES] for fn in fn_pair])
+        assert len(weighted[0])==len(weighted[1])==169
+        original_range=job.ranges
+        job.ranges=lambda sp,v:weighted if sp==args.spot else original_range(sp,v)
+        # pipeline uses imported "make_job" and shares job.ranges global.
+        extra_range=dict(source='ASSUMED_EXPLICIT_169CLASS',
+            profile=prof,oop_169=dict(zip(ranges.NAMES,weighted[0])),
+            ip_169=dict(zip(ranges.NAMES,weighted[1])))
+    else:
+        if args.spot in EXTRA_SPOTS:
+            pp=EXTRA_SPOTS[args.spot]
+            for place,act in pp['oopc']+pp['ipc']:
+                if place not in ranges.ACTS or act not in ranges.ACTS[place]:
+                    raise ValueError('Preflop range source action missing: '+place+'/'+act)
+            ranges.SPOTS[args.spot]=pp
+            pipeline.SPOTS[args.spot]=pp
+        extra_range=dict(source='PINNED_POKER_SOLVER_PREFLOP_CFR',
+                         spot=args.spot,
+                         full_sha256=sha(src/'v8_build/build/pf_data.json'))
+    spot=pipeline.SPOTS[args.spot]
+    original_locks=pipeline.lock_list
+    def lock_list(spot,ver,board):
+        return make_fallbacks(spot,ver,pool,original_locks,board)
+    pipeline.lock_list=lock_list
+    orig_make=pipeline.make_job
+    def sized_make(*pos,**kwargs):
+        kwargs['target']=0.5
+        kwargs['rank']=0.5 if args.version!='gto' else 1.5
+        kwargs['iters']=1700
+        j=orig_make(*pos,**kwargs)
+        j['flop_oop']=','.join(SIZES) # include donk or OOP-PFR cbet
+        j['flop_ip']=','.join(SIZES)  # include IP stab / IP-PFR cbet
+        j['flop_raise']='3x,a'
+        return j
+    pipeline.make_job=sized_make
+    if args.turn_size_menu=='river-gaps':
+        pipeline.SUB.update(turn_oop='33%,66%,75%',turn_ip='33%,66%,75%')
+        pipeline.TURN_LINES=['x b33 c','x b66 c','x b75 c','x x',
+                             'b33 c','b66 c','b75 c']
+    turns=pipeline.turns_for(flop)[:args.turn_count]
+    lines=list(FLOP_ACTIONS)
+    out=pf/'out'/args.spot/args.version
+    out.mkdir(parents=True,exist_ok=True)
+    path=out/(flop+'_multiboard.json')
+    jpath=out/(flop+'_multiboard.job.json')
+    extracted=[{'prefix':[], 'street':True}]+[
+        dict(prefix=line.split()+[turn],street=False,raw=True)
+        for line in lines for turn in turns]
+    locks,lock_src=pipeline.lock_list(args.spot,args.version,flop)
+    job_input=sized_make(args.spot,args.version,flop,str(path)+'.tmp',
+        extract=extracted,locks=locks,compress=True)
+    info=dict(schema='NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1',
+      spot=args.spot,version=args.version,flop=flop,
+      pot_family='ISO' if args.spot=='ISO_BTN_CO' else 'LMP' if args.spot=='LMP_CO_BB' else '3BP' if '3' in args.spot else 'SRP',
+      root_pot_bb=spot['pot'],root_remaining_bb=spot['stack'],
+      root_spr=round(spot['stack']/spot['pot'],6),
+      preflop_ranges=extra_range,
+      n_NL2_hands=pool['hands'],
+      pool_source_sha256=sha(src/'inputs/pool_stats.json'),
+      solver_pin=sha(pf/'py/pipeline.py'),solver_ranges_sha256=sha(pf/'py/ranges.py'),
+      flop_action_sizes=SIZES,allow_OOP_flop_leads=True,
+      turn_sizing_mode=args.turn_size_menu,
+      turn_subgame_sizing={'oop':pipeline.SUB['turn_oop'],'ip':pipeline.SUB['turn_ip']},
+      selected_lines=lines,turns=turns,
+      locks=[{'pat':m['pat'],'scope':m.get('scope','PINNED_MEASURED_NL2_SOURCE'),'source':m.get('src'),
+         'n':m.get('n')} for m in lock_src],
+      unknown_action_frequency_policy='Use observed NL2 street/size marginals where available; fallback checked-to bet 45% with 33:35%,50:35%,75:20%,100:10%. No observed private-card behavior.',
+      no_generic_certification=True,not_observed_exact_NL2_hero_EV=True,
+      file_flop=str(path.relative_to(pf)),file_flop_sha256=None,
+      cases=[],failures=[],skipped=[],elapsed_seconds=0)
+    t0=time.monotonic()
+    try:
+        job.run(job_input,str(jpath))
+        pathlib.Path(str(path)+'.tmp').rename(path)
+        fr=json.loads(path.read_text())
+        fr['turns']=turns
+        path.write_text(json.dumps(fr,separators=(',',':')))
+        info['file_flop_sha256']=sha(path)
+        for line in lines:
+            for turn in turns:
+                parent=next((n for n in fr['nodes'] if n['line']==line+'/' and n['board'][-2:]==turn),None)
+                if not parent or not parent.get('wr') or any(
+                    sum(max(0,float(y)) for y in arr)<1e-4 for arr in parent['wr']):
+                    info['skipped'].append(dict(line=line,turn=turn,reason='NO_BOTH_PLAYER_REACH'))
+                    continue
+                # The parent stores raw weighted hands. A branch can have
+                # positive total weight but zero legal hands once turn-card
+                # blockers are removed. Never feed that into the Rust driver:
+                # it aborts with "OOP range is empty" or "IP range is empty".
+                boardcards={flop[i:i+2] for i in (0,2,4)}
+                boardcards.add(turn)
+                retained=[]
+                for player in (0,1):
+                    legal=0.0
+                    for hole,weight in zip(fr['hands'][player],parent['wr'][player]):
+                        if float(weight)<=1e-4:continue
+                        holecards=(hole[:2],hole[2:4])
+                        if holecards[0] in boardcards or holecards[1] in boardcards:
+                            continue
+                        legal+=float(weight)
+                    retained.append(legal)
+                if min(retained)<=1e-4:
+                    info['skipped'].append(dict(line=line,turn=turn,
+                        reason='ZERO_LEGAL_PLAYER_RANGE_AFTER_TURN_CARD_BLOCKERS',
+                        legal_weight_by_seat=retained))
+                    continue
+                try:
+                    pipeline.solve_sub(args.spot,args.version,flop,fr,line,turn)
+                except RuntimeError as err:
+                    # A solver-specific empty-range rejection after its own
+                    # internal prune is a genuine unreachability, not a GTO
+                    # solve. Log explicitly, keep other branches untouched.
+                    if 'OOP range is empty' in str(err) or 'IP range is empty' in str(err):
+                        info['skipped'].append(dict(line=line,turn=turn,
+                            reason='RUST_ENGINE_EXCLUDED_EMPTY_REACH_RANGE',
+                            legal_weight_by_seat=retained,
+                            solver_error=str(err)[-400:]))
+                        continue
+                    raise
+                sub=out/(flop+'_'+line.replace(' ','')+'_'+turn+'.json')
+                if not sub.exists():raise FileNotFoundError('Missing true Rust subgame '+str(sub))
+                d=json.loads(sub.read_text())
+                source_nodes=[n for n in d['nodes'] if len(n['board'])>=8]
+                if not any(len(n['board'])==10 for n in source_nodes):
+                    raise ValueError('No authentic river node '+str(sub))
+                info['cases'].append(dict(line=line,turn=turn,
+                    source_path=str(sub.relative_to(pf)),source_sha256=sha(sub),
+                    real_flop_parent_spr=round((fr['stack']-max(parent['bets']))/parent['pot'],6),
+                    flop_parent_pot_bb=parent['pot']/100,
+                    flop_parent_effective_remaining_bb=(fr['stack']-max(parent['bets']))/100,
+                    true_river_nodes=sum(len(n['board'])==10 for n in d['nodes']),
+                    source_node_count=len(d['nodes']),
+                    gto_gap_pct=d['info'].get('gto_expl_pct'),
+                    hero_gap_pct=d['info'].get('hero_gap_pct'),
+                    lock_stats=d['info'].get('lock_stats',{}),
+                    status='GTO_EXACT_ONLY' if args.version=='gto' else 'NL2_IMPUTED_MARGINAL_LOCKED_EXPERIMENT'))
+    except Exception as e:
+        info['failures'].append({'reason':str(e),'traceback':traceback.format_exc()[-2400:]})
+    info['elapsed_seconds']=round(time.monotonic()-t0,2)
+    info['solved_cases']=len(info['cases'])
+    args.manifest.parent.mkdir(parents=True,exist_ok=True)
+    args.manifest.write_text(json.dumps(info,ensure_ascii=False,indent=2)+'\n')
+    print(json.dumps({k:info[k] for k in ('spot','version','flop','solved_cases','elapsed_seconds','failures')},ensure_ascii=False))
+    if info['failures'] or info['solved_cases']==0:raise SystemExit(1)
+if __name__=='__main__':main()
+,0.45,'ASSUMED_STREET_ROOT_BET_45PCT')]:
+        measured_opportunity=scope.startswith('NL2') and size_total>0
+        config={'pat':pat,'bet':rate,'sizes':observed_sizes if measured_opportunity else assumed_sizes}
         configs.append(config)
-        meta.append({'pat':pat,'n':ph['cbet']['n'] if scope.startswith('NL2') else 0,
-                     'src':scope,'scope':scope})
+        meta.append({'pat':pat,'n':ph['cbet']['n'] if measured_opportunity else 0,
+                     'src':scope+'; '+(observed_scope if measured_opportunity
+                        else 'ASSUMED_SIZE_SPLIT_35_35_20_10'),
+                     'scope':scope if measured_opportunity else 'ASSUMED_HISTORY_RATE_OR_SIZE',
+                     'size_source':observed_scope if measured_opportunity else 'ASSUMED',
+                     'excluded_over110_size_pct':measured_sizes.get('>110%') if measured_opportunity else None,
+                     'observed_source_n':int(ph['cbet']['n']) if measured_opportunity else 0})
     return base+configs,meta
 
 def main():

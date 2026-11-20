@@ -94,6 +94,9 @@ def candidates(model,alllines,locked_by_key,strict,limit_spr=0.05):
                     villain_observed_pattern_node_share_pct=cov,
                     source_not_real_per_combo_observation=True,
                     unknown_history_frequency_filled_with_default=sample.get('unknown_defaults',False),
+                    observed_marginal_source_nodes=sample.get('observed_marginal_nodes'),
+                    assumed_default_source_nodes=sample.get('assumed_nodes'),
+                    unlocked_source_nodes=sample.get('unlocked_nodes'),
                     hero_model_gain_bb=sample.get('hero_gain_bb')))
             # An exact model whose EXP actor isn't the hero may not borrow
             # the opponent's best action as the hero's recommendation.
@@ -239,9 +242,16 @@ def build_source_index(root,extra):
                              (g,nn,n['strictly_reachable_combos'],'new-github-actions'))
                     else:
                         key=(g['spot'],g['family'],g['flop'],g['turn'],g['flop_line'],board,line,seat)
+                        matched=sample.get('villain_lock_scope') or {}
+                        # Count real *marginal* source coverage separately from
+                        # assumed rates and unobserved action-history nodes.
                         by_locked[key].append(dict(version=g['version'],run_id=g['run_id'],sha=g['sha'],
                           pool_coverage=sample.get('lock_coverage_pct'),
-                          scope=sample['certified_scope'],unknown_defaults=True,
+                          scope=sample['certified_scope'],
+                          unknown_defaults=int(matched.get('imputed_assumption_nodes',0))>0,
+                          observed_marginal_nodes=int(matched.get('observed_marginal_source_nodes',0)),
+                          assumed_nodes=int(matched.get('imputed_assumption_nodes',0)),
+                          unlocked_nodes=int(matched.get('unmatched_nodes',0)),
                           hero_gain_bb=sample.get('hero_model_gain_bb')))
     return by_exact,by_locked,dict(official_subgames=len(games),new_subgames=new_count,source_files=[str(x) for x in extra])
 

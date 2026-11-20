@@ -35,12 +35,20 @@ def audit(data):
                    'scope':v['source_scope'],
                    'pool_coverage_pct':v.get('villain_observed_pattern_node_share_pct'),
                    'used_disclosed_default':bool(v.get('unknown_history_frequency_filled_with_default')),
+                   'observed_marginal_source_nodes':v.get('observed_marginal_source_nodes'),
+                   'assumed_default_source_nodes':v.get('assumed_default_source_nodes'),
+                   'unlocked_source_nodes':v.get('unlocked_source_nodes'),
                    'hero_model_gain_bb':v.get('hero_model_gain_bb'),
                    'model_based_not_actual_winnings':True
                 })
                 tot['paired_hero_locked_source_variants']+=1
                 if v.get('unknown_history_frequency_filled_with_default'):
                     tot['variants_with_assumed_defaults']+=1
+                if (v.get('observed_marginal_source_nodes') or 0)>0:
+                    tot['variants_with_measured_aggregate_marginals']+=1
+                tot['source_nodes_from_measured_NL2_marginals']+=int(v.get('observed_marginal_source_nodes') or 0)
+                tot['source_nodes_from_assumed_defaults']+=int(v.get('assumed_default_source_nodes') or 0)
+                tot['source_villain_nodes_unmatched_unlocked']+=int(v.get('unlocked_source_nodes') or 0)
             medium=bool(x.get('b50_nonpolarized_relative_equity_research_candidate'))
             eligible=int(x.get('medium_50pct_eligible_combos') or 0)
             if medium and eligible<=0:raise ValueError('False b50 candidate with zero combos')
@@ -74,7 +82,7 @@ def audit(data):
         'cert_multiboard':len(models),'approx':data['APPROX'],'EST':0,'models_total':392,
         'distinct_source_gto_cases':len(source_set),'aggregate':dict(tot),
         'source_policy':'Only true exact board, betting history, root position, pot, SPR and max/near combo reach are supported.',
-        'unknown_action_rates':'Absent NL2 conditional counts use disclosed assumed check-bet45%, size probabilities 33/50/75/100 = 35/35/20/10; mark as model based.',
+        'unknown_action_rates':'Observed marginal NL2 PFR cbet-size distribution and by-size fold/raise where available; unavailable conditional rates use disclosed assumed checked-to-bet45% and 35/35/20/10. Aggregates are not exact board-history private-combo frequencies.',
         'not_actual_NL2_earnings':True,
         'not_generalized_handclass_GTO':True,
         'models':models}
