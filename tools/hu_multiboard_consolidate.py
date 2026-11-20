@@ -30,6 +30,23 @@ def discover(root):
         if (ix['batch']!=code or ix['generic_model_certification']!=0 or
             sha(gz)!=ix['gzip_sha256'] or hashlib.sha256(raw).hexdigest()!=ix['source_sha256']):
             raise ValueError('Source SHA or count mismatch '+code)
+        # E's archived template hard-coded four jobs. New genuine work must
+        # instead report the VERIFIED number of separate solver artifacts.
+        # Repair only this KNOWN metadata defect, never infer extra GTO games.
+        expected_new_jobs={'B5_SBGAPS':6,'B6_REMAIN':6,'B7_RIVER':6,'B8_LOCK':2}
+        if code in expected_new_jobs and ix['actual_spot_flop_version_jobs']!=expected_new_jobs[code]:
+            n=expected_new_jobs[code]
+            if not (ix['actual_spot_flop_version_jobs']==4 and
+                    len(d.get('artifacts',[]))==n and not d.get('errors') and
+                    d['source_run_id']==ix['run_id'] and
+                    d['new_authentic_board_cases']==ix['verified_cases'] and
+                    d['exact_board_gto_sources']==ix['gto_cases'] and
+                    d['imputed_pool_locked_sources']==ix['locked_cases'] and
+                    all(len(z.get('cases',[]))>0 and not z.get('errors') for z in d['artifacts'])):
+                raise ValueError('Archive index differs from verified raw job count '+code)
+            ix['actual_spot_flop_version_jobs']=n
+            idx.write_text(json.dumps(ix,ensure_ascii=False,indent=2)+'\\n'.replace('\\n','\n'))
+            print('REPAIRED VERIFIED JOB COUNT ONLY',code,'jobs=',n,flush=True)
         if (d['schema']!='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1' or d['errors'] or
             d['source_run_id']!=ix['run_id'] or
             d['new_authentic_board_cases']!=ix['verified_cases'] or
