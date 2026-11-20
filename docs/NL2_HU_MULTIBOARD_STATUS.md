@@ -30,6 +30,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B2_PARTIAL | 44666290556 | 65 | 166 |
 | B2_REPAIRED_GTO | 44731732467 | 7 | 0 |
 | B3 | 44666294821 | 43 | 90 |
+| B4_MICRO | PENDING | 0 | 0 |
 
 ## Top-24 preregistered game histories
 
