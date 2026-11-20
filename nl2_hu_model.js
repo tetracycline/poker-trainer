@@ -93,6 +93,16 @@ function transition(meta,action,size,stage){
   else if(action==='call') {spent=Math.min(S,0.5*P);addPot=spent;}
   return {pot:round(P+addPot),stack:round(Math.max(0,S-spent)),root:meta.root};
 }
+function heroIPFromPreflop(pre){
+  // Postflop seat order: SB is leftmost, then BB, UTG, HJ, CO, BTN.
+  // The hero may be BB IP against SB, but BB OOP against BTN/CO.
+  const positions=['SB','BB','UTG','HJ','CO','BTN'];
+  const you=(String(pre).match(/你\s*(SB|BB|UTG|HJ|CO|BTN)\b/)||[])[1];
+  const all=[...String(pre).matchAll(/\b(SB|BB|UTG|HJ|CO|BTN)\b/g)].map(m=>m[1]);
+  const villains=all.filter(x=>x!==you);
+  if(!you||villains.length<1)return false; // do not invent an earlier opponent check
+  return positions.indexOf(you)>Math.min(...villains.map(p=>positions.indexOf(p)));
+}
 function keyNext(source,action,stage){
   const parts=roleHistory(source);const last=parts[source.st]||'';
   const w={bet:'下注',raise:'加注',check:'過',call:'跟'}[action]||'過';
@@ -104,7 +114,9 @@ function keyNext(source,action,stage){
       action==='check'&&!hasPriorOpponentCheck?'、對手過':'';
   parts[source.st]=last+(last?'、':'')+'你'+w+response;
   const next=source.st+1;
-  if(next<=2)parts[next]=stage===2?'對手過':'對手過';
+  // A new betting street ALWAYS starts with the OOP seat.
+  // Only an IP hero can face a completed OOP check before acting.
+  if(next<=2)parts[next]=heroIPFromPreflop(source.pre)?'對手過':'';
   return parts.slice(0,next+1).join('|');
 }
 function titleFor(pre,key,stage){
