@@ -1,0 +1,55 @@
+name: NL2 stage3 independently validate pilot multiboard GTO source
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage3-pilot-verify.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-sb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: trainer
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - name: Download completed SB_BB precise GTO flop from active pilot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p downloads
+          gh run download 44664289972 \
+            --name nl2-stage3-pilot-SB_BB-9s6h3d \
+            --repo "$GITHUB_REPOSITORY" --dir downloads/nl2-stage3-pilot-SB_BB-9s6h3d
+      - name: Independently validate Rust source SHA, all authentic street sizes, first-to-last per-combo legal reach, SPR and rake
+        run: |
+          python3 trainer/tools/verify_hu_multiboard_100bb.py \
+            --downloads downloads --solver-root solver --run-id 44664289972 \
+            --out trainer/data/solver_evidence/STAGE3_PILOT_SB_BB.json
+      - name: Commit exact-board pilot provenance to PR #2 Draft
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/STAGE3_PILOT_SB_BB.json
+          git commit -m 'stage3: independent 100bb SB_BB full flop + river multi-board pilot source/SPR/combos'
+          git fetch origin fix/nl2-hu-lines-audit-20261118
+          git rebase origin/fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+      - name: Always retain source proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-stage3-pilot-SB-authentic-verification
+          path: trainer/data/solver_evidence/STAGE3_PILOT_SB_BB.json
+          retention-days: 30
