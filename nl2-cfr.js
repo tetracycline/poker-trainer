@@ -91,7 +91,8 @@ async function loadSource(){
    base=await loadIndex('data/nl2_hu_exact_boards.json',false);
  }
  const extra=await Promise.allSettled([
-   loadIndex('data/nl2_hu_exact_boards_b04.json.gz',true)
+   loadIndex('data/nl2_hu_exact_boards_b04.json.gz',true),
+   loadIndex('data/nl2_hu_exact_boards_b05.json.gz',true)
  ]);
  for(const x of extra)if(x.status==='rejected')
    console.warn('Independent new exact-board source batch not available',x.reason);
