@@ -8,8 +8,8 @@ Every unlisted board/texture action remains APPROX, not GTO.
 
 | status | nodes |
 | --- | ---: |
-| CERT-MULTIBOARD | 20 |
-| APPROX approximate | 372 |
+| CERT-MULTIBOARD | 22 |
+| APPROX approximate | 370 |
 | Total | 392 |
 
 ## Fixed frequency ranking and disclosure
@@ -44,7 +44,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B15_GTO_PARENT_EXP | 44751432807 | 0 | 1 |
 | B16_GTO_PARENT_TWO | 44752125878 | 0 | 2 |
 | B17_RIVER_PINNED | 44752647498 | 0 | 1 |
-| B18_RIVERPAIR | PENDING | 0 | 0 |
+| B18_RIVERPAIR | 44758653460 | 0 | 2 |
 
 ## Top-24 preregistered game histories
 
@@ -64,10 +64,10 @@ CFR outcomes cannot be used to tune this cutoff.
 | 12 | ln-ipc-t_model-btptzw | SRP/SB_BB | 7.583 | CERT-MULTIBOARD | Js9h4d Ts, As9h2d Kd, Ks7h2d 9d, 8s8h3d 5s |
 | 13 | ln-iso-lmp_t_model-10v4wiz | LMP/LMP_CO_BB | 19.3 | CERT-MULTIBOARD | 9s6h3d Ts, KsQh4d Tc, 8s8h3d 5s |
 | 14 | ln-bb-t_model-cge9jz | SRP/CO_BB | 8.364 | CERT-MULTIBOARD | Js9h4d Ts, As9h2d Kd, 8s8h3d 5s |
-| 15 | ln-opfr-r_model-1bv0680 | SRP/SB_BB | 2.833 | APPROX | not enough authentic proof |
+| 15 | ln-opfr-r_model-1bv0680 | SRP/SB_BB | 2.833 | CERT-MULTIBOARD | AsTh4d 4s, Ks7h2d 9d, As9h2d Kd |
 | 16 | ln-opfr-r_model-j55znd | SRP/SB_BB | 2.278 | CERT-MULTIBOARD | KsQh4d Tc, 9s6h3d Ts, Ks7h2d 9d |
 | 17 | ln-opfr-r_model-j5b75a | SRP/SB_BB | 4.5 | CERT-MULTIBOARD | As9h2d Kd, Jh9d6s 3c, 8s8h3d 5s, Ks7h2d 9d, 9s6h3d Ts |
-| 18 | ln-opfr-r_model-ka3vbv | SRP/SB_BB | 2.833 | APPROX | not enough authentic proof |
+| 18 | ln-opfr-r_model-ka3vbv | SRP/SB_BB | 2.833 | CERT-MULTIBOARD | AsTh4d 4s, Ks7h2d 9d, As9h2d Kd |
 | 19 | ln-3bp-3b_t_model-1gg0bw | 3BP/SB3_BTN | 1.414 | CERT-MULTIBOARD | 8s8h3d 5s, As7h3d Jh, Ks7h2d 9d |
 | 20 | ln-ipfr-t_model-xbvh6 | SRP/BTN_BB | 17.727 | CERT-MULTIBOARD | Ks7s2s 9d, AsQh8d 3c, Jh9d6s 3c, AsAh5h 8s, 9s6h3d Ts |
 | 21 | ln-opfr-r_model-1eyhxd9 | SRP/SB_BB | 7.833 | CERT-MULTIBOARD | 9s6h3d Ts, Ks7h2d 9d, As9h2d Kd, Jh9d6s 3c, KsQh4d Tc |
@@ -78,7 +78,7 @@ CFR outcomes cannot be used to tune this cutoff.
 ## Reasons some MODEL nodes are not CERT
 
 - LOWER_FREQUENCY_BELOW_PREREGISTERED_TOP24_CUTOFF: 368
-- NOT_ENOUGH_DISTINCT_AUTHENTIC_FLOPS_WITH_HERO_LOCKED_SOURCE: 4
+- NOT_ENOUGH_DISTINCT_AUTHENTIC_FLOPS_WITH_HERO_LOCKED_SOURCE: 2
 
 ## Convergence, combo reach and NL2 lock limits
 

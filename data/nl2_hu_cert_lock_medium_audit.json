@@ -1,22 +1,22 @@
 {
   "schema": "NL2_HYBRID_CERT_NL2_LOCK_AND_MEDIUM_PROOF_V1",
-  "cert_multiboard": 20,
-  "approx": 372,
+  "cert_multiboard": 22,
+  "approx": 370,
   "EST": 0,
   "models_total": 392,
-  "distinct_source_gto_cases": 62,
+  "distinct_source_gto_cases": 63,
   "aggregate": {
-    "paired_hero_locked_source_variants": 81,
-    "variants_with_assumed_defaults": 53,
-    "variants_with_measured_aggregate_marginals": 54,
-    "source_nodes_from_measured_NL2_marginals": 693,
-    "source_nodes_from_assumed_defaults": 400,
+    "paired_hero_locked_source_variants": 87,
+    "variants_with_assumed_defaults": 55,
+    "variants_with_measured_aggregate_marginals": 56,
+    "source_nodes_from_measured_NL2_marginals": 701,
+    "source_nodes_from_assumed_defaults": 404,
     "source_villain_nodes_unmatched_unlocked": 654,
-    "named_board_proofs": 75,
-    "board_examples_with_b50_candidate": 30,
-    "strictly_reachable_combo_rows": 16889,
-    "board_examples_without_nonpolarized_evidence": 45,
-    "models_with_3_to_5_gto_and_hero_lock_source": 20
+    "named_board_proofs": 81,
+    "board_examples_with_b50_candidate": 32,
+    "strictly_reachable_combo_rows": 17217,
+    "board_examples_without_nonpolarized_evidence": 49,
+    "models_with_3_to_5_gto_and_hero_lock_source": 22
   },
   "source_policy": "Only true exact board, betting history, root position, pot, SPR and max/near combo reach are supported.",
   "unknown_action_rates": "Observed marginal NL2 PFR cbet-size distribution and by-size fold/raise where available; unavailable conditional rates use disclosed assumed checked-to-bet45% and 35/35/20/10. Aggregates are not exact board-history private-combo frequencies.",
@@ -1719,6 +1719,109 @@
         }
       ]
     },
+    "ln-opfr-r_model-1bv0680": {
+      "model_id": "ln-opfr-r_model-1bv0680",
+      "rank": 15,
+      "source_spot": "SB_BB",
+      "source_family": "SRP",
+      "generic_handclass_texture_actions_still_approx": true,
+      "verified_named_board_count": 3,
+      "boards": [
+        {
+          "flop": "AsTh4d",
+          "turn": "4s",
+          "exact_public_board": "4dThAs4s6c",
+          "exact_action_line": "b75 c/b50 c/",
+          "original_pot_bb": 30.0,
+          "actual_spr": 2.833333,
+          "assumed_model_spr": 2.833,
+          "source_run_id": 44522421850,
+          "source_sha256": "b8cb2646ae21f546a1b391a5b81021cfea6c375ddd382efe1e2a6d804a1cddde",
+          "gto_exploitability_pct": 0.28533026576042175,
+          "strictly_reachable_combo_rows": 83,
+          "paired_NL2_hero_lock": [
+            {
+              "version": "exp_oop",
+              "run_id": 44522421850,
+              "source_sha256": "d8dde38af65b49fa8a08b83ca47f3c203f64ac327595eb71c2fb7716ef2fbe24",
+              "scope": "PARTIAL_NL2_OBSERVED_AGGREGATE_LOCK",
+              "pool_coverage_pct": 30.0,
+              "used_disclosed_default": false,
+              "observed_marginal_source_nodes": null,
+              "assumed_default_source_nodes": null,
+              "unlocked_source_nodes": null,
+              "hero_model_gain_bb": 1.17151,
+              "model_based_not_actual_winnings": true
+            }
+          ],
+          "medium_50pct_eligible_combos": 96,
+          "medium_nonpolarized_status": "EXACT_BOARD_RESEARCH_CANDIDATE",
+          "no_global_bet_size_recommendation": true
+        },
+        {
+          "flop": "Ks7h2d",
+          "turn": "9d",
+          "exact_public_board": "2d7hKs9d5s",
+          "exact_action_line": "b75 c/b50 c/",
+          "original_pot_bb": 30.0,
+          "actual_spr": 2.833333,
+          "assumed_model_spr": 2.833,
+          "source_run_id": 44654973894,
+          "source_sha256": "668c02396ae1fcf091549309d8c5d1b1e5e8ba0856a95125572b01a1868daa02",
+          "gto_exploitability_pct": 0.47931620478630066,
+          "strictly_reachable_combo_rows": 7,
+          "paired_NL2_hero_lock": [
+            {
+              "version": "exp_oop",
+              "run_id": 44654973894,
+              "source_sha256": "5f3e16ec60148df08d29061ebda014d0c18a7e5a51d5e49eda3f8be37a2c49ef",
+              "scope": "PARTIAL_NL2_OBSERVED_AGGREGATE_LOCK",
+              "pool_coverage_pct": 27.08,
+              "used_disclosed_default": false,
+              "observed_marginal_source_nodes": null,
+              "assumed_default_source_nodes": null,
+              "unlocked_source_nodes": null,
+              "hero_model_gain_bb": 2.02803,
+              "model_based_not_actual_winnings": true
+            }
+          ],
+          "medium_50pct_eligible_combos": 65,
+          "medium_nonpolarized_status": "NOT_SUPPORTED_BY_CURRENT_CFR_EVIDENCE",
+          "no_global_bet_size_recommendation": true
+        },
+        {
+          "flop": "As9h2d",
+          "turn": "Kd",
+          "exact_public_board": "2d9hAsKd6s",
+          "exact_action_line": "b33 c/b100 c/",
+          "original_pot_bb": 29.88,
+          "actual_spr": 2.84672,
+          "assumed_model_spr": 2.833,
+          "source_run_id": 44666285424,
+          "source_sha256": "57b778dcf7eee4b53e78eb9cf467858815d989a5ab2688e48c4ecd8fb0afc7b4",
+          "gto_exploitability_pct": 0.45521923899650574,
+          "strictly_reachable_combo_rows": 74,
+          "paired_NL2_hero_lock": [
+            {
+              "version": "exp_oop",
+              "run_id": 44758653460,
+              "source_sha256": "76958a5fb1f314132604d8060096b7531044513868ed522db0ac496eef71a221",
+              "scope": "TURN_ONLY_NL2_MARGINAL_LOCK_FROM_PINNED_GTO_FLOP_PARENT",
+              "pool_coverage_pct": 100.0,
+              "used_disclosed_default": true,
+              "observed_marginal_source_nodes": 4,
+              "assumed_default_source_nodes": 2,
+              "unlocked_source_nodes": 0,
+              "hero_model_gain_bb": 2.69808,
+              "model_based_not_actual_winnings": true
+            }
+          ],
+          "medium_50pct_eligible_combos": 14,
+          "medium_nonpolarized_status": "NOT_SUPPORTED_BY_CURRENT_CFR_EVIDENCE",
+          "no_global_bet_size_recommendation": true
+        }
+      ]
+    },
     "ln-opfr-r_model-j55znd": {
       "model_id": "ln-opfr-r_model-j55znd",
       "rank": 16,
@@ -1982,6 +2085,109 @@
             }
           ],
           "medium_50pct_eligible_combos": 0,
+          "medium_nonpolarized_status": "NOT_SUPPORTED_BY_CURRENT_CFR_EVIDENCE",
+          "no_global_bet_size_recommendation": true
+        }
+      ]
+    },
+    "ln-opfr-r_model-ka3vbv": {
+      "model_id": "ln-opfr-r_model-ka3vbv",
+      "rank": 18,
+      "source_spot": "SB_BB",
+      "source_family": "SRP",
+      "generic_handclass_texture_actions_still_approx": true,
+      "verified_named_board_count": 3,
+      "boards": [
+        {
+          "flop": "AsTh4d",
+          "turn": "4s",
+          "exact_public_board": "4dThAs4s6c",
+          "exact_action_line": "b75 c/b50 c/",
+          "original_pot_bb": 30.0,
+          "actual_spr": 2.833333,
+          "assumed_model_spr": 2.833,
+          "source_run_id": 44522421850,
+          "source_sha256": "b8cb2646ae21f546a1b391a5b81021cfea6c375ddd382efe1e2a6d804a1cddde",
+          "gto_exploitability_pct": 0.28533026576042175,
+          "strictly_reachable_combo_rows": 83,
+          "paired_NL2_hero_lock": [
+            {
+              "version": "exp_oop",
+              "run_id": 44522421850,
+              "source_sha256": "d8dde38af65b49fa8a08b83ca47f3c203f64ac327595eb71c2fb7716ef2fbe24",
+              "scope": "PARTIAL_NL2_OBSERVED_AGGREGATE_LOCK",
+              "pool_coverage_pct": 30.0,
+              "used_disclosed_default": false,
+              "observed_marginal_source_nodes": null,
+              "assumed_default_source_nodes": null,
+              "unlocked_source_nodes": null,
+              "hero_model_gain_bb": 1.17151,
+              "model_based_not_actual_winnings": true
+            }
+          ],
+          "medium_50pct_eligible_combos": 96,
+          "medium_nonpolarized_status": "EXACT_BOARD_RESEARCH_CANDIDATE",
+          "no_global_bet_size_recommendation": true
+        },
+        {
+          "flop": "Ks7h2d",
+          "turn": "9d",
+          "exact_public_board": "2d7hKs9d5s",
+          "exact_action_line": "b75 c/b50 c/",
+          "original_pot_bb": 30.0,
+          "actual_spr": 2.833333,
+          "assumed_model_spr": 2.833,
+          "source_run_id": 44654973894,
+          "source_sha256": "668c02396ae1fcf091549309d8c5d1b1e5e8ba0856a95125572b01a1868daa02",
+          "gto_exploitability_pct": 0.47931620478630066,
+          "strictly_reachable_combo_rows": 7,
+          "paired_NL2_hero_lock": [
+            {
+              "version": "exp_oop",
+              "run_id": 44654973894,
+              "source_sha256": "5f3e16ec60148df08d29061ebda014d0c18a7e5a51d5e49eda3f8be37a2c49ef",
+              "scope": "PARTIAL_NL2_OBSERVED_AGGREGATE_LOCK",
+              "pool_coverage_pct": 27.08,
+              "used_disclosed_default": false,
+              "observed_marginal_source_nodes": null,
+              "assumed_default_source_nodes": null,
+              "unlocked_source_nodes": null,
+              "hero_model_gain_bb": 2.02803,
+              "model_based_not_actual_winnings": true
+            }
+          ],
+          "medium_50pct_eligible_combos": 65,
+          "medium_nonpolarized_status": "NOT_SUPPORTED_BY_CURRENT_CFR_EVIDENCE",
+          "no_global_bet_size_recommendation": true
+        },
+        {
+          "flop": "As9h2d",
+          "turn": "Kd",
+          "exact_public_board": "2d9hAsKd6s",
+          "exact_action_line": "b33 c/b100 c/",
+          "original_pot_bb": 29.88,
+          "actual_spr": 2.84672,
+          "assumed_model_spr": 2.833,
+          "source_run_id": 44666285424,
+          "source_sha256": "57b778dcf7eee4b53e78eb9cf467858815d989a5ab2688e48c4ecd8fb0afc7b4",
+          "gto_exploitability_pct": 0.45521923899650574,
+          "strictly_reachable_combo_rows": 74,
+          "paired_NL2_hero_lock": [
+            {
+              "version": "exp_oop",
+              "run_id": 44758653460,
+              "source_sha256": "76958a5fb1f314132604d8060096b7531044513868ed522db0ac496eef71a221",
+              "scope": "TURN_ONLY_NL2_MARGINAL_LOCK_FROM_PINNED_GTO_FLOP_PARENT",
+              "pool_coverage_pct": 100.0,
+              "used_disclosed_default": true,
+              "observed_marginal_source_nodes": 4,
+              "assumed_default_source_nodes": 2,
+              "unlocked_source_nodes": 0,
+              "hero_model_gain_bb": 2.69808,
+              "model_based_not_actual_winnings": true
+            }
+          ],
+          "medium_50pct_eligible_combos": 14,
           "medium_nonpolarized_status": "NOT_SUPPORTED_BY_CURRENT_CFR_EVIDENCE",
           "no_global_bet_size_recommendation": true
         }

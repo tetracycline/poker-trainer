@@ -1,8 +1,8 @@
 {
   "schema": "NL2_TOP24_FROZEN_MULTIBOARD_SHORTFALLS_V1",
   "top24": 24,
-  "certified_from_source": 20,
-  "still_approx": 4,
+  "certified_from_source": 22,
+  "still_approx": 2,
   "new_source_batches": [
     "NL2_MULTIBOARD_B1.json.gz",
     "NL2_MULTIBOARD_B2_PARTIAL.json.gz",
@@ -18,11 +18,12 @@
     "NL2_MULTIBOARD_B13_LMP_B50.json.gz",
     "NL2_MULTIBOARD_B15_GTO_PARENT_EXP.json.gz",
     "NL2_MULTIBOARD_B16_GTO_PARENT_TWO.json.gz",
-    "NL2_MULTIBOARD_B17_RIVER_PINNED.json.gz"
+    "NL2_MULTIBOARD_B17_RIVER_PINNED.json.gz",
+    "NL2_MULTIBOARD_B18_RIVERPAIR.json.gz"
   ],
   "sources": {
     "official_subgames": 644,
-    "new_subgames": 853,
+    "new_subgames": 855,
     "source_files": [
       "data/solver_evidence/NL2_MULTIBOARD_B1.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json.gz",
@@ -38,12 +39,13 @@
       "data/solver_evidence/NL2_MULTIBOARD_B13_LMP_B50.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B15_GTO_PARENT_EXP.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B16_GTO_PARENT_TWO.json.gz",
-      "data/solver_evidence/NL2_MULTIBOARD_B17_RIVER_PINNED.json.gz"
+      "data/solver_evidence/NL2_MULTIBOARD_B17_RIVER_PINNED.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B18_RIVERPAIR.json.gz"
     ]
   },
   "missing_by_spot": {
     "LMP_CO_BB": 1,
-    "SB_BB": 3
+    "SB_BB": 1
   },
   "recommendation": "Solve a few new exact flops ONLY where action history, actual SPR, actor, sequential legal combos, and hero-side NL2 lock can be matched; never grant CERT from texture alone.",
   "ranking_locked": true,
@@ -1038,7 +1040,7 @@
       "spot": "SB_BB",
       "street": 2,
       "original_model_spr": 2.833,
-      "current_label": "APPROX",
+      "current_label": "CERT-MULTIBOARD",
       "exact_matching_flops": [
         "9s6h3d",
         "As7h3d",
@@ -1050,25 +1052,32 @@
         "KsQh4d"
       ],
       "flops_with_hero_lock": [
+        "As9h2d",
         "AsTh4d",
         "Ks7h2d"
       ],
       "flops_without_hero_lock": [
         "9s6h3d",
         "As7h3d",
-        "As9h2d",
         "Jh9d6s",
         "Js9h4d",
         "KsQh4d"
       ],
       "distinct_matching_gto_flop_count": 8,
-      "distinct_gto_plus_hero_lock_count": 2,
-      "missing_required_flops": 1,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
       "texture_labels_seen": [
         "ACE_HIGH",
         "KQ_HIGH"
       ],
       "recorded_line_examples": [
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44737532081,
+          "node_spr": 2.833333,
+          "line": "b50 c/b75 c/",
+          "lock_count": 0
+        },
         {
           "flop": "AsTh4d",
           "source_run_id": 44522421850,
@@ -1082,13 +1091,6 @@
           "node_spr": 2.84672,
           "line": "b33 c/b100 c/",
           "lock_count": 1
-        },
-        {
-          "flop": "As9h2d",
-          "source_run_id": 44666285424,
-          "node_spr": 2.84672,
-          "line": "b33 c/b100 c/",
-          "lock_count": 0
         },
         {
           "flop": "As7h3d",
@@ -1287,7 +1289,7 @@
       "spot": "SB_BB",
       "street": 2,
       "original_model_spr": 2.833,
-      "current_label": "APPROX",
+      "current_label": "CERT-MULTIBOARD",
       "exact_matching_flops": [
         "9s6h3d",
         "As7h3d",
@@ -1299,25 +1301,32 @@
         "KsQh4d"
       ],
       "flops_with_hero_lock": [
+        "As9h2d",
         "AsTh4d",
         "Ks7h2d"
       ],
       "flops_without_hero_lock": [
         "9s6h3d",
         "As7h3d",
-        "As9h2d",
         "Jh9d6s",
         "Js9h4d",
         "KsQh4d"
       ],
       "distinct_matching_gto_flop_count": 8,
-      "distinct_gto_plus_hero_lock_count": 2,
-      "missing_required_flops": 1,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
       "texture_labels_seen": [
         "ACE_HIGH",
         "KQ_HIGH"
       ],
       "recorded_line_examples": [
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44737532081,
+          "node_spr": 2.833333,
+          "line": "b50 c/b75 c/",
+          "lock_count": 0
+        },
         {
           "flop": "AsTh4d",
           "source_run_id": 44522421850,
@@ -1331,13 +1340,6 @@
           "node_spr": 2.84672,
           "line": "b33 c/b100 c/",
           "lock_count": 1
-        },
-        {
-          "flop": "As9h2d",
-          "source_run_id": 44666285424,
-          "node_spr": 2.84672,
-          "line": "b33 c/b100 c/",
-          "lock_count": 0
         },
         {
           "flop": "As7h3d",
