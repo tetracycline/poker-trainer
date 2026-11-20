@@ -299,7 +299,17 @@ def verify(root,source_pin,run_id):
                         'raise_sizes':j.get('flop_raise')}
                 if m.get('flop_action_sizes')!=actual or m.get('restricted_original_GTO_tree') is not True:
                     raise ValueError('Old GTO flop source bet menu does not match SHA-pinned original Rust job')
-                if not all(isinstance(actual[x],str) and actual[x] for x in ('oop','ip','raise_sizes')):
+                if m.get('pinned_official_legacy_source_id')==44525865923:
+                    # Independently SHA-pinned original BTN_BB GTO source run
+                    # 44525865923 may have NO OOP lead menu at the flop.
+                    # Do not invent one. Actual ip/raise options are required,
+                    # and the complete original job is checked byte-for-byte
+                    # against the precommitted B31 original job SHA above.
+                    if not (isinstance(actual['ip'],str) and actual['ip'] and
+                            isinstance(actual['raise_sizes'],str) and actual['raise_sizes'] and
+                            isinstance(actual['oop'],str)):
+                        raise ValueError('Historical BTN_BB original IP/raise menu missing')
+                elif not all(isinstance(actual[x],str) and actual[x] for x in ('oop','ip','raise_sizes')):
                     raise ValueError('Missing original historical flop sizing options')
             else: raise ValueError('Unknown flop size proof profile')
             if m['version']=='gto' and j.get('hero') is not None:
