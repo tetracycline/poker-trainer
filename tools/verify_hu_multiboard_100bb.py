@@ -75,6 +75,28 @@ def source_nodes(d,seq):
         spr=(d['stack']-max(n['bets']))/n['pot']
         if spr<0:raise ValueError('Negative SPR')
         medium=strict_medium_evidence(n,d,strict['mask'])
+
+        actor=n['player'];hands=d['hands'][actor];nh=len(hands)
+        actions=n['acts'];strictmask=base64.b64decode(strict['mask'],validate=True)
+        if len(strictmask)!=nh or len(n['ev'])!=len(actions)*nh or len(n['strat'])!=len(actions)*nh:
+            raise ValueError('Missing original CFR EV/strategy dimensions')
+        bestlegal=bytearray([255]*nh);bestunrestricted=bytearray([255]*nh)
+        weighted=[0.]*len(actions);total=0.
+        for k,m in enumerate(strictmask):
+            if not m:continue
+            prob=[max(0.,float(n['strat'][z*nh+k])) for z in range(len(actions))]
+            den=sum(prob)
+            if den<=0:raise ValueError('Reachable actor with zero strategy sum')
+            prob=[z/den for z in prob]
+            ev=[float(n['ev'][z*nh+k]) for z in range(len(actions))]
+            permitted=[z for z in range(len(actions)) if m&(1<<z)]
+            if not permitted:raise ValueError('Reachable hand but no permissible action')
+            bestlegal[k]=max(permitted,key=lambda z:ev[z])
+            bestunrestricted[k]=max(range(len(actions)),key=lambda z:ev[z])
+            weight=float(n['w'][actor][k]);total+=weight
+            for z,pct in enumerate(prob):weighted[z]+=weight*pct
+        per_action={act:round(100*weighted[i]/total,3) if total else 0
+                    for i,act in enumerate(actions)}
         out.append(dict(public_board=n['board'],exact_node_line=n['line'],
           acting_seat=n['player'],pot_bb=n['pot']/100,
           remaining_bb=(d['stack']-max(n['bets']))/100,
@@ -82,6 +104,10 @@ def source_nodes(d,seq):
           strictly_reachable_combos=strict['count'],
           strictly_reachable_masks_b64=strict['mask'],
           source_actions=n['acts'],
+          action_frequency_weighted_pct=per_action,
+          strict_legal_best_ev_action_indices_b64=base64.b64encode(bestlegal).decode('ascii'),
+          strict_unconstrained_best_ev_action_indices_b64=base64.b64encode(bestunrestricted).decode('ascii'),
+          best_ev_scope='CONDITIONAL_RUST_CFR_ACTION_EV_WITHIN_ACTUAL_EXACT_POT_AND_BOARD',
           medium_50pct_eligible_combos=medium['eligible'],
           b50_nonpolarized_relative_equity_research_candidate=medium['candidate'],
           medium_50pct_strict_evidence=medium))
@@ -256,6 +282,7 @@ def verify(root,source_pin,run_id):
                   assumed_missing_rate_policy=m['unknown_action_frequency_policy'],
                   empirical_scope=('ASSUMED_PREFLOP_RANGES' if fam in ('ISO','LMP') else 'PINNED_PREFLOP_CFR'),
                   certified_scope='EXACT_BOARD_ONLY_GTO' if m['version']=='gto' else 'PARTIALLY_LOCKED_NL2_MARGINAL_PROXY',
+                  hands_by_seat=d['hands'],
                   strict_combo_path_summary=dict(proof),nodes=nodes)
                 info['cases'].append(source)
                 accum['verified_cases']+=1
