@@ -1,0 +1,64 @@
+name: TASK-HYBRID B48 source-blind ranks33-41 exact-board missing proofs
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b48-next9-gaps.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Preregister next nine frequency nodes BEFORE reading solver source and audit only real boards
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b48_next9_gaps.py
+          python3 tools/hu_b48_next9_gaps.py
+      - name: Independent source blindness/count/actor and missing-board gates
+        run: |
+          python3 - <<'PY'
+          import json,hashlib
+          x=json.load(open('data/nl2_hu_b48_next9_sourceblind_gaps.json'))
+          v=json.load(open('data/nl2_hu_multiboard_status_v3_rank28.json'))
+          assert x['source_blind_preselection_ranks']==list(range(33,42))
+          assert x['no_current_reclassification'] and x['no_source_outcome_based_rank_selection']
+          assert len(x['rows'])==9 and v['CERT_MULTIBOARD']==27 and v['APPROX']==365
+          assert x['fixed_rank_sha256']==hashlib.sha256(
+            open('data/nl2_hu_multiboard_prerank.json','rb').read()).hexdigest()
+          for r in x['rows']:
+              assert r['current_label']=='APPROX'
+              assert r['missing_to_three_flops']==max(0,3-r['distinct_matched_flop_count'])
+              if r['meets_named_board_certification_evidence']:
+                  assert 3<=len(r['candidate_3_5_flops'])<=5
+                  assert len(set(r['candidate_3_5_flops']))==len(r['candidate_3_5_flops'])
+          print('PASS B48 prereg source-blind next nine gaps, V2 counts unchanged')
+          PY
+      - name: Commit independently source-verified gaps to PR#2 Draft (no merge)
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b48_next9_sourceblind_gaps.json docs/NL2_HU_B48_NEXT6_GAPS.md
+          git commit -m 'TASK-HYBRID B48: preregister frozen ranks33-41; exact GTO+hero-lock missing-board report'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - name: Retain source audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B48-ranks33-41-gaps
+          path: |
+            data/nl2_hu_b48_next9_sourceblind_gaps.json
+            docs/NL2_HU_B48_NEXT6_GAPS.md
+          retention-days: 30
