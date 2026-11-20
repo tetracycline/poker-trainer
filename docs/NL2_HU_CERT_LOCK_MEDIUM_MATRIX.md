@@ -29,9 +29,9 @@ Verified: 24 CERT / 368 APPROX; 88 named boards.
 | 5 | ln-opfr-t_model-id38uf | Jh9d6s 3c | 44736420272 | 44736420272 | 14/8/5 | unproven |
 | 5 | ln-opfr-t_model-id38uf | Ks7h2d 9d | 44654973894 | 44654973894,44775751657 | unknown | unproven |
 | 6 | ln-bb-t_model-1n6d5u3 | 8s8h3d 5s | 44653774402 | 44653774402,44666285424 | unknown | candidate |
-| 6 | ln-bb-t_model-1n6d5u3 | 9s6h3d Ts | 44525865923 | 44525865923 | unknown | candidate |
+| 6 | ln-bb-t_model-1n6d5u3 | 9s6h3d Ts | 44525865923 | 44525865923,44779505990 | unknown | candidate |
 | 6 | ln-bb-t_model-1n6d5u3 | Js9h4d Ts | 44653774402 | 44653774402 | unknown | candidate |
-| 6 | ln-bb-t_model-1n6d5u3 | Ks7s2s 9d | 44525865923 | 44525865923 | unknown | unproven |
+| 6 | ln-bb-t_model-1n6d5u3 | Ks7s2s 9d | 44525865923 | 44525865923,44779505990 | unknown | unproven |
 | 6 | ln-bb-t_model-1n6d5u3 | KsQh4d Tc | 44653774402 | 44653774402,44666285424 | unknown | unproven |
 | 7 | ln-iso-lmp_t_model-1e9jvm0 | 8s8h3d 5s | 44666294821 | 44666294821 | 13/10/8 | candidate |
 | 7 | ln-iso-lmp_t_model-1e9jvm0 | 9s6h3d Ts | 44666294821 | 44666294821 | 14/11/7 | candidate |
@@ -79,11 +79,11 @@ Verified: 24 CERT / 368 APPROX; 88 named boards.
 | 19 | ln-3bp-3b_t_model-1gg0bw | 8s8h3d 5s | 44653774402 | 44653774402 | unknown | unproven |
 | 19 | ln-3bp-3b_t_model-1gg0bw | As7h3d Jh | 44522421850 | 44522421850 | unknown | candidate |
 | 19 | ln-3bp-3b_t_model-1gg0bw | Ks7h2d 9d | 44654973894 | 44654973894 | unknown | candidate |
-| 20 | ln-ipfr-t_model-xbvh6 | 9s6h3d Ts | 44525865923 | 44525865923 | unknown | candidate |
+| 20 | ln-ipfr-t_model-xbvh6 | 9s6h3d Ts | 44525865923 | 44525865923,44779505990 | unknown | candidate |
 | 20 | ln-ipfr-t_model-xbvh6 | AsAh5h 8s | 44521980749 | 44521980749 | unknown | candidate |
 | 20 | ln-ipfr-t_model-xbvh6 | AsQh8d 3c | 44521980749 | 44521980749 | unknown | candidate |
 | 20 | ln-ipfr-t_model-xbvh6 | Jh9d6s 3c | 44732810327 | 44732810327 | 22/6/18 | candidate |
-| 20 | ln-ipfr-t_model-xbvh6 | Ks7s2s 9d | 44525865923 | 44525865923 | unknown | candidate |
+| 20 | ln-ipfr-t_model-xbvh6 | Ks7s2s 9d | 44525865923 | 44525865923,44779505990 | unknown | candidate |
 | 21 | ln-opfr-r_model-1eyhxd9 | 9s6h3d Ts | 44732810327 | 44732810327 | 14/11/8 | candidate |
 | 21 | ln-opfr-r_model-1eyhxd9 | As9h2d Kd | 44666285424 | 44666285424 | 14/11/18 | unproven |
 | 21 | ln-opfr-r_model-1eyhxd9 | Jh9d6s 3c | 44736420272 | 44736420272 | 14/8/5 | unproven |
