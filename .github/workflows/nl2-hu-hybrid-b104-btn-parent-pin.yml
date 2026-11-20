@@ -1,0 +1,67 @@
+name: TASK-HYBRID B104 pin original verified B1 BTN_BB As9h2d IP GTO x-b100c river parent (max8m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b104-btn-parent-pin.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  sha-pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download ONLY historical successful B1 BTN_BB As9h2d original GTO source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p gto_parent
+          gh run download 44666285424 --repo "$GITHUB_REPOSITORY"              --name nl2-multiboard-B1-BTN_BB-gto-As9h2d --dir gto_parent
+          test -s gto_parent/evidence/BTN_BB-gto-As9h2d.json
+      - name: Pin original full GTO flop, Rust job, manifest SHA; true BTN IP actor and frozen rank135 one-board gap
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b104_btn_b1_gto_parent_pin.py
+          python3 tools/hu_b104_btn_b1_gto_parent_pin.py --artifact-root gto_parent
+      - name: Independently verify source pinned, not falsely CERT, counts unchanged
+        run: |
+          python3 - <<'PY'
+          import json
+          d=json.load(open('data/nl2_hu_b104_btn_as9h2d_gto_parent_pin.json'))
+          assert d['schema']=='NL2_HU_B104_B1_BTN_AS9H2D_GTO_SHA_PARENT_V1'
+          assert d['original_source_run_id']==44666285424 and d['preselected_rank']==135
+          assert d['original_source_GTO_IP_hero_river_nodes']>0
+          assert d['required_IP_river_line']=='x b100 c/x x/x'
+          assert (d['current_CERT'],d['current_APPROX'],d['new_cert'])==(134,258,0)
+          assert all(len(d[k])==64 for k in (
+           'original_GTO_manifest_sha256','original_GTO_flop_root_sha256','original_GTO_Rust_job_sha256'))
+          print('PASS B104 original B1 100bb GTO pin only, V24 unchanged')
+          PY
+      - name: Commit original B1 rank135 source pin only to Draft PR #2, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b104_btn_as9h2d_gto_parent_pin.json docs/NL2_HU_B104_BTN_B1_AS9H2D_GTO_PARENT_PIN.md
+          git commit -m 'TASK-HYBRID B104: pin original B1 BTN_BB As9h2d GTO root for rank135 exact IP hero river lock'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B104-B1-GTO-parent-pin
+          path: |
+            data/nl2_hu_b104_btn_as9h2d_gto_parent_pin.json
+            docs/NL2_HU_B104_BTN_B1_AS9H2D_GTO_PARENT_PIN.md
+          retention-days: 30
