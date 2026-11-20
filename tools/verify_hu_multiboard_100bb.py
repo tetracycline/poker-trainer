@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+"""Independent NL2 100bb multiboard CFR source, pot, rake, action, SPR,
+convergence, full-street per-combo frequency reach and locked-pool provenance
+audit. Creates no generic GTO certification by itself.
+"""
+import argparse,collections,hashlib,json,pathlib,sys
+REPO_SPOTS={
+'BTN_BB':('SRP',5.5,97.5),
+'CO_BB':('SRP',5.5,97.5),
+'SB_BB':('SRP',6.0,97.0),
+'UTG_CO':('SRP',6.5,97.5),
+'BB3_BTN':('3BP',20.5,90.0),
+'SB3_BTN':('3BP',21.0,90.0),
+'CO3_BTN':('3BP',16.5,92.5),
+'ISO_BTN_CO':('ISO',9.5,96.0),
+'LMP_CO_BB':('LMP',2.5,99.0)}
+def sha(path):
+    h=hashlib.sha256()
+    with path.open('rb') as f:
+        for z in iter(lambda:f.read(1024*1024),b''):h.update(z)
+    return h.hexdigest()
+def source_nodes(d,seq):
+    out=[]
+    for n in d['nodes']:
+        k='|'.join((n['board'],n['line'],str(n['player'])))
+        strict=seq['nodes'].get(k)
+        if strict is None:raise ValueError('No sequential mask for '+k)
+        reach=sum(w>1e-4 for w in n['w'][n['player']])
+        if reach==0 or strict['count']==0:continue
+        spr=(d['stack']-max(n['bets']))/n['pot']
+        if spr<0:raise ValueError('Negative SPR')
+        out.append(dict(public_board=n['board'],exact_node_line=n['line'],
+          acting_seat=n['player'],pot_bb=n['pot']/100,
+          remaining_bb=(d['stack']-max(n['bets']))/100,
+          node_spr=round(spr,6),source_reachable_combos=reach,
+          strictly_reachable_combos=strict['count'],
+          strictly_reachable_masks_b64=strict['mask'],
+          source_actions=n['acts']))
+    return out
+def verify(root,source_pin,run_id):
+    sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
+    from hu_sequential_cfr_reach import game_reach
+    src=source_pin.resolve()
+    expected_pool=sha(src/'inputs/pool_stats.json')
+    reports=[]
+    rejects=[]
+    accum=collections.Counter()
+    for ad in sorted(root.iterdir()):
+        if not ad.is_dir() or not (ad.name.startswith('nl2-stage3-') or ad.name.startswith('nl2-multiboard-')):
+            continue
+        manifest=list((ad/'evidence').glob('*.json'))
+        if len(manifest)!=1:
+            rejects.append(dict(artifact=ad.name,reason='Expected one actual solver manifest'))
+            continue
+        m=json.loads(manifest[0].read_text())
+        info=dict(artifact=ad.name,spot=m['spot'],version=m['version'],flop=m['flop'],cases=[],
+            excludes=m.get('skipped',[]),errors=m.get('failures',[]))
+        try:
+            if m['schema']!='NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1' or m['no_generic_certification'] is not True:
+                raise ValueError('Not a genuine auditable multi-board solver record')
+            if m['spot'] not in REPO_SPOTS or m['version'] not in ('gto','exp_ip','exp_oop'):
+                raise ValueError('Unexpected source profile or version')
+            fam,pot,stack=REPO_SPOTS[m['spot']]
+            if m['pot_family']!=fam or abs(m['root_pot_bb']-pot)>1e-6 or abs(m['root_remaining_bb']-stack)>1e-6:
+                raise ValueError('Root pot/SPR assumption mismatch')
+            if abs(m['root_spr']-stack/pot)>1e-4:
+                raise ValueError('Root SPR mismatch')
+            if m['pool_source_sha256']!=expected_pool:
+                raise ValueError('NL2 statistical pool source hash mismatch')
+            if m['spot'] in ('ISO_BTN_CO','LMP_CO_BB'):
+                r=m['preflop_ranges']
+                if r['source']!='ASSUMED_EXPLICIT_169CLASS':
+                    raise ValueError('Assumed pool mislabeled empirical')
+                for seat in ('oop_169','ip_169'):
+                    if len(r[seat])!=169 or any(not 0<=float(x)<=1 for x in r[seat].values()) or not sum(r[seat].values()):
+                        raise ValueError('Frozen assumed 169 class range invalid')
+            else:
+                if m['preflop_ranges']['source']!='PINNED_POKER_SOLVER_PREFLOP_CFR':
+                    raise ValueError('Known SRP/3BP profile without real preflop CFR')
+                if m['preflop_ranges']['full_sha256']!=sha(src/'v8_build/build/pf_data.json'):
+                    raise ValueError('Preflop combo weights underlying file changed')
+            if m['failures'] or m['solved_cases']!=len(m['cases']) or not m['cases']:
+                raise ValueError('Original solver source incomplete')
+            base=ad/'solver/postflop'
+            flopfile=base/m['file_flop']
+            if sha(flopfile)!=m['file_flop_sha256']:
+                raise ValueError('Raw flop source sha256 mismatch')
+            jobfile=flopfile.with_suffix('.job.json')
+            if not jobfile.is_file():raise ValueError('Missing authentic Rust driver flop config')
+            j=json.loads(jobfile.read_text());fr=json.loads(flopfile.read_text())
+            if fr.get('flop')!=m['flop'] or fr['pot']!=round(100*pot) or fr['stack']!=round(100*stack):
+                raise ValueError('Authentic flop model does not match assumed 100bb pot')
+            if j['pot']!=round(100*pot) or j['stack']!=round(100*stack):
+                raise ValueError('Rust job actual pot/stack inconsistent')
+            if abs(j['rake_rate']-0.05)>1e-8 or j['rake_cap']!=1000:
+                raise ValueError('Unstated rake vs expected NL2 5% max10bb')
+            if not all(x in j.get('flop_oop','') for x in ('33%','50%','75%','100%')):
+                raise ValueError('Missing actual OOP lead sizes')
+            if not all(x in j.get('flop_ip','') for x in ('33%','50%','75%','100%')):
+                raise ValueError('Missing actual IP bet sizes')
+            if m['version']=='gto' and j.get('hero') is not None:
+                raise ValueError('GTO job unexpectedly locks a hero')
+            if m['version']!='gto' and j.get('hero')!=(1 if m['version']=='exp_ip' else 0):
+                raise ValueError('Locked hero seat is wrong')
+            if m['version']!='gto' and not j.get('locks'):
+                raise ValueError('Pool locked variant has no lock patterns')
+            for c in m['cases']:
+                rawfile=base/c['source_path']
+                if sha(rawfile)!=c['source_sha256']:
+                    raise ValueError('Subgame SHA mismatch '+c['source_path'])
+                d=json.loads(rawfile.read_text())
+                if d['flop']!=m['flop'] or d['turn']!=c['turn'] or d['line0']!=c['line']:
+                    raise ValueError('Wrong flop-to-turn lineage')
+                parent=next((n for n in fr['nodes'] if n['line']==c['line']+'/' and n['board'][-2:]==c['turn']),None)
+                if parent is None:raise ValueError('No exact flop parent '+c['line'])
+                pp=parent['pot']/100;rem=(fr['stack']-max(parent['bets']))/100
+                if abs(pp-c['flop_parent_pot_bb'])>1e-5 or abs(rem-c['flop_parent_effective_remaining_bb'])>1e-5 or abs(rem/pp-c['real_flop_parent_spr'])>1e-5:
+                    raise ValueError('Parent authentic SPR inconsistent')
+                gg=d['info'].get('gto_expl_pct')
+                hh=d['info'].get('hero_gap_pct')
+                if gg is None or gg>0.5:
+                    raise ValueError('GTO equilibrium gap >0.5% '+str(gg))
+                if m['version']!='gto' and (hh is None or hh>0.5):
+                    raise ValueError('Locked hero gap >0.5% '+str(hh))
+                if c['true_river_nodes']!=sum(len(n['board'])==10 for n in d['nodes']):
+                    raise ValueError('Declared river CFR node count wrong')
+                sequential,proof=game_reach(fr,d)
+                if not proof['sequential_actor_combo_nodes']:
+                    raise ValueError('All combos became unreachable after strict action gates')
+                nodes=source_nodes(d,dict(nodes=sequential))
+                if not nodes:
+                    raise ValueError('No reachable legal action in verified multi-street game')
+                source=dict(run_id=run_id,artifact=ad.name,
+                  pot_family=fam,spot=m['spot'],version=m['version'],flop=m['flop'],
+                  turn=c['turn'],flop_line=c['line'],flop_root_pot_bb=pot,
+                  flop_root_stack_bb=stack,flop_source_sha256=m['file_flop_sha256'],
+                  root_spr=m['root_spr'],turn_spr=c['real_flop_parent_spr'],
+                  source_sha256=c['source_sha256'],gto_exploitability_pct=gg,
+                  locked_hero_gap_pct=hh,flop_size_menu=['33%','50%','75%','100%'],
+                  NL2_pool_source_sha256=expected_pool,
+                  lock_patterns=m['locks'] if m['version']!='gto' else [],
+                  assumed_missing_rate_policy=m['unknown_action_frequency_policy'],
+                  empirical_scope=('ASSUMED_PREFLOP_RANGES' if fam in ('ISO','LMP') else 'PINNED_PREFLOP_CFR'),
+                  certified_scope='EXACT_BOARD_ONLY_GTO' if m['version']=='gto' else 'PARTIALLY_LOCKED_NL2_MARGINAL_PROXY',
+                  strict_combo_path_summary=dict(proof),nodes=nodes)
+                info['cases'].append(source)
+                accum['verified_cases']+=1
+                accum['gto' if m['version']=='gto' else 'pool_locked_experimental']+=1
+                accum['sequential_actor_combo_nodes']+=proof['sequential_actor_combo_nodes']
+                accum['individually_proved_nodes']+=len(nodes)
+        except Exception as exc:
+            info['errors'].append(str(exc))
+            rejects.append(dict(artifact=ad.name,reason=str(exc)))
+        reports.append(info)
+    if not reports:rejects.append(dict(reason='No authentic multi-board artifacts found'))
+    return dict(schema='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1',
+      source_run_id=run_id,actual_NL2_stake_hands=2334487,
+      source_poker_solver_pin='abe310c3aad02dd4a7c77fb2831801fd490cf51b',
+      authentic_rust_engine_pin='9d1509fe5077d019825f833eed04b16d342dfda1',
+      no_generic_texture_certification=True,
+      new_authentic_board_cases=accum['verified_cases'],
+      exact_board_gto_sources=accum['gto'],
+      imputed_pool_locked_sources=accum['pool_locked_experimental'],
+      verified_source_nodes=accum['individually_proved_nodes'],
+      strictly_reachable_combo_nodes=accum['sequential_actor_combo_nodes'],
+      errors=rejects,artifacts=reports)
+
+def main():
+    p=argparse.ArgumentParser()
+    p.add_argument('--downloads',required=True,type=pathlib.Path)
+    p.add_argument('--solver-root',required=True,type=pathlib.Path)
+    p.add_argument('--run-id',type=int,required=True)
+    p.add_argument('--out',required=True,type=pathlib.Path)
+    a=p.parse_args()
+    d=verify(a.downloads,a.solver_root,a.run_id)
+    a.out.parent.mkdir(parents=True,exist_ok=True)
+    a.out.write_text(json.dumps(d,ensure_ascii=False,separators=(',',':'))+'\n')
+    print(json.dumps({k:v for k,v in d.items() if k not in ('artifacts','errors')},ensure_ascii=False))
+    if d['errors'] or d['new_authentic_board_cases']<1:raise SystemExit(1)
+if __name__=='__main__':main()
