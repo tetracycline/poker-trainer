@@ -58,7 +58,25 @@ def main():
     src=args.solver_root.resolve();pf=src/'postflop'
     assert (pf/'pfdriver/target/release/pfdriver').is_file()
     sys.path.insert(0,str(pf/'py'))
-    import pipeline
+    # LMP_CO_BB is NOT a pinned 100bb preflop-CFR profile in
+    # poker-solver.pipeline.SPOTS. Recreate EXACTLY the explicit 169-class
+    # limped preflop weights sealed by the successful B116 GTO manifest.
+    # These are assumed, not observed NL2 preflop frequencies.
+    import pipeline,ranges,job
+    from solve_hu_assumed_pots import RULES,w_lmp_ip
+    assert SPOT in RULES and SPOT=='LMP_CO_BB'
+    prof=RULES[SPOT]
+    config={k:prof[k] for k in ('pot','stack','oop','ip','pfr')}
+    config['kind']='SRP'  # game-tree geometry, NOT an SRP policy assertion
+    ranges.SPOTS[SPOT]=config
+    pipeline.SPOTS[SPOT]=config
+    weighted=([1.0 for _ in ranges.NAMES],
+              [float(w_lmp_ip(n)) for n in ranges.NAMES])
+    assert len(weighted[0])==len(weighted[1])==169
+    assert m['preflop_ranges']['oop_169']==dict(zip(ranges.NAMES,weighted[0]))
+    assert m['preflop_ranges']['ip_169']==dict(zip(ranges.NAMES,weighted[1]))
+    original_ranges=job.ranges
+    job.ranges=lambda sp,v:weighted if sp==SPOT else original_ranges(sp,v)
     spot=pipeline.SPOTS[SPOT]
     assert abs(spot['pot']-2.5)<1e-8 and abs(spot['stack']-99.0)<1e-8
     assert spot['pfr']=='ip'
