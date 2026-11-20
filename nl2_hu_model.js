@@ -241,10 +241,11 @@ function repair(html,sp,catalog){
     const sourceRef=exactViewerSpots.includes(rootP.spot)
       ? '<p class="small"><a href="nl2-cfr.html?spot='+encodeURIComponent(rootP.spot)+'&version=gto">研究用：相同位置／底池家族的真實公牌 CFR 範例</a>（須另核對牌面、動作線、實際 SPR，<b>此 MODEL 格並未因此取得 CERT</b>）</p>'
       : '<p class="small">ISO／Limp 有 100bb 真實解算樣本，但目前無精確公牌／尺寸映射；原始證據 <a href="https://github.com/tetracycline/poker-trainer/actions/runs/44508547280">GitHub Actions 44508547280</a>，<b>此 MODEL 未獲 CERT</b>。</p>';
+    const exactHistoryRef='<p class="small"><span class="hu-cfr-lineage" data-hu-model="'+esc(n.id)+'">來源稽核：目前僅 MODEL，待核對精確公牌與下注歷史。</span></p>';
     patched+='<div class="sec" data-node="'+n.sp+'/'+n.nd+'" id="'+n.id+'"><b class="ttl">'+esc(n.title)+'</b>'+
       '<p class="navln"><a class="jmp" href="#'+n.source+'">↑ 上一步</a></p>'+
       '<p class="small muted"><b>MODEL／待真實 CFR：</b>'+esc(sizeDesc)+
-      ' 預設代表同分類（brick）延續；實際發牌轉換分類應重新判斷，不能視為 CERT 或 EST。</p>'+sourceRef+
+      ' 預設代表同分類（brick）延續；實際發牌轉換分類應重新判斷，不能視為 CERT 或 EST。</p>'+sourceRef+exactHistoryRef+
       '<div class="tw"><table class="rt lt"><tr><th></th>'+HC.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr>'+tr+'</table></div></div>';
   }
   // A few legacy secondary action links point to filtered-out/unpublished
