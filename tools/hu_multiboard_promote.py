@@ -40,6 +40,9 @@ def hero_seat(pre):
     return 1 if ORDER[hero]>min(ORDER[a] for a in others) else 0
 
 def tokenize(h):
+    # An OOP player starts a new betting street with EMPTY action history.
+    # This is not a missing decision; it is a bona fide solver "/" root.
+    if not str(h).strip():return ('',)
     clauses=[]
     for z in str(h).split('、'):
         t=z.strip()
