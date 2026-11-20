@@ -64,7 +64,8 @@ CFR outcomes cannot be used to tune this cutoff.
 | B66_SB_B100_IP | 44809135555 | 0 | 1 |
 | B99_LMP_XX_RIVER | 44829140730 | 0 | 1 |
 | B102_SB_XX_RIVER | 44830517362 | 0 | 1 |
-| B105_BTN_XX_RIVER | PENDING | 0 | 0 |
+| B105_BTN_XX_RIVER | 44831903066 | 0 | 1 |
+| B108_CO_XB33_XB100 | PENDING | 0 | 0 |
 
 ## Top-24 preregistered game histories
 
