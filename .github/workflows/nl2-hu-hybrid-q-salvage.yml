@@ -1,0 +1,118 @@
+name: TASK-HYBRID Q salvage verified O lock and P LMP GTO (no fabricated CERT)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-q-salvage.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-three:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download only 3 successful artifact names from original run IDs, not timed-out job artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for name in nl2-multiboard-B12_LOCK_FAST-SB_BB-exp_oop-Js9h4d; do
+            mkdir -p "downloads_o/$name"
+            gh run download 44742066290 --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads_o/$name"
+            test -d "downloads_o/$name/evidence"
+          done
+          for name in nl2-multiboard-B13_LMP_B50-LMP_CO_BB-gto-Jh9d6s nl2-multiboard-B13_LMP_B50-LMP_CO_BB-gto-4s4h2d; do
+            mkdir -p "downloads_p/$name"
+            gh run download 44743586052 --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads_p/$name"
+            test -d "downloads_p/$name/evidence"
+          done
+          test "$(find downloads_o -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 1
+          test "$(find downloads_p -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 2
+      - name: Independently validate pinned exact board, rake, SHA256, full-street reach and true GTO/EXP source
+        run: |
+          set -euo pipefail
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads_o --solver-root solver --run-id 44742066290 --out trainer/data/solver_evidence/NL2_MULTIBOARD_B12_LOCK_FAST.json
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads_p --solver-root solver --run-id 44743586052 --out trainer/data/solver_evidence/NL2_MULTIBOARD_B13_LMP_B50.json
+      - name: Produce and checksum immutable honest partial archives
+        run: |
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          base=pathlib.Path('trainer/data/solver_evidence')
+          checks=[
+            ('B12_LOCK_FAST',44742066290,1,0,1,'SB_BB Js9h4d exp_oop; other original job cancelled'),
+            ('B13_LMP_B50',44743586052,2,2,0,'LMP_CO_BB Jh9d6s and 4s4h2d GTO; all EXP cancelled')]
+          for code,run_id,n,ng,ne,notice in checks:
+            p=base/('NL2_MULTIBOARD_'+code+'.json')
+            d=json.loads(p.read_text())
+            assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1' and not d['errors']
+            assert d['source_run_id']==run_id and len(d['artifacts'])==n
+            assert sum(z['version']=='gto' for z in d['artifacts'])==ng
+            assert sum(z['version'].startswith('exp_') for z in d['artifacts'])==ne
+            assert d['exact_board_gto_sources']>=ng and d['imputed_pool_locked_sources']>=ne
+            assert d['new_authentic_board_cases']==d['exact_board_gto_sources']+d['imputed_pool_locked_sources']>0
+            raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+            gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+            ix=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+              run_id=run_id,batch=code,actual_spot_flop_version_jobs=n,
+              verified_cases=d['new_authentic_board_cases'],
+              gto_cases=d['exact_board_gto_sources'],locked_cases=d['imputed_pool_locked_sources'],
+              source_sha256=hashlib.sha256(raw).hexdigest(),
+              gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+              generic_model_certification=0,
+              excluded_unverified_jobs=notice)
+            p.with_suffix('.index.json').write_text(json.dumps(ix,indent=2,ensure_ascii=False)+'\n')
+            p.unlink()
+            print('PASS',code,ix,flush=True)
+          PY
+      - name: Rerun exact 392 model registry, frozen rank gaps, node-lock and nonpolarized proofs
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_multiboard_consolidate.py --root data --out data/nl2_hu_multiboard_status.json --doc docs/NL2_HU_MULTIBOARD_STATUS.md
+          python3 tools/hu_highfreq_shortfalls.py data data/nl2_hu_highfreq_shortfalls.json
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status.json --out data/nl2_hu_cert_lock_medium_audit.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          g=json.load(open('data/nl2_hu_highfreq_shortfalls.json'))
+          a=json.load(open('data/nl2_hu_cert_lock_medium_audit.json'))
+          assert s['TOTAL']==392 and s['CERT_MULTIBOARD']+s['APPROX']==392
+          assert s['CERT_MULTIBOARD']>=18
+          assert s['independently_verified_completed_batches']['B12_LOCK_FAST']['authentic_jobs']==1
+          assert s['independently_verified_completed_batches']['B13_LMP_B50']['authentic_jobs']==2
+          assert g['certified_from_source']==s['CERT_MULTIBOARD']
+          assert a['cert_multiboard']==s['CERT_MULTIBOARD'] and a['approx']==s['APPROX']
+          print('PASS Q',s['CERT_MULTIBOARD'],'CERT',s['APPROX'],'APPROX')
+          PY
+      - name: Commit/push verified Q evidence only to PR2 Draft, never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B12_LOCK_FAST.index.json data/solver_evidence/NL2_MULTIBOARD_B12_LOCK_FAST.json.gz data/solver_evidence/NL2_MULTIBOARD_B13_LMP_B50.index.json data/solver_evidence/NL2_MULTIBOARD_B13_LMP_B50.json.gz data/nl2_hu_multiboard_status.json data/nl2_hu_highfreq_shortfalls.json data/nl2_hu_cert_lock_medium_audit.json docs/NL2_HU_MULTIBOARD_STATUS.md
+          git commit -m 'TASK-HYBRID Q: verify O one EXP and P two GTO sources; exact-only recertification'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - name: Retain audit archives even if update fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-Q-two-batches-salvage
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B12_LOCK_FAST*
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B13_LMP_B50*
+          retention-days: 30
