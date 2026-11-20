@@ -96,7 +96,12 @@ function transition(meta,action,size,stage){
 function keyNext(source,action,stage){
   const parts=roleHistory(source);const last=parts[source.st]||'';
   const w={bet:'下注',raise:'加注',check:'過',call:'跟'}[action]||'過';
-  const response=action==='bet'||action==='raise'?'、對手跟':action==='check'?'、對手過':'';
+  // A double check ends the street at the second player's action.
+  // If the OOP opponent already checked, hero checking must not fabricate
+  // an impossible third opponent check on the same street.
+  const hasPriorOpponentCheck=/(^|、)對手過$/.test(last);
+  const response=action==='bet'||action==='raise'?'、對手跟':
+      action==='check'&&!hasPriorOpponentCheck?'、對手過':'';
   parts[source.st]=last+(last?'、':'')+'你'+w+response;
   const next=source.st+1;
   if(next<=2)parts[next]=stage===2?'對手過':'對手過';
