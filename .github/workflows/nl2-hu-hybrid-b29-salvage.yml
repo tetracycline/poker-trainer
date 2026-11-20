@@ -1,0 +1,107 @@
+name: TASK-HYBRID B29-salvage 3 successfully solved pinned old-GTO-parent new NL2 locks
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b29-salvage.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  salvage-three:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - name: Download only 3 original successful attempt-2 Rust artifacts by exact immutable GitHub ID
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads trainer/data/solver_evidence
+          while read -r slug id; do
+            name="nl2-multiboard-B29_OFFICIAL_RELOCK-SB_BB-Ks7h2d-${slug}-exp_oop"
+            mkdir -p "downloads/$name"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "/tmp/B29_${id}.zip"
+            unzip -q "/tmp/B29_${id}.zip" -d "downloads/$name"
+            test -f "downloads/$name/evidence/SB_BB-Ks7h2d-${slug}-exp_oop.json"
+            test -d "downloads/$name/solver/postflop/out"
+          done <<'ARTIFACTS'
+          b50c 14649240948
+          b75c 14648219191
+          xx 14648547110
+          ARTIFACTS
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 3
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver \
+            --run-id 44774044183 --out trainer/data/solver_evidence/NL2_MULTIBOARD_B29_OFFICIAL_RELOCK.json
+      - name: Validate authentic three hero-OOP locked downstream subgames with pinning and source SHA256
+        run: |
+          python3 - <<'PY'
+          import hashlib,gzip,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B29_OFFICIAL_RELOCK.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1' and not d['errors']
+          assert len(d['artifacts'])==3 and d['exact_board_gto_sources']==0
+          assert d['imputed_pool_locked_sources']==3 and d['new_authentic_board_cases']==3
+          assert {(x['flop'],x['cases'][0]['flop_line']) for x in d['artifacts']}=={
+             ('Ks7h2d','b50 c'),('Ks7h2d','b75 c'),('Ks7h2d','x x')}
+          assert all(x['version']=='exp_oop' for x in d['artifacts'])
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          ix=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+             batch='B29_OFFICIAL_RELOCK',run_id=d['source_run_id'],actual_spot_flop_version_jobs=3,
+             verified_cases=d['new_authentic_board_cases'],gto_cases=0,
+             locked_cases=d['imputed_pool_locked_sources'],
+             source_sha256=hashlib.sha256(raw).hexdigest(),
+             gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+             generic_model_certification=0,
+             original_immutable_GTO_parent_sha256='8765d6b5ddfc47fdb29ac38c3675941e6fcaf51371b8f569c59ed3c3c5065897',
+             source_policy='True pinned official GTO flop parent; new measured aggregated NL2 lock on turn/river only, historical unknown lock variants not relabeled',
+             verified_successful_attempt2_artifact_ids={'b50c':14649240948,'b75c':14648219191,'xx':14648547110})
+          p.with_suffix('.index.json').write_text(json.dumps(ix,indent=2,ensure_ascii=False)+'\n')
+          p.unlink()
+          print('PASS original pinned GTO parent with fresh exact hero lock',ix)
+          PY
+      - name: Recertify 392 frozen models and rerun all named board lock/medium/unknown UI audits
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_multiboard_consolidate.py --root data --out data/nl2_hu_multiboard_status.json --doc docs/NL2_HU_MULTIBOARD_STATUS.md
+          python3 tools/hu_highfreq_shortfalls.py data data/nl2_hu_highfreq_shortfalls.json
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status.json --out data/nl2_hu_cert_lock_medium_audit.json
+          python3 tools/hu_cert_lock_medium_coverage_matrix.py
+          python3 tools/hu_cert_ui_completeness_gate.py
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          a=json.load(open('data/nl2_hu_cert_ui_completeness_gate.json'))
+          assert s['TOTAL']==392 and s['CERT_MULTIBOARD']==24 and s['APPROX']==368
+          assert s['independently_verified_completed_batches']['B29_OFFICIAL_RELOCK']['authentic_jobs']==3
+          assert a['cert_models']==24 and a['approx_models']==368
+          print('PASS 24 CERT / 368 APPROX with updated measured-marginal pool lock proof')
+          PY
+      - name: Push genuine locked sources, matrix, SHA & strict status to PR #2 Draft, never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B29_OFFICIAL_RELOCK.index.json data/solver_evidence/NL2_MULTIBOARD_B29_OFFICIAL_RELOCK.json.gz data/nl2_hu_multiboard_status.json data/nl2_hu_highfreq_shortfalls.json data/nl2_hu_cert_lock_medium_audit.json data/nl2_hu_cert_lock_medium_matrix.json data/nl2_hu_cert_ui_completeness_gate.json docs/NL2_HU_MULTIBOARD_STATUS.md docs/NL2_HU_CERT_LOCK_MEDIUM_MATRIX.md
+          git commit -m 'TASK-HYBRID B29: 3 real turn-only observed-aggregate hero locks from SHA-pinned original Ks7h2d GTO'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - name: Preserve original downstream lock evidence if PR push races
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B29-3-legacy-pinned-GTO-hero-locks
+          path: trainer/data/solver_evidence/NL2_MULTIBOARD_B29_OFFICIAL_RELOCK*
+          retention-days: 30
