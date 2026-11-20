@@ -1,0 +1,89 @@
+name: NL2 stage2 297-case independent full-street combo reach integrity
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage2-sequential-integrity.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Independently compare per-combo masks after actual flop/turn/river action ancestry
+        run: |
+          python3 - <<'PY'
+          import base64,collections,gzip,hashlib,json,pathlib
+          root=pathlib.Path('data')
+          totals=collections.Counter()
+          by={}
+          for suffix,run,n in [('04',44653774402,158),('05',44654973894,139)]:
+            gzroot=(root/f'nl2_hu_exact_boards_b{suffix}.json.gz').read_bytes()
+            raw=json.loads(gzip.decompress(gzroot))
+            j=json.loads((root/f'nl2_hu_exact_boards_b{suffix}.index.json').read_text())
+            assert hashlib.sha256(gzroot).hexdigest()==j['gz_sha256']
+            assert len(raw['subgames'])==n
+            seq=json.loads(gzip.decompress((root/f'nl2_hu_sequential_reach_official_b{suffix}.json.gz').read_bytes()))
+            assert seq['schema']=='HU_NL2_SEQUENTIAL_REACH_OVERLAY_V1'
+            assert seq['source_proof_run_id']==run and seq['generic_model_CERT']==0
+            assert len(seq['subgames_by_source_sha256'])==n
+            count=collections.Counter()
+            for case in raw['subgames']:
+              s=seq['subgames_by_source_sha256'].get(case['source_sha256'])
+              assert s and s['source_run_id']==run
+              assert len(s['nodes'])==len(case['nodes'])
+              for node in case['nodes']:
+                key='|'.join((node['board'],node['line'],str(node['acting_seat'])))
+                q=s['nodes'].get(key)
+                assert q is not None
+                src=base64.b64decode(node['eligible_action_masks_b64'],validate=True)
+                seqmask=base64.b64decode(q['mask'],validate=True)
+                hands=case['hands_by_seat'][node['acting_seat']]
+                assert len(src)==len(seqmask)==len(hands)
+                assert all((a & ~b)==0 for a,b in zip(seqmask,src))
+                assert q['count']==sum(bool(x) for x in seqmask)
+                assert q['count']<=node['reachable_combos']
+                count['nodes']+=1
+                count['source_combo_node_rows']+=sum(bool(x) for x in src)
+                count['sequential_combo_node_rows']+=q['count']
+            count['subgames']=n
+            by[suffix]=dict(count)
+            totals.update(count)
+          assert totals['subgames']==297
+          assert totals['sequential_combo_node_rows']>0
+          assert totals['sequential_combo_node_rows']<totals['source_combo_node_rows']
+          d={'schema':'NL2_HU_297_ACTUAL_STREET_SEQUENTIAL_VERIFIED_V1',
+             'run_ids':[44653774402,44654973894],
+             'genuine_source_subgames_with_full_street_combo_gate':297,
+             'source_cfr_reoptimized_after_policy_gate':False,
+             'generic_model_certification':0,
+             'rule':'At every ancestor per combo: highest probability action, plus at most one alternative if >=40% absolute and >=70% of highest. Zero weight and card conflicts filtered.',
+             'batch_stats':by,'aggregate':dict(totals)}
+          (root/'nl2_hu_stage2_sequential_status.json').write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(d,ensure_ascii=False))
+          PY
+      - name: Commit verified full 297-source per-combo reach stats (not generic CERT)
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_stage2_sequential_status.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'audit(stage2): 297 genuine 100bb CFR source games verified across complete per-combo flop-turn-river action paths'
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+          fi
+      - name: Keep independent proof if branch push blocked
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-stage2-sequential-combo-297-proof
+          path: data/nl2_hu_stage2_sequential_status.json
+          retention-days: 30
