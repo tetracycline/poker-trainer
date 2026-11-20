@@ -401,8 +401,20 @@ def verify(root,source_pin,run_id):
                         m.get('gto_parent_source_run_id')==44806967313 and
                         m.get('gto_parent_source_sha256')=='efd7295c361a9a0cb559a004b77f16d2a9ed2e73a19d1c6125659f7a451c6ee6' and
                         m.get('flop_root_jobfile_sha256')=='8c58597e5114bd178abeb880f3fe4d6912cba8b1fa7b6788853096df6a5d2c62' and
-                        m.get('gto_parent_source_manifest_sha256')=='a8fc7e0d02b5badaa82c56faa54e985ff11075eff023519836034e7ed101812e'):
-                        raise ValueError('Focused x-b50-call turn only from individually SHA-pinned B112 original B43 UTG_CO actor-IP GTO')
+                        m.get('gto_parent_source_manifest_sha256')=='a8fc7e0d02b5badaa82c56faa54e985ff11075eff023519836034e7ed101812e'
+                        or
+                        # B121 source: B114 CO_BB GTO has finished with a
+                        # verified verbatim root/job/manifest SHA. The genuine
+                        # Rust EXP_IP task solves ONLY the exact turn child.
+                        # Never reuse its GTO flop file as an EXP flop solve.
+                        (m['spot']=='CO_BB' and m['version']=='exp_ip' and
+                         m['flop']=='8s8h3d' and m.get('selected_lines')==['x x'] and
+                         m.get('selected_turn_lines')==['x b50 c'] and
+                         m.get('gto_parent_source_run_id')==44836834970 and
+                         m.get('gto_parent_source_sha256')=='af2fcbadbf848208f4046b4098b60dce01618863d76deaaecb35648f7b139741' and
+                         m.get('flop_root_jobfile_sha256')=='9d1d6fc120154cb70881f2bda9c0d29fd0d7ddc219b154c25d02c932a9cbbafb' and
+                         m.get('gto_parent_source_manifest_sha256')=='2e908a15bba6701cd7fa3bb1079d99a3a985cb05ef586b95eef9f00805c0d2fe')):
+                        raise ValueError('Focused x-b50-call turn requires exact SHA-pinned B113 UTG or B121 CO parent')
                     if m.get('selected_turn_lines')!=[' '.join(token)]:
                         raise ValueError('Focused turn extraction differs from predeclared line')
                     subjobfile=rawfile.with_suffix('.job.json')
