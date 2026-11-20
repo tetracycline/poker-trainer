@@ -39,6 +39,7 @@ function selectNode(){
   : '原始解算（不經 GitHub Actions）：<code>'+esc(run)+'</code>';
  const info=[
  '<div><span class="tag '+(game.version==='gto'?'':'exp')+'">'+esc(game.status)+'</span>　<b>'+esc(game.spot)+'・'+esc(game.pot_family)+'・'+esc(game.version)+'</b></div>',
+ (game.solve_menu_scope?'<p><b>解算下注選單：</b>翻牌 OOP '+esc(game.solve_menu_scope.flop_oop)+'／IP '+esc(game.solve_menu_scope.flop_ip)+'；轉牌下注 '+esc(game.solve_menu_scope.turn_bets)+'，加注 '+esc(game.solve_menu_scope.turn_raise)+'。'+esc(game.solve_menu_scope.restriction_note)+'</p>':''),
  '<p>精確公牌 <strong>'+esc(n.board)+'</strong>；完整動作線 <strong>'+esc(n.line)+'</strong>；動作玩家 '+(n.acting_seat===0?'OOP':'IP')+'；此節點剩餘 SPR <strong>'+fmt(n.node_spr)+'</strong></p>',
  '<p>可選動作：'+n.actions.map(esc).join('、')+'；CFR 權重加總頻率：'+Object.entries(n.reach_weighted_action_pct).map(([k,v])=>esc(k)+':'+v+'%').join('、')+'</p>',
  (strict?'<p><b>跨街可達手牌 '+fmt(strict.count)+'／'+fmt(n.reachable_combos)+'</b>。已按前街最高頻／近混頻及卡牌衝突篩選；原始 EV 未重解。</p>':
@@ -81,23 +82,17 @@ async function loadIndex(path,zipped=false){
    throw Error('無效的來源資料 schema');
  return data.subgames;
 }
-async function loadSource(){
- // Independently source-verified batches 01–03 plus 04; do not count
- // any same-source duplicate from later optional local/offline shards.
- let base;
- try {base=await loadIndex('data/nl2_hu_exact_boards.json.gz',true);}
+async function loadBase(){
+ try {return await loadIndex('data/nl2_hu_exact_boards.json.gz',true);}
  catch(error){
    console.warn('Compact CFR archive unavailable; validating the full JSON source',error);
-   base=await loadIndex('data/nl2_hu_exact_boards.json',false);
+   return loadIndex('data/nl2_hu_exact_boards.json',false);
  }
- const extra=await Promise.allSettled([
-   loadIndex('data/nl2_hu_exact_boards_b04.json.gz',true),
-   loadIndex('data/nl2_hu_exact_boards_b05.json.gz',true)
- ]);
- for(const x of extra)if(x.status==='rejected')
-   console.warn('Independent new exact-board source batch not available',x.reason);
- return base.concat(...extra.filter(x=>x.status==='fulfilled').map(x=>x.value));
 }
+const independentSources=[
+ 'data/nl2_hu_exact_boards_b04.json.gz',
+ 'data/nl2_hu_exact_boards_b05.json.gz'
+];
 async function loadPathOverlay(path){
  const r=await fetch(path,{cache:'no-store'});
  if(!r.ok)throw Error('跨街可達性索引無法載入');
@@ -129,8 +124,8 @@ async function loadOffline(){
  for(const x of paths)if(x.status==='fulfilled')Object.assign(pathReach,x.value);
  return {exact,missingPath:paths.some(x=>x.status==='rejected')};
 }
-Promise.allSettled([loadSource(),loadOffline()]).then(([base,offline])=>{
- const results=[base,...(offline.status==='fulfilled'?offline.value.exact:[offline])];
+Promise.allSettled([loadOffline(),loadBase(),...independentSources.map(f=>loadIndex(f,true))]).then(([offline,...sourceResults])=>{
+ const results=[...sourceResults,...(offline.status==='fulfilled'?offline.value.exact:[offline])];
  if(results.every(x=>x.status==='rejected'))throw results[0].reason;
  const loaded=results.flatMap(x=>x.status==='fulfilled'?x.value:[]);
  const seen=new Set();
@@ -157,7 +152,15 @@ Promise.allSettled([loadSource(),loadOffline()]).then(([base,offline])=>{
  const sha=url.searchParams.get('sha');
  if(sha){
    const target=subset.findIndex(c=>c.source_sha256===sha);
-   if(target>=0){selG.value=String(target);selectGame();}
+   if(target>=0){
+    selG.value=String(target);selectGame();
+    const board=url.searchParams.get('board'),line=url.searchParams.get('line');
+    if(board!==null||line!==null){
+     const ix=game.nodes.findIndex(n=>n.board===board&&n.line===line);
+     if(ix>=0){selN.value=String(ix);selectNode();}
+     else{current=null;by('combos').innerHTML='';setText(by('details'),'指定的公牌與行動線不在這份精確來源內。');}
+    }
+   }
  }
 }).catch(e=>setText(by('status'),'真實 CFR 索引不可用：'+e.message));
 })();
