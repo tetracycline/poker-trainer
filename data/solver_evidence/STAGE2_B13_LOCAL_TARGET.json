@@ -1,0 +1,178 @@
+{
+  "schema": "LOCAL_EXACT_HISTORY_CONTRACT_V1",
+  "reviewed_remote_commit": "fd8324d",
+  "scope": "Three-bet pot; exact monochrome public runouts. Exact examples only, not generic CERT/EST. Highest / near-mixed path filter does not re-solve equilibrium.",
+  "solver_wrapper_sha256": "3f92b9297f4532f30ce42841dfdecc3b3441f965e98e05080b56ac65c56369f3",
+  "preflop": {
+    "oop": "CO",
+    "ip": "BTN",
+    "oop_chain": [
+      "COrfi/open",
+      "COopen>BTN3b/call"
+    ],
+    "ip_chain": "COopen>BTN/3bet",
+    "pot_bb": 16.5,
+    "stack_bb": 92.5
+  },
+  "flop_size_rules": {
+    "oop_lead": "50%",
+    "ip": "33%,50%,75%"
+  },
+  "turn_sizes": [
+    "50%",
+    "100%"
+  ],
+  "turn_raise": "all-in only",
+  "extracted_turn": "7h",
+  "extracted_rivers": [
+    "2d",
+    "Js"
+  ],
+  "pool_locks_applied": 0,
+  "pool_lock_limitation": "No observed position-specific OOP lead-to-barrel line with exact board, size, SPR and prior sequence.",
+  "github_actions_used": false,
+  "records": [
+    {
+      "model_id": "ln-3bp-3b_r_model-2uuo7v",
+      "baseline_model_status": "NO_MATCHING_EXACT_BOARD_SOURCE_LINE",
+      "source_profile": "CO3_BTN-gto-Kc9c4c",
+      "baseline_model_approx_spr": 0.851,
+      "scope": "Canonical exact source only; target texture verified independently before making a candidate link",
+      "generic_CERT": false,
+      "generic_EST": false,
+      "exact_sources": [
+        {
+          "board": "4c9cKc7h2d",
+          "line": "b50 c/b50 c/",
+          "phase": "CO_STREET_ROOT",
+          "pot_bb": 66.0,
+          "effective_stack_bb": 67.75,
+          "exact_spr": 1.0265151515151516,
+          "relative_spr_difference": 0.17098154981549823,
+          "source_sha256": "bf88d071fd4da64c58ef10592514fe8f9725979021513695887b7525a05bdec8",
+          "source_combo_count": 57,
+          "eligible_exact_path_combo_count": 0,
+          "path_actionable": false,
+          "acting_seat": "CO",
+          "converged_gto_gap_pct": 0.38808953762054443
+        },
+        {
+          "board": "4c9cKc7h2d",
+          "line": "b50 c/b50 c/x",
+          "phase": "BTN_AFTER_CO_CHECK",
+          "pot_bb": 66.0,
+          "effective_stack_bb": 67.75,
+          "exact_spr": 1.0265151515151516,
+          "relative_spr_difference": 0.17098154981549823,
+          "source_sha256": "bf88d071fd4da64c58ef10592514fe8f9725979021513695887b7525a05bdec8",
+          "source_combo_count": 65,
+          "eligible_exact_path_combo_count": 0,
+          "path_actionable": false,
+          "acting_seat": "BTN",
+          "converged_gto_gap_pct": 0.38808953762054443
+        },
+        {
+          "board": "4c9cKc7hJs",
+          "line": "b50 c/b50 c/",
+          "phase": "CO_STREET_ROOT",
+          "pot_bb": 66.0,
+          "effective_stack_bb": 67.75,
+          "exact_spr": 1.0265151515151516,
+          "relative_spr_difference": 0.17098154981549823,
+          "source_sha256": "bf88d071fd4da64c58ef10592514fe8f9725979021513695887b7525a05bdec8",
+          "source_combo_count": 54,
+          "eligible_exact_path_combo_count": 0,
+          "path_actionable": false,
+          "acting_seat": "CO",
+          "converged_gto_gap_pct": 0.38808953762054443
+        },
+        {
+          "board": "4c9cKc7hJs",
+          "line": "b50 c/b50 c/x",
+          "phase": "BTN_AFTER_CO_CHECK",
+          "pot_bb": 66.0,
+          "effective_stack_bb": 67.75,
+          "exact_spr": 1.0265151515151516,
+          "relative_spr_difference": 0.17098154981549823,
+          "source_sha256": "bf88d071fd4da64c58ef10592514fe8f9725979021513695887b7525a05bdec8",
+          "source_combo_count": 62,
+          "eligible_exact_path_combo_count": 0,
+          "path_actionable": false,
+          "acting_seat": "BTN",
+          "converged_gto_gap_pct": 0.38808953762054443
+        }
+      ]
+    },
+    {
+      "model_id": "ln-3bp-3b_r_model-1mjg9wj",
+      "baseline_model_status": "NO_MATCHING_EXACT_BOARD_SOURCE_LINE",
+      "source_profile": "CO3_BTN-gto-Kc9c4c",
+      "baseline_model_approx_spr": 3.164,
+      "scope": "Canonical exact source only; target texture verified independently before making a candidate link",
+      "generic_CERT": false,
+      "generic_EST": false,
+      "exact_sources": [
+        {
+          "board": "4c9cKc7h2d",
+          "line": "b50 c/x x/",
+          "phase": "CO_STREET_ROOT",
+          "pot_bb": 33.0,
+          "effective_stack_bb": 84.25,
+          "exact_spr": 2.553030303030303,
+          "relative_spr_difference": 0.2393115727002967,
+          "source_sha256": "bf88d071fd4da64c58ef10592514fe8f9725979021513695887b7525a05bdec8",
+          "source_combo_count": 69,
+          "eligible_exact_path_combo_count": 1,
+          "path_actionable": true,
+          "acting_seat": "CO",
+          "converged_gto_gap_pct": 0.38808953762054443
+        },
+        {
+          "board": "4c9cKc7h2d",
+          "line": "b50 c/x x/x",
+          "phase": "BTN_AFTER_CO_CHECK",
+          "pot_bb": 33.0,
+          "effective_stack_bb": 84.25,
+          "exact_spr": 2.553030303030303,
+          "relative_spr_difference": 0.2393115727002967,
+          "source_sha256": "bf88d071fd4da64c58ef10592514fe8f9725979021513695887b7525a05bdec8",
+          "source_combo_count": 62,
+          "eligible_exact_path_combo_count": 0,
+          "path_actionable": false,
+          "acting_seat": "BTN",
+          "converged_gto_gap_pct": 0.38808953762054443
+        },
+        {
+          "board": "4c9cKc7hJs",
+          "line": "b50 c/x x/",
+          "phase": "CO_STREET_ROOT",
+          "pot_bb": 33.0,
+          "effective_stack_bb": 84.25,
+          "exact_spr": 2.553030303030303,
+          "relative_spr_difference": 0.2393115727002967,
+          "source_sha256": "bf88d071fd4da64c58ef10592514fe8f9725979021513695887b7525a05bdec8",
+          "source_combo_count": 66,
+          "eligible_exact_path_combo_count": 1,
+          "path_actionable": true,
+          "acting_seat": "CO",
+          "converged_gto_gap_pct": 0.38808953762054443
+        },
+        {
+          "board": "4c9cKc7hJs",
+          "line": "b50 c/x x/x",
+          "phase": "BTN_AFTER_CO_CHECK",
+          "pot_bb": 33.0,
+          "effective_stack_bb": 84.25,
+          "exact_spr": 2.553030303030303,
+          "relative_spr_difference": 0.2393115727002967,
+          "source_sha256": "bf88d071fd4da64c58ef10592514fe8f9725979021513695887b7525a05bdec8",
+          "source_combo_count": 57,
+          "eligible_exact_path_combo_count": 40,
+          "path_actionable": true,
+          "acting_seat": "BTN",
+          "converged_gto_gap_pct": 0.38808953762054443
+        }
+      ]
+    }
+  ]
+}

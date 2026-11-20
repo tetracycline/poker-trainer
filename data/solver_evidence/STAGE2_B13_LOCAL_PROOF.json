@@ -1,0 +1,118 @@
+{
+  "schema": "NL2_HU_SOLVER_ARCHIVE_AUDIT_V1",
+  "run_id": "LOCAL_20261120_B13",
+  "artifact_count": 1,
+  "profiles": [
+    "CO3_BTN"
+  ],
+  "solved_subgames": 1,
+  "skipped_unreachable": 0,
+  "raw_reachable_hand_combos": 2495,
+  "near_mixed_combo_nodes": 158,
+  "certified_new_nl2_river_cells": 0,
+  "estimated_new_nl2_river_cells": 0,
+  "mapping_status": "BLOCKED: needs verified NL2 exact action, pot, ranges, SPR and board lineage",
+  "errors": [],
+  "artifacts": [
+    {
+      "artifact": "nl2-stage2-CO3_BTN-gto-Kc9c4c-local",
+      "spot": "CO3_BTN",
+      "version": "gto",
+      "solved_cases": 1,
+      "skipped_unreachable": [],
+      "cases": [
+        {
+          "flop": "Kc9c4c",
+          "turn": "7h",
+          "line": "b50 c",
+          "parent_spr": 2.55303,
+          "n_solver_nodes": 62,
+          "gto_gap_pct": 0.38808953762054443,
+          "cert_converged": true,
+          "solver_validated_for": "GTO_EXACT_BOARD_ONLY",
+          "hero_gap_pct": null,
+          "pool_lock_patterns": 0,
+          "villain_pool_lock_coverage": {
+            "version": "GTO_NO_POOL_LOCK",
+            "villain_nodes": 0,
+            "matched_nodes": 0,
+            "coverage_pct": null
+          },
+          "hero_gain_vs_locked_pool_bb": null,
+          "medium50_exact_board_candidates": [
+            {
+              "board": "4c9cKc7h",
+              "exact_line": "b50 c/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 2.55303,
+              "eligible_combos": 22,
+              "reach_weighted_b50_pct": 32.128
+            },
+            {
+              "board": "4c9cKc7h",
+              "exact_line": "b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 2.55303,
+              "eligible_combos": 39,
+              "reach_weighted_b50_pct": 45.147
+            },
+            {
+              "board": "4c9cKc7h2d",
+              "exact_line": "b50 c/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 2.55303,
+              "eligible_combos": 18,
+              "reach_weighted_b50_pct": 21.084
+            },
+            {
+              "board": "4c9cKc7hJs",
+              "exact_line": "b50 c/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 2.55303,
+              "eligible_combos": 16,
+              "reach_weighted_b50_pct": 22.301
+            },
+            {
+              "board": "4c9cKc7hJs",
+              "exact_line": "b50 c/b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.026515,
+              "eligible_combos": 3,
+              "reach_weighted_b50_pct": 6.04
+            }
+          ],
+          "medium50_not_a_generic_MODEL_cert": true,
+          "source_sha256": "bf88d071fd4da64c58ef10592514fe8f9725979021513695887b7525a05bdec8",
+          "reach_summary": {
+            "nodes": 48,
+            "combos_reachable": 2495,
+            "combos_unreachable": 2186,
+            "forced_single": 2337,
+            "near_mixed": 158,
+            "discarded_secondary": 4010
+          },
+          "certified_nl2_cells": 0
+        }
+      ]
+    }
+  ],
+  "execution_backend": "LOCAL_DOT_CLOUD_NOT_GITHUB_ACTIONS",
+  "parent_wr_exact_lineage_audit": [
+    {
+      "profile": "CO3_BTN-gto-Kc9c4c",
+      "line": "b50 c",
+      "source_wr_exact_match": true,
+      "parent_gto_gap_pct": 0.4301464259624481,
+      "parent_hero_gap_pct": null,
+      "weighted_combos_by_seat": [
+        71,
+        80
+      ]
+    }
+  ]
+}
