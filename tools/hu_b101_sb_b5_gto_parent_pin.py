@@ -7,7 +7,7 @@ import argparse,gzip,hashlib,json,pathlib
 R=pathlib.Path("data")
 INDEX=R/"solver_evidence/NL2_MULTIBOARD_B5_SBGAPS.index.json"
 ARCH=R/"solver_evidence/NL2_MULTIBOARD_B5_SBGAPS.json.gz"
-B48=R/"nl2_hu_b48_next9_sourceblind_gaps.json"
+B54=R/"nl2_hu_b54_next14_sourceblind_gaps.json"
 V23=R/"nl2_hu_multiboard_status_v23_b100_lmp_pair.json"
 OUT=R/"nl2_hu_b101_sb_as7h3d_b5_gto_parent_pin.json"
 DOC=pathlib.Path("docs/NL2_HU_B101_SB_AS7H3D_GTO_PARENT_PIN.md")
@@ -58,7 +58,7 @@ def main():
     assert all(x in cfg.get('flop_ip','') for x in ('33%','50%','75%','100%'))
     parent=[n for n in fr['nodes'] if n['line']=='b50 c/' and n['board'][-2:]=='Kd']
     assert len(parent)==1 and all(any(float(z)>1e-4 for z in ws) for ws in parent[0]['wr'])
-    locked=json.loads(B48.read_text())
+    locked=json.loads(B54.read_text())
     row=next(x for x in locked['rows'] if x['rank']==43)
     assert row['model_id']=='ln-opfr-r_model-1e6gydx'
     assert row['missing_to_three_flops']==1
