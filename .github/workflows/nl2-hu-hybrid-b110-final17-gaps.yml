@@ -1,0 +1,65 @@
+name: TASK-HYBRID B110 source-blind ranks376-392 exact-board missing proofs
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b110-final17-gaps.yml', 'tools/hu_b110_final17_gaps.py']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Preregister final seventeen frequency nodes BEFORE reading solver source and audit only real boards
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b110_final17_gaps.py
+          python3 tools/hu_b110_final17_gaps.py
+      - name: Independent source blindness/count/actor and missing-board gates
+        run: |
+          python3 - <<'PY'
+          import json,hashlib
+          x=json.load(open('data/nl2_hu_b110_final17_sourceblind_gaps.json'))
+          v=json.load(open('data/nl2_hu_multiboard_status_v25_b106_rank135.json'))
+          assert x['source_blind_preselection_ranks']==list(range(376,393))
+          assert x['no_current_reclassification'] and x['no_source_outcome_based_rank_selection']
+          assert len(x['rows'])==17 and v['CERT_MULTIBOARD']==135 and v['APPROX']==257
+          assert x['status_v25_cert']==135 and x['status_v25_approx']==257
+          assert x['fixed_rank_sha256']==hashlib.sha256(
+            open('data/nl2_hu_multiboard_prerank.json','rb').read()).hexdigest()
+          for r in x['rows']:
+              assert r['current_label']=='APPROX'
+              assert r['missing_to_three_flops']==max(0,3-r['distinct_matched_flop_count'])
+              if r['meets_named_board_certification_evidence']:
+                  assert 3<=len(r['candidate_3_5_flops'])<=5
+                  assert len(set(r['candidate_3_5_flops']))==len(r['candidate_3_5_flops'])
+          print('PASS B110 prereg source-blind final seventeen gaps, V25 135/257 unchanged')
+          PY
+      - name: Commit independently source-verified gaps to PR#2 Draft (no merge)
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b110_final17_sourceblind_gaps.json docs/NL2_HU_B110_FINAL17_GAPS.md
+          git commit -m 'TASK-HYBRID B110: preregister frozen ranks376-392; exact GTO+hero-lock missing-board report'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - name: Retain source audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B110-ranks376-392-gaps
+          path: |
+            data/nl2_hu_b110_final17_sourceblind_gaps.json
+            docs/NL2_HU_B110_FINAL17_GAPS.md
+          retention-days: 30
