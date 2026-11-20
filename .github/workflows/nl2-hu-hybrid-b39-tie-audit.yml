@@ -1,0 +1,61 @@
+name: TASK-HYBRID B39 preregister source-blind tied-frequency high-priority APPROX candidates
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b39-tie-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  audit-ties:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Freeze equal-score cohort before reading any exact board solver evidence
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_highfreq_tie_audit.py
+          python3 tools/hu_highfreq_tie_audit.py
+      - name: Independently enforce original CERT and new tie cohort non-promotion
+        run: |
+          python3 - <<'PY'
+          import json,hashlib
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          x=json.load(open('data/nl2_hu_b39_frequency_tie_prereg.json'))
+          assert x['schema']=='NL2_HU_B39_SOURCE_BLIND_EQUAL_SCORE_TIE_PREREG_V1'
+          assert x['tie_ranks']==[25,26] and len(x['rows'])==2
+          assert x['original_preregistered_N']==24
+          assert x['source_blind_selection']=='ALL_RANKS_AFTER_24_WITH_SCORE_EQUAL_TO_FROZEN_RANK24'
+          assert x['no_auto_upgrade_to_cert'] and x['no_change_to_original_cutoff']
+          assert s['CERT_MULTIBOARD']==24 and s['APPROX']==368
+          assert x['frozen_status_before_tie_audit_sha256']==hashlib.sha256(
+              open('data/nl2_hu_multiboard_status.json','rb').read()).hexdigest()
+          print('PASS B39 transparent high-frequency tie pre-registration and read-only CFR gap audit')
+          PY
+      - name: Commit B39 preregistration and truthful missing-board evidence to PR #2; never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b39_frequency_tie_prereg.json docs/NL2_HU_B39_TIE_PREREG.md
+          git commit -m 'TASK-HYBRID B39: score-blind tie cohort ranks 25-26, exact-source shortfalls; 24 CERT unchanged'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - name: Retain audit on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B39-sourceblind-tie-candidates
+          path: |
+            data/nl2_hu_b39_frequency_tie_prereg.json
+            docs/NL2_HU_B39_TIE_PREREG.md
+          retention-days: 30
