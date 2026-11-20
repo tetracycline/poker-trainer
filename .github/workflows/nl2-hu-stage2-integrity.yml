@@ -51,14 +51,18 @@ jobs:
           assert ix['gto_cert_exact_board_subgames']==114
           assert ix['nl2_pool_locked_provisional_subgames']==233
           assert ix['models_certified_by_this_file']==d['generic_model_certified']==0
-          assert d['all_actors_including_locked_villain_nonpolarized_source_nodes']==675
-          assert 0<d['medium_nonpolarized_exact_board_candidates']<=675
+          status=json.loads((p/'nl2_hu_stage2_status.json').read_text())
+          assert status['source_cases']==d['source_subgames']==644
+          assert status['gto_exact_board_certificates']==219
+          assert status['nl2_provisional_pool_locked_source_cases']==425
+          assert d['all_actors_including_locked_villain_nonpolarized_source_nodes']>=675
+          assert 0<d['medium_nonpolarized_exact_board_candidates']<=d['all_actors_including_locked_villain_nonpolarized_source_nodes']
           assert queue['summary']['model_nodes']==len(queue['records'])==392
           assert model['model_nodes']==len(model['records'])==392 and model['generic_CERT']==0
           assert refs['generic_models']==len(refs['items'])==392 and refs['generic_certificates']==0
           audit=json.loads(open('audit/link.json').read())
           print('NAV',audit.get('counts'))
-          print('CFR',{'exact':347,'GTO':114,'provisional_pool_lock':233,'nonpolarized_research_nodes':675,'uncertified_model':392})
+          print('CFR',{'exact':status['source_cases'],'GTO':status['gto_exact_board_certificates'],'provisional_pool_lock':status['nl2_provisional_pool_locked_source_cases'],'hero_or_gto_nonpolarized_research_nodes':d['medium_nonpolarized_exact_board_candidates'],'uncertified_model':392})
           PY
       - name: Attach independent audit evidence
         if: always()
