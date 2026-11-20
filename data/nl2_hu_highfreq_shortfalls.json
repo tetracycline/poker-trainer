@@ -1,8 +1,8 @@
 {
   "schema": "NL2_TOP24_FROZEN_MULTIBOARD_SHORTFALLS_V1",
   "top24": 24,
-  "certified_from_source": 16,
-  "still_approx": 8,
+  "certified_from_source": 18,
+  "still_approx": 6,
   "new_source_batches": [
     "NL2_MULTIBOARD_B1.json.gz",
     "NL2_MULTIBOARD_B2_PARTIAL.json.gz",
@@ -11,11 +11,12 @@
     "NL2_MULTIBOARD_B4_MICRO.json.gz",
     "NL2_MULTIBOARD_B5_SBGAPS.json.gz",
     "NL2_MULTIBOARD_B7_RIVER.json.gz",
-    "NL2_MULTIBOARD_B8_LOCK.json.gz"
+    "NL2_MULTIBOARD_B8_LOCK.json.gz",
+    "NL2_MULTIBOARD_B11_RIVER_FAST.json.gz"
   ],
   "sources": {
     "official_subgames": 644,
-    "new_subgames": 833,
+    "new_subgames": 837,
     "source_files": [
       "data/solver_evidence/NL2_MULTIBOARD_B1.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json.gz",
@@ -24,12 +25,13 @@
       "data/solver_evidence/NL2_MULTIBOARD_B4_MICRO.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B5_SBGAPS.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B7_RIVER.json.gz",
-      "data/solver_evidence/NL2_MULTIBOARD_B8_LOCK.json.gz"
+      "data/solver_evidence/NL2_MULTIBOARD_B8_LOCK.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B11_RIVER_FAST.json.gz"
     ]
   },
   "missing_by_spot": {
     "LMP_CO_BB": 1,
-    "SB_BB": 7
+    "SB_BB": 5
   },
   "recommendation": "Solve a few new exact flops ONLY where action history, actual SPR, actor, sequential legal combos, and hero-side NL2 lock can be matched; never grant CERT from texture alone.",
   "ranking_locked": true,
@@ -340,7 +342,7 @@
           "source_run_id": 44732810327,
           "node_spr": 16.166667,
           "line": "x x/",
-          "lock_count": 1
+          "lock_count": 2
         }
       ],
       "upcoming_preregistered_board_examples": [],
@@ -1590,23 +1592,29 @@
       "spot": "SB_BB",
       "street": 2,
       "original_model_spr": 6.167,
-      "current_label": "APPROX",
+      "current_label": "CERT-MULTIBOARD",
       "exact_matching_flops": [
         "8s8h3d",
+        "9s6h3d",
         "As9h2d",
-        "Js9h4d"
+        "Js9h4d",
+        "KsQh4d"
       ],
       "flops_with_hero_lock": [
-        "8s8h3d"
+        "8s8h3d",
+        "9s6h3d",
+        "KsQh4d"
       ],
       "flops_without_hero_lock": [
         "As9h2d",
         "Js9h4d"
       ],
-      "distinct_matching_gto_flop_count": 3,
-      "distinct_gto_plus_hero_lock_count": 1,
-      "missing_required_flops": 2,
+      "distinct_matching_gto_flop_count": 5,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
       "texture_labels_seen": [
+        "KQ_HIGH",
+        "LOW",
         "PAIRED"
       ],
       "recorded_line_examples": [
@@ -1630,11 +1638,23 @@
           "node_spr": 6.166667,
           "line": "x x/b75 c/",
           "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44741462253,
+          "node_spr": 6.166667,
+          "line": "x x/b75 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44741462253,
+          "node_spr": 6.166667,
+          "line": "x x/b75 c/",
+          "lock_count": 1
         }
       ],
       "upcoming_preregistered_board_examples": [
-        "KsQh4d",
-        "9s6h3d",
         "As7h3d",
         "Jh9d6s"
       ],
@@ -1648,23 +1668,29 @@
       "spot": "SB_BB",
       "street": 2,
       "original_model_spr": 9.5,
-      "current_label": "APPROX",
+      "current_label": "CERT-MULTIBOARD",
       "exact_matching_flops": [
         "8s8h3d",
+        "9s6h3d",
         "As9h2d",
-        "Js9h4d"
+        "Js9h4d",
+        "KsQh4d"
       ],
       "flops_with_hero_lock": [
-        "8s8h3d"
+        "8s8h3d",
+        "9s6h3d",
+        "KsQh4d"
       ],
       "flops_without_hero_lock": [
         "As9h2d",
         "Js9h4d"
       ],
-      "distinct_matching_gto_flop_count": 3,
-      "distinct_gto_plus_hero_lock_count": 1,
-      "missing_required_flops": 2,
+      "distinct_matching_gto_flop_count": 5,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
       "texture_labels_seen": [
+        "KQ_HIGH",
+        "LOW",
         "PAIRED"
       ],
       "recorded_line_examples": [
@@ -1688,11 +1714,23 @@
           "node_spr": 9.540161,
           "line": "x x/b33 c/",
           "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44741462253,
+          "node_spr": 9.540161,
+          "line": "x x/b33 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44741462253,
+          "node_spr": 9.540161,
+          "line": "x x/b33 c/",
+          "lock_count": 1
         }
       ],
       "upcoming_preregistered_board_examples": [
-        "KsQh4d",
-        "9s6h3d",
         "As7h3d",
         "Jh9d6s"
       ],
