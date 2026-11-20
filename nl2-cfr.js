@@ -82,13 +82,20 @@ async function loadIndex(path,zipped=false){
  return data.subgames;
 }
 async function loadSource(){
- // Prefer the independently hashed, deterministic compact 347-case archive.
- // Do not load the old 266-case file plus the 81-case extension twice.
- try {return await loadIndex('data/nl2_hu_exact_boards.json.gz',true);}
+ // Independently source-verified batches 01–03 plus 04; do not count
+ // any same-source duplicate from later optional local/offline shards.
+ let base;
+ try {base=await loadIndex('data/nl2_hu_exact_boards.json.gz',true);}
  catch(error){
    console.warn('Compact CFR archive unavailable; validating the full JSON source',error);
-   return await loadIndex('data/nl2_hu_exact_boards.json',false);
+   base=await loadIndex('data/nl2_hu_exact_boards.json',false);
  }
+ const extra=await Promise.allSettled([
+   loadIndex('data/nl2_hu_exact_boards_b04.json.gz',true)
+ ]);
+ for(const x of extra)if(x.status==='rejected')
+   console.warn('Independent new exact-board source batch not available',x.reason);
+ return base.concat(...extra.filter(x=>x.status==='fulfilled').map(x=>x.value));
 }
 async function loadPathOverlay(path){
  const r=await fetch(path,{cache:'no-store'});
