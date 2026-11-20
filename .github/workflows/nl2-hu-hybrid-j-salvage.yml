@@ -1,0 +1,119 @@
+name: TASK-HYBRID J-salvage verify five successful SB_BB river-size subgames
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-j-salvage.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-five-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download exactly the five completed J solves, EXCLUDE cancelled As9h2d exp_oop
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads
+          for name in \
+            nl2-multiboard-B7_RIVER-SB_BB-gto-8s8h3d \
+            nl2-multiboard-B7_RIVER-SB_BB-exp_oop-8s8h3d \
+            nl2-multiboard-B7_RIVER-SB_BB-gto-Js9h4d \
+            nl2-multiboard-B7_RIVER-SB_BB-exp_oop-Js9h4d \
+            nl2-multiboard-B7_RIVER-SB_BB-gto-As9h2d; do
+            mkdir -p "downloads/$name"
+            gh run download 44737532081 --name "$name" --repo "$GITHUB_REPOSITORY" --dir "downloads/$name"
+            test -d "downloads/$name/evidence"
+          done
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 5
+      - name: Independently verify full-street per-combo reach, 5 true subjob source SHA, rake, SPR and actor
+        run: |
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py \
+            --downloads downloads --solver-root solver --run-id 44737532081 \
+            --out trainer/data/solver_evidence/NL2_MULTIBOARD_B7_RIVER.json
+      - name: Freeze accurately counted GTO and hero-lock raw source index; no false CERT
+        run: |
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B7_RIVER.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert d['source_run_id']==44737532081 and not d['errors'] and len(d['artifacts'])==5
+          assert sum(x['version']=='gto' for x in d['artifacts'])==3
+          assert sum(x['version']=='exp_oop' for x in d['artifacts'])==2
+          assert d['exact_board_gto_sources']>0 and d['imputed_pool_locked_sources']>0
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          ix={'schema':'NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+              'run_id':44737532081,'batch':'B7_RIVER',
+              'actual_spot_flop_version_jobs':5,
+              'verified_cases':d['new_authentic_board_cases'],
+              'gto_cases':d['exact_board_gto_sources'],
+              'locked_cases':d['imputed_pool_locked_sources'],
+              'source_sha256':hashlib.sha256(raw).hexdigest(),
+              'gzip_sha256':hashlib.sha256(gz.read_bytes()).hexdigest(),
+              'generic_model_certification':0,
+              'excluded_unverified_job':'SB_BB As9h2d exp_oop cancelled after 21-minute solve timeout',
+              'target_sources':['SB_BB 8s8h3d GTO+EXP_OOP; exact 33/66/75 turn sizes',
+                                'SB_BB Js9h4d GTO+EXP_OOP; exact 33/66/75 turn sizes',
+                                'SB_BB As9h2d GTO-only; exact 33/66/75 turn sizes']}
+          p.with_suffix('.index.json').write_text(json.dumps(ix,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          print('PASS source GTO',ix['gto_cases'],'EXP',ix['locked_cases'],'verified jobs=',5)
+          PY
+      - name: Reclassify frozen top24 only if exact GTO/hero/SPR/reach/texture gates pass
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_multiboard_consolidate.py --root data --out data/nl2_hu_multiboard_status.json --doc docs/NL2_HU_MULTIBOARD_STATUS.md
+          python3 tools/hu_highfreq_shortfalls.py data data/nl2_hu_highfreq_shortfalls.json
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status.json --out data/nl2_hu_cert_lock_medium_audit.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          g=json.load(open('data/nl2_hu_highfreq_shortfalls.json'))
+          a=json.load(open('data/nl2_hu_cert_lock_medium_audit.json'))
+          assert s['CERT_MULTIBOARD']>=16 and s['TOTAL']==392 and s['CERT_MULTIBOARD']+s['APPROX']==392
+          assert s['independently_verified_completed_batches']['B7_RIVER']['authentic_jobs']==5
+          assert g['certified_from_source']==s['CERT_MULTIBOARD'] and len(g['rows'])==24
+          assert a['cert_multiboard']==s['CERT_MULTIBOARD'] and a['approx']==s['APPROX']
+          print('PASS J partial river-size source-only',s['CERT_MULTIBOARD'],'CERT',s['APPROX'],'APPROX')
+          PY
+      - name: Push independently verified partial J river evidence and truthful counters to PR #2 Draft
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B7_RIVER.json.gz data/solver_evidence/NL2_MULTIBOARD_B7_RIVER.index.json data/nl2_hu_multiboard_status.json data/nl2_hu_highfreq_shortfalls.json data/nl2_hu_cert_lock_medium_audit.json docs/NL2_HU_MULTIBOARD_STATUS.md
+          git commit -m 'TASK-HYBRID J salvage: verify five true GTO+hero lock jobs; exclude cancelled sixth, recertify 392'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - name: Retain all J recovery evidence if review/push fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-J-five-verified-no-fake-sixth
+          path: trainer/data/solver_evidence/NL2_MULTIBOARD_B7_RIVER*
+          retention-days: 30
