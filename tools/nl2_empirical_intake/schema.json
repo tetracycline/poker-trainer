@@ -1,0 +1,32 @@
+{
+ "$schema":"https://json-schema.org/draft/2020-12/schema",
+ "title":"NL2_EXACT_NODE_LOCK_INTAKE_V1",
+ "description":"Syntactic envelope. validate.py additionally requires exact fields, full action/chip replay, source hashing, menu legality, distinct exact nodes, n>=500 and non-showdown sampling. No solver wiring.",
+ "type":"object","additionalProperties":false,"required":["schema","synthetic","source","rows"],
+ "properties":{
+  "schema":{"const":"NL2_EXACT_NODE_LOCK_INTAKE_V1"},
+  "synthetic":{"type":"boolean"},
+  "source":{"type":"object","additionalProperties":false,
+   "required":["sha256","start","end","provenance","dedup","attested_hand_count","parsed_hand_count","rejected_hand_count","reject_counts","sampling"],
+   "properties":{"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"start":{"type":"string","format":"date"},"end":{"type":"string","format":"date"},"provenance":{"type":"string","minLength":10},"dedup":{"const":"UNIQUE_SITE_HAND_ID"},"attested_hand_count":{"$ref":"#/$defs/count"},"parsed_hand_count":{"$ref":"#/$defs/count"},"rejected_hand_count":{"$ref":"#/$defs/count"},"reject_counts":{"$ref":"#/$defs/counts"},"sampling":{"enum":["PUBLIC_ACTION_HISTORIES","PRIVATE_HOLECARDS_INDEPENDENT_OF_SHOWDOWN","SHOWDOWN_ONLY"]}}},
+  "rows":{"type":"array","minItems":1,"items":{"$ref":"#/$defs/row"}}
+ },
+ "$defs":{
+  "count":{"type":"integer","minimum":0},
+  "counts":{"type":"object","additionalProperties":{"$ref":"#/$defs/count"}},
+  "card":{"type":"string","pattern":"^[2-9TJQKA][cdhs]$"},
+  "chip_pair":{"type":"array","minItems":2,"maxItems":2,"items":{"$ref":"#/$defs/count"}},
+  "action":{"type":"object","additionalProperties":false,"required":["actor","action","to"],"properties":{"actor":{"type":"integer","minimum":0,"maximum":5},"action":{"enum":["x","f","c","b","r"]},"to":{"$ref":"#/$defs/count"}}},
+  "street_actions":{"type":"array","items":{"$ref":"#/$defs/action"}},
+  "row":{"type":"object","additionalProperties":false,"required":["cohort","preflop","flop_state","board","street","prior_streets","current_actions","node","counts","n","mode","combo"],"properties":{
+   "cohort":{"type":"object","additionalProperties":false,"required":["stake","table","seats","family","positions","rake","ante"],"properties":{"stake":{"const":"NL2"},"table":{"const":"NLHE_CASH"},"seats":{"const":6},"family":{"enum":["SRP","3BP","ISO","LMP"]},"positions":{"type":"array","minItems":2,"maxItems":2,"uniqueItems":true,"items":{"enum":["SB","BB","UTG","HJ","CO","BTN"]}},"rake":{"type":"string","minLength":1},"ante":{"const":0}}},
+   "preflop":{"type":"object","additionalProperties":false,"required":["starting_stacks","actions"],"properties":{"starting_stacks":{"type":"array","minItems":6,"maxItems":6,"items":{"type":"integer","minimum":3}},"actions":{"$ref":"#/$defs/street_actions"}}},
+   "flop_state":{"type":"object","additionalProperties":false,"required":["pot","remaining"],"properties":{"pot":{"$ref":"#/$defs/count"},"remaining":{"$ref":"#/$defs/chip_pair"}}},
+   "board":{"type":"array","items":{"$ref":"#/$defs/card"},"uniqueItems":true,"minItems":3,"maxItems":5},"street":{"enum":[1,2,3]},
+   "prior_streets":{"type":"array","maxItems":2,"items":{"$ref":"#/$defs/street_actions"}},"current_actions":{"$ref":"#/$defs/street_actions"},
+   "node":{"type":"object","additionalProperties":false,"required":["actor","pot","remaining","committed","spr_num","spr_den","menu"],"properties":{"actor":{"enum":[0,1]},"pot":{"$ref":"#/$defs/count"},"remaining":{"$ref":"#/$defs/chip_pair"},"committed":{"$ref":"#/$defs/chip_pair"},"spr_num":{"$ref":"#/$defs/count"},"spr_den":{"type":"integer","minimum":1},"menu":{"type":"array","uniqueItems":true,"minItems":2,"items":{"type":"string","pattern":"^([xfc]|[br]:[1-9][0-9]*)$"}}}},
+   "counts":{"$ref":"#/$defs/counts"},"n":{"type":"integer","minimum":500},
+   "mode":{"enum":["AGGREGATE_FREQUENCY","EXACT_PRIVATE_COMBO"]},"combo":{"oneOf":[{"type":"null"},{"type":"array","minItems":2,"maxItems":2,"uniqueItems":true,"items":{"$ref":"#/$defs/card"}}]}
+  }}
+ }
+}
