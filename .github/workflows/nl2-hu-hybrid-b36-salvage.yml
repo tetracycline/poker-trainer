@@ -1,0 +1,120 @@
+name: TASK-HYBRID B36 salvage two B35 SHA-pinned BTN_BB genuine turn/river locks (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b36-salvage.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  salvage-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download exactly two already-solved immutable Rust NL2 partial-lock artifacts from 44798496352
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for flop in KsQh4d Js9h4d; do
+            name="nl2-multiboard-B36_BTN_RELOCK-$flop-xx-exp_oop"
+            mkdir -p "downloads/$name"
+            gh run download 44798496352 --name "$name" --repo "$GITHUB_REPOSITORY" --dir "downloads/$name"
+            test -d "downloads/$name/evidence"
+          done
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 2
+      - name: Revalidate full original GTO SHA, 100bb pot/SPR, rake, correct actor, downstream Rust reach and source locks
+        run: |
+          set -euo pipefail
+          mkdir -p trainer/data/solver_evidence
+          python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
+          python3 trainer/tools/verify_hu_multiboard_100bb.py \
+             --downloads downloads --solver-root solver --run-id 44798496352 \
+             --out trainer/data/solver_evidence/NL2_MULTIBOARD_B36_BTN_RELOCK.json
+      - name: Freeze exactly two authenticated turn/river NL2 marginal-locked games; preserve old UNKNOWN
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,gzip,hashlib,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B36_BTN_RELOCK.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert d['source_run_id']==44798496352 and not d['errors']
+          assert len(d['artifacts'])==2 and d['exact_board_gto_sources']==0
+          assert all(x['version']=='exp_oop' and not x['errors'] for x in d['artifacts'])
+          assert {(x['flop'],x['version']) for x in d['artifacts']}=={
+              ('KsQh4d','exp_oop'),('Js9h4d','exp_oop')}
+          assert all(x['cases'] and
+                     all(c['flop_line']=='x x' for c in x['cases'])
+                     for x in d['artifacts'])
+          assert d['new_authentic_board_cases']==d['imputed_pool_locked_sources']>=2
+          raw=p.read_bytes()
+          gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          idx=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+              run_id=d['source_run_id'],batch='B36_BTN_RELOCK',
+              actual_spot_flop_version_jobs=2,verified_cases=d['new_authentic_board_cases'],
+              gto_cases=0,locked_cases=d['imputed_pool_locked_sources'],
+              source_sha256=hashlib.sha256(raw).hexdigest(),
+              gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+              generic_model_certification=0,original_GTO_run_id=44653774402,
+              named_flops=['KsQh4d','Js9h4d'],
+              limit='B35-pinned original GTO flop with NEW downstream-only partial NL2 marginal locks. Historical per-node rates UNKNOWN; generic texture not GTO.')
+          p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          print('PASS B36 verified pinned original GTO + downstream source',idx)
+          PY
+      - name: Strict immutable model source reclassify and full CERT provenance/middle-size audits
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_multiboard_consolidate.py --root data --out data/nl2_hu_multiboard_status.json --doc docs/NL2_HU_MULTIBOARD_STATUS.md
+          python3 tools/hu_highfreq_shortfalls.py data data/nl2_hu_highfreq_shortfalls.json
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status.json --out data/nl2_hu_cert_lock_medium_audit.json
+          python3 tools/hu_cert_lock_medium_coverage_matrix.py
+          python3 tools/hu_cert_ui_completeness_gate.py
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          g=json.load(open('data/nl2_hu_cert_ui_completeness_gate.json'))
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix.json'))
+          b=s['independently_verified_completed_batches']['B36_BTN_RELOCK']
+          assert s['TOTAL']==392 and s['CERT_MULTIBOARD']==24 and s['APPROX']==368
+          assert b['status']=='VERIFIED' and b['authentic_jobs']==2 and b['locked_cases']>=2
+          assert g['cert_models']==24 and g['approx_models']==368
+          assert g['all_cert_boards_have_exact_source_and_hero_lock']
+          assert m['CERT_MULTIBOARD']==24 and m['strict_aggregate']['hero_lock_variants']>=105
+          assert g['b50_nonpolarized_research_candidate_boards']==35
+          print('PASS B36 authentic downstream locked proof; frozen cert',s['CERT_MULTIBOARD'],'approx',s['APPROX'])
+          PY
+      - name: Commit actual verified source and excluded invalid branches, push Draft PR #2 (never merge)
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B36_BTN_RELOCK.index.json data/solver_evidence/NL2_MULTIBOARD_B36_BTN_RELOCK.json.gz data/nl2_hu_multiboard_status.json data/nl2_hu_highfreq_shortfalls.json data/nl2_hu_cert_lock_medium_audit.json data/nl2_hu_cert_lock_medium_matrix.json data/nl2_hu_cert_ui_completeness_gate.json docs/NL2_HU_MULTIBOARD_STATUS.md docs/NL2_HU_CERT_LOCK_MEDIUM_MATRIX.md
+          git commit -m 'TASK-HYBRID B36 salvage: 2 verified BTN_BB x-x downstream marginal locks from original B35 GTO'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - name: Keep immutable source/index if push conflicts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B36-four-real-BTN-locks-two-rejected
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B36_BTN_RELOCK*
+            trainer/
+          retention-days: 30
