@@ -45,7 +45,7 @@ def discover(root):
                     all(len(z.get('cases',[]))>0 and not z.get('errors') for z in d['artifacts'])):
                 raise ValueError('Archive index differs from verified raw job count '+code)
             ix['actual_spot_flop_version_jobs']=n
-            idx.write_text(json.dumps(ix,ensure_ascii=False,indent=2)+'\\n'.replace('\\n','\n'))
+            idx.write_text(json.dumps(ix,ensure_ascii=False,indent=2)+'\n')
             print('REPAIRED VERIFIED JOB COUNT ONLY',code,'jobs=',n,flush=True)
         if (d['schema']!='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1' or d['errors'] or
             d['source_run_id']!=ix['run_id'] or
