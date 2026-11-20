@@ -1,0 +1,70 @@
+name: TASK-HYBRID B107 SHA pin individually verified B2 CO_BB Js9h4d parent for ranks215/220
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b107-co-parent-pin.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Fetch one previously B2_PARTIAL verified GTO, NOT unrelated original failed job
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p gto_parent
+          gh run download 44666290556 --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B2-CO_BB-gto-Js9h4d' --dir gto_parent
+          test -s gto_parent/evidence/CO_BB-gto-Js9h4d.json
+      - name: Independently pin full original Rust GTO root, job, actor IP, freeze ranks215/220 before experimental source
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b107_co_b2_gto_parent_pin.py
+          python3 tools/hu_b107_co_b2_gto_parent_pin.py --artifact-root gto_parent
+      - name: Independently verify source is original authenticated B2 artifact, not failed workflow or invented GTO
+        run: |
+          python3 - <<'PY'
+          import json
+          x=json.load(open('data/nl2_hu_b107_co_js9h4d_b2_gto_parent_pin.json'))
+          assert x['schema']=='NL2_HU_B107_CO_B2_JS9H4D_GTO_PARENT_V1'
+          assert x['result']=='PASS_INDIVIDUALLY_VERIFIED_B2_GTO_ARTIFACT'
+          assert x['full_B2_workflow_failed_unrelated_job']
+          assert x['B2_failed_SB3_BTN_GTO_job_explicitly_excluded']
+          assert x['original_source_run_id']==44666290556 and x['frozen_targets']==[215,220]
+          assert x['flop_line']=='x b33 c' and x['turn_line']=='x b100 c'
+          assert x['public_flop']=='Js9h4d' and x['turn']=='Ts'
+          assert x['original_GTO_positive_strict_IP_actor_node_count']>0
+          assert (x['new_model_CERT'],x['certified_source_V25'])==(0,[135,257])
+          assert all(len(x[k])==64 for k in ['original_manifest_SHA256','original_GTO_flop_SHA256','original_GTO_job_SHA256','B2_PARTIAL_source_archive_SHA256'])
+          print('PASS B107 individually verified historical full-flop GTO SHA, 135/257 unchanged')
+          PY
+      - name: Commit source-only GTO root pin to Draft PR #2, no merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b107_co_js9h4d_b2_gto_parent_pin.json docs/NL2_HU_B107_CO_B2_JS9H4D_GTO_PARENT_PIN.md
+          git commit -m 'TASK-HYBRID B107: individually verified B2 CO_BB Js9h4d GTO root for rank215+220 IP hero river locks'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B107-individual-B2-GTO-parent
+          path: |
+            data/nl2_hu_b107_co_js9h4d_b2_gto_parent_pin.json
+            docs/NL2_HU_B107_CO_B2_JS9H4D_GTO_PARENT_PIN.md
+          retention-days: 30
