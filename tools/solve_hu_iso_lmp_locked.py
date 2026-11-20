@@ -75,7 +75,7 @@ def main():
     manifest=dict(schema='HU_ASSUMED_NL2_AGGREGATE_LOCKED_CFR_V1',
       spot=a.spot,version=a.version,flop=a.flop,turns=pipeline.turns_for(a.flop)[:a.turn_count],
       actual_pool_source='poker-solver/inputs/pool_stats.json',pool_sha256=sha(root/'inputs/pool_stats.json'),
-      preflop_assumptions=rule,100bb_initial_stack=True,
+      preflop_assumptions=rule,initial_stack_bb=100.0,
       root_pot_bb=rule['pot'],root_stack_bb=rule['stack'],root_spr=round(rule['stack']/rule['pot'],6),
       oop_class_weights=dict(zip(ranges.NAMES,oop_weights)),
       ip_class_weights=dict(zip(ranges.NAMES,ip_weights)),
