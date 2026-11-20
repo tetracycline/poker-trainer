@@ -42,6 +42,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B13_LMP_B50 | 44743586052 | 2 | 0 |
 | B14_FOCUS_EXP | PENDING | 0 | 0 |
 | B15_GTO_PARENT_EXP | 44751432807 | 0 | 1 |
+| B16_GTO_PARENT_TWO | PENDING | 0 | 0 |
 
 ## Top-24 preregistered game histories
 
