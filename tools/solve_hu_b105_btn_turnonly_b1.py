@@ -27,7 +27,7 @@ def main():
     assert pin['source_archive_sha256']==idx['gzip_sha256']
     assert pin['preselected_rank']==135 and pin['preselected_model_id']=='ln-ipfr-r_model-3lq5u6'
     assert pin['missing_one_flop']=='As9h2d' and pin['existing_hero_locked_flops']==['Jh9d6s','KsQh4d']
-    assert (pin['target_public_flop',pin['target_turn',pin['flop_line'],pin['turn_line'])==(
+    assert (pin['target_public_flop'],pin['target_turn'],pin['flop_line'],pin['turn_line'])==(
        FLOP,TURN,LINE,TURNLINE)
     assert pin['original_source_GTO_IP_hero_river_nodes']>0
     artifact=args.gto_artifact_root.resolve()
