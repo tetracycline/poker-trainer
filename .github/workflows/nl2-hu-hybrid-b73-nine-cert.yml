@@ -1,4 +1,4 @@
-name: TASK-HYBRID B73 V12 nine frozen-rank CERT 77/315 with 334 real board lock and 50pct proof
+name: TASK-HYBRID B73 V12 nine frozen-rank CERT 86/306 with 334 real board lock and 50pct proof
 on:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
@@ -24,7 +24,7 @@ jobs:
           python3 tools/hu_b73_v12_nine_cert.py
           node --check nl2-multiboard.js
           node --check nl2_hu_multiboard_ui.js
-      - name: Verify V9 immutable, exactly 9 upgrades, 334 named lock/b50 boards, Batch E and all rivers
+      - name: Verify V11 immutable, exactly 9 upgrades, 334 named lock/b50 boards, Batch E and all rivers
         run: |
           set -euo pipefail
           python3 - <<'PY'
