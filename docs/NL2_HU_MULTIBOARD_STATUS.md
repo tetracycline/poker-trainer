@@ -43,6 +43,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B14_FOCUS_EXP | PENDING | 0 | 0 |
 | B15_GTO_PARENT_EXP | 44751432807 | 0 | 1 |
 | B16_GTO_PARENT_TWO | 44752125878 | 0 | 2 |
+| B17_RIVER_PINNED | PENDING | 0 | 0 |
 
 ## Top-24 preregistered game histories
 
