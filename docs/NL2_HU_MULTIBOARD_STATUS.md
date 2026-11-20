@@ -39,6 +39,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B10_RIVER_EXP | PENDING | 0 | 0 |
 | B11_RIVER_FAST | PENDING | 0 | 0 |
 | B12_LOCK_FAST | PENDING | 0 | 0 |
+| B13_LMP_B50 | PENDING | 0 | 0 |
 
 ## Top-24 preregistered game histories
 
