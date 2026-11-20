@@ -371,8 +371,17 @@ def verify(root,source_pin,run_id):
                          m.get('gto_parent_source_run_id')==44736420272 and
                          m.get('gto_parent_source_sha256')=='af894c256528d482110eea24682467970fdb2d90cafec6de677cfd46a664b0d3' and
                          m.get('flop_root_jobfile_sha256')=='b86009ee8f620defbf9645bc5219c24b128e103ca6d95bf483b2748735b8ea44' and
-                         m.get('gto_parent_source_manifest_sha256')=='af789ac9a2811e81672c59690913ac380bc47124fb9060be5466ce179f73a8f9')):
-                        raise ValueError('x-x turn extraction outside specifically SHA-pinned BTN_BB, B98 LMP or B101 SB_BB parent')
+                         m.get('gto_parent_source_manifest_sha256')=='af789ac9a2811e81672c59690913ac380bc47124fb9060be5466ce179f73a8f9')
+                        or
+                        # B104 only: unmodified authentic B1 BTN_BB As9h2d
+                        # GTO full-size flop, actor IP. No other source accepted.
+                        (m['spot']=='BTN_BB' and m['version']=='exp_ip' and
+                         m['flop']=='As9h2d' and m.get('selected_lines')==['x b100 c'] and
+                         m.get('gto_parent_source_run_id')==44666285424 and
+                         m.get('gto_parent_source_sha256')=='80cbf4e9c56d01f6fb56400006b02029088de5114d3e70d848c3a233157e7a8e' and
+                         m.get('flop_root_jobfile_sha256')=='f23084dbc9a1f9539c5d52ab57d91d62253c794e000fb96b87321e274e888a19' and
+                         m.get('gto_parent_source_manifest_sha256')=='385c2fc4341b185633345d617638ea71c1a922b5cfe6297625c0a44cb6678fbb')):
+                        raise ValueError('x-x extraction outside strictly SHA-pinned BTN, B98 LMP, B101 SB or B104 BTN actor parent')
                     if m.get('selected_turn_lines')!=[' '.join(token)]:
                         raise ValueError('Focused turn extraction differs from predeclared line')
                     subjobfile=rawfile.with_suffix('.job.json')
