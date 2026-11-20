@@ -1,0 +1,114 @@
+name: TASK-HYBRID W inspect exact b66 river from original Rust source (no CERT shortcut)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-w-b66-source-reach.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  audited-b66:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - name: Retrieve only two immutable, previously verified GTO full-street sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for flop in 9s6h3d KsQh4d; do
+            mkdir -p "input/$flop"
+            gh run download 44741462253 --repo "$GITHUB_REPOSITORY" \
+              --name "nl2-multiboard-B11_RIVER_FAST-SB_BB-gto-$flop" --dir "input/$flop"
+            test -d "input/$flop/evidence"
+          done
+      - name: Audit real turn action bet66 probability and legal river branch from GTO solves
+        run: |
+          python3 - <<'PY'
+          import collections,hashlib,json,pathlib
+          rec=[]
+          for flop in ('9s6h3d','KsQh4d'):
+            root=pathlib.Path('input')/flop
+            manifest=list((root/'evidence').glob('*.json'))
+            assert len(manifest)==1
+            m=json.loads(manifest[0].read_text())
+            assert m['schema']=='NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1'
+            assert m['spot']=='SB_BB' and m['flop']==flop and m['version']=='gto'
+            assert m['turn_sizing_mode']=='river-gaps'
+            assert not m['failures']
+            for c in m['cases']:
+              if c['line']!='x x':continue
+              f=root/'solver/postflop'/c['source_path']
+              raw=f.read_bytes()
+              assert hashlib.sha256(raw).hexdigest()==c['source_sha256']
+              d=json.loads(raw)
+              config=json.loads(f.with_suffix('.job.json').read_text())
+              assert config['turn_oop']=='33%,66%,75%' and config['turn_ip']=='33%,66%,75%'
+              roots=[n for n in d['nodes'] if len(n['board'])==8 and n['line']=='x x/']
+              entries=[]
+              for n in roots:
+                actor=n['player'];actions=n['acts'];nh=len(d['hands'][actor])
+                assert len(n['strat'])==nh*len(actions)
+                all_positive=near=weighted=0
+                distribution={a:0. for a in actions}
+                if 'b66' in actions:
+                  choice=actions.index('b66')
+                  for k,w in enumerate(n['w'][actor]):
+                    if float(w)<=1e-4:continue
+                    values=[float(n['strat'][i*nh+k]) for i in range(len(actions))]
+                    best=max(values)
+                    if values[choice]>0:all_positive+=1
+                    if values[choice]>=.4 and values[choice]>=.7*best:near+=1
+                    weighted+=1
+                for i,a in enumerate(actions):
+                  distribution[a]=round(sum(
+                    float(n['w'][actor][k])*float(n['strat'][i*nh+k])
+                    for k in range(nh)),5)
+                entries.append(dict(actor=actor,turn_root_actions=actions,
+                   reachable_actor_combos_with_positive_b66=all_positive,
+                   eligible_near_max_b66_combos=near,total_reachable_combos=weighted,
+                   weighed_action_mass_by_action=distribution))
+              river=collections.Counter(n['line'] for n in d['nodes'] if len(n['board'])==10 and n['line'].startswith('x x/b'))
+              rec.append(dict(flop=flop,turn=c['turn'],gto_source_sha256=c['source_sha256'],
+                gto_gap_pct=d['info'].get('gto_expl_pct'),job_true_turn_sizes=config['turn_oop'],
+                strict_preconditions='secondary f>=40%, f>=70% of fmax at every earlier decision',
+                turn_root=entries,
+                raw_river_path_counts={k:v for k,v in river.items() if k.startswith('x x/b')},
+                raw_has_b66_call_river=river.get('x x/b66 c/',0)>0))
+          assert rec
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          assert s['TOTAL']==392 and s['records']['ln-opfr-r_model-iry60z']['label']=='APPROX'
+          out=dict(schema='TASK_HYBRID_RANK24_EXACT_B66_RAW_PROVENANCE_V1',
+            source_run=44741462253,rank24_model_id='ln-opfr-r_model-iry60z',
+            no_new_GTO_or_CERT_claim=True,model_status_unmodified=True,
+            immutable_raw_source_cases=rec)
+          target=pathlib.Path('data/nl2_hu_rank24_b66_raw_reach_audit.json')
+          target.write_text(json.dumps(out,indent=2,ensure_ascii=False)+'\n')
+          print('PASS original GTO b66 action-node audit',len(rec))
+          for x in rec:print(x['flop'],x['turn'],'GTO gap',x['gto_gap_pct'],
+              'b66 exact river',x['raw_has_b66_call_river'],'root combos',x['turn_root'])
+          PY
+      - name: Commit read-only source audit with strict no promotion rule; PR #2 Draft
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_rank24_b66_raw_reach_audit.json
+          git commit -m 'TASK-HYBRID W: original Rust source proof for rank24 b66 action and strict combo reach'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - name: Preserve raw audit even if write unavailable
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-W-exact-b66-source
+          path: data/nl2_hu_rank24_b66_raw_reach_audit.json
+          retention-days: 30
