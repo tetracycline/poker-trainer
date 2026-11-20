@@ -23,9 +23,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p evidence/run1 evidence/run2 data/solver_evidence
+          mkdir -p evidence/run1 evidence/run2 evidence/run3 data/solver_evidence
           gh run download 44521980749 --repo "$GITHUB_REPOSITORY" --dir evidence/run1
           gh run download 44522421850 --repo "$GITHUB_REPOSITORY" --dir evidence/run2
+          gh run download 44525865923 --repo "$GITHUB_REPOSITORY" --dir evidence/run3
       - name: Independently audit every raw CFR result, exact river, SPR, SHA, eligible combo and NL2 lock source
         run: |
           python3 tools/verify_hu_solver_bundle.py \
@@ -34,33 +35,38 @@ jobs:
           python3 tools/verify_hu_solver_bundle.py \
             --downloads evidence/run2 --run-id 44522421850 \
             --out data/solver_evidence/STAGE2_BATCH02.json
+          python3 tools/verify_hu_solver_bundle.py \
+            --downloads evidence/run3 --run-id 44525865923 \
+            --out data/solver_evidence/STAGE2_BATCH03.json
       - name: Export certified only exact-board GTO and provisional locked NL2 experiment per combo
         run: |
           python3 tools/export_hu_exact_board_cert.py --downloads evidence/run1 \
             --proof data/solver_evidence/STAGE2_BATCH01.json --out evidence/b01.json
           python3 tools/export_hu_exact_board_cert.py --downloads evidence/run2 \
             --proof data/solver_evidence/STAGE2_BATCH02.json --out evidence/b02.json
+          python3 tools/export_hu_exact_board_cert.py --downloads evidence/run3 \
+            --proof data/solver_evidence/STAGE2_BATCH03.json --out evidence/b03.json
           python3 - <<'PY'
           import json,pathlib,collections
           p=pathlib.Path('data/nl2_hu_exact_boards.json')
-          one=json.load(open('evidence/b01.json'));two=json.load(open('evidence/b02.json'))
-          items=one['subgames']+two['subgames']
-          assert len(items)==one['exact_subgame_count']+two['exact_subgame_count']==266
+          one=json.load(open('evidence/b01.json'));two=json.load(open('evidence/b02.json'));three=json.load(open('evidence/b03.json'))
+          items=one['subgames']+two['subgames']+three['subgames']
+          assert len(items)==one['exact_subgame_count']+two['exact_subgame_count']+three['exact_subgame_count']==347
           assert len({(c['source_run_id'],c['spot'],c['version'],c['source_sha256']) for c in items})==266
           statuses=collections.Counter(x['status'] for x in items)
           assert statuses['CERT_EXACT_BOARD_GTO']>0 and statuses['EXPERIMENTAL_POOL_LOCKED']>0
-          assert one['generic_model_upgrades']==two['generic_model_upgrades']==0
+          assert one['generic_model_upgrades']==two['generic_model_upgrades']==three['generic_model_upgrades']==0
           o={'schema':'HU_NL2_EXACT_BOARD_CFR_V1',
              'public_board_scope_only':True,'generic_model_upgrades':0,
              'exact_subgame_count':len(items),
-             'run_ids':[44521980749,44522421850],
-             'provenance_files':['data/solver_evidence/STAGE2_BATCH01.json','data/solver_evidence/STAGE2_BATCH02.json'],
+             'run_ids':[44521980749,44522421850,44525865923],
+             'provenance_files':['data/solver_evidence/STAGE2_BATCH01.json','data/solver_evidence/STAGE2_BATCH02.json','data/solver_evidence/STAGE2_BATCH03.json'],
              'status_counts':dict(statuses),
              'combo_rules':one['rules'],
              'warning':'CERT is for exact original public board, pot, SPR and action history only. 392 generic MODEL boards are NOT certified or estimated.',
              'subgames':items}
           p.parent.mkdir(parents=True,exist_ok=True)
-          p.write_text(json.dumps(o,ensure_ascii=False,separators=(',',':'))+'\\n')
+          p.write_text(json.dumps(o,ensure_ascii=False,separators=(',',':'))+chr(10))
           print({'subgames':len(items),'status_counts':dict(statuses),
                  'generic_MODEL_Cert':0,'size_bytes':p.stat().st_size})
           PY
@@ -69,7 +75,7 @@ jobs:
           python3 - <<'PY'
           import json,base64
           d=json.load(open('data/nl2_hu_exact_boards.json'))
-          assert d['exact_subgame_count']==266
+          assert d['exact_subgame_count']==347
           for r in d['subgames']:
               for n in r['nodes']:
                   actor=n['acting_seat']; expected=len(r['hands_by_seat'][actor])
@@ -84,11 +90,11 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/solver_evidence/STAGE2_BATCH01.json data/solver_evidence/STAGE2_BATCH02.json data/nl2_hu_exact_boards.json
+          git add data/solver_evidence/STAGE2_BATCH01.json data/solver_evidence/STAGE2_BATCH02.json data/solver_evidence/STAGE2_BATCH03.json data/nl2_hu_exact_boards.json
           if git diff --cached --quiet; then
             echo 'No new proof files to commit'
           else
-            git commit -m 'evidence(stage2): verify 266 authentic SRP/3BP CFR subgames and publish exact-board combo eligibility'
+            git commit -m 'evidence(stage2): verify 347 authentic SRP/3BP CFR subgames and publish exact-board combo eligibility'
             git fetch origin fix/nl2-hu-lines-audit-20261118
             git rebase origin/fix/nl2-hu-lines-audit-20261118
             git push origin HEAD:fix/nl2-hu-lines-audit-20261118
@@ -101,6 +107,7 @@ jobs:
           path: |
             data/solver_evidence/STAGE2_BATCH01.json
             data/solver_evidence/STAGE2_BATCH02.json
+            data/solver_evidence/STAGE2_BATCH03.json
             data/nl2_hu_exact_boards.json
           retention-days: 30
           if-no-files-found: warn
