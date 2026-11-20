@@ -68,14 +68,40 @@ async function loadIndex(path,zipped=false){
    throw Error('無效的來源資料 schema');
  return data.subgames;
 }
-Promise.allSettled([loadIndex('data/nl2_hu_exact_boards.json'),loadIndex('data/nl2_hu_exact_boards_b03.json.gz',true)]).then(results=>{
- if(results.every(x=>x.status==='rejected'))throw results[0].reason;
- const complete=results.every(x=>x.status==='fulfilled'),seen=new Set();
- all=results.flatMap(x=>x.status==='fulfilled'?x.value:[]).filter(c=>{
-  const key=[c.spot,c.version,c.source_sha256].join(':');if(seen.has(key))return false;seen.add(key);return true;
+async function loadSource(){
+ // Prefer the independently hashed, deterministic compact 347-case archive.
+ // Do not load the old 266-case file plus the 81-case extension twice.
+ try {return await loadIndex('data/nl2_hu_exact_boards.json.gz',true);}
+ catch(error){
+   console.warn('Compact CFR archive unavailable; validating the full JSON source',error);
+   return await loadIndex('data/nl2_hu_exact_boards.json',false);
+ }
+}
+loadSource().then(loaded=>{
+ const seen=new Set();
+ all=loaded.filter(c=>{
+  const key=[c.spot,c.version,c.source_sha256].join(':');
+  if(seen.has(key))return false;seen.add(key);return true;
  });
  const counts={};for(const c of all)counts[c.status]=(counts[c.status]||0)+1;
- setText(by('status'),'已載入 '+all.length+' 個精確牌面多街子局'+(complete?'':'（有一批未能載入）')+'。泛化 MODEL 升級：0。'+JSON.stringify(counts)+'；本頁逐 combo 可達性來自真實 CFR，而非 100bb 假設策略。');
- const spots=[...new Set(all.map(c=>c.spot))].sort();copyOpts(selS,spots.map(s=>[s,s]));selectSpot();
-}).catch(e=>setText(by('status'),'尚無可公開的獨立驗證 CFR 資料：'+e.message));
+ const msg='已載入 '+all.length+' 個實際公牌多街子局；GTO 精確公牌 CERT：'+(counts['CERT_EXACT_BOARD_GTO']||0)
+   +'；對手頻率鎖定試驗：'+(counts['EXPERIMENTAL_POOL_LOCKED']||0)
+   +'；392 張通用 MODEL 仍不是 CERT（0/392）。只在同一公牌、同一完整下注歷史及節點 SPR 有效。';
+ setText(by('status'),msg);
+ const spots=[...new Set(all.map(c=>c.spot))].sort();
+ copyOpts(selS,spots.map(spot=>[spot,spot]));
+ const url=new URL(location.href);
+ const chosen=url.searchParams.get('spot');
+ if(chosen&&spots.includes(chosen))selS.value=chosen;
+ selectSpot();
+ const version=url.searchParams.get('version');
+ if(version&&[...selV.options].some(o=>o.value===version)){
+   selV.value=version;selectVersion();
+ }
+ const sha=url.searchParams.get('sha');
+ if(sha){
+   const target=subset.findIndex(c=>c.source_sha256===sha);
+   if(target>=0){selG.value=String(target);selectGame();}
+ }
+}).catch(e=>setText(by('status'),'真實 CFR 索引不可用：'+e.message));
 })();
