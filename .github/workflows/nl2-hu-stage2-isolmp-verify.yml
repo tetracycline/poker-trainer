@@ -1,0 +1,56 @@
+name: NL2 stage2 verify real ISO/LMP 100bb NL2 marginal pool locks
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage2-isolmp-verify.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-iso-lmp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: trainer
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - name: Download every genuine raw ISO/LMP postflop locked-CFR artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p evidence/downloads
+          gh run download 44654142656 --repo "$GITHUB_REPOSITORY" --dir evidence/downloads
+      - name: Verify actual NL2 sample n/fold/raise from pool source SHA, parent SPR, combos, river, CFR convergence
+        run: |
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_iso_lmp_locked.py \
+            --downloads evidence/downloads --solver-root solver \
+            --out trainer/data/solver_evidence/STAGE2_ISO_LMP_LOCKED.json
+      - name: Commit source proof to PR #2 without merging
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/STAGE2_ISO_LMP_LOCKED.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'audit(stage2): verify ISO/LMP 100bb NL2 marginal locked solver and source statistics'
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+          fi
+      - name: Preserve even if push is rejected
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-stage2-isolmp-real-pool-locked-provenance
+          path: trainer/data/solver_evidence/STAGE2_ISO_LMP_LOCKED.json
+          retention-days: 30
