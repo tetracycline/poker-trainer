@@ -1,0 +1,134 @@
+name: TASK-HYBRID B106 V25 original B1+B105 rank135 3 true IP boards CERT 135/257
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b106-rank135-v25.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  source-verified-cert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Freeze B105 SHA-pinned original B1 GTO and true actor-IP river node, exact three cards
+        run: |
+          set -euo pipefail
+          test -s data/solver_evidence/NL2_MULTIBOARD_B105_BTN_XX_RIVER.index.json
+          test -s data/solver_evidence/NL2_MULTIBOARD_B105_BTN_XX_RIVER.json.gz
+          python3 -m py_compile tools/hu_b106_v25_rank135.py tools/hu_cert_lock_medium_audit.py
+          python3 tools/hu_b106_v25_rank135.py
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+      - name: Independently check immutable V24, rank135 sole upgrade, 533 actual boards, B4-E and river links
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json
+          oldpath='data/nl2_hu_multiboard_status_v24_b103_rank43.json'
+          newpath='data/nl2_hu_multiboard_status_v25_b106_rank135.json'
+          before=json.load(open(oldpath))
+          after=json.load(open(newpath))
+          matrix=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v25.json'))
+          idx=json.load(open('data/solver_evidence/NL2_MULTIBOARD_B105_BTN_XX_RIVER.index.json'))
+          pin=json.load(open('data/nl2_hu_b104_btn_as9h2d_gto_parent_pin.json'))
+          river=json.load(open('data/nl2_hu_b34_full_integrity.json'))['navigation']
+          assert (before['CERT_MULTIBOARD'],before['APPROX'])==(134,258)
+          assert (after['CERT_MULTIBOARD'],after['APPROX'],after['TOTAL'])==(135,257,392)
+          assert after['parent_v24_sha256']==hashlib.sha256(open(oldpath,'rb').read()).hexdigest()
+          assert after['B104_original_B1_GTO_pin_sha256']==hashlib.sha256(open('data/nl2_hu_b104_btn_as9h2d_gto_parent_pin.json','rb').read()).hexdigest()
+          changed={x for x in after['records'] if before['records'][x]!=after['records'][x]}
+          assert changed=={'ln-ipfr-r_model-3lq5u6'}
+          rec=after['records']['ln-ipfr-r_model-3lq5u6']
+          assert rec['label']=='CERT-MULTIBOARD' and rec['source_blind_expansion_rank']==135
+          boards=rec['certified_3_to_5_exact_flop_boards']
+          assert len(boards)==3 and {x['flop'] for x in boards}=={'As9h2d','Jh9d6s','KsQh4d'}
+          assert all(b['acting_seat']==1 and b['strict_full_street_combo_reachable']>0 and
+                     b['nl2_locked_variants'] and b['relative_spr_error_pct']<=5 for b in boards)
+          missing=next(b for b in boards if b['flop']=='As9h2d')
+          assert missing['source_run_id']==44666285424
+          assert any(v['run_id']==idx['run_id'] for v in missing['nl2_locked_variants'])
+          assert idx['run_id']==44831903066 and idx['original_pinned_GTO_flop_NOT_recomputed']
+          assert pin['original_source_run_id']==44666285424
+          assert after['records']['ln-ipfr-t_model-sxr0qa']['label']=='APPROX'
+          assert matrix['CERT_MULTIBOARD']==135 and matrix['APPROX']==257
+          assert len(matrix['boards'])==matrix['strict_aggregate']['named_board_proofs']==533
+          assert matrix['parent_v25_status_sha256']==hashlib.sha256(open(newpath,'rb').read()).hexdigest()
+          assert all(x['hero_lock_proofs'] and x['strictly_reachable_combo_count']>0 and
+                     x['no_general_bet_size_recommendation'] for x in matrix['boards'])
+          assert after['independently_verified_completed_batches']['B105_BTN_XX_RIVER']['run_id']==44831903066
+          e=after['independently_verified_completed_batches']['B4_MICRO']
+          assert e['run_id']==44732810327 and e['status']=='VERIFIED' and e['gto_cases']==e['locked_cases']==30
+          assert river['continuing']==river['reach_river']==2475 and river['share_pct']==100
+          assert river['missing_river']==river['link_misses']==river['reach_violations']==river['modeled_path_violations']==0
+          print('PASS V25 135 CERT 257 APPROX, 533 real board GTO+hero IP locks, Batch E 30+30, river 2475')
+          PY
+      - name: Test both frontend loaders support every V25-to-V1 complete JSON source fallback
+        run: |
+          node - <<'JS'
+          const fs=require('fs'),assert=require('assert').strict;
+          const versions=[
+            'v25_b106_rank135','v24_b103_rank43','v23_b100_lmp_pair','v22_batch94',
+            'v21_batch92','v20_batch90','v19_batch88','v18_batch86',
+            'v17_batch84','v16_batch82','v15_batch80','v14_batch77',
+            'v13_batch75','v12_batch73','v11_batch71','v10_batch69',
+            'v9_rank40_b67','v8_batch61','v7_batch59','v6_rank33',
+            'v5_batch55','v4_batch50','v3_rank28','v2_tie'];
+          const urls=versions.map(x=>'data/nl2_hu_multiboard_status_'+x+'.json');
+          urls.push('data/nl2_hu_multiboard_status.json');
+          assert.equal(urls.length,25);
+          const json=urls.map(x=>JSON.parse(fs.readFileSync(x,'utf8')));
+          async function check(file){
+            const code=fs.readFileSync(file,'utf8');
+            const start=code.indexOf('function fetchCertifiedRegistry(){');
+            const end=code.indexOf('\nfetchCertifiedRegistry()\n .then(d=>{',start);
+            assert(start>=0&&end>start);
+            assert(!code.includes('fetchCertifiedRegistry()\n .then(r=>'));
+            const snippet=code.slice(start,end);
+            const fetched=[...snippet.matchAll(/fetch\('([^']+)'/g)].map(m=>m[1]);
+            assert.deepEqual(fetched,urls,'Missing or duplicate V25-V1 registry fallback');
+            const run=new Function('fetch',snippet+';return fetchCertifiedRegistry();');
+            for(let i=0;i<urls.length;i++){
+              const seen=[];
+              const result=await run(async url=>{
+                const j=urls.indexOf(url);assert(j>=0);seen.push(j);
+                return j<i?{ok:false,status:404}:{ok:true,json:async()=>json[j]};
+              });
+              assert.strictEqual(result,json[i]);
+              assert.deepEqual(seen,Array.from({length:i+1},(_,n)=>n));
+            }
+          }
+          (async()=>{await check('nl2-multiboard.js');await check('nl2_hu_multiboard_ui.js');
+             console.log('PASS B106 V25-V1 both source-certified frontends');
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          JS
+      - name: Commit only independently source-certified 135/257 V25 plus 533 exact NL2 lock/b50 rows to Draft PR #2
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v25_b106_rank135.json data/nl2_hu_cert_lock_medium_matrix_v25.json docs/NL2_HU_B106_V25_RANK135_CERT.md docs/NL2_HU_B106_V25_ALL_LOCKS_MEDIUM.md
+          git commit -m 'TASK-HYBRID B106: B1 GTO and authentic B105 actor-IP river rank135, V25 135 CERT/257 APPROX, 533 boards'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B106-V25-rank135
+          path: |
+            data/nl2_hu_multiboard_status_v25_b106_rank135.json
+            data/nl2_hu_cert_lock_medium_matrix_v25.json
+            docs/NL2_HU_B106_V25_RANK135_CERT.md
+            docs/NL2_HU_B106_V25_ALL_LOCKS_MEDIUM.md
+          retention-days: 30
