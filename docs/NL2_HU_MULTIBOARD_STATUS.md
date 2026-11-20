@@ -49,6 +49,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B20_B66_GTO | 44763159052 | 3 | 0 |
 | B22_B66_EXP | 44765475084 | 0 | 3 |
 | B23_LMP_NEXT | 44764901527 | 2 | 2 |
+| B25_LMP_TEXTURES | PENDING | 0 | 0 |
 
 ## Top-24 preregistered game histories
 
