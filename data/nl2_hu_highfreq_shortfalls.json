@@ -1,8 +1,8 @@
 {
   "schema": "NL2_TOP24_FROZEN_MULTIBOARD_SHORTFALLS_V1",
   "top24": 24,
-  "certified_from_source": 19,
-  "still_approx": 5,
+  "certified_from_source": 20,
+  "still_approx": 4,
   "new_source_batches": [
     "NL2_MULTIBOARD_B1.json.gz",
     "NL2_MULTIBOARD_B2_PARTIAL.json.gz",
@@ -16,11 +16,12 @@
     "NL2_MULTIBOARD_B11_RIVER_FAST.json.gz",
     "NL2_MULTIBOARD_B12_LOCK_FAST.json.gz",
     "NL2_MULTIBOARD_B13_LMP_B50.json.gz",
-    "NL2_MULTIBOARD_B15_GTO_PARENT_EXP.json.gz"
+    "NL2_MULTIBOARD_B15_GTO_PARENT_EXP.json.gz",
+    "NL2_MULTIBOARD_B16_GTO_PARENT_TWO.json.gz"
   ],
   "sources": {
     "official_subgames": 644,
-    "new_subgames": 850,
+    "new_subgames": 852,
     "source_files": [
       "data/solver_evidence/NL2_MULTIBOARD_B1.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json.gz",
@@ -34,12 +35,13 @@
       "data/solver_evidence/NL2_MULTIBOARD_B11_RIVER_FAST.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B12_LOCK_FAST.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B13_LMP_B50.json.gz",
-      "data/solver_evidence/NL2_MULTIBOARD_B15_GTO_PARENT_EXP.json.gz"
+      "data/solver_evidence/NL2_MULTIBOARD_B15_GTO_PARENT_EXP.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B16_GTO_PARENT_TWO.json.gz"
     ]
   },
   "missing_by_spot": {
     "LMP_CO_BB": 1,
-    "SB_BB": 4
+    "SB_BB": 3
   },
   "recommendation": "Solve a few new exact flops ONLY where action history, actual SPR, actor, sequential legal combos, and hero-side NL2 lock can be matched; never grant CERT from texture alone.",
   "ranking_locked": true,
@@ -132,7 +134,7 @@
       "spot": "SB_BB",
       "street": 1,
       "original_model_spr": 6.167,
-      "current_label": "APPROX",
+      "current_label": "CERT-MULTIBOARD",
       "exact_matching_flops": [
         "9s6h3d",
         "As9h2d",
@@ -143,19 +145,20 @@
       ],
       "flops_with_hero_lock": [
         "AsTh4d",
+        "Jh9d6s",
         "Ks7h2d"
       ],
       "flops_without_hero_lock": [
         "9s6h3d",
         "As9h2d",
-        "Jh9d6s",
         "Js9h4d"
       ],
       "distinct_matching_gto_flop_count": 6,
-      "distinct_gto_plus_hero_lock_count": 2,
-      "missing_required_flops": 1,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
       "texture_labels_seen": [
         "ACE_HIGH",
+        "JT_HIGH",
         "KQ_HIGH"
       ],
       "recorded_line_examples": [
@@ -199,7 +202,7 @@
           "source_run_id": 44736420272,
           "node_spr": 6.166667,
           "line": "b75 c/",
-          "lock_count": 0
+          "lock_count": 1
         }
       ],
       "upcoming_preregistered_board_examples": [
@@ -1065,42 +1068,42 @@
       ],
       "recorded_line_examples": [
         {
-          "flop": "As9h2d",
-          "source_run_id": 44737532081,
-          "node_spr": 2.833333,
-          "line": "b50 c/b75 c/",
-          "lock_count": 0
-        },
-        {
           "flop": "AsTh4d",
           "source_run_id": 44522421850,
-          "node_spr": 2.84672,
-          "line": "b33 c/b100 c/",
+          "node_spr": 2.833333,
+          "line": "b75 c/b50 c/",
           "lock_count": 1
         },
         {
           "flop": "Ks7h2d",
           "source_run_id": 44654973894,
-          "node_spr": 2.84672,
-          "line": "b33 c/b100 c/",
+          "node_spr": 2.833333,
+          "line": "b75 c/b50 c/",
           "lock_count": 1
         },
         {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 2.833333,
+          "line": "b75 c/b50 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "Js9h4d",
+          "source_run_id": 44666285424,
+          "node_spr": 2.833333,
+          "line": "b75 c/b50 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 2.833333,
+          "line": "b75 c/b50 c/",
+          "lock_count": 0
+        },
+        {
           "flop": "As7h3d",
-          "source_run_id": 44736420272,
-          "node_spr": 2.84672,
-          "line": "b33 c/b100 c/",
-          "lock_count": 0
-        },
-        {
-          "flop": "Jh9d6s",
-          "source_run_id": 44736420272,
-          "node_spr": 2.84672,
-          "line": "b33 c/b100 c/",
-          "lock_count": 0
-        },
-        {
-          "flop": "KsQh4d",
           "source_run_id": 44736420272,
           "node_spr": 2.84672,
           "line": "b33 c/b100 c/",
@@ -1144,6 +1147,20 @@
       ],
       "recorded_line_examples": [
         {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 2.277778,
+          "line": "b100 c/b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44736420272,
+          "node_spr": 2.277778,
+          "line": "b100 c/b50 c/",
+          "lock_count": 1
+        },
+        {
           "flop": "Ks7h2d",
           "source_run_id": 44654973894,
           "node_spr": 2.277778,
@@ -1163,20 +1180,6 @@
           "node_spr": 2.277778,
           "line": "b50 c/b100 c/",
           "lock_count": 0
-        },
-        {
-          "flop": "9s6h3d",
-          "source_run_id": 44732810327,
-          "node_spr": 2.277778,
-          "line": "b100 c/b50 c/",
-          "lock_count": 1
-        },
-        {
-          "flop": "KsQh4d",
-          "source_run_id": 44736420272,
-          "node_spr": 2.277778,
-          "line": "b100 c/b50 c/",
-          "lock_count": 1
         }
       ],
       "upcoming_preregistered_board_examples": [
@@ -1314,42 +1317,42 @@
       ],
       "recorded_line_examples": [
         {
-          "flop": "As9h2d",
-          "source_run_id": 44737532081,
-          "node_spr": 2.833333,
-          "line": "b50 c/b75 c/",
-          "lock_count": 0
-        },
-        {
           "flop": "AsTh4d",
           "source_run_id": 44522421850,
-          "node_spr": 2.84672,
-          "line": "b33 c/b100 c/",
+          "node_spr": 2.833333,
+          "line": "b75 c/b50 c/",
           "lock_count": 1
         },
         {
           "flop": "Ks7h2d",
           "source_run_id": 44654973894,
-          "node_spr": 2.84672,
-          "line": "b33 c/b100 c/",
+          "node_spr": 2.833333,
+          "line": "b75 c/b50 c/",
           "lock_count": 1
         },
         {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 2.833333,
+          "line": "b75 c/b50 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "Js9h4d",
+          "source_run_id": 44666285424,
+          "node_spr": 2.833333,
+          "line": "b75 c/b50 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 2.833333,
+          "line": "b75 c/b50 c/",
+          "lock_count": 0
+        },
+        {
           "flop": "As7h3d",
-          "source_run_id": 44736420272,
-          "node_spr": 2.84672,
-          "line": "b33 c/b100 c/",
-          "lock_count": 0
-        },
-        {
-          "flop": "Jh9d6s",
-          "source_run_id": 44736420272,
-          "node_spr": 2.84672,
-          "line": "b33 c/b100 c/",
-          "lock_count": 0
-        },
-        {
-          "flop": "KsQh4d",
           "source_run_id": 44736420272,
           "node_spr": 2.84672,
           "line": "b33 c/b100 c/",
