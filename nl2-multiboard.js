@@ -224,6 +224,16 @@ el('node').addEventListener('change',selectNode);
 el('all-combos').addEventListener('change',fillCombos);
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v17=d=>{
+   if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V17_BATCH84'||
+      d.CERT_MULTIBOARD!==108||d.APPROX!==284||d.TOTAL!==392||
+      d.original_v16_cert!==107||d.original_v16_approx!==285||
+      d.original_top24_cutoff_unchanged!==true||
+      String(d.source_blind_expansion_ranks)!=='239'||
+      d.supplementary_cert_count!==84||Object.keys(d.records||{}).length!==392)
+      throw Error('V17 one exact 5-board GTO/hero-lock model invalid');
+   return d;
+ };
  const v16=d=>{
    if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V16_BATCH82'||
       d.CERT_MULTIBOARD!==107||d.APPROX!==285||d.TOTAL!==392||
@@ -378,7 +388,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v16_batch82.json',{cache:'no-store'}).then(open).then(v16)
+ return fetch('data/nl2_hu_multiboard_status_v17_batch84.json',{cache:'no-store'}).then(open).then(v17)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v16_batch82.json',{cache:'no-store'}).then(open).then(v16))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v15_batch80.json',{cache:'no-store'}).then(open).then(v15))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v14_batch77.json',{cache:'no-store'}).then(open).then(v14))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v13_batch75.json',{cache:'no-store'}).then(open).then(v13))
@@ -404,7 +415,7 @@ function fetchCertifiedRegistry(){
 
 fetchCertifiedRegistry()
  .then(d=>{
-   if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V1','NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE','NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28','NL2_HU_392_MULTIBOARD_CERT_STATUS_V4_BATCH50','NL2_HU_392_MULTIBOARD_CERT_STATUS_V5_BATCH55','NL2_HU_392_MULTIBOARD_CERT_STATUS_V6_RANK33','NL2_HU_392_MULTIBOARD_CERT_STATUS_V7_BATCH59','NL2_HU_392_MULTIBOARD_CERT_STATUS_V8_BATCH61','NL2_HU_392_MULTIBOARD_CERT_STATUS_V9_RANK40_B67','NL2_HU_392_MULTIBOARD_CERT_STATUS_V10_BATCH69','NL2_HU_392_MULTIBOARD_CERT_STATUS_V11_BATCH71','NL2_HU_392_MULTIBOARD_CERT_STATUS_V12_BATCH73','NL2_HU_392_MULTIBOARD_CERT_STATUS_V13_BATCH75','NL2_HU_392_MULTIBOARD_CERT_STATUS_V14_BATCH77','NL2_HU_392_MULTIBOARD_CERT_STATUS_V15_BATCH80','NL2_HU_392_MULTIBOARD_CERT_STATUS_V16_BATCH82'].includes(d.schema)||d.CERT_MULTIBOARD+d.APPROX!==392)
+   if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V1','NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE','NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28','NL2_HU_392_MULTIBOARD_CERT_STATUS_V4_BATCH50','NL2_HU_392_MULTIBOARD_CERT_STATUS_V5_BATCH55','NL2_HU_392_MULTIBOARD_CERT_STATUS_V6_RANK33','NL2_HU_392_MULTIBOARD_CERT_STATUS_V7_BATCH59','NL2_HU_392_MULTIBOARD_CERT_STATUS_V8_BATCH61','NL2_HU_392_MULTIBOARD_CERT_STATUS_V9_RANK40_B67','NL2_HU_392_MULTIBOARD_CERT_STATUS_V10_BATCH69','NL2_HU_392_MULTIBOARD_CERT_STATUS_V11_BATCH71','NL2_HU_392_MULTIBOARD_CERT_STATUS_V12_BATCH73','NL2_HU_392_MULTIBOARD_CERT_STATUS_V13_BATCH75','NL2_HU_392_MULTIBOARD_CERT_STATUS_V14_BATCH77','NL2_HU_392_MULTIBOARD_CERT_STATUS_V15_BATCH80','NL2_HU_392_MULTIBOARD_CERT_STATUS_V16_BATCH82','NL2_HU_392_MULTIBOARD_CERT_STATUS_V17_BATCH84'].includes(d.schema)||d.CERT_MULTIBOARD+d.APPROX!==392)
       throw Error('模型認證來源驗證失敗');
    status=d;
    models=Object.values(d.records).filter(x=>x.label==='CERT-MULTIBOARD')
