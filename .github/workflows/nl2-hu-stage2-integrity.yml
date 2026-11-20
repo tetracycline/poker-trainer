@@ -1,0 +1,66 @@
+name: NL2 stage2 evidence/UX integrity gate (never generic MODEL CERT)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-stage2-integrity.yml'
+      - 'nl2-cfr.js'
+      - 'nl2_hu_cfr_refs.js'
+      - 'nl2-exploit.js'
+      - 'nl2_hu_model.js'
+      - 'tools/hu_exploit_depol_report.py'
+      - 'tools/hu_model_history_crosswalk.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify all four browser scripts parse
+        run: |
+          node --check nl2-cfr.js
+          node --check nl2-exploit.js
+          node --check nl2_hu_cfr_refs.js
+          node --check nl2_hu_model.js
+      - name: Rebuild independent actual river reach and model lineage
+        run: |
+          mkdir -p audit
+          node tools/link_audit.js --json audit/link.json --md audit/links.md
+          node tools/hu_model_path_audit.js audit/model-path.json
+      - name: Validate all source references, no duplicate CFR, no generic CERT, report source and date
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, gzip
+          p=pathlib.Path('data')
+          ix=json.loads((p/'nl2_hu_exact_boards_index.json').read_text())
+          d=json.loads((p/'nl2_hu_exploit_depol_report.json').read_text())
+          model=json.loads((p/'nl2_hu_model_history_crosswalk.json').read_text())
+          queue=json.loads((p/'nl2_hu_stage2_queue.json').read_text())
+          refs=json.loads((p/'nl2_hu_model_source_references.json').read_text())
+          json.loads(gzip.decompress((p/'nl2_hu_exact_boards.json.gz').read_bytes()))
+          assert ix['genuine_exact_board_subgames']==347
+          assert ix['gto_cert_exact_board_subgames']==114
+          assert ix['nl2_pool_locked_provisional_subgames']==233
+          assert ix['models_certified_by_this_file']==d['generic_model_certified']==0
+          assert d['medium_nonpolarized_exact_board_candidates']==675
+          assert queue['summary']['model_nodes']==len(queue['records'])==392
+          assert model['model_nodes']==len(model['records'])==392 and model['generic_CERT']==0
+          assert refs['generic_models']==len(refs['items'])==392 and refs['generic_certificates']==0
+          audit=json.loads(open('audit/link.json').read())
+          print('NAV',audit.get('counts'))
+          print('CFR',{'exact':347,'GTO':114,'provisional_pool_lock':233,'nonpolarized_research_nodes':675,'uncertified_model':392})
+          PY
+      - name: Attach independent audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-stage2-integrity
+          path: audit/
+          retention-days: 30
