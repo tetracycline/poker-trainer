@@ -1,0 +1,89 @@
+name: TASK-HYBRID B2 independently verify 17 already-solved jobs in 20 minutes
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b2-salvage.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+jobs:
+  verify-17:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - name: Download immutable B2 genuine Rust CFR results, exclude one known failed job artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads
+          gh run download 44666290556 --repo "$GITHUB_REPOSITORY" --dir downloads
+          test -d downloads/nl2-multiboard-B2-SB3_BTN-gto-8s8h3d
+          rm -rf downloads/nl2-multiboard-B2-SB3_BTN-gto-8s8h3d
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d -name 'nl2-multiboard-B2-*' | wc -l)" -eq 17
+      - name: Independently audit all 17 prior successes: SHA, Rust GTO convergence, source pot/SPR, actual combo and NL2 lock
+        run: |
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py \
+            --downloads downloads --solver-root solver --run-id 44666290556 \
+            --out trainer/data/solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json
+      - name: Hash-compress every verified case; retain the failed GTO exclusion in index
+        run: |
+          python3 - <<'PY'
+          import pathlib, json, gzip, hashlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert not d['errors'] and len(d['artifacts'])==17
+          assert d['source_run_id']==44666290556
+          assert d['exact_board_gto_sources']>0 and d['imputed_pool_locked_sources']>0
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          idx={'schema':'NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+               'run_id':44666290556,'batch':'B2_PARTIAL',
+               'actual_spot_flop_version_jobs':17,
+               'verified_cases':d['new_authentic_board_cases'],
+               'gto_cases':d['exact_board_gto_sources'],
+               'locked_cases':d['imputed_pool_locked_sources'],
+               'source_sha256':hashlib.sha256(raw).hexdigest(),
+               'gzip_sha256':hashlib.sha256(gz.read_bytes()).hexdigest(),
+               'generic_model_certification':0,
+               'failed_source_job':'SB3_BTN/8s8h3d/GTO excluded; not counted'}
+          p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          print('17 actual jobs source checked',idx)
+          PY
+      - name: Commit this completed short B2 validation to PR #2 Draft only
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json.gz data/solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.index.json
+          git commit -m 'TASK-HYBRID B2 partial: source-verify 17 completed CFR jobs; quarantine failed GTO'
+          for i in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$i"
+          done
+          exit 1
+      - name: Upload source proof even on push conflict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hybrid-17-genuine-B2-CFR-proofs
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B2_PARTIAL*
+          retention-days: 30
