@@ -413,8 +413,19 @@ def verify(root,source_pin,run_id):
                          m.get('gto_parent_source_run_id')==44836834970 and
                          m.get('gto_parent_source_sha256')=='af2fcbadbf848208f4046b4098b60dce01618863d76deaaecb35648f7b139741' and
                          m.get('flop_root_jobfile_sha256')=='9d1d6fc120154cb70881f2bda9c0d29fd0d7ddc219b154c25d02c932a9cbbafb' and
-                         m.get('gto_parent_source_manifest_sha256')=='2e908a15bba6701cd7fa3bb1079d99a3a985cb05ef586b95eef9f00805c0d2fe')):
-                        raise ValueError('Focused x-b50-call turn requires exact SHA-pinned B113 UTG or B121 CO parent')
+                         m.get('gto_parent_source_manifest_sha256')=='2e908a15bba6701cd7fa3bb1079d99a3a985cb05ef586b95eef9f00805c0d2fe')
+                        or
+                        # B126 only: exact SHA-pinned original B116 LMP root
+                        # (ASSUMED_EXPLICIT_169CLASS limped preflop), actor
+                        # OOP BB hero lock in the true turn/river child.
+                        (m['spot']=='LMP_CO_BB' and m['version']=='exp_oop' and
+                         m['flop']=='As7h3d' and m.get('selected_lines')==['b50 c'] and
+                         m.get('selected_turn_lines')==['x b50 c'] and
+                         m.get('gto_parent_source_run_id')==44837377803 and
+                         m.get('gto_parent_source_sha256')=='7a66b9e3495aaa1a113136bec64181f50b3b87046e351a0d5a73826eda3f1601' and
+                         m.get('flop_root_jobfile_sha256')=='92a3ee4289cd1a85e7f9766e770d940eb70e3e3c35b437691395abaefaa1c10b' and
+                         m.get('gto_parent_source_manifest_sha256')=='7199156c5b98fd7f51f732cc721a1eaefb718013ca50e4d29ed3a35b1159f433')):
+                        raise ValueError('Focused x-b50-call turn requires immutable B113 UTG, B121 CO or B126 LMP original GTO parent')
                     if m.get('selected_turn_lines')!=[' '.join(token)]:
                         raise ValueError('Focused turn extraction differs from predeclared line')
                     subjobfile=rawfile.with_suffix('.job.json')
