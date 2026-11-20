@@ -224,6 +224,16 @@ el('node').addEventListener('change',selectNode);
 el('all-combos').addEventListener('change',fillCombos);
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v22=d=>{
+   if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V22_BATCH94'||
+      d.CERT_MULTIBOARD!==131||d.APPROX!==261||d.TOTAL!==392||
+      d.original_v21_cert!==126||d.original_v21_approx!==266||
+      d.original_top24_cutoff_unchanged!==true||
+      String(d.source_blind_expansion_ranks)!=='338,341,344,349,351'||
+      d.supplementary_cert_count!==107||Object.keys(d.records||{}).length!==392)
+      throw Error('V22 5 original source-blind true GTO/actor hero locked models invalid');
+   return d;
+ };
  const v21=d=>{
    if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V21_BATCH92'||
       d.CERT_MULTIBOARD!==126||d.APPROX!==266||d.TOTAL!==392||
@@ -428,7 +438,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v21_batch92.json',{cache:'no-store'}).then(open).then(v21)
+ return fetch('data/nl2_hu_multiboard_status_v22_batch94.json',{cache:'no-store'}).then(open).then(v22)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v21_batch92.json',{cache:'no-store'}).then(open).then(v21))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v20_batch90.json',{cache:'no-store'}).then(open).then(v20))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v19_batch88.json',{cache:'no-store'}).then(open).then(v19))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v18_batch86.json',{cache:'no-store'}).then(open).then(v18))
@@ -459,7 +470,7 @@ function fetchCertifiedRegistry(){
 
 fetchCertifiedRegistry()
  .then(d=>{
-   if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V1','NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE','NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28','NL2_HU_392_MULTIBOARD_CERT_STATUS_V4_BATCH50','NL2_HU_392_MULTIBOARD_CERT_STATUS_V5_BATCH55','NL2_HU_392_MULTIBOARD_CERT_STATUS_V6_RANK33','NL2_HU_392_MULTIBOARD_CERT_STATUS_V7_BATCH59','NL2_HU_392_MULTIBOARD_CERT_STATUS_V8_BATCH61','NL2_HU_392_MULTIBOARD_CERT_STATUS_V9_RANK40_B67','NL2_HU_392_MULTIBOARD_CERT_STATUS_V10_BATCH69','NL2_HU_392_MULTIBOARD_CERT_STATUS_V11_BATCH71','NL2_HU_392_MULTIBOARD_CERT_STATUS_V12_BATCH73','NL2_HU_392_MULTIBOARD_CERT_STATUS_V13_BATCH75','NL2_HU_392_MULTIBOARD_CERT_STATUS_V14_BATCH77','NL2_HU_392_MULTIBOARD_CERT_STATUS_V15_BATCH80','NL2_HU_392_MULTIBOARD_CERT_STATUS_V16_BATCH82','NL2_HU_392_MULTIBOARD_CERT_STATUS_V17_BATCH84','NL2_HU_392_MULTIBOARD_CERT_STATUS_V18_BATCH86','NL2_HU_392_MULTIBOARD_CERT_STATUS_V19_BATCH88','NL2_HU_392_MULTIBOARD_CERT_STATUS_V20_BATCH90','NL2_HU_392_MULTIBOARD_CERT_STATUS_V21_BATCH92'].includes(d.schema)||d.CERT_MULTIBOARD+d.APPROX!==392)
+   if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V1','NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE','NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28','NL2_HU_392_MULTIBOARD_CERT_STATUS_V4_BATCH50','NL2_HU_392_MULTIBOARD_CERT_STATUS_V5_BATCH55','NL2_HU_392_MULTIBOARD_CERT_STATUS_V6_RANK33','NL2_HU_392_MULTIBOARD_CERT_STATUS_V7_BATCH59','NL2_HU_392_MULTIBOARD_CERT_STATUS_V8_BATCH61','NL2_HU_392_MULTIBOARD_CERT_STATUS_V9_RANK40_B67','NL2_HU_392_MULTIBOARD_CERT_STATUS_V10_BATCH69','NL2_HU_392_MULTIBOARD_CERT_STATUS_V11_BATCH71','NL2_HU_392_MULTIBOARD_CERT_STATUS_V12_BATCH73','NL2_HU_392_MULTIBOARD_CERT_STATUS_V13_BATCH75','NL2_HU_392_MULTIBOARD_CERT_STATUS_V14_BATCH77','NL2_HU_392_MULTIBOARD_CERT_STATUS_V15_BATCH80','NL2_HU_392_MULTIBOARD_CERT_STATUS_V16_BATCH82','NL2_HU_392_MULTIBOARD_CERT_STATUS_V17_BATCH84','NL2_HU_392_MULTIBOARD_CERT_STATUS_V18_BATCH86','NL2_HU_392_MULTIBOARD_CERT_STATUS_V19_BATCH88','NL2_HU_392_MULTIBOARD_CERT_STATUS_V20_BATCH90','NL2_HU_392_MULTIBOARD_CERT_STATUS_V21_BATCH92','NL2_HU_392_MULTIBOARD_CERT_STATUS_V22_BATCH94'].includes(d.schema)||d.CERT_MULTIBOARD+d.APPROX!==392)
       throw Error('模型認證來源驗證失敗');
    status=d;
    models=Object.values(d.records).filter(x=>x.label==='CERT-MULTIBOARD')
