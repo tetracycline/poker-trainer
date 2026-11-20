@@ -1,0 +1,1698 @@
+{
+  "schema": "NL2_HU_SOLVER_ARCHIVE_AUDIT_V1",
+  "run_id": "LOCAL_20261120_B05",
+  "artifact_count": 2,
+  "profiles": [
+    "BB3_BTN",
+    "BTN_BB"
+  ],
+  "solved_subgames": 12,
+  "skipped_unreachable": 2,
+  "raw_reachable_hand_combos": 96184,
+  "near_mixed_combo_nodes": 5865,
+  "certified_new_nl2_river_cells": 0,
+  "estimated_new_nl2_river_cells": 0,
+  "mapping_status": "BLOCKED: needs verified NL2 exact action, pot, ranges, SPR and board lineage",
+  "errors": [],
+  "artifacts": [
+    {
+      "artifact": "nl2-stage2-BB3_BTN-exp_ip-QsJh4d-local",
+      "spot": "BB3_BTN",
+      "version": "exp_ip",
+      "solved_cases": 5,
+      "skipped_unreachable": [
+        {
+          "flop": "QsJh4d",
+          "line": "x x",
+          "turn": "7s",
+          "reason": "NO_TWO_SIDED_COMBO_REACH"
+        },
+        {
+          "flop": "QsJh4d",
+          "line": "b50 r c",
+          "turn": "7s",
+          "reason": "NO_TWO_SIDED_COMBO_REACH"
+        }
+      ],
+      "cases": [
+        {
+          "flop": "QsJh4d",
+          "turn": "7s",
+          "line": "b33 c",
+          "parent_spr": 2.44506,
+          "n_solver_nodes": 78,
+          "gto_gap_pct": 0.33416029810905457,
+          "cert_converged": true,
+          "solver_validated_for": "LOCKED_POOL_RESPONSE_PROVISIONAL_GTO_BASELINE",
+          "hero_gap_pct": 0.41508567333221436,
+          "pool_lock_patterns": 2,
+          "villain_pool_lock_coverage": {
+            "version": "NL2_AGGREGATE_NODE_LOCKS_NOT_DIRECT_COMBO_OBSERVATIONS",
+            "villain_nodes": 24,
+            "matched_nodes": 5,
+            "unmatched_nodes": 19,
+            "coverage_pct": 20.83,
+            "source_pattern_count": 6,
+            "unmatched_examples": [
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b33 c/x x/"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b33 c/x x/x b50"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b33 c/x x/x b100"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b33 c/x x/x a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b33 c/x x/b50 a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b33 c/x x/b100 a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b33 c/x x/"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b33 c/x x/x b50"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b33 c/x x/x b100"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b33 c/x x/x a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b33 c/x x/b50 a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b33 c/x x/b100 a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b33 c/b50 c/x b50"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b33 c/b50 c/x a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b33 c/b50 c/b50 a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b33 c/b50 c/x b50"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b33 c/b50 c/x a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b33 c/b100 c/x a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b33 c/b100 c/x a"
+              }
+            ],
+            "fully_locked_in_sample": false,
+            "interpretation": "Regex match is source coverage, not observed combo evidence; unmatched villain nodes remain unlocked."
+          },
+          "hero_gain_vs_locked_pool_bb": 3.7504,
+          "medium50_exact_board_candidates": [
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "b33 c/x x/x",
+              "hero": 1,
+              "actor": 1,
+              "node_spr": 2.445065,
+              "eligible_combos": 3,
+              "reach_weighted_b50_pct": 21.172
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "b33 c/b50 c/x",
+              "hero": 1,
+              "actor": 1,
+              "node_spr": 0.972532,
+              "eligible_combos": 1,
+              "reach_weighted_b50_pct": 3.286
+            }
+          ],
+          "medium50_not_a_generic_MODEL_cert": true,
+          "source_sha256": "784fbf2895769b7dce8f3b8d0c56ee4be99e71f54a3d4adbca46f4431bed752f",
+          "reach_summary": {
+            "nodes": 50,
+            "combos_reachable": 1021,
+            "combos_unreachable": 1826,
+            "forced_single": 968,
+            "near_mixed": 53,
+            "discarded_secondary": 1710
+          },
+          "certified_nl2_cells": 0
+        },
+        {
+          "flop": "QsJh4d",
+          "turn": "7s",
+          "line": "b75 c",
+          "parent_spr": 1.45572,
+          "n_solver_nodes": 68,
+          "gto_gap_pct": 0.3601919710636139,
+          "cert_converged": true,
+          "solver_validated_for": "LOCKED_POOL_RESPONSE_PROVISIONAL_GTO_BASELINE",
+          "hero_gap_pct": 0.39474716782569885,
+          "pool_lock_patterns": 2,
+          "villain_pool_lock_coverage": {
+            "version": "NL2_AGGREGATE_NODE_LOCKS_NOT_DIRECT_COMBO_OBSERVATIONS",
+            "villain_nodes": 29,
+            "matched_nodes": 5,
+            "unmatched_nodes": 24,
+            "coverage_pct": 17.24,
+            "source_pattern_count": 6,
+            "unmatched_examples": [
+              {
+                "board": "4dJhQs7s",
+                "line": "b75 c/x b50"
+              },
+              {
+                "board": "4dJhQs7s",
+                "line": "b75 c/x b100"
+              },
+              {
+                "board": "4dJhQs7s",
+                "line": "b75 c/x a"
+              },
+              {
+                "board": "4dJhQs7s",
+                "line": "b75 c/b100 a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b75 c/x b50 c/"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b75 c/x b50 c/x a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b75 c/x b50 c/"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b75 c/x b50 c/x a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b75 c/x b100 c/"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b75 c/x b100 c/"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b75 c/x x/"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b75 c/x x/x b50"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b75 c/x x/x b100"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b75 c/x x/x a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b75 c/x x/b50 a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b75 c/x x/b100 a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b75 c/x x/"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b75 c/x x/x b50"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b75 c/x x/x b100"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b75 c/x x/x a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b75 c/x x/b50 a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b75 c/x x/b100 a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b75 c/b50 c/x a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b75 c/b100 c/x a"
+              }
+            ],
+            "fully_locked_in_sample": false,
+            "interpretation": "Regex match is source coverage, not observed combo evidence; unmatched villain nodes remain unlocked."
+          },
+          "hero_gain_vs_locked_pool_bb": 3.13439,
+          "medium50_exact_board_candidates": [
+            {
+              "board": "4dJhQs7s",
+              "exact_line": "b75 c/x",
+              "hero": 1,
+              "actor": 1,
+              "node_spr": 1.455716,
+              "eligible_combos": 20,
+              "reach_weighted_b50_pct": 80.297
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "b75 c/x x/x",
+              "hero": 1,
+              "actor": 1,
+              "node_spr": 1.455716,
+              "eligible_combos": 11,
+              "reach_weighted_b50_pct": 38.087
+            }
+          ],
+          "medium50_not_a_generic_MODEL_cert": true,
+          "source_sha256": "de7b4475d78db6ee4c441711759556a1b768a81d910fd38e7b5735cb78717a8a",
+          "reach_summary": {
+            "nodes": 61,
+            "combos_reachable": 993,
+            "combos_unreachable": 1727,
+            "forced_single": 962,
+            "near_mixed": 31,
+            "discarded_secondary": 1508
+          },
+          "certified_nl2_cells": 0
+        },
+        {
+          "flop": "QsJh4d",
+          "turn": "7s",
+          "line": "b33 r c",
+          "parent_spr": 1.14022,
+          "n_solver_nodes": 29,
+          "gto_gap_pct": 0.40132462978363037,
+          "cert_converged": true,
+          "solver_validated_for": "LOCKED_POOL_RESPONSE_PROVISIONAL_GTO_BASELINE",
+          "hero_gap_pct": 0.20836235582828522,
+          "pool_lock_patterns": 0,
+          "villain_pool_lock_coverage": {
+            "version": "NL2_AGGREGATE_NODE_LOCKS_NOT_DIRECT_COMBO_OBSERVATIONS",
+            "villain_nodes": 6,
+            "matched_nodes": 0,
+            "unmatched_nodes": 6,
+            "coverage_pct": 0.0,
+            "source_pattern_count": 6,
+            "unmatched_examples": [
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b33 r c/x x/"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b33 r c/x x/x b50"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b33 r c/x x/x a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b33 r c/x x/"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b33 r c/x x/x b50"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b33 r c/x x/x a"
+              }
+            ],
+            "fully_locked_in_sample": false,
+            "interpretation": "Regex match is source coverage, not observed combo evidence; unmatched villain nodes remain unlocked."
+          },
+          "hero_gain_vs_locked_pool_bb": -0.00186,
+          "medium50_exact_board_candidates": [
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "b33 r c/x x/x",
+              "hero": 1,
+              "actor": 1,
+              "node_spr": 1.140216,
+              "eligible_combos": 9,
+              "reach_weighted_b50_pct": 26.543
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "b33 r c/x x/x",
+              "hero": 1,
+              "actor": 1,
+              "node_spr": 1.140216,
+              "eligible_combos": 13,
+              "reach_weighted_b50_pct": 35.17
+            }
+          ],
+          "medium50_not_a_generic_MODEL_cert": true,
+          "source_sha256": "829516bbdc7954267b7b7ea8c3d8ac92e5c15849e995fd4582a35af88e7fc233",
+          "reach_summary": {
+            "nodes": 16,
+            "combos_reachable": 541,
+            "combos_unreachable": 638,
+            "forced_single": 512,
+            "near_mixed": 29,
+            "discarded_secondary": 795
+          },
+          "certified_nl2_cells": 0
+        },
+        {
+          "flop": "QsJh4d",
+          "turn": "7s",
+          "line": "b75 r c",
+          "parent_spr": 0.3889,
+          "n_solver_nodes": 11,
+          "gto_gap_pct": 0.05728817731142044,
+          "cert_converged": true,
+          "solver_validated_for": "LOCKED_POOL_RESPONSE_PROVISIONAL_GTO_BASELINE",
+          "hero_gap_pct": 0.03043423593044281,
+          "pool_lock_patterns": 0,
+          "villain_pool_lock_coverage": {
+            "version": "NL2_AGGREGATE_NODE_LOCKS_NOT_DIRECT_COMBO_OBSERVATIONS",
+            "villain_nodes": 4,
+            "matched_nodes": 0,
+            "unmatched_nodes": 4,
+            "coverage_pct": 0.0,
+            "source_pattern_count": 6,
+            "unmatched_examples": [
+              {
+                "board": "4dJhQs7s",
+                "line": "b75 r c/x a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b75 r c/x x/"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b75 r c/x x/"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b75 r c/x x/x a"
+              }
+            ],
+            "fully_locked_in_sample": false,
+            "interpretation": "Regex match is source coverage, not observed combo evidence; unmatched villain nodes remain unlocked."
+          },
+          "hero_gain_vs_locked_pool_bb": -0.01483,
+          "medium50_exact_board_candidates": [],
+          "medium50_not_a_generic_MODEL_cert": true,
+          "source_sha256": "2c3efed96d6fcc3189cc8696b269d1573d1f2adc18a993ecb28f99db55053051",
+          "reach_summary": {
+            "nodes": 10,
+            "combos_reachable": 225,
+            "combos_unreachable": 110,
+            "forced_single": 216,
+            "near_mixed": 9,
+            "discarded_secondary": 166
+          },
+          "certified_nl2_cells": 0
+        },
+        {
+          "flop": "QsJh4d",
+          "turn": "7s",
+          "line": "b50 c",
+          "parent_spr": 1.94512,
+          "n_solver_nodes": 66,
+          "gto_gap_pct": 0.39091604948043823,
+          "cert_converged": true,
+          "solver_validated_for": "LOCKED_POOL_RESPONSE_PROVISIONAL_GTO_BASELINE",
+          "hero_gap_pct": 0.33941352367401123,
+          "pool_lock_patterns": 2,
+          "villain_pool_lock_coverage": {
+            "version": "NL2_AGGREGATE_NODE_LOCKS_NOT_DIRECT_COMBO_OBSERVATIONS",
+            "villain_nodes": 29,
+            "matched_nodes": 5,
+            "unmatched_nodes": 24,
+            "coverage_pct": 17.24,
+            "source_pattern_count": 6,
+            "unmatched_examples": [
+              {
+                "board": "4dJhQs7s",
+                "line": "b50 c/x b50"
+              },
+              {
+                "board": "4dJhQs7s",
+                "line": "b50 c/x b100"
+              },
+              {
+                "board": "4dJhQs7s",
+                "line": "b50 c/b100 a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b50 c/x b50 c/"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b50 c/x b50 c/x a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b50 c/x b50 c/"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b50 c/x b50 c/x a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b50 c/x b100 c/"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b50 c/x b100 c/"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b50 c/x x/"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b50 c/x x/x b50"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b50 c/x x/x b100"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b50 c/x x/x a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b50 c/x x/b50 a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b50 c/x x/b100 a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b50 c/x x/"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b50 c/x x/x b50"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b50 c/x x/x b100"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b50 c/x x/x a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b50 c/x x/b100 a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b50 c/b50 c/x a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b50 c/b50 c/x a"
+              },
+              {
+                "board": "4dJhQs7sJc",
+                "line": "b50 c/b100 c/x a"
+              },
+              {
+                "board": "4dJhQs7s6c",
+                "line": "b50 c/b100 c/x a"
+              }
+            ],
+            "fully_locked_in_sample": false,
+            "interpretation": "Regex match is source coverage, not observed combo evidence; unmatched villain nodes remain unlocked."
+          },
+          "hero_gain_vs_locked_pool_bb": 3.79369,
+          "medium50_exact_board_candidates": [
+            {
+              "board": "4dJhQs7s",
+              "exact_line": "b50 c/x",
+              "hero": 1,
+              "actor": 1,
+              "node_spr": 1.945122,
+              "eligible_combos": 9,
+              "reach_weighted_b50_pct": 17.04
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "b50 c/x x/x",
+              "hero": 1,
+              "actor": 1,
+              "node_spr": 1.945122,
+              "eligible_combos": 5,
+              "reach_weighted_b50_pct": 8.526
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "b50 c/x x/x",
+              "hero": 1,
+              "actor": 1,
+              "node_spr": 1.945122,
+              "eligible_combos": 14,
+              "reach_weighted_b50_pct": 33.234
+            }
+          ],
+          "medium50_not_a_generic_MODEL_cert": true,
+          "source_sha256": "3468b9254b180c4af1fd9c5b8f8ddb691799edd5863c615d792d75c4c8d297b0",
+          "reach_summary": {
+            "nodes": 62,
+            "combos_reachable": 1321,
+            "combos_unreachable": 1748,
+            "forced_single": 1271,
+            "near_mixed": 50,
+            "discarded_secondary": 1917
+          },
+          "certified_nl2_cells": 0
+        }
+      ]
+    },
+    {
+      "artifact": "nl2-stage2-BTN_BB-gto-QsJh4d-local",
+      "spot": "BTN_BB",
+      "version": "gto",
+      "solved_cases": 7,
+      "skipped_unreachable": [],
+      "cases": [
+        {
+          "flop": "QsJh4d",
+          "turn": "7s",
+          "line": "x x",
+          "parent_spr": 17.72727,
+          "n_solver_nodes": 110,
+          "gto_gap_pct": 0.48543626070022583,
+          "cert_converged": true,
+          "solver_validated_for": "GTO_EXACT_BOARD_ONLY",
+          "hero_gap_pct": null,
+          "pool_lock_patterns": 0,
+          "villain_pool_lock_coverage": {
+            "version": "GTO_NO_POOL_LOCK",
+            "villain_nodes": 0,
+            "matched_nodes": 0,
+            "coverage_pct": null
+          },
+          "hero_gain_vs_locked_pool_bb": null,
+          "medium50_exact_board_candidates": [
+            {
+              "board": "4dJhQs7s",
+              "exact_line": "x x/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 17.727273,
+              "eligible_combos": 33,
+              "reach_weighted_b50_pct": 10.43
+            },
+            {
+              "board": "4dJhQs7s",
+              "exact_line": "x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 17.727273,
+              "eligible_combos": 254,
+              "reach_weighted_b50_pct": 56.719
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x x/x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 8.613636,
+              "eligible_combos": 10,
+              "reach_weighted_b50_pct": 6.818
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x x/x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 8.613636,
+              "eligible_combos": 71,
+              "reach_weighted_b50_pct": 16.634
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x x/x b100 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 5.575758,
+              "eligible_combos": 6,
+              "reach_weighted_b50_pct": 1.137
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x x/x b100 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 5.575758,
+              "eligible_combos": 82,
+              "reach_weighted_b50_pct": 32.135
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x x/x x/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 17.727273,
+              "eligible_combos": 68,
+              "reach_weighted_b50_pct": 31.363
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x x/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 17.727273,
+              "eligible_combos": 60,
+              "reach_weighted_b50_pct": 19.138
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x x/x x/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 17.727273,
+              "eligible_combos": 112,
+              "reach_weighted_b50_pct": 35.63
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x x/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 17.727273,
+              "eligible_combos": 81,
+              "reach_weighted_b50_pct": 27.143
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x x/b50 c/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 8.613636,
+              "eligible_combos": 84,
+              "reach_weighted_b50_pct": 29.387
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x x/b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 8.613636,
+              "eligible_combos": 188,
+              "reach_weighted_b50_pct": 28.611
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x x/b50 c/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 8.613636,
+              "eligible_combos": 46,
+              "reach_weighted_b50_pct": 36.479
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x x/b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 8.613636,
+              "eligible_combos": 213,
+              "reach_weighted_b50_pct": 28.296
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x x/b100 c/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 5.575758,
+              "eligible_combos": 63,
+              "reach_weighted_b50_pct": 28.126
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x x/b100 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 5.575758,
+              "eligible_combos": 3,
+              "reach_weighted_b50_pct": 8.729
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x x/b100 c/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 5.575758,
+              "eligible_combos": 78,
+              "reach_weighted_b50_pct": 33.64
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x x/b100 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 5.575758,
+              "eligible_combos": 87,
+              "reach_weighted_b50_pct": 24.663
+            }
+          ],
+          "medium50_not_a_generic_MODEL_cert": true,
+          "source_sha256": "ce77368bdfbb07fa49fcd2247f1ab985cede12ec8c65131c1cc2689c405ee0d8",
+          "reach_summary": {
+            "nodes": 108,
+            "combos_reachable": 27655,
+            "combos_unreachable": 18433,
+            "forced_single": 26137,
+            "near_mixed": 1518,
+            "discarded_secondary": 45917
+          },
+          "certified_nl2_cells": 0
+        },
+        {
+          "flop": "QsJh4d",
+          "turn": "7s",
+          "line": "x b33 c",
+          "parent_spr": 10.46827,
+          "n_solver_nodes": 58,
+          "gto_gap_pct": 0.4956023395061493,
+          "cert_converged": true,
+          "solver_validated_for": "GTO_EXACT_BOARD_ONLY",
+          "hero_gap_pct": null,
+          "pool_lock_patterns": 0,
+          "villain_pool_lock_coverage": {
+            "version": "GTO_NO_POOL_LOCK",
+            "villain_nodes": 0,
+            "matched_nodes": 0,
+            "coverage_pct": null
+          },
+          "hero_gain_vs_locked_pool_bb": null,
+          "medium50_exact_board_candidates": [
+            {
+              "board": "4dJhQs7s",
+              "exact_line": "x b33 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 10.468271,
+              "eligible_combos": 45,
+              "reach_weighted_b50_pct": 11.403
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b33 c/x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 4.984136,
+              "eligible_combos": 12,
+              "reach_weighted_b50_pct": 8.981
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b33 c/x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 4.984136,
+              "eligible_combos": 24,
+              "reach_weighted_b50_pct": 3.085
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b33 c/x b100 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 3.15609,
+              "eligible_combos": 4,
+              "reach_weighted_b50_pct": 1.497
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b33 c/x b100 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 3.15609,
+              "eligible_combos": 46,
+              "reach_weighted_b50_pct": 18.374
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b33 c/x x/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 10.468271,
+              "eligible_combos": 63,
+              "reach_weighted_b50_pct": 25.586
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b33 c/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 10.468271,
+              "eligible_combos": 95,
+              "reach_weighted_b50_pct": 35.688
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b33 c/x x/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 10.468271,
+              "eligible_combos": 113,
+              "reach_weighted_b50_pct": 34.998
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b33 c/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 10.468271,
+              "eligible_combos": 139,
+              "reach_weighted_b50_pct": 31.981
+            }
+          ],
+          "medium50_not_a_generic_MODEL_cert": true,
+          "source_sha256": "bfee19c89ecd460d36cee7909483c1c5e5ac570fcee5f6fef2bcf92dd7e20ad9",
+          "reach_summary": {
+            "nodes": 56,
+            "combos_reachable": 11847,
+            "combos_unreachable": 8198,
+            "forced_single": 11170,
+            "near_mixed": 677,
+            "discarded_secondary": 19522
+          },
+          "certified_nl2_cells": 0
+        },
+        {
+          "flop": "QsJh4d",
+          "turn": "7s",
+          "line": "x b75 c",
+          "parent_spr": 6.78561,
+          "n_solver_nodes": 58,
+          "gto_gap_pct": 0.470455139875412,
+          "cert_converged": true,
+          "solver_validated_for": "GTO_EXACT_BOARD_ONLY",
+          "hero_gap_pct": null,
+          "pool_lock_patterns": 0,
+          "villain_pool_lock_coverage": {
+            "version": "GTO_NO_POOL_LOCK",
+            "villain_nodes": 0,
+            "matched_nodes": 0,
+            "coverage_pct": null
+          },
+          "hero_gain_vs_locked_pool_bb": null,
+          "medium50_exact_board_candidates": [
+            {
+              "board": "4dJhQs7s",
+              "exact_line": "x b75 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 6.78561,
+              "eligible_combos": 4,
+              "reach_weighted_b50_pct": 5.024
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b75 c/x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 3.142805,
+              "eligible_combos": 17,
+              "reach_weighted_b50_pct": 10.49
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b75 c/x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 3.142805,
+              "eligible_combos": 64,
+              "reach_weighted_b50_pct": 21.646
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b75 c/x x/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 6.78561,
+              "eligible_combos": 70,
+              "reach_weighted_b50_pct": 37.004
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b75 c/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 6.78561,
+              "eligible_combos": 27,
+              "reach_weighted_b50_pct": 9.324
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b75 c/x x/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 6.78561,
+              "eligible_combos": 158,
+              "reach_weighted_b50_pct": 65.617
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b75 c/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 6.78561,
+              "eligible_combos": 59,
+              "reach_weighted_b50_pct": 13.781
+            }
+          ],
+          "medium50_not_a_generic_MODEL_cert": true,
+          "source_sha256": "56b2b2ff2420b0192459182130ba49b5a4e29e2f2a885df4c35bf006939b9539",
+          "reach_summary": {
+            "nodes": 56,
+            "combos_reachable": 9837,
+            "combos_unreachable": 5585,
+            "forced_single": 9234,
+            "near_mixed": 603,
+            "discarded_secondary": 15637
+          },
+          "certified_nl2_cells": 0
+        },
+        {
+          "flop": "QsJh4d",
+          "turn": "7s",
+          "line": "x b33 r c",
+          "parent_spr": 5.60536,
+          "n_solver_nodes": 110,
+          "gto_gap_pct": 0.4186837077140808,
+          "cert_converged": true,
+          "solver_validated_for": "GTO_EXACT_BOARD_ONLY",
+          "hero_gap_pct": null,
+          "pool_lock_patterns": 0,
+          "villain_pool_lock_coverage": {
+            "version": "GTO_NO_POOL_LOCK",
+            "villain_nodes": 0,
+            "matched_nodes": 0,
+            "coverage_pct": null
+          },
+          "hero_gain_vs_locked_pool_bb": null,
+          "medium50_exact_board_candidates": [
+            {
+              "board": "4dJhQs7s",
+              "exact_line": "x b33 r c/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 5.605359,
+              "eligible_combos": 27,
+              "reach_weighted_b50_pct": 13.87
+            },
+            {
+              "board": "4dJhQs7s",
+              "exact_line": "x b33 r c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 5.605359,
+              "eligible_combos": 191,
+              "reach_weighted_b50_pct": 55.734
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b33 r c/x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 2.55268,
+              "eligible_combos": 14,
+              "reach_weighted_b50_pct": 8.147
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b33 r c/x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 2.55268,
+              "eligible_combos": 25,
+              "reach_weighted_b50_pct": 15.083
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b33 r c/x b100 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.53512,
+              "eligible_combos": 1,
+              "reach_weighted_b50_pct": 0.431
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b33 r c/x x/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 5.605359,
+              "eligible_combos": 57,
+              "reach_weighted_b50_pct": 29.675
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b33 r c/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 5.605359,
+              "eligible_combos": 41,
+              "reach_weighted_b50_pct": 16.939
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b33 r c/x x/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 5.605359,
+              "eligible_combos": 49,
+              "reach_weighted_b50_pct": 25.219
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b33 r c/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 5.605359,
+              "eligible_combos": 114,
+              "reach_weighted_b50_pct": 31.412
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b33 r c/b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 2.55268,
+              "eligible_combos": 23,
+              "reach_weighted_b50_pct": 12.278
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b33 r c/b50 c/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 2.55268,
+              "eligible_combos": 11,
+              "reach_weighted_b50_pct": 8.846
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b33 r c/b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 2.55268,
+              "eligible_combos": 32,
+              "reach_weighted_b50_pct": 16.045
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b33 r c/b100 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.53512,
+              "eligible_combos": 15,
+              "reach_weighted_b50_pct": 17.449
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b33 r c/b100 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.53512,
+              "eligible_combos": 37,
+              "reach_weighted_b50_pct": 20.378
+            }
+          ],
+          "medium50_not_a_generic_MODEL_cert": true,
+          "source_sha256": "99c7bee472187ad4b128ce0c91dd620b8cc446b43b423ec610300410724e3646",
+          "reach_summary": {
+            "nodes": 107,
+            "combos_reachable": 14841,
+            "combos_unreachable": 13967,
+            "forced_single": 13859,
+            "near_mixed": 982,
+            "discarded_secondary": 25553
+          },
+          "certified_nl2_cells": 0
+        },
+        {
+          "flop": "QsJh4d",
+          "turn": "7s",
+          "line": "x b75 r c",
+          "parent_spr": 2.81077,
+          "n_solver_nodes": 78,
+          "gto_gap_pct": 0.40190404653549194,
+          "cert_converged": true,
+          "solver_validated_for": "GTO_EXACT_BOARD_ONLY",
+          "hero_gap_pct": null,
+          "pool_lock_patterns": 0,
+          "villain_pool_lock_coverage": {
+            "version": "GTO_NO_POOL_LOCK",
+            "villain_nodes": 0,
+            "matched_nodes": 0,
+            "coverage_pct": null
+          },
+          "hero_gain_vs_locked_pool_bb": null,
+          "medium50_exact_board_candidates": [
+            {
+              "board": "4dJhQs7s",
+              "exact_line": "x b75 r c/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 2.810766,
+              "eligible_combos": 10,
+              "reach_weighted_b50_pct": 12.723
+            },
+            {
+              "board": "4dJhQs7s",
+              "exact_line": "x b75 r c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 2.810766,
+              "eligible_combos": 125,
+              "reach_weighted_b50_pct": 55.278
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b75 r c/x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.155383,
+              "eligible_combos": 12,
+              "reach_weighted_b50_pct": 10.614
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b75 r c/x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.155383,
+              "eligible_combos": 5,
+              "reach_weighted_b50_pct": 7.2
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b75 r c/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 2.810766,
+              "eligible_combos": 40,
+              "reach_weighted_b50_pct": 25.261
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b75 r c/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 2.810766,
+              "eligible_combos": 51,
+              "reach_weighted_b50_pct": 26.546
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b75 r c/b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.155383,
+              "eligible_combos": 17,
+              "reach_weighted_b50_pct": 14.576
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b75 r c/b50 c/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 1.155383,
+              "eligible_combos": 3,
+              "reach_weighted_b50_pct": 11.773
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b75 r c/b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.155383,
+              "eligible_combos": 16,
+              "reach_weighted_b50_pct": 21.564
+            }
+          ],
+          "medium50_not_a_generic_MODEL_cert": true,
+          "source_sha256": "04de6823855feedfe7be42732e327a9fa090acfd3001e7f4ade90d7e14675653",
+          "reach_summary": {
+            "nodes": 76,
+            "combos_reachable": 7485,
+            "combos_unreachable": 5970,
+            "forced_single": 6933,
+            "near_mixed": 552,
+            "discarded_secondary": 11320
+          },
+          "certified_nl2_cells": 0
+        },
+        {
+          "flop": "QsJh4d",
+          "turn": "7s",
+          "line": "x b50 c",
+          "parent_spr": 8.61364,
+          "n_solver_nodes": 58,
+          "gto_gap_pct": 0.43747952580451965,
+          "cert_converged": true,
+          "solver_validated_for": "GTO_EXACT_BOARD_ONLY",
+          "hero_gap_pct": null,
+          "pool_lock_patterns": 0,
+          "villain_pool_lock_coverage": {
+            "version": "GTO_NO_POOL_LOCK",
+            "villain_nodes": 0,
+            "matched_nodes": 0,
+            "coverage_pct": null
+          },
+          "hero_gain_vs_locked_pool_bb": null,
+          "medium50_exact_board_candidates": [
+            {
+              "board": "4dJhQs7s",
+              "exact_line": "x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 8.613636,
+              "eligible_combos": 9,
+              "reach_weighted_b50_pct": 5.809
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b50 c/x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 4.056818,
+              "eligible_combos": 6,
+              "reach_weighted_b50_pct": 3.605
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b50 c/x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 4.056818,
+              "eligible_combos": 40,
+              "reach_weighted_b50_pct": 11.68
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b50 c/x b100 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 2.537879,
+              "eligible_combos": 4,
+              "reach_weighted_b50_pct": 2.891
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b50 c/x b100 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 2.537879,
+              "eligible_combos": 22,
+              "reach_weighted_b50_pct": 15.667
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b50 c/x x/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 8.613636,
+              "eligible_combos": 124,
+              "reach_weighted_b50_pct": 40.238
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b50 c/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 8.613636,
+              "eligible_combos": 100,
+              "reach_weighted_b50_pct": 30.335
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b50 c/x x/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 8.613636,
+              "eligible_combos": 126,
+              "reach_weighted_b50_pct": 44.651
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b50 c/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 8.613636,
+              "eligible_combos": 63,
+              "reach_weighted_b50_pct": 24.139
+            }
+          ],
+          "medium50_not_a_generic_MODEL_cert": true,
+          "source_sha256": "66b78c27ae8a2dd85380c2309e80a1e8a951242818a31533af79217b753173aa",
+          "reach_summary": {
+            "nodes": 56,
+            "combos_reachable": 10956,
+            "combos_unreachable": 8146,
+            "forced_single": 10237,
+            "near_mixed": 719,
+            "discarded_secondary": 17770
+          },
+          "certified_nl2_cells": 0
+        },
+        {
+          "flop": "QsJh4d",
+          "turn": "7s",
+          "line": "x b50 r c",
+          "parent_spr": 4.05682,
+          "n_solver_nodes": 100,
+          "gto_gap_pct": 0.44617530703544617,
+          "cert_converged": true,
+          "solver_validated_for": "GTO_EXACT_BOARD_ONLY",
+          "hero_gap_pct": null,
+          "pool_lock_patterns": 0,
+          "villain_pool_lock_coverage": {
+            "version": "GTO_NO_POOL_LOCK",
+            "villain_nodes": 0,
+            "matched_nodes": 0,
+            "coverage_pct": null
+          },
+          "hero_gain_vs_locked_pool_bb": null,
+          "medium50_exact_board_candidates": [
+            {
+              "board": "4dJhQs7s",
+              "exact_line": "x b50 r c/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 4.056818,
+              "eligible_combos": 5,
+              "reach_weighted_b50_pct": 5.813
+            },
+            {
+              "board": "4dJhQs7s",
+              "exact_line": "x b50 r c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 4.056818,
+              "eligible_combos": 169,
+              "reach_weighted_b50_pct": 57.74
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b50 r c/x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.778409,
+              "eligible_combos": 3,
+              "reach_weighted_b50_pct": 4.131
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b50 r c/x b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.778409,
+              "eligible_combos": 2,
+              "reach_weighted_b50_pct": 3.663
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b50 r c/x b100 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.018939,
+              "eligible_combos": 8,
+              "reach_weighted_b50_pct": 45.495
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b50 r c/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 4.056818,
+              "eligible_combos": 27,
+              "reach_weighted_b50_pct": 22.683
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b50 r c/x x/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 4.056818,
+              "eligible_combos": 4,
+              "reach_weighted_b50_pct": 4.57
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b50 r c/x x/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 4.056818,
+              "eligible_combos": 54,
+              "reach_weighted_b50_pct": 32.409
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b50 r c/b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.778409,
+              "eligible_combos": 17,
+              "reach_weighted_b50_pct": 13.558
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b50 r c/b50 c/",
+              "hero": null,
+              "actor": 0,
+              "node_spr": 1.778409,
+              "eligible_combos": 4,
+              "reach_weighted_b50_pct": 12.044
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b50 r c/b50 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.778409,
+              "eligible_combos": 20,
+              "reach_weighted_b50_pct": 13.655
+            },
+            {
+              "board": "4dJhQs7sJc",
+              "exact_line": "x b50 r c/b100 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.018939,
+              "eligible_combos": 5,
+              "reach_weighted_b50_pct": 5.306
+            },
+            {
+              "board": "4dJhQs7s6c",
+              "exact_line": "x b50 r c/b100 c/x",
+              "hero": null,
+              "actor": 1,
+              "node_spr": 1.018939,
+              "eligible_combos": 15,
+              "reach_weighted_b50_pct": 15.704
+            }
+          ],
+          "medium50_not_a_generic_MODEL_cert": true,
+          "source_sha256": "0b4b8eccf76b9bdb03d2a9f8737b101a3cc5e6d45849acf199e1bc5cdca0922f",
+          "reach_summary": {
+            "nodes": 96,
+            "combos_reachable": 9462,
+            "combos_unreachable": 12757,
+            "forced_single": 8820,
+            "near_mixed": 642,
+            "discarded_secondary": 16316
+          },
+          "certified_nl2_cells": 0
+        }
+      ]
+    }
+  ],
+  "execution_backend": "LOCAL_DOT_CLOUD_NOT_GITHUB_ACTIONS",
+  "parent_wr_exact_lineage_audit": [
+    {
+      "profile": "BTN_BB-gto-QsJh4d",
+      "line": "x x",
+      "source_wr_exact_match": true,
+      "parent_gto_gap_pct": 0.45837923884391785,
+      "parent_hero_gap_pct": null,
+      "weighted_combos_by_seat": [
+        445,
+        391
+      ]
+    },
+    {
+      "profile": "BTN_BB-gto-QsJh4d",
+      "line": "x b33 c",
+      "source_wr_exact_match": true,
+      "parent_gto_gap_pct": 0.45837923884391785,
+      "parent_hero_gap_pct": null,
+      "weighted_combos_by_seat": [
+        266,
+        437
+      ]
+    },
+    {
+      "profile": "BTN_BB-gto-QsJh4d",
+      "line": "x b75 c",
+      "source_wr_exact_match": true,
+      "parent_gto_gap_pct": 0.45837923884391785,
+      "parent_hero_gap_pct": null,
+      "weighted_combos_by_seat": [
+        224,
+        314
+      ]
+    },
+    {
+      "profile": "BTN_BB-gto-QsJh4d",
+      "line": "x b33 r c",
+      "source_wr_exact_match": true,
+      "parent_gto_gap_pct": 0.45837923884391785,
+      "parent_hero_gap_pct": null,
+      "weighted_combos_by_seat": [
+        206,
+        322
+      ]
+    },
+    {
+      "profile": "BTN_BB-gto-QsJh4d",
+      "line": "x b75 r c",
+      "source_wr_exact_match": true,
+      "parent_gto_gap_pct": 0.45837923884391785,
+      "parent_hero_gap_pct": null,
+      "weighted_combos_by_seat": [
+        143,
+        202
+      ]
+    },
+    {
+      "profile": "BTN_BB-gto-QsJh4d",
+      "line": "x b50 c",
+      "source_wr_exact_match": true,
+      "parent_gto_gap_pct": 0.45837923884391785,
+      "parent_hero_gap_pct": null,
+      "weighted_combos_by_seat": [
+        253,
+        417
+      ]
+    },
+    {
+      "profile": "BTN_BB-gto-QsJh4d",
+      "line": "x b50 r c",
+      "source_wr_exact_match": true,
+      "parent_gto_gap_pct": 0.45837923884391785,
+      "parent_hero_gap_pct": null,
+      "weighted_combos_by_seat": [
+        158,
+        289
+      ]
+    },
+    {
+      "profile": "BB3_BTN-exp_ip-QsJh4d",
+      "line": "b33 c",
+      "source_wr_exact_match": true,
+      "parent_gto_gap_pct": 0.4619058668613434,
+      "parent_hero_gap_pct": 0.36687079071998596,
+      "weighted_combos_by_seat": [
+        59,
+        14
+      ]
+    },
+    {
+      "profile": "BB3_BTN-exp_ip-QsJh4d",
+      "line": "b75 c",
+      "source_wr_exact_match": true,
+      "parent_gto_gap_pct": 0.4619058668613434,
+      "parent_hero_gap_pct": 0.36687079071998596,
+      "weighted_combos_by_seat": [
+        59,
+        21
+      ]
+    },
+    {
+      "profile": "BB3_BTN-exp_ip-QsJh4d",
+      "line": "b33 r c",
+      "source_wr_exact_match": true,
+      "parent_gto_gap_pct": 0.4619058668613434,
+      "parent_hero_gap_pct": 0.36687079071998596,
+      "weighted_combos_by_seat": [
+        45,
+        36
+      ]
+    },
+    {
+      "profile": "BB3_BTN-exp_ip-QsJh4d",
+      "line": "b75 r c",
+      "source_wr_exact_match": true,
+      "parent_gto_gap_pct": 0.4619058668613434,
+      "parent_hero_gap_pct": 0.36687079071998596,
+      "weighted_combos_by_seat": [
+        50,
+        7
+      ]
+    },
+    {
+      "profile": "BB3_BTN-exp_ip-QsJh4d",
+      "line": "b50 c",
+      "source_wr_exact_match": true,
+      "parent_gto_gap_pct": 0.4619058668613434,
+      "parent_hero_gap_pct": 0.36687079071998596,
+      "weighted_combos_by_seat": [
+        59,
+        34
+      ]
+    }
+  ]
+}
