@@ -1,0 +1,47 @@
+name: TASK-HYBRID B41 independently audit 26 named-board CERT models + V2 UI + 2475 river paths
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b41-full-integrity.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  full-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Revalidate all 26 source-backed CERT boards, hero lock, V1/V2 trust, E, and 2475 river links
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b41_v2_full_integrity.py
+          python3 tools/hu_b41_v2_full_integrity.py
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+      - name: Commit verified integrity report and preserve original 24/368 V1 ledger
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b41_v2_integrity.json docs/NL2_HU_B41_FULL_INTEGRITY.md
+          git commit -m 'TASK-HYBRID B41: full 26 CERT/366 APPROX V2 integrity, 2475 river, immutable V1 core'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - name: Retain exact audit if push fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B41-V2-source-and-river-integrity
+          path: |
+            data/nl2_hu_b41_v2_integrity.json
+            docs/NL2_HU_B41_FULL_INTEGRITY.md
+          retention-days: 30
