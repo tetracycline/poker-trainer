@@ -19,7 +19,7 @@ code{font-size:12px;white-space:pre-wrap}
 </style></head>
 <body>
 <header><a href="nl2.html#lines">返回 NL2 行動線對照表</a><h1>真實 CFR：精確牌面、完整行動線與逐 combo 可達性</h1>
-<div class="info">資料由 GitHub Actions 真實 Rust CFR 原始輸出生成；每個來源附 SHA-256 和 run ID。</div></header>
+<div class="info">真實 Rust CFR 原始輸出，含 GitHub Actions 與離線解算；每個來源附 SHA-256 和執行編號。</div></header>
 <main>
 <p class="warn"><b>認證範圍：</b>「CERT」僅代表<strong>下方明確標出的公牌＋下注歷史＋底池與 SPR</strong>之 GTO 解算。
 它不代表上頁 392 張 MODEL 摘要表全部被真實解算。NL2 玩家池剝削（EXP）只在來源節點有實測頻率鎖定時可解讀，沒有測到的節點不視為已鎖。</p>
@@ -32,5 +32,5 @@ code{font-size:12px;white-space:pre-wrap}
 <div class="panel"><b>合法動作篩選：</b>每個有權重的 combo 僅保留最高頻動作；第二動作須同時滿足 f≥40% 與 f≥最高頻的 70%。權重為 0 的 combo 不會出現。<label><input id="showall" type="checkbox"> 顯示全部可達組合（預設前 100）</label></div>
 <div class="scroll"><table><thead><tr><th>確切 Hole Cards</th><th>允許動作（依 CFR）</th><th>此節點行動 EV 最高（僅對照，不自動加路徑）</th></tr></thead><tbody id="combos"></tbody></table></div>
 </main>
-<script src="nl2-cfr.js?v=stage2-b03"></script>
+<script src="nl2-cfr.js?v=stage2-b04-offline"></script>
 </body></html>

@@ -32,6 +32,9 @@ function selectNode(){
  current=game?.nodes[Number(selN.value)]||null;
  if(!current){by('details').textContent='目前沒有符合的真實 CFR 節點。';by('combos').innerHTML='';return;}
  const n=current,eligible=n.medium_50pct_eligible_combos||0;
+ const run=String(game.source_run_id),source=/^[0-9]+$/.test(run)
+  ? '原始 GitHub Actions：<a href="https://github.com/tetracycline/poker-trainer/actions/runs/'+run+'" target="_blank" rel="noopener">Run '+run+'</a>'
+  : '原始解算（不經 GitHub Actions）：<code>'+esc(run)+'</code>';
  const info=[
  '<div><span class="tag '+(game.version==='gto'?'':'exp')+'">'+esc(game.status)+'</span>　<b>'+esc(game.spot)+'・'+esc(game.pot_family)+'・'+esc(game.version)+'</b></div>',
  '<p>精確公牌 <strong>'+esc(n.board)+'</strong>；完整動作線 <strong>'+esc(n.line)+'</strong>；動作玩家 '+(n.acting_seat===0?'OOP':'IP')+'；此節點剩餘 SPR <strong>'+fmt(n.node_spr)+'</strong></p>',
@@ -41,7 +44,7 @@ function selectNode(){
  game.version==='gto'?'':('<p>NL2 實際頻率可匹配對手節點：'+fmt(game.nl2_pool_lock_coverage?.matched_nodes)+'／'+fmt(game.nl2_pool_lock_coverage?.villain_nodes)+'（'+fmt(game.nl2_pool_lock_coverage?.coverage_pct)+'%）。未匹配節點未鎖定；本子局模型化鎖頻的英雄 EV 差值 '+fmt(game.hero_gain_vs_locked_pool_bb)+' bb，<b>不能稱為完整 NL2 池最優策略。</b></p>'),
  game.version==='gto'?'<p>GTO exploitability：'+fmt(game.gto_gap_pct)+'%</p>':
  '<p>對手頻率鎖定試驗：hero gap '+fmt(game.hero_gap_pct)+'%，初始平衡 gap '+fmt(game.gto_gap_pct)+'%；不代表未匹配節點也被鎖定。</p>',
- '<div class="meta">原始 GitHub Actions：<a href="https://github.com/tetracycline/poker-trainer/actions/runs/'+Number(game.source_run_id)+'" target="_blank" rel="noopener">Run '+Number(game.source_run_id)+'</a>；JSON SHA-256 <code>'+esc(game.source_sha256)+'</code></div>'
+ '<div class="meta">'+source+'；JSON SHA-256 <code>'+esc(game.source_sha256)+'</code></div>'
  ];
  setHtml('details',info.join(''));
  renderCombos();
@@ -81,7 +84,9 @@ async function loadSource(){
    return await loadIndex('data/nl2_hu_exact_boards.json',false);
  }
 }
-loadSource().then(loaded=>{
+Promise.allSettled([loadSource(),loadIndex('data/nl2_hu_exact_boards_b04_local.json.gz',true)]).then(results=>{
+ if(results.every(x=>x.status==='rejected'))throw results[0].reason;
+ const loaded=results.flatMap(x=>x.status==='fulfilled'?x.value:[]);
  const seen=new Set();
  all=loaded.filter(c=>{
   const key=[c.spot,c.version,c.source_sha256].join(':');
@@ -89,7 +94,7 @@ loadSource().then(loaded=>{
  });
  const counts={};for(const c of all)counts[c.status]=(counts[c.status]||0)+1;
  const candidateNodes=all.reduce((k,c)=>k+c.nodes.filter(mediumCandidate).length,0);
- const msg='已載入 '+all.length+' 個實際公牌多街子局；50% pot 去極化研究候選節點 '+candidateNodes+'；GTO 精確公牌 CERT：'+(counts['CERT_EXACT_BOARD_GTO']||0)
+ const msg='已載入 '+all.length+' 個實際公牌多街子局'+(results.some(x=>x.status==='rejected')?'（有一批未能載入）':'')+'；50% pot 去極化研究候選節點 '+candidateNodes+'；GTO 精確公牌 CERT：'+(counts['CERT_EXACT_BOARD_GTO']||0)
    +'；對手頻率鎖定試驗：'+(counts['EXPERIMENTAL_POOL_LOCKED']||0)
    +'；392 張通用 MODEL 仍不是 CERT（0/392）。只在同一公牌、同一完整下注歷史及節點 SPR 有效。';
  setText(by('status'),msg);
