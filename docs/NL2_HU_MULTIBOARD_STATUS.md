@@ -51,7 +51,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B23_LMP_NEXT | 44764901527 | 2 | 2 |
 | B25_LMP_TEXTURES | 44767785255 | 3 | 3 |
 | B26_LMP_NONPAIRED | 44769773770 | 2 | 3 |
-| B29_OFFICIAL_RELOCK | PENDING | 0 | 0 |
+| B29_OFFICIAL_RELOCK | 44775751657 | 0 | 3 |
 
 ## Top-24 preregistered game histories
 
