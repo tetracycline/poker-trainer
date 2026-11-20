@@ -1,0 +1,148 @@
+name: TASK-HYBRID B113 original B43 UTG_CO 9s6h3d genuine actor-IP x-b50c turn/river NL2 lock (max28m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b113-utg-xb50-river.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Download only independently B112 SHA-verified original B43 GTO flop, NOT exp-OOP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p gto_parent
+          gh run download 44806967313 --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B43_UTG_B75-UTG_CO-gto-9s6h3d' --dir gto_parent
+          test -s gto_parent/evidence/UTG_CO-gto-9s6h3d.json
+          test -s gto_parent/solver/postflop/out/UTG_CO/gto/9s6h3d_multiboard.json
+          test -s gto_parent/solver/postflop/out/UTG_CO/gto/9s6h3d_multiboard.job.json
+      - name: Build pinned authentic Rust CFR postflop engine
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_b113_utg_turnonly_b43.py trainer/tools/verify_hu_multiboard_100bb.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: True Rust Ts x-b50-call IP NL2 partial turn+river lock, immutable original GTO flop
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-engine-pin.txt
+          python3 trainer/tools/solve_hu_b113_utg_turnonly_b43.py             --solver-root solver --gto-artifact-root gto_parent             --manifest evidence/UTG_CO-9s6h3d-b75c-exp_ip.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B113_UTG_B75_XB50-UTG_CO-exp_ip-9s6h3d
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-and-commit:
+    needs: solve
+    if: ${{ needs.solve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Fetch exactly one genuine B113 Rust child source (original B43 GTO parent untouched)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          name='nl2-multiboard-B113_UTG_B75_XB50-UTG_CO-exp_ip-9s6h3d'
+          mkdir -p "downloads/$name"
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$name"
+          test -s "downloads/$name/evidence/UTG_CO-9s6h3d-b75c-exp_ip.json"
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 1
+      - name: SHA-verify complete original GTO root/job plus strict acting-IP x-b50c turn legal combo reach
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py             --downloads downloads --solver-root solver --run-id "$GITHUB_RUN_ID"             --out trainer/data/solver_evidence/NL2_MULTIBOARD_B113_UTG_B75_XB50.json
+      - name: Seal authentic actor-IP GTO-anchored source SHA only if exact river node exists
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B113_UTG_B75_XB50.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert not d['errors'] and len(d['artifacts'])==1
+          assert d['exact_board_gto_sources']==0
+          assert d['imputed_pool_locked_sources']==d['new_authentic_board_cases']>=1
+          a=d['artifacts'][0]
+          assert (a['spot'],a['version'],a['flop'])==('UTG_CO','exp_ip','9s6h3d')
+          assert not a['errors'] and len(a['cases'])==1
+          c=a['cases'][0]
+          assert (c['flop_line'],c['turn'])==('b75 c','Ts')
+          hero=[n for n in c['nodes'] if n['acting_seat']==1 and
+             n['exact_node_line']=='b75 c/x b50 c/x' and n['strictly_reachable_combos']>0]
+          assert hero,'No strictly reachable actor-IP river x-b50c source; keep rank236 APPROX'
+          assert all(n['public_board'] for n in hero)
+          raw=p.read_bytes()
+          gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          ix=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+             batch='B113_UTG_B75_XB50',run_id=d['source_run_id'],
+             actual_spot_flop_version_jobs=1,verified_cases=d['new_authentic_board_cases'],
+             gto_cases=0,locked_cases=d['imputed_pool_locked_sources'],
+             source_sha256=hashlib.sha256(raw).hexdigest(),
+             gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+             generic_model_certification=0,
+             original_gto_parent_run=44806967313,
+             original_parent_GTO_root_SHA256='efd7295c361a9a0cb559a004b77f16d2a9ed2e73a19d1c6125659f7a451c6ee6',
+             original_B112_parent_manifest_SHA256='a8fc7e0d02b5badaa82c56faa54e985ff11075eff023519836034e7ed101812e',
+             original_B43_whole_verifier_failed_but_GTO_individually_verified=True,
+             B43_EXP_OOP_not_substituted_for_actor_IP=True,
+             original_GTO_flop_NOT_recomputed=True,
+             genuine_IP_river_actor_nodes=len(hero),source_blind_rank=236,
+             immediate_CERT_upgrades=0)
+          p.with_suffix('.index.json').write_text(json.dumps(ix,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          print('PASS B113 actor-IP authentic Rust original-GTO-pinned turn/river lock',ix)
+          PY
+      - name: Commit exact source archive to Draft PR #2, no model upgrade until independent B114 gate
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B113_UTG_B75_XB50.json.gz data/solver_evidence/NL2_MULTIBOARD_B113_UTG_B75_XB50.index.json
+          git commit -m 'TASK-HYBRID B113: UTG_CO 9s6h3d genuine IP x-b50-call NL2 partial turn-river actor lock from pinned B43 GTO'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B113-genuine-UTG-IP-river-source
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B113_UTG_B75_XB50*
+          retention-days: 30
