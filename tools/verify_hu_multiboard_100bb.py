@@ -235,10 +235,20 @@ def verify(root,source_pin,run_id):
                     raise ValueError('Actual flop job has unexpected or missing focused action extraction')
             if abs(j['rake_rate']-0.05)>1e-8 or j['rake_cap']!=1000:
                 raise ValueError('Unstated rake vs expected NL2 5% max10bb')
-            if not all(x in j.get('flop_oop','') for x in ('33%','50%','75%','100%')):
-                raise ValueError('Missing actual OOP lead sizes')
-            if not all(x in j.get('flop_ip','') for x in ('33%','50%','75%','100%')):
-                raise ValueError('Missing actual IP bet sizes')
+            fp=m.get('flop_size_profile','full')
+            if fp=='lmp-50-only':
+                if m['spot']!='LMP_CO_BB' or m.get('flop_line_policy')!='oop-b50only':
+                    raise ValueError('LMP restricted flop tree mismatched declared exact b50 c')
+                if j.get('flop_oop')!='50%' or j.get('flop_ip')!='50%' or m.get('flop_action_sizes')!=['50%']:
+                    raise ValueError('False 50pct restricted-game claim vs actual Rust menu')
+                if m.get('restricted_tree_assumption') is not True:
+                    raise ValueError('Missing restricted-tree warning on solver source')
+            elif fp=='full':
+                if not all(x in j.get('flop_oop','') for x in ('33%','50%','75%','100%')):
+                    raise ValueError('Missing actual OOP lead sizes')
+                if not all(x in j.get('flop_ip','') for x in ('33%','50%','75%','100%')):
+                    raise ValueError('Missing actual IP bet sizes')
+            else: raise ValueError('Unknown flop size proof profile')
             if m['version']=='gto' and j.get('hero') is not None:
                 raise ValueError('GTO job unexpectedly locks a hero')
             partial_gto_parent=m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK'

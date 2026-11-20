@@ -102,6 +102,8 @@ def main():
     a.add_argument('--version',choices=('gto','exp_ip','exp_oop'),default='gto')
     a.add_argument('--flop',required=True)
     a.add_argument('--turn-count',type=int,default=1)
+    a.add_argument('--flop-size-profile',choices=('full','lmp-50-only'),default='full',
+        help='Only LMP: predeclared flop single 50pct menu; genuine restricted-game CFR, not unrestricted GTO')
     a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','oop-b75only','oop-b33only','checkcheck'),default='all',
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
     a.add_argument('--turn-line-policy',choices=('default','b100only'),default='default',
@@ -111,6 +113,9 @@ def main():
     a.add_argument('--manifest',required=True,type=pathlib.Path)
     args=a.parse_args()
     if not 1<=args.turn_count<=3:a.error('turn-count 1..3')
+    if args.flop_size_profile=='lmp-50-only':
+        if args.spot!='LMP_CO_BB' or args.flop_line_policy!='oop-b50only':
+            a.error('Restricted flop 50pct policy requires LMP_CO_BB with exact b50 c line')
     flop=args.flop;cards=[flop[i:i+2] for i in (0,2,4)]
     if len(flop)!=6 or len(set(cards))!=3 or not all(re.fullmatch('[23456789TJQKA][cdhs]',t) for t in cards):
         a.error('Invalid explicit flop')
@@ -161,8 +166,12 @@ def main():
         kwargs['rank']=0.5 if args.version!='gto' else 1.5
         kwargs['iters']=1700
         j=orig_make(*pos,**kwargs)
-        j['flop_oop']=','.join(SIZES) # include donk or OOP-PFR cbet
-        j['flop_ip']=','.join(SIZES)  # include IP stab / IP-PFR cbet
+        if args.flop_size_profile=='lmp-50-only':
+            j['flop_oop']='50%'
+            j['flop_ip']='50%'
+        else:
+            j['flop_oop']=','.join(SIZES) # include donk or OOP-PFR cbet
+            j['flop_ip']=','.join(SIZES) # include IP stab / IP-PFR cbet
         j['flop_raise']='3x,a'
         return j
     pipeline.make_job=sized_make
@@ -200,7 +209,10 @@ def main():
       n_NL2_hands=pool['hands'],
       pool_source_sha256=sha(src/'inputs/pool_stats.json'),
       solver_pin=sha(pf/'py/pipeline.py'),solver_ranges_sha256=sha(pf/'py/ranges.py'),
-      flop_action_sizes=SIZES,allow_OOP_flop_leads=True,
+      flop_action_sizes=['50%'] if args.flop_size_profile=='lmp-50-only' else SIZES,
+      flop_size_profile=args.flop_size_profile,
+      restricted_tree_assumption=args.flop_size_profile=='lmp-50-only',
+      allow_OOP_flop_leads=True,
       turn_sizing_mode=args.turn_size_menu,
       turn_subgame_sizing={'oop':pipeline.SUB['turn_oop'],'ip':pipeline.SUB['turn_ip']},
       selected_lines=lines,flop_line_policy=args.flop_line_policy,
