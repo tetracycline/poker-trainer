@@ -424,8 +424,20 @@ def verify(root,source_pin,run_id):
                          m.get('gto_parent_source_run_id')==44837377803 and
                          m.get('gto_parent_source_sha256')=='7a66b9e3495aaa1a113136bec64181f50b3b87046e351a0d5a73826eda3f1601' and
                          m.get('flop_root_jobfile_sha256')=='92a3ee4289cd1a85e7f9766e770d940eb70e3e3c35b437691395abaefaa1c10b' and
-                         m.get('gto_parent_source_manifest_sha256')=='7199156c5b98fd7f51f732cc721a1eaefb718013ca50e4d29ed3a35b1159f433')):
-                        raise ValueError('Focused x-b50-call turn requires immutable B113 UTG, B121 CO or B126 LMP original GTO parent')
+                         m.get('gto_parent_source_manifest_sha256')=='7199156c5b98fd7f51f732cc721a1eaefb718013ca50e4d29ed3a35b1159f433')
+                        or
+                        # B128 source: B119 authentic original b75-raise-call
+                        # GTO flop parent; LMP assumed 169-class preflop,
+                        # downstream actor-IP NL2 turn+river is an actual
+                        # fresh Rust source, never an inferred GTO texture.
+                        (m['spot']=='LMP_CO_BB' and m['version']=='exp_ip' and
+                         m['flop']=='As7h3d' and m.get('selected_lines')==['b75 r c'] and
+                         m.get('selected_turn_lines')==['x b50 c'] and
+                         m.get('gto_parent_source_run_id')==44837834984 and
+                         m.get('gto_parent_source_sha256')=='3531438b93c5185182fa7bb0ab4d95dd1025e7e1fe5da3d18b58cee4eec87573' and
+                         m.get('flop_root_jobfile_sha256')=='b6cc92f2dd7d5995b8e26f959420a0a5677769b9f1918208a2ea4e4f99d6653e' and
+                         m.get('gto_parent_source_manifest_sha256')=='e7a2817f866609cafd48d3dc20f34372b87fb77522d45facda8c5088f67a49ca')):
+                        raise ValueError('Focused x-b50-call turn requires exact immutable B113/B121/B126/B128 GTO parent')
                     if m.get('selected_turn_lines')!=[' '.join(token)]:
                         raise ValueError('Focused turn extraction differs from predeclared line')
                     subjobfile=rawfile.with_suffix('.job.json')
