@@ -34,7 +34,7 @@ def main():
     pinned={
       'KsQh4d':dict(
         manifest='f79497797d728792b829f771ac2827d73a71ba777429691c7a0c62afea3bae51',
-        flop='95a482291bcfd8a826dd1a447a903e1d16096b73ec76c4d7741fe0c74a9f9a6c',
+        flop='95a482291bcfd8a826dd1a447a903e1d16096b73eb76c4d7741fe0c74a9f9a6c',
         job='e22e1437ee32cb29555c4fca7bb129e0260c54148ebd4e66b02cad88802ead1d',
         turn='Tc'),
       'Js9h4d':dict(
