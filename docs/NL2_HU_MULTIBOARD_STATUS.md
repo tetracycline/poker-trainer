@@ -8,8 +8,8 @@ Every unlisted board/texture action remains APPROX, not GTO.
 
 | status | nodes |
 | --- | ---: |
-| CERT-MULTIBOARD | 22 |
-| APPROX approximate | 370 |
+| CERT-MULTIBOARD | 23 |
+| APPROX approximate | 369 |
 | Total | 392 |
 
 ## Fixed frequency ranking and disclosure
@@ -47,7 +47,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B18_RIVERPAIR | 44758653460 | 0 | 2 |
 | B19_LMP50_RESTRICTED | 44762388523 | 2 | 3 |
 | B20_B66_GTO | 44763159052 | 3 | 0 |
-| B22_B66_EXP | PENDING | 0 | 0 |
+| B22_B66_EXP | 44765475084 | 0 | 3 |
 | B23_LMP_NEXT | PENDING | 0 | 0 |
 
 ## Top-24 preregistered game histories
@@ -58,7 +58,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | 2 | ln-opfr-t_model-19esov6 | SRP/SB_BB | 5.056 | CERT-MULTIBOARD | KsQh4d Tc, As9h2d Kd, 9s6h3d Ts |
 | 3 | ln-opfr-t_model-1wej9w5 | SRP/SB_BB | 6.167 | CERT-MULTIBOARD | AsTh4d Td, Jh9d6s 3c, Ks7h2d 9d |
 | 4 | ln-opfr-t_model-trdt3w | SRP/SB_BB | 7.833 | CERT-MULTIBOARD | Ks7h2d 9d, As7h3d Kd, As9h2d Kd |
-| 5 | ln-opfr-t_model-id38uf | SRP/SB_BB | 16.167 | CERT-MULTIBOARD | 8s8h3d 5s, 9s6h3d Ts, Jh9d6s 3c, Ks7h2d 9d, AsTh4d 4s |
+| 5 | ln-opfr-t_model-id38uf | SRP/SB_BB | 16.167 | CERT-MULTIBOARD | 8s8h3d 5s, 9s6h3d Ts, Jh9d6s 3c, Ks7h2d 9d, As7h3d Kd |
 | 6 | ln-bb-t_model-1n6d5u3 | SRP/BTN_BB | 17.727 | CERT-MULTIBOARD | 8s8h3d 5s, Ks7s2s 9d, 9s6h3d Ts, Js9h4d Ts, KsQh4d Tc |
 | 7 | ln-iso-lmp_t_model-1e9jvm0 | LMP/LMP_CO_BB | 39.6 | CERT-MULTIBOARD | 8s8h3d 5s, 9s6h3d Ts, KsQh4d Tc |
 | 8 | ln-ipfr-t_model-qcljc6 | SRP/BTN_BB | 8.364 | CERT-MULTIBOARD | Jh9d6s 3c, KsQh4d Tc, As9h2d Kd |
@@ -77,12 +77,12 @@ CFR outcomes cannot be used to tune this cutoff.
 | 21 | ln-opfr-r_model-1eyhxd9 | SRP/SB_BB | 7.833 | CERT-MULTIBOARD | 9s6h3d Ts, Ks7h2d 9d, As9h2d Kd, Jh9d6s 3c, KsQh4d Tc |
 | 22 | ln-opfr-r_model-bkt7sm | SRP/SB_BB | 6.167 | CERT-MULTIBOARD | 8s8h3d 5s, 9s6h3d Ts, KsQh4d Tc |
 | 23 | ln-opfr-r_model-f6iab7 | SRP/SB_BB | 9.5 | CERT-MULTIBOARD | 8s8h3d 5s, 9s6h3d Ts, KsQh4d Tc |
-| 24 | ln-opfr-r_model-iry60z | SRP/SB_BB | 6.643 | APPROX | not enough authentic proof |
+| 24 | ln-opfr-r_model-iry60z | SRP/SB_BB | 6.643 | CERT-MULTIBOARD | 9s6h3d Ts, KsQh4d Tc, As7h3d Kd |
 
 ## Reasons some MODEL nodes are not CERT
 
 - LOWER_FREQUENCY_BELOW_PREREGISTERED_TOP24_CUTOFF: 368
-- NOT_ENOUGH_DISTINCT_AUTHENTIC_FLOPS_WITH_HERO_LOCKED_SOURCE: 2
+- NOT_ENOUGH_DISTINCT_AUTHENTIC_FLOPS_WITH_HERO_LOCKED_SOURCE: 1
 
 ## Convergence, combo reach and NL2 lock limits
 

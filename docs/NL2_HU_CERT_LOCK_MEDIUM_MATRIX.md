@@ -6,7 +6,7 @@ Opponent action rates refer only to **observed NL2 pool marginals**, not per-boa
 Unknown historical per-node source counts remain unknown; defaults and unmatched villain nodes are separately counted.
 50% pot is a research candidate on the named runout, not a universal bet size recommendation.
 
-Verified: 22 CERT / 370 APPROX; 81 named boards.
+Verified: 23 CERT / 369 APPROX; 84 named boards.
 
 | rank | model | named board proof | GTO run | lock run(s) | measured / assumed / unlocked nodes | 50% pot |
 | ---: | --- | --- | ---: | --- | --- | --- |
@@ -20,8 +20,8 @@ Verified: 22 CERT / 370 APPROX; 81 named boards.
 | 4 | ln-opfr-t_model-trdt3w | As9h2d Kd | 44666285424 | 44666285424 | 10/10/14 | unproven |
 | 4 | ln-opfr-t_model-trdt3w | Ks7h2d 9d | 44654973894 | 44654973894 | unknown | candidate |
 | 5 | ln-opfr-t_model-id38uf | 8s8h3d 5s | 44666285424 | 44666285424,44737532081 | 14/11/27 | candidate |
-| 5 | ln-opfr-t_model-id38uf | 9s6h3d Ts | 44732810327 | 44732810327,44741462253 | 14/11/8 | candidate |
-| 5 | ln-opfr-t_model-id38uf | AsTh4d 4s | 44522421850 | 44522421850 | unknown | unproven |
+| 5 | ln-opfr-t_model-id38uf | 9s6h3d Ts | 44732810327 | 44732810327,44741462253,44765475084 | 14/11/8 | candidate |
+| 5 | ln-opfr-t_model-id38uf | As7h3d Kd | 44736420272 | 44765475084 | 5/3/6 | unproven |
 | 5 | ln-opfr-t_model-id38uf | Jh9d6s 3c | 44736420272 | 44736420272 | 14/8/5 | unproven |
 | 5 | ln-opfr-t_model-id38uf | Ks7h2d 9d | 44654973894 | 44654973894 | unknown | unproven |
 | 6 | ln-bb-t_model-1n6d5u3 | 8s8h3d 5s | 44653774402 | 44653774402,44666285424 | unknown | candidate |
@@ -91,5 +91,8 @@ Verified: 22 CERT / 370 APPROX; 81 named boards.
 | 23 | ln-opfr-r_model-f6iab7 | 8s8h3d 5s | 44737532081 | 44737532081 | 14/11/28 | unproven |
 | 23 | ln-opfr-r_model-f6iab7 | 9s6h3d Ts | 44741462253 | 44741462253 | 14/11/9 | candidate |
 | 23 | ln-opfr-r_model-f6iab7 | KsQh4d Tc | 44741462253 | 44741462253 | 12/8/9 | unproven |
+| 24 | ln-opfr-r_model-iry60z | 9s6h3d Ts | 44763159052 | 44765475084 | 5/3/4 | candidate |
+| 24 | ln-opfr-r_model-iry60z | As7h3d Kd | 44763159052 | 44765475084 | 5/3/6 | candidate |
+| 24 | ln-opfr-r_model-iry60z | KsQh4d Tc | 44763159052 | 44765475084 | 5/3/4 | unproven |
 
 No CERT from generic texture mapping or unsupported downstream action lines.
