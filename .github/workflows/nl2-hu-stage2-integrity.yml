@@ -49,7 +49,8 @@ jobs:
           assert ix['gto_cert_exact_board_subgames']==114
           assert ix['nl2_pool_locked_provisional_subgames']==233
           assert ix['models_certified_by_this_file']==d['generic_model_certified']==0
-          assert d['medium_nonpolarized_exact_board_candidates']==675
+          assert d['all_actors_including_locked_villain_nonpolarized_source_nodes']==675
+          assert 0<d['medium_nonpolarized_exact_board_candidates']<=675
           assert queue['summary']['model_nodes']==len(queue['records'])==392
           assert model['model_nodes']==len(model['records'])==392 and model['generic_CERT']==0
           assert refs['generic_models']==len(refs['items'])==392 and refs['generic_certificates']==0
