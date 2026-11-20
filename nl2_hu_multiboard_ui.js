@@ -27,7 +27,12 @@ function render(){
  const statuses=app.querySelectorAll('.hu-board-cert-status[data-hu-model]');
  for(const tag of statuses){
    const id=tag.dataset.huModel,item=registry.records[id];
-   if(!item){tag.textContent='APPROX 近似（無對應來源）';continue;}
+   if(!item){if(!tag.dataset.mbApplied){tag.dataset.mbApplied='missing';tag.textContent='APPROX 近似（無對應來源）';}continue;}
+   // DOM label changes themselves fire the MutationObserver. Mark before
+   // modifying child nodes to avoid a self-triggered render microtask loop.
+   const signature=item.label+':'+item.proven_exact_board_count;
+   if(tag.dataset.mbApplied===signature)continue;
+   tag.dataset.mbApplied=signature;
    const sec=tag.closest('.sec');
    const note=sec?.querySelector('.hu-board-proof[data-hu-model]');
    if(item.label==='CERT-MULTIBOARD'){
