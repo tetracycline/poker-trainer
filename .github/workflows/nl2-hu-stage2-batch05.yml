@@ -1,0 +1,107 @@
+name: NL2 stage-2 authentic CFR batch05 SRP/3bet
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage2-batch05.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - { spot: SB_BB, flop: Ks7h2d, version: gto }
+          - { spot: SB_BB, flop: Ks7h2d, version: exp_ip }
+          - { spot: SB_BB, flop: Ks7h2d, version: exp_oop }
+          - { spot: BB3_BTN, flop: Ks7h2d, version: gto }
+          - { spot: BB3_BTN, flop: Ks7h2d, version: exp_ip }
+          - { spot: BB3_BTN, flop: Ks7h2d, version: exp_oop }
+          - { spot: UTG_CO, flop: Ks7h2d, version: gto }
+          - { spot: UTG_CO, flop: Ks7h2d, version: exp_ip }
+          - { spot: UTG_CO, flop: Ks7h2d, version: exp_oop }
+          - { spot: SB3_BTN, flop: Ks7h2d, version: gto }
+          - { spot: SB3_BTN, flop: Ks7h2d, version: exp_ip }
+          - { spot: SB3_BTN, flop: Ks7h2d, version: exp_oop }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - run: python -m pip install numpy matplotlib
+      - name: Compile pinned authentic Rust CFR solver
+        env: {RUSTFLAGS: '-A dangerous_implicit_autorefs', CARGO_BUILD_JOBS: '2'}
+        run: |
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          cargo build --release --locked
+      - name: Compute genuine GTO or NL2 villain-frequency-locked multi-street CFR
+        run: |
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-commit.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/upstream-engine-commit.txt
+          python trainer/tools/solve_hu_missing_branches.py \
+            --solver-root solver --spot "${{ matrix.spot }}" --version "${{ matrix.version }}" \
+            --flop "${{ matrix.flop }}" --count 1 --turn-count 1 \
+            --flop-bet-sizes '33%,50%,75%' --strict-stage1 \
+            --manifest "evidence/${{ matrix.spot }}-${{ matrix.version }}-${{ matrix.flop }}.json"
+      - name: Preserve parent and all river subgames plus per-combo reach and SHA-256
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-stage2-${{ matrix.spot }}-${{ matrix.version }}-${{ matrix.flop }}
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-and-push:
+    needs: solve
+    if: ${{ needs.solve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - name: Download all 12 real CFR job outputs
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: |
+          mkdir -p evidence/downloads
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir evidence/downloads
+      - name: Verify exact source board, action line, node pot/SPR, per-combo reach and <=0.5% convergence
+        run: |
+          mkdir -p data/solver_evidence
+          python3 tools/verify_hu_solver_bundle.py \
+            --downloads evidence/downloads --run-id "$GITHUB_RUN_ID" \
+            --out data/solver_evidence/STAGE2_BATCH05.json
+      - name: Commit verified evidence on PR branch (no uncertified MODEL promotion)
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/STAGE2_BATCH05.json
+          git commit -m 'evidence: verified authentic SRP/3bet batch05 CFR combos, SPR, and source SHA'
+          git fetch origin fix/nl2-hu-lines-audit-20261118
+          git rebase origin/fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+      - name: Archive reproducibility proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-stage2-batch05-verified-provenance
+          path: data/solver_evidence/STAGE2_BATCH05.json
+          retention-days: 30
