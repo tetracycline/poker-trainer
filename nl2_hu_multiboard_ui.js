@@ -105,6 +105,17 @@ function schedule(){if(!pending){pending=true;queueMicrotask(render)}}
 new MutationObserver(schedule).observe(app,{childList:true,subtree:true});
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v4=d=>{
+   if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V4_BATCH50'||
+      d.CERT_MULTIBOARD!==33||d.APPROX!==359||d.TOTAL!==392||
+      d.original_v3_cert!==27||d.original_v3_approx!==365||
+      d.original_top24_cutoff_unchanged!==true||
+      String(d.source_blind_expansion_ranks)!=='31,34,36,37,38,39'||
+      d.supplementary_cert_count!==9||
+      Object.keys(d.records||{}).length!==392)
+      throw Error('V4 exact-source CERT ledger failed guard');
+   return d;
+ };
  const v3=d=>{
    if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28'||
       d.CERT_MULTIBOARD!==27||d.APPROX!==365||d.TOTAL!==392||
@@ -126,21 +137,21 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v3_rank28.json',{cache:'no-store'})
-   .then(open).then(v3)
+ return fetch('data/nl2_hu_multiboard_status_v4_batch50.json',{cache:'no-store'}).then(open).then(v4)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v3_rank28.json',{cache:'no-store'}).then(open).then(v3))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v2_tie.json',{cache:'no-store'}).then(open).then(v2))
    .catch(()=>fetch('data/nl2_hu_multiboard_status.json',{cache:'no-store'}).then(open)
-      .then(d=>{
-        if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V1'||
-           d.CERT_MULTIBOARD!==24||d.APPROX!==368||d.TOTAL!==392||
-           Object.keys(d.records||{}).length!==392)throw Error('V1 source ledger invalid');
-        return d;
-      }));
+     .then(d=>{
+       if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V1'||
+          d.CERT_MULTIBOARD!==24||d.APPROX!==368||d.TOTAL!==392||
+          Object.keys(d.records||{}).length!==392)throw Error('V1 source ledger invalid');
+       return d;
+     }));
 }
 
 fetchCertifiedRegistry()
  .then(d=>{
-   if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V1','NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE','NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28'].includes(d.schema)||d.TOTAL!==392||
+   if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V1','NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE','NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28','NL2_HU_392_MULTIBOARD_CERT_STATUS_V4_BATCH50'].includes(d.schema)||d.TOTAL!==392||
       d.CERT_MULTIBOARD+d.APPROX!==392||Object.keys(d.records).length!==392){
         throw Error('Certification source register failed independent count check');
    }
