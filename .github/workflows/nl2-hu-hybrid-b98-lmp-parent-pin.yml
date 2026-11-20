@@ -1,0 +1,69 @@
+name: TASK-HYBRID B98 freeze actual B3 LMP 8s8h3d x-x GTO parent for two one-board gaps (max8m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b98-lmp-parent-pin.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Fetch ORIGINAL verified B3 GTO file only; no new GTO solve
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p gto_parent
+          gh run download 44666294821 --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B3-LMP_CO_BB-gto-8s8h3d' --dir gto_parent
+          test -f gto_parent/evidence/LMP_CO_BB-gto-8s8h3d.json
+      - name: Independently pin raw Rust GTO root/job SHA, 169class range assumptions, full-street exact OOP hero reach
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b98_lmp_b3_gto_parent_pin.py
+          python3 tools/hu_b98_lmp_b3_gto_parent_pin.py --artifact-root gto_parent
+      - name: Confirm one missing named GTO hero locked flop shared by 2 preregistered ranks; no label changes
+        run: |
+          python3 - <<'PY'
+          import json,hashlib
+          x=json.load(open('data/nl2_hu_b98_lmp_8s8h3d_gto_parent_pin.json'))
+          assert x['schema']=='NL2_HU_B98_LMP_B3_8S8H3D_FROZEN_PARENT_V1'
+          assert x['result']=='PASS_GTO_ROOT_PIN'
+          assert x['source_run_id']==44666294821 and x['public_flop']=='8s8h3d'
+          assert x['flop_line']==x['turn_line']=='x x' and x['turn']=='5s'
+          assert x['hero_actor_seat']==0 and x['GTO_verified_river_OOP_actor_nodes']>0
+          assert x['frozen_rank_targets']==[77,78] and x['new_CERT_count']==0
+          assert all(len(x[k])==64 for k in (
+              'original_manifest_sha256','original_GTO_flop_sha256',
+              'original_GTO_flop_job_sha256','source_archive_gzip_sha256'))
+          print('PASS B98 immutable B3 parent exact root pinned, 131/261 unchanged')
+          PY
+      - name: Commit original source pin only to Draft PR #2; never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b98_lmp_8s8h3d_gto_parent_pin.json docs/NL2_HU_B98_LMP_B3_GTO_PARENT_PIN.md
+          git commit -m 'TASK-HYBRID B98: freeze authentic B3 LMP 8s8h3d GTO x-x parent for rank77/78 true NL2 OOP river lock'
+          for attempt in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$attempt"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B98-pinned-LMP-GTO-parent
+          path: |
+            data/nl2_hu_b98_lmp_8s8h3d_gto_parent_pin.json
+            docs/NL2_HU_B98_LMP_B3_GTO_PARENT_PIN.md
+          retention-days: 30
