@@ -1,0 +1,57 @@
+name: TASK-HYBRID B21 per-board lock source and nonpolarized proof audit (under 8m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b21-cert-matrix.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  audit-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Reconcile every existing CERT source, per-villain observed/default/unlocked count, b50 proof
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_cert_lock_medium_coverage_matrix.py
+          python3 tools/hu_cert_lock_medium_coverage_matrix.py
+          python3 - <<'PY'
+          import json
+          d=json.load(open('data/nl2_hu_cert_lock_medium_matrix.json'))
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          assert d['CERT_MULTIBOARD']==s['CERT_MULTIBOARD'] and d['APPROX']==s['APPROX']
+          assert d['CERT_MULTIBOARD']+d['APPROX']==392
+          assert len(d['models'])==d['CERT_MULTIBOARD']
+          assert all(3<=m['example_count']<=5 for m in d['models'].values())
+          assert len(d['boards'])==d['strict_aggregate']['named_board_proofs']
+          print('PASS B21 explicit per named-board lock provenance, no invented empirical conditional data')
+          PY
+      - name: Commit evidence-only named-board audit and push to Draft PR #2, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_cert_lock_medium_matrix.json docs/NL2_HU_CERT_LOCK_MEDIUM_MATRIX.md
+          if git diff --cached --quiet; then echo 'Source matrix already up to date'; exit 0; fi
+          git commit -m 'TASK-HYBRID B21: audit every CERT exact-board node-lock marginal/default/unknown and b50 proof'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - name: Preserve proof-only audit result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B21-all-CERT-per-board-lock-matrix
+          path: |
+            data/nl2_hu_cert_lock_medium_matrix.json
+            docs/NL2_HU_CERT_LOCK_MEDIUM_MATRIX.md
+          retention-days: 30
