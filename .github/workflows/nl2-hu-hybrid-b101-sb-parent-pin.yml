@@ -1,0 +1,67 @@
+name: TASK-HYBRID B101 freeze verified B5 SB_BB As7h3d b50-call GTO parent for rank43 (max8m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b101-sb-parent-pin.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  freeze-pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Fetch original cancelled-run only verified GTO job (NOT cancelled experimental hero lock)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p gto_parent
+          gh run download 44736420272 --repo "$GITHUB_REPOSITORY"              --name 'nl2-multiboard-B5_SBGAPS-SB_BB-gto-As7h3d' --dir gto_parent
+          test -s gto_parent/evidence/SB_BB-gto-As7h3d.json
+      - name: Independently check B5 GTO original root + exact actor river node + source-blind rank43 one board gap
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b101_sb_b5_gto_parent_pin.py
+          python3 tools/hu_b101_sb_b5_gto_parent_pin.py --artifact-root gto_parent
+      - name: Pin frozen 133/259 baseline, never pre-certify unverified experimental hero source
+        run: |
+          python3 - <<'PY'
+          import json
+          d=json.load(open('data/nl2_hu_b101_sb_as7h3d_b5_gto_parent_pin.json'))
+          assert d['status']=='PASS_SHA_PINNED_GTO_PARENT'
+          assert d['original_B5_verified_run_id']==44736420272
+          assert d['GTO_positive_reach_OOP_river_nodes']>0
+          assert d['expected_model_rank']==43
+          assert d['original_B5_EXP_OOP_cancelled_and_not_accepted']
+          assert d['no_new_CERT_until_Rust_and_actor_verification']
+          assert (d['current_CERT'],d['current_APPROX'])==(133,259)
+          print('PASS B101 pinned original B5 GTO + rank43 missing lock, no false upgrade')
+          PY
+      - name: Commit SHA pin to Draft PR #2 only, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b101_sb_as7h3d_b5_gto_parent_pin.json docs/NL2_HU_B101_SB_AS7H3D_GTO_PARENT_PIN.md
+          git commit -m 'TASK-HYBRID B101: pin genuine original B5 SB_BB As7h3d b50-c GTO for rank43 OOP hero river lock'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B101-authentic-SB-GTO-pin
+          path: |
+            data/nl2_hu_b101_sb_as7h3d_b5_gto_parent_pin.json
+            docs/NL2_HU_B101_SB_AS7H3D_GTO_PARENT_PIN.md
+          retention-days: 30
