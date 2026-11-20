@@ -166,7 +166,7 @@ def ranking(queue,pool,cutoff):
       summary={'models':len(scored),'high_frequency_priority':cutoff,
                'low_priority_approx':len(scored)-cutoff,
                'top_by_family':dict(collections.Counter(x['family'] for x in scored[:cutoff]))},
-      nodes:scored)
+      nodes=scored)
 
 def main():
     a=argparse.ArgumentParser()
@@ -176,6 +176,7 @@ def main():
     a.add_argument('--cutoff',type=int,default=24)
     q=a.parse_args()
     obj=ranking(json.loads(q.queue.read_text()),json.loads(q.pool.read_text()),q.cutoff)
+    obj['source_sha256']=hashlib.sha256(q.pool.read_bytes()).hexdigest()
     q.out.parent.mkdir(parents=True,exist_ok=True)
     q.out.write_text(json.dumps(obj,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps({'summary':obj['summary'],'cutoff':obj['cutoff'],
