@@ -184,7 +184,8 @@ def verify(root,source_pin,run_id):
             if m.get('turn_sizing_mode','default') not in ('default','river-gaps','exact-b66-only'):
                 raise ValueError('Unregistered turn subgame size menu')
             permitted_flop_lines={'oop-b33only':'b33 c','oop-b50only':'b50 c',
-                'oop-b75only':'b75 c','checked-b50only':'x b50 c'}
+                'oop-b75only':'b75 c','checked-b50only':'x b50 c',
+                'checked-b100only':'x b100 c','checkcheck':'x x'}
             policy=m.get('flop_line_policy','all')
             if policy in permitted_flop_lines:
                 if m.get('selected_lines')!=[permitted_flop_lines[policy]]:
