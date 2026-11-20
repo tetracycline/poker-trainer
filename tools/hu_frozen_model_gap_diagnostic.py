@@ -83,6 +83,7 @@ def main():
     for row in rank['nodes']:
         if row['rank_by_empirically_grounded_frequency_proxy'] not in (1,24):continue
         m=dict(row)
+        m['solver_profile']=m['spot']
         m.update({k:byid[row['model_id']][k] for k in ('preflop_text','abstract_action_history')})
         out=audit(m,exact,locked)
         out['current_label']=labels['records'][m['model_id']]['label']
