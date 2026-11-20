@@ -33,6 +33,8 @@ CFR outcomes cannot be used to tune this cutoff.
 | B4_MICRO | 44732810327 | 30 | 30 |
 | B5_SBGAPS | PENDING | 0 | 0 |
 | B6_REMAIN | PENDING | 0 | 0 |
+| B7_RIVER | PENDING | 0 | 0 |
+| B8_LOCK | PENDING | 0 | 0 |
 
 ## Top-24 preregistered game histories
 
