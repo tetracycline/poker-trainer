@@ -4,7 +4,8 @@ const fmt=x=>x==null?'—':typeof x==='number'?x.toLocaleString('en-US',{maximum
 const setText=(el,s)=>{el.textContent=s;return el;};
 const option=(list,k,label)=>{const op=document.createElement('option');op.value=k;op.textContent=label;list.appendChild(op);};
 let all=[],subset=[],game=null,current=null;
-const selS=by('spot'),selV=by('ver'),selG=by('game'),selN=by('node');
+const selS=by('spot'),selV=by('ver'),selG=by('game'),selN=by('node'),selFocus=by('focus');
+const mediumCandidate=n=>!!n.b50_relative_equity_mix?.nonpolarized_medium_bet_candidate;
 const setHtml=(id,h)=>{by(id).innerHTML=h;};
 const copyOpts=(el,items)=>{el.innerHTML='';for(const [k,l] of items)option(el,k,l);};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -15,13 +16,16 @@ function selectSpot(){
 }
 function selectVersion(){
  subset=all.filter(c=>c.spot===selS.value&&c.version===selV.value);
- copyOpts(selG,subset.map((c,i)=>[String(i),c.flop+c.turn+' ('+c.flop_line+')｜根 SPR '+fmt(c.turn_spr)]));
+ if(selFocus.value==='b50')subset=subset.filter(c=>c.nodes.some(mediumCandidate));
+ else if(selV.value.startsWith('exp'))subset.sort((a,b)=>(b.hero_gain_vs_locked_pool_bb||0)-(a.hero_gain_vs_locked_pool_bb||0));
+ copyOpts(selG,subset.map((c,i)=>[String(i),c.flop+c.turn+' ('+c.flop_line+')｜根 SPR '+fmt(c.turn_spr)+
+    (c.version.startsWith('exp')?'｜實驗 EV 差 '+fmt(c.hero_gain_vs_locked_pool_bb)+'bb':'')]));
  selectGame();
 }
 function selectGame(){
  game=subset[Number(selG.value)]||null;
- const nodes=game?.nodes||[];
- copyOpts(selN,nodes.map((n,i)=>[String(i),n.board+'｜'+n.line+'｜'+(n.acting_seat===0?'OOP':'IP')+'｜SPR '+fmt(n.node_spr)]));
+ const nodes=(game?.nodes||[]).map((n,i)=>({n,i})).filter(({n})=>selFocus.value!=='b50'||mediumCandidate(n));
+ copyOpts(selN,nodes.map(({n,i})=>[String(i),n.board+'｜'+n.line+'｜'+(n.acting_seat===0?'OOP':'IP')+'｜SPR '+fmt(n.node_spr)+(mediumCandidate(n)?'｜中尺寸合併下注研究候選':'')]));
  selectNode();
 }
 function selectNode(){
@@ -57,7 +61,7 @@ function renderCombos(){
  for(const cells of displayed){const tr=document.createElement('tr');for(const value of cells){const td=document.createElement('td');setText(td,value);tr.appendChild(td);}fragment.appendChild(tr);}
  const box=by('combos');box.innerHTML='';box.appendChild(fragment);
 }
-for(const [el,cb] of [[selS,selectSpot],[selV,selectVersion],[selG,selectGame],[selN,selectNode],[by('showall'),renderCombos]])el.addEventListener('change',cb);
+for(const [el,cb] of [[selS,selectSpot],[selV,selectVersion],[selG,selectGame],[selN,selectNode],[selFocus,selectVersion],[by('showall'),renderCombos]])el.addEventListener('change',cb);
 async function loadIndex(path,zipped=false){
  const r=await fetch(path,{cache:'no-store'});
  if(!r.ok)throw Error('CFR 索引無法載入 (HTTP '+r.status+')');
@@ -84,7 +88,8 @@ loadSource().then(loaded=>{
   if(seen.has(key))return false;seen.add(key);return true;
  });
  const counts={};for(const c of all)counts[c.status]=(counts[c.status]||0)+1;
- const msg='已載入 '+all.length+' 個實際公牌多街子局；GTO 精確公牌 CERT：'+(counts['CERT_EXACT_BOARD_GTO']||0)
+ const candidateNodes=all.reduce((k,c)=>k+c.nodes.filter(mediumCandidate).length,0);
+ const msg='已載入 '+all.length+' 個實際公牌多街子局；50% pot 去極化研究候選節點 '+candidateNodes+'；GTO 精確公牌 CERT：'+(counts['CERT_EXACT_BOARD_GTO']||0)
    +'；對手頻率鎖定試驗：'+(counts['EXPERIMENTAL_POOL_LOCKED']||0)
    +'；392 張通用 MODEL 仍不是 CERT（0/392）。只在同一公牌、同一完整下注歷史及節點 SPR 有效。';
  setText(by('status'),msg);
