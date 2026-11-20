@@ -39,7 +39,7 @@ def main():
         assert m["solver_profile"]==r["spot"] and m["family"]==r["family"]
         r["preflop_text"]=m["preflop_text"]
         r["abstract_action_history"]=m["abstract_action_history"]
-        matched,why=candidates(r,exact,locked,Nsix)
+        matched,why=candidates(r,exact,locked,None)
         if why:raise ValueError("rank "+str(i)+": "+str(why))
         boards,reason=choose_3_5(matched)
         if reason or not 3<=len(boards)<=5:raise ValueError("rank "+str(i)+" insufficient: "+str(reason))
@@ -58,7 +58,7 @@ def main():
             high_frequency_preregistered=True,original_top24_high_frequency_preregistered=False,
             source_blind_expansion_rank=i,prereg_cohort="B85_NEXT20",
             certified_3_to_5_exact_flop_boards=boards,proven_exact_board_count=len(boards),
-            blocked_reason=Nsix,source_credibility="GITHUB_ACTIONS_AUTHENTIC_CFR_SHA256_AND_FULL_STREET_COMBO_REACH")
+            blocked_reason=None,source_credibility="GITHUB_ACTIONS_AUTHENTIC_CFR_SHA256_AND_FULL_STREET_COMBO_REACH")
         published.append(dict(rank=i,model_id=r["model_id"],flops=[b["flop"] for b in boards],
             thin_combo_warnings=[dict(flop=b["flop"],strict=b["strict_full_street_combo_reachable"]) for b in boards if b["strict_full_street_combo_reachable"]<10],
             source_run_ids=sorted({b["source_run_id"] for b in boards}),
@@ -100,7 +100,7 @@ def main():
           " | "+str(x["thin_combo_warnings"])+" |")
     lines+=["","453 exact named board certificates. Some proof has thin legal combos.",
       "LMP restricted 50%-only tree and assumed preflop ranges are not full-game GTO.",
-      "Measured NL2 *aggregate* marginals are not observed exact oppsixnt/private-hand frequencies.",
+      "Measured NL2 *aggregate* marginals are not observed exact opponent/private-hand frequencies.",
       "50% pot nonpolarized labels refer ONLY to exact supported boards, not to all textures.",
       "Unmatched, assumed and historical unknown node counts remain separate.",
       "Batch E 44732810327 verified, 2475/2475 river navigation previously verified.",""]
