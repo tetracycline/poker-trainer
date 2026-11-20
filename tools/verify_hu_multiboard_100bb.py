@@ -3,7 +3,7 @@
 convergence, full-street per-combo frequency reach and locked-pool provenance
 audit. Creates no generic GTO certification by itself.
 """
-import argparse,collections,hashlib,json,pathlib,sys
+import argparse,base64,collections,hashlib,json,pathlib,re,sys
 REPO_SPOTS={
 'BTN_BB':('SRP',5.5,97.5),
 'CO_BB':('SRP',5.5,97.5),
@@ -19,6 +19,51 @@ def sha(path):
     with path.open('rb') as f:
         for z in iter(lambda:f.read(1024*1024),b''):h.update(z)
     return h.hexdigest()
+def strict_medium_evidence(n,raw,seq_mask):
+    """Re-evaluate b50 relative-equity distribution ONLY after every past
+    hero action was legal under max/near-mix and blockers.
+    No empirical private-card NL2 frequencies are invented.
+    """
+    actions=n['acts']
+    if 'b50' not in actions:return dict(eligible=0,preferred=0,candidate=False,status='NO_50PCT_ACTION')
+    i=actions.index('b50');actor=n['player'];nh=len(raw['hands'][actor])
+    if len(n['w'][actor])!=nh or len(n['eq'])!=nh or len(n['ev'])!=nh*len(actions):
+        raise ValueError('Missing equity/EV/w source for strict medium-size proof')
+    masks=base64.b64decode(seq_mask,validate=True)
+    if len(masks)!=nh:raise ValueError('Sequential mask length changed')
+    allhands=[];bet=[];p50=0
+    for k,m in enumerate(masks):
+        if not m or float(n['w'][actor][k])<=1e-4:continue
+        equity=float(n['eq'][k]);weight=float(n['w'][actor][k])
+        if not 0<=equity<=1.001:raise ValueError('Invalid source equity')
+        allhands.append((equity,weight))
+        if m & (1<<i):
+            raw_ev=[float(n['ev'][j*nh+k]) for j in range(len(actions))]
+            preferred=int(i==max(range(len(raw_ev)),key=lambda x:raw_ev[x]))
+            p50+=preferred
+            bet.append((equity,weight))
+    if not bet:return dict(eligible=0,preferred=0,candidate=False,status='B50_UNREACHABLE_AFTER_PREVIOUS_STREET')
+    total=sum(w for _,w in allhands);ordered=sorted(allhands)
+    def quantile(frac):
+        target=total*frac;acc=0
+        for eq,w in ordered:
+            acc+=w
+            if acc>=target:return eq
+        return ordered[-1][0]
+    qlo,qhi=quantile(1/3),quantile(2/3)
+    low=mid=high=0
+    lw=mw=hw=0.
+    for eq,w in bet:
+        if eq<qlo:low+=1;lw+=w
+        elif eq>qhi:high+=1;hw+=w
+        else:mid+=1;mw+=w
+    eligible=len(bet);fraction=mw/(lw+mw+hw)
+    candidate=eligible>=20 and mid>=10 and fraction>=0.20 and (high>=5 or low>=5)
+    return dict(eligible=eligible,preferred=p50,
+        best_ev_b50_fraction_pct=round(100*p50/eligible,3),
+        low_count=low,middle_count=mid,high_count=high,
+        mid_reach_mass_fraction_pct=round(100*fraction,3),candidate=bool(candidate),
+        status='EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION')
 def source_nodes(d,seq):
     out=[]
     for n in d['nodes']:
@@ -29,13 +74,17 @@ def source_nodes(d,seq):
         if reach==0 or strict['count']==0:continue
         spr=(d['stack']-max(n['bets']))/n['pot']
         if spr<0:raise ValueError('Negative SPR')
+        medium=strict_medium_evidence(n,d,strict['mask'])
         out.append(dict(public_board=n['board'],exact_node_line=n['line'],
           acting_seat=n['player'],pot_bb=n['pot']/100,
           remaining_bb=(d['stack']-max(n['bets']))/100,
           node_spr=round(spr,6),source_reachable_combos=reach,
           strictly_reachable_combos=strict['count'],
           strictly_reachable_masks_b64=strict['mask'],
-          source_actions=n['acts']))
+          source_actions=n['acts'],
+          medium_50pct_eligible_combos=medium['eligible'],
+          b50_nonpolarized_relative_equity_research_candidate=medium['candidate'],
+          medium_50pct_strict_evidence=medium))
     return out
 def verify(root,source_pin,run_id):
     sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
