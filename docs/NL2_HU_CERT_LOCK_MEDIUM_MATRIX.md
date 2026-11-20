@@ -47,10 +47,10 @@ Verified: 24 CERT / 368 APPROX; 88 named boards.
 | 10 | ln-iso-lmp_t_model-1nf06ka | 8s8h3d 5s | 44666294821 | 44666294821 | 21/7/12 | unproven |
 | 10 | ln-iso-lmp_t_model-1nf06ka | 9s6h3d Ts | 44666294821 | 44666294821 | 20/7/13 | unproven |
 | 10 | ln-iso-lmp_t_model-1nf06ka | KsQh4d Tc | 44666294821 | 44666294821 | 19/7/13 | unproven |
-| 11 | ln-bb-t_model-1c7tu96 | 9s6h3d Ts | 44525865923 | 44525865923 | unknown | unproven |
+| 11 | ln-bb-t_model-1c7tu96 | 9s6h3d Ts | 44525865923 | 44525865923,44781020650 | unknown | unproven |
 | 11 | ln-bb-t_model-1c7tu96 | As9h2d Kd | 44666285424 | 44666285424 | 9/2/13 | unproven |
 | 11 | ln-bb-t_model-1c7tu96 | Js9h4d Ts | 44653774402 | 44653774402 | unknown | unproven |
-| 11 | ln-bb-t_model-1c7tu96 | Ks7s2s 9d | 44525865923 | 44525865923 | unknown | unproven |
+| 11 | ln-bb-t_model-1c7tu96 | Ks7s2s 9d | 44525865923 | 44525865923,44781020650 | unknown | unproven |
 | 11 | ln-bb-t_model-1c7tu96 | KsQh4d Tc | 44653774402 | 44653774402,44666285424 | unknown | unproven |
 | 12 | ln-ipc-t_model-btptzw | 8s8h3d 5s | 44666285424 | 44666285424 | 19/2/6 | unproven |
 | 12 | ln-ipc-t_model-btptzw | As9h2d Kd | 44666285424 | 44666285424 | 27/2/12 | unproven |
