@@ -283,7 +283,9 @@ def verify(root,source_pin,run_id):
                             n.get('line')==' '.join(expected_flop)+'/' and n.get('wr')
                             for n in fr.get('nodes',[])):
                         raise ValueError('Exact requested line absent from pinned GTO flop parent')
-                elif not actual_flop_extract or not all(p[:2]==expected_flop for p in actual_flop_extract):
+                # Match the complete declared prefix: x b100 c has THREE tokens,
+                # not two. Length-2 policies retain their original strict gate.
+                elif not actual_flop_extract or not all(p[:len(expected_flop)]==expected_flop for p in actual_flop_extract):
                     raise ValueError('Actual flop job has unexpected or missing focused action extraction')
             if abs(j['rake_rate']-0.05)>1e-8 or j['rake_cap']!=1000:
                 raise ValueError('Unstated rake vs expected NL2 5% max10bb')
