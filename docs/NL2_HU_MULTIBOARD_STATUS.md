@@ -60,6 +60,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B43_UTG_B75 | 44806967313 | 1 | 1 |
 | B51_UTG_XX | PENDING | 0 | 0 |
 | B52_TWO_IP_LOCKS | PENDING | 0 | 0 |
+| B56_SB_B50_XX | PENDING | 0 | 0 |
 
 ## Top-24 preregistered game histories
 
