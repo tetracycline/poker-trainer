@@ -224,6 +224,16 @@ el('node').addEventListener('change',selectNode);
 el('all-combos').addEventListener('change',fillCombos);
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v5=d=>{
+   if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V5_BATCH55'||
+      d.CERT_MULTIBOARD!==41||d.APPROX!==351||d.TOTAL!==392||
+      d.original_v4_cert!==33||d.original_v4_approx!==359||
+      d.original_top24_cutoff_unchanged!==true||
+      String(d.source_blind_expansion_ranks)!=='42,44,49,50,51,53,54,55'||
+      d.supplementary_cert_count!==17||Object.keys(d.records||{}).length!==392)
+      throw Error('V5 authentic multi-board ledger invalid');
+   return d;
+ };
  const v4=d=>{
    if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V4_BATCH50'||
       d.CERT_MULTIBOARD!==33||d.APPROX!==359||d.TOTAL!==392||
@@ -256,7 +266,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v4_batch50.json',{cache:'no-store'}).then(open).then(v4)
+ return fetch('data/nl2_hu_multiboard_status_v5_batch55.json',{cache:'no-store'}).then(open).then(v5)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v4_batch50.json',{cache:'no-store'}).then(open).then(v4))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v3_rank28.json',{cache:'no-store'}).then(open).then(v3))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v2_tie.json',{cache:'no-store'}).then(open).then(v2))
    .catch(()=>fetch('data/nl2_hu_multiboard_status.json',{cache:'no-store'}).then(open)
@@ -270,7 +281,7 @@ function fetchCertifiedRegistry(){
 
 fetchCertifiedRegistry()
  .then(d=>{
-   if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V1','NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE','NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28','NL2_HU_392_MULTIBOARD_CERT_STATUS_V4_BATCH50'].includes(d.schema)||d.CERT_MULTIBOARD+d.APPROX!==392)
+   if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V1','NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE','NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28','NL2_HU_392_MULTIBOARD_CERT_STATUS_V4_BATCH50','NL2_HU_392_MULTIBOARD_CERT_STATUS_V5_BATCH55'].includes(d.schema)||d.CERT_MULTIBOARD+d.APPROX!==392)
       throw Error('模型認證來源驗證失敗');
    status=d;
    models=Object.values(d.records).filter(x=>x.label==='CERT-MULTIBOARD')
