@@ -210,7 +210,7 @@ def build_source_index(root,extra):
                      unknown_defaults=False,hero_gain_bb=game.get('hero_gain_vs_locked_pool_bb')))
     new_count=0
     for path in extra:
-        source=json.loads(path.read_text())
+        source=load_gzip(path) if path.suffix=='.gz' else json.loads(path.read_text())
         if source['schema']!='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1' or source['errors']:
             raise ValueError('New CFR source not independently verified: '+str(path))
         for artifact in source['artifacts']:
