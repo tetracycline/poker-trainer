@@ -4,7 +4,7 @@
 Only exact public boards/action histories/pot/SPR may be CERT.
 No generic MODEL node is ever promoted via texture resemblance.
 """
-import argparse, collections, gzip, hashlib, json, pathlib, re, sys
+import argparse, base64, collections, gzip, hashlib, json, pathlib, re, sys
 
 def digest(raw):
     return hashlib.sha256(raw).hexdigest()
@@ -33,7 +33,10 @@ def pack(a):
             raise ValueError('Run/pot provenance mismatch')
         for n in r['nodes']:
             if n['reachable_combos']<=0:continue
-            if len(n['eligible_action_masks_b64'])<10 or n['node_spr']<0:
+            encoded=n['eligible_action_masks_b64']
+            combo=base64.b64decode(encoded,validate=True)
+            original=r['hands_by_seat'][n['acting_seat']]
+            if len(combo)!=len(original) or n['node_spr']<0 or not any(combo):
                 raise ValueError('Combo/SPR source invalid')
     result={
       'schema':'HU_NL2_EXACT_BOARD_CFR_V1',
