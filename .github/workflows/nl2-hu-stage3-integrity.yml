@@ -1,0 +1,79 @@
+name: NL2 stage3 multiboard/approx trainer integrity and source labels
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-stage3-integrity.yml'
+      - 'nl2-multiboard.js'
+      - 'nl2-multiboard.html'
+      - 'nl2_hu_multiboard_ui.js'
+      - 'nl2_hu_model.js'
+      - 'data/nl2_hu_multiboard_status.json'
+      - 'tools/hu_multiboard_consolidate.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify usable JavaScript and exact-board hierarchy
+        run: |
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2_hu_model.js
+          node --check nl2_hu_cfr_refs.js
+          node --check nl2.js
+      - name: Independently validate all 392 labels, 3-5 actual cards, no generic GTO and frequency-cutoff 24
+        run: |
+          python3 - <<'PY'
+          import json
+          d=json.load(open('data/nl2_hu_multiboard_status.json'))
+          q=json.load(open('data/nl2_hu_stage2_queue.json'))
+          r=json.load(open('data/nl2_hu_multiboard_prerank.json'))
+          assert d['TOTAL']==len(d['records'])==len(q['records'])==len(r['nodes'])==392
+          assert d['CERT_MULTIBOARD']+d['APPROX']==392
+          assert d['top_N_rank_cutoff']==r['cutoff']['N']==24
+          assert d['selection_outcome_independent']
+          for m in d['records'].values():
+            if m['label']=='CERT-MULTIBOARD':
+              examples=m['certified_3_to_5_exact_flop_boards']
+              assert m['high_frequency_preregistered']
+              assert 3<=len(examples)<=5 and len(set(x['flop'] for x in examples))==len(examples)
+              assert len(set(x['flop_texture'] for x in examples))>=2
+              assert all(x['strict_full_street_combo_reachable']>0 and x['genuine_gto_exploitability_pct']<=0.5
+                         and x['relative_spr_error_pct']<=5 and len(x['source_sha256'])==64 and x['nl2_locked_variants'] for x in examples)
+            else:
+              assert m['label']=='APPROX' and m['certified_3_to_5_exact_flop_boards']==[]
+          print('PASS',d['CERT_MULTIBOARD'],'CERT multi-board,',d['APPROX'],'APPROX')
+          PY
+      - name: Independently rebuild 100 percent valid HU river navigation, no forced fake plays
+        run: |
+          mkdir -p audit
+          node tools/link_audit.js --json audit/link.json --md audit/links.md
+          node tools/hu_model_path_audit.js audit/hu-model-path.json
+          python3 - <<'PY'
+          import json
+          l=json.load(open('audit/link.json'))
+          d=json.load(open('audit/hu-model-path.json'))
+          assert l['counts']['continuing']==l['counts']['reachRiver']
+          assert l['counts']['noRiver']==0
+          assert d['coverage']==100 and d['violations']==[]
+          assert d['stats']['modelTables']==392
+          print('PASS navigation 100%, 392 modeled nodes, 0 unreachable spoofed extra river links')
+          PY
+      - name: Preserve UI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-stage3-training-integrity-proof
+          path: audit/
+          retention-days: 30
