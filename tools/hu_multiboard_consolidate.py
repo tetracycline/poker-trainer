@@ -32,8 +32,9 @@ def discover(root):
             raise ValueError('Source SHA or count mismatch '+code)
         # E's archived template hard-coded four jobs. New genuine work must
         # instead report the VERIFIED number of separate solver artifacts.
+        # B5 retains five successful originals; the sixth timed out, and is EXCLUDED.
         # Repair only this KNOWN metadata defect, never infer extra GTO games.
-        expected_new_jobs={'B5_SBGAPS':6,'B6_REMAIN':6,'B7_RIVER':6,'B8_LOCK':2}
+        expected_new_jobs={'B5_SBGAPS':5,'B6_REMAIN':6,'B7_RIVER':6,'B8_LOCK':2}
         if code in expected_new_jobs and ix['actual_spot_flop_version_jobs']!=expected_new_jobs[code]:
             n=expected_new_jobs[code]
             if not (ix['actual_spot_flop_version_jobs']==4 and
