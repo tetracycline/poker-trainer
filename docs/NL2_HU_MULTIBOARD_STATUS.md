@@ -34,7 +34,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B5_SBGAPS | 44736420272 | 45 | 26 |
 | B6_REMAIN | PENDING | 0 | 0 |
 | B7_RIVER | 44737532081 | 45 | 26 |
-| B8_LOCK | PENDING | 0 | 0 |
+| B8_LOCK | 44738324702 | 0 | 13 |
 | B9_LMP_FAST | PENDING | 0 | 0 |
 | B10_RIVER_EXP | PENDING | 0 | 0 |
 | B11_RIVER_FAST | PENDING | 0 | 0 |
