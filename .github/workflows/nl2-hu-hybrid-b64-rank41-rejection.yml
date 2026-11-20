@@ -1,0 +1,56 @@
+name: TASK-HYBRID B64 rank41 source-negative strict hero-actor reach gate, never false-promote
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b64-rank41-rejection.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  negative-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify authenticated archived source but no acting-IP reachable hero lock; preserve APPROX
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b64_rank41_source_rejection.py
+          python3 tools/hu_b64_rank41_source_rejection.py
+      - name: Strict no false promotion for rank41
+        run: |
+          python3 - <<'PY'
+          import json
+          x=json.load(open('data/nl2_hu_b64_rank41_unmatched_hero_node.json'))
+          v=json.load(open('data/nl2_hu_multiboard_status_v8_batch61.json'))
+          assert x['status']=='PASS_EXCLUSION' and x['new_EXP_IP_source_hero_nodes']==0
+          assert len(x['admitted_hero_source_boards'])==2 and x['no_CERT_promotion']
+          assert v['CERT_MULTIBOARD']==56 and v['APPROX']==336
+          assert v['records'][x['model_id']]['label']=='APPROX'
+          print('PASS B64 no false rank41 CERT, original V8 56/336 retained')
+          PY
+      - name: Commit exclusion evidence to PR #2 Draft without merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b64_rank41_unmatched_hero_node.json docs/NL2_HU_B64_RANK41_REJECTION.md
+          git commit -m 'TASK-HYBRID B64: reject B52 CO_BB lock for rank41 with zero acting-IP nodes; keep APPROX'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B64-rank41-no-false-cert
+          path: |
+            data/nl2_hu_b64_rank41_unmatched_hero_node.json
+            docs/NL2_HU_B64_RANK41_REJECTION.md
+          retention-days: 30
