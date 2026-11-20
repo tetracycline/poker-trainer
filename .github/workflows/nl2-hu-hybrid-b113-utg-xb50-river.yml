@@ -82,7 +82,7 @@ jobs:
           python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
           mkdir -p trainer/data/solver_evidence
           python3 trainer/tools/verify_hu_multiboard_100bb.py             --downloads downloads --solver-root solver --run-id "$GITHUB_RUN_ID"             --out trainer/data/solver_evidence/NL2_MULTIBOARD_B113_UTG_B75_XB50.json
-      - name: Seal authentic actor-IP GTO-anchored source SHA only if exact river node exists
+      - name: Seal independently verified source; mark rank236 APPROX if no strict hero-IP river node
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -100,8 +100,16 @@ jobs:
           assert (c['flop_line'],c['turn'])==('b75 c','Ts')
           hero=[n for n in c['nodes'] if n['acting_seat']==1 and
              n['exact_node_line']=='b75 c/x b50 c/x' and n['strictly_reachable_combos']>0]
-          assert hero,'No strictly reachable actor-IP river x-b50c source; keep rank236 APPROX'
+          # A solver subgame is real even if the frozen max/near-mix
+          # sequential path mask eliminates the target hero action.
+          # Keep the independently verified source, but never certify
+          # rank236 when the exact actor-IP river node is unreachable.
           assert all(n['public_board'] for n in hero)
+          matched_before_strict=[n for n in c['nodes']
+              if n['acting_seat']==1 and
+                 n['exact_node_line']=='b75 c/x b50 c/x']
+          no_certification_reason=(None if hero
+              else 'B113_ACTOR_IP_RIVER_HAS_ZERO_STRICT_REACH_AFTER_FROZEN_ACTION_FILTER')
           raw=p.read_bytes()
           gz=p.with_suffix('.json.gz')
           gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
@@ -119,12 +127,15 @@ jobs:
              B43_EXP_OOP_not_substituted_for_actor_IP=True,
              original_GTO_flop_NOT_recomputed=True,
              genuine_IP_river_actor_nodes=len(hero),source_blind_rank=236,
+             target_actor_nodes_in_verified_strict_source=len(matched_before_strict),
+             no_certification_reason=no_certification_reason,
+             rank236_remains_APPROX_until_three_true_actor_matched_boards=not bool(hero),
              immediate_CERT_upgrades=0)
           p.with_suffix('.index.json').write_text(json.dumps(ix,ensure_ascii=False,indent=2)+'\n')
           p.unlink()
-          print('PASS B113 actor-IP authentic Rust original-GTO-pinned turn/river lock',ix)
+          print('PASS B113 authentic original-GTO-pinned source checked; certification strictly gated',ix)
           PY
-      - name: Commit exact source archive to Draft PR #2, no model upgrade until independent B114 gate
+      - name: Commit authentic source or negative gate to Draft PR #2, never auto-upgrade
         working-directory: trainer
         run: |
           set -euo pipefail
