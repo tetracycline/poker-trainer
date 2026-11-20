@@ -1,4 +1,4 @@
-name: TASK-HYBRID B71 V10 eleven frozen-rank CERT 77/315 with 298 real board lock and 50pct proof
+name: TASK-HYBRID B71 V11 eleven frozen-rank CERT 77/315 with 298 real board lock and 50pct proof
 on:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
@@ -53,7 +53,7 @@ jobs:
           assert b['independently_verified_completed_batches']['B4_MICRO']['run_id']==44732810327
           assert nav['continuing']==nav['reach_river']==2475 and nav['share_pct']==100
           assert nav['missing_river']==nav['link_misses']==nav['reach_violations']==nav['modeled_path_violations']==0
-          print('PASS B71 66 CERT / 326 APPROX; 298 named exact boards; E and river source gates')
+          print('PASS B71 77 CERT / 315 APPROX; 298 named exact boards; E and river source gates')
           PY
           node - <<'JS'
           const fs=require('fs'),assert=require('assert').strict;
@@ -91,13 +91,13 @@ jobs:
             console.log('PASS V11 through V1 fallback both certification pages');
           })().catch(e=>{console.error(e);process.exitCode=1});
           JS
-      - name: Commit V10 source certificates and all 298 exact locked/medium evidence to Draft PR #2; absolutely no merge
+      - name: Commit V11 source certificates and all 298 exact locked/medium evidence to Draft PR #2; absolutely no merge
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/nl2_hu_multiboard_status_v11_batch71.json data/nl2_hu_cert_lock_medium_matrix_v11.json docs/NL2_HU_B71_V10_NINE_CERT.md docs/NL2_HU_B71_V10_ALL_LOCKS_MEDIUM.md
-          git commit -m 'TASK-HYBRID B71: eleven preregistered authentic multi-board models, V10 77 CERT/315 APPROX and 298 source-backed locks'
+          git add data/nl2_hu_multiboard_status_v11_batch71.json data/nl2_hu_cert_lock_medium_matrix_v11.json docs/NL2_HU_B71_V11_ELEVEN_CERT.md docs/NL2_HU_B71_V11_ALL_LOCKS_MEDIUM.md
+          git commit -m 'TASK-HYBRID B71: eleven preregistered authentic multi-board models, V11 77 CERT/315 APPROX and 298 source-backed locks'
           for n in 1 2 3; do
             git fetch origin fix/nl2-hu-lines-audit-20261118
             git rebase origin/fix/nl2-hu-lines-audit-20261118
@@ -108,10 +108,10 @@ jobs:
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: TASK-HYBRID-B71-V10-eleven-real-models
+          name: TASK-HYBRID-B71-V11-eleven-real-models
           path: |
             data/nl2_hu_multiboard_status_v11_batch71.json
             data/nl2_hu_cert_lock_medium_matrix_v11.json
-            docs/NL2_HU_B71_V10_NINE_CERT.md
-            docs/NL2_HU_B71_V10_ALL_LOCKS_MEDIUM.md
+            docs/NL2_HU_B71_V11_ELEVEN_CERT.md
+            docs/NL2_HU_B71_V11_ALL_LOCKS_MEDIUM.md
           retention-days: 30
