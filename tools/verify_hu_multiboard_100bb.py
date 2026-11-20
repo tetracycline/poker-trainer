@@ -265,6 +265,15 @@ def verify(root,source_pin,run_id):
                     raise ValueError('Missing actual OOP lead sizes')
                 if not all(x in j.get('flop_ip','') for x in ('33%','50%','75%','100%')):
                     raise ValueError('Missing actual IP bet sizes')
+            elif fp=='legacy-official-pinned':
+                if m.get('pinned_official_legacy_source_id')!=44654973894 or not partial_gto_parent:
+                    raise ValueError('Historical bet menu not authorized for current GTO tree')
+                actual={'oop':j.get('flop_oop'),'ip':j.get('flop_ip'),
+                        'raise_sizes':j.get('flop_raise')}
+                if m.get('flop_action_sizes')!=actual or m.get('restricted_original_GTO_tree') is not True:
+                    raise ValueError('Old GTO flop source bet menu does not match SHA-pinned original Rust job')
+                if not all(isinstance(actual[x],str) and actual[x] for x in ('oop','ip','raise_sizes')):
+                    raise ValueError('Missing original historical flop sizing options')
             else: raise ValueError('Unknown flop size proof profile')
             if m['version']=='gto' and j.get('hero') is not None:
                 raise ValueError('GTO job unexpectedly locks a hero')
@@ -376,7 +385,10 @@ def verify(root,source_pin,run_id):
                   flop_root_stack_bb=stack,flop_source_sha256=m['file_flop_sha256'],
                   root_spr=m['root_spr'],turn_spr=c['real_flop_parent_spr'],
                   source_sha256=c['source_sha256'],gto_exploitability_pct=gg,
-                  locked_hero_gap_pct=hh,flop_size_menu=['33%','50%','75%','100%'],
+                  locked_hero_gap_pct=hh,flop_size_menu=(
+                      [p.strip() for p in j['flop_oop'].split(',')]
+                      if m.get('pinned_official_legacy_source_id')==44654973894
+                      else ['33%','50%','75%','100%']),
                   NL2_pool_source_sha256=expected_pool,
                   lock_patterns=m['locks'] if m['version']!='gto' else [],
                   lock_coverage_pct=locked['coverage_pct'],
