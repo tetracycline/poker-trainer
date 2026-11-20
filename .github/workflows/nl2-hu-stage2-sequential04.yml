@@ -1,0 +1,64 @@
+name: NL2 stage2 independently verify real flop→turn→river highest-frequency combo paths batch04
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage2-sequential04.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download real source CFR tree and SHA manifest of every action line
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p evidence/downloads
+          gh run download 44653774402 --repo "$GITHUB_REPOSITORY" --dir evidence/downloads
+      - name: Cross-check exact turn/river ancestry and intersect per-combo maximum/near action masks
+        run: |
+          python3 tools/hu_sequential_cfr_reach.py \
+            --downloads evidence/downloads \
+            --proof data/solver_evidence/STAGE2_BATCH04.json \
+            --out data/nl2_hu_sequential_reach_official_b04.json.gz
+      - name: Fail closed on empty or misclassified original source
+        run: |
+          python3 - <<'PY'
+          import gzip,json
+          p='data/nl2_hu_sequential_reach_official_b04.json.gz'
+          d=json.loads(gzip.decompress(open(p,'rb').read()))
+          assert d['schema']=='HU_NL2_SEQUENTIAL_REACH_OVERLAY_V1'
+          assert d['source_proof_run_id']==44653774402
+          assert len(d['subgames_by_source_sha256'])==158
+          assert d['generic_model_CERT']==0
+          assert d['aggregate_stats']['sequential_actor_combo_nodes']>0
+          assert d['aggregate_stats']['removed_by_parent_action_policy']>0
+          print('PASS source-constrained flop-turn-river combo eligibility',d['aggregate_stats'])
+          PY
+      - name: Commit audited sequential masks to Draft PR #2
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_sequential_reach_official_b04.json.gz
+          if ! git diff --cached --quiet; then
+            git commit -m 'stage2: exact-board batch04 158-case flop-turn-river sequential combo reach, no fake CERT'
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+          fi
+      - name: Retain source-proof report on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-stage2-sequential04-proof
+          path: data/nl2_hu_sequential_reach_official_b04.json.gz
+          retention-days: 30
