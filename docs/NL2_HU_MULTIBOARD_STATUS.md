@@ -47,6 +47,7 @@ CFR outcomes cannot be used to tune this cutoff.
 | B18_RIVERPAIR | 44758653460 | 0 | 2 |
 | B19_LMP50_RESTRICTED | PENDING | 0 | 0 |
 | B20_B66_GTO | PENDING | 0 | 0 |
+| B22_B66_EXP | PENDING | 0 | 0 |
 
 ## Top-24 preregistered game histories
 
