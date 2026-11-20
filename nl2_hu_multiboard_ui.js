@@ -64,8 +64,9 @@ function render(){
               +'&board='+encodeURIComponent(b.public_board)
               +'&line='+encodeURIComponent(b.actual_exact_action_line);
          }else{
-           link.href='https://github.com/tetracycline/poker-trainer/actions/runs/'+b.source_run_id;
-           link.target='_blank';link.rel='noopener';
+           link.href='nl2-multiboard.html?model='+encodeURIComponent(item.model_id)+
+               '&board='+encodeURIComponent(b.public_board)+'&sha='+encodeURIComponent(b.source_sha256);
+           link.textContent='本公牌真實 GTO 與 NL2 局部鎖頻逐 combo 檢視（Run '+b.source_run_id+'）';
          }
          li.appendChild(link);
          li.append(document.createTextNode(
