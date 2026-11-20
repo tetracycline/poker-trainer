@@ -232,10 +232,14 @@ function repair(html,sp,catalog){
     const sizeDesc='100bb；'+rootP.family+'；'+rootP.range+'；根底池 '+rootP.pot+'bb／根餘額 '+rootP.stack+
       'bb／根 SPR '+rootP.rootSPR+'；模型節點底池約 '+P.pot+'bb、剩餘有效籌碼約 '+P.stack+'bb、SPR 約 '+P.spr+
       '；每街採常見 ⅓／½／¾ 底池下注、加注到 3 倍並由對手跟注；所有值是明示假設，非真實逐 combo 解算。';
+    const exactViewerSpots=['BTN_BB','BB3_BTN','CO_BB','SB_BB','SB3_BTN','UTG_CO','CO3_BTN'];
+    const sourceRef=exactViewerSpots.includes(rootP.spot)
+      ? '<p class="small"><a href="nl2-cfr.html?spot='+encodeURIComponent(rootP.spot)+'&version=gto">研究用：相同位置／底池家族的真實公牌 CFR 範例</a>（須另核對牌面、動作線、實際 SPR，<b>此 MODEL 格並未因此取得 CERT</b>）</p>'
+      : '<p class="small">ISO／Limp 有 100bb 真實解算樣本，但目前無精確公牌／尺寸映射；原始證據 <a href="https://github.com/tetracycline/poker-trainer/actions/runs/44508547280">GitHub Actions 44508547280</a>，<b>此 MODEL 未獲 CERT</b>。</p>';
     patched+='<div class="sec" data-node="'+n.sp+'/'+n.nd+'" id="'+n.id+'"><b class="ttl">'+esc(n.title)+'</b>'+
       '<p class="navln"><a class="jmp" href="#'+n.source+'">↑ 上一步</a></p>'+
       '<p class="small muted"><b>MODEL／待真實 CFR：</b>'+esc(sizeDesc)+
-      ' 預設代表同分類（brick）延續；實際發牌轉換分類應重新判斷，不能視為 CERT 或 EST。</p>'+
+      ' 預設代表同分類（brick）延續；實際發牌轉換分類應重新判斷，不能視為 CERT 或 EST。</p>'+sourceRef+
       '<div class="tw"><table class="rt lt"><tr><th></th>'+HC.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr>'+tr+'</table></div></div>';
   }
   // A few legacy secondary action links point to filtered-out/unpublished
