@@ -1,0 +1,159 @@
+name: TASK-HYBRID Y two pinned GTO-parent b33c/b100c river lock pairs
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-y-river-two-parents.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 21
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - {spot: SB_BB, flop: As9h2d, gto_run: 44666285424, gto_artifact: 'nl2-multiboard-B1-SB_BB-gto-As9h2d', version: exp_oop}
+          - {spot: SB_BB, flop: KsQh4d, gto_run: 44736420272, gto_artifact: 'nl2-multiboard-B5_SBGAPS-SB_BB-gto-KsQh4d', version: exp_oop}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Download only named original GTO parent from independently verified prior run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p gto_parent
+          gh run download "${{ matrix.gto_run }}" --repo "$GITHUB_REPOSITORY" --name "${{ matrix.gto_artifact }}" --dir gto_parent
+          test -f "gto_parent/solver/postflop/out/${{ matrix.spot }}/gto/${{ matrix.flop }}_multiboard.json"
+          test -f "gto_parent/solver/postflop/out/${{ matrix.spot }}/gto/${{ matrix.flop }}_multiboard.job.json"
+      - name: Pin and compile genuine Rust solver
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_turnonly_gto_parent.py trainer/tools/verify_hu_multiboard_100bb.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Run real exact b33 c flop GTO parent to b100 c turn-river partially NL2-locked CFR
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          python3 trainer/tools/solve_hu_turnonly_gto_parent.py \
+            --solver-root solver --gto-artifact-root gto_parent \
+            --gto-parent-run-id "${{ matrix.gto_run }}" \
+            --spot "${{ matrix.spot }}" --flop "${{ matrix.flop }}" \
+            --flop-line "b33 c" --version "${{ matrix.version }}" \
+            --manifest "evidence/${{ matrix.spot }}-${{ matrix.flop }}-b33c-exp_oop.json"
+      - name: Preserve original raw Rust subgame and source hash even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B18_RIVERPAIR-${{ matrix.flop }}-b33c-exp_oop
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: ${{ needs.solve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - name: Download exactly two immutable genuinely completed raw Rust evidence artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir downloads
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d -name 'nl2-multiboard-B18_RIVERPAIR-*' | wc -l)" -eq 2
+          mkdir -p trainer/data/solver_evidence
+          python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver \
+            --run-id "$GITHUB_RUN_ID" --out trainer/data/solver_evidence/NL2_MULTIBOARD_B18_RIVERPAIR.json
+      - name: Verify two honest EXP-only downstream cases and make stable SHA archive
+        run: |
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B18_RIVERPAIR.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1' and not d['errors']
+          assert len(d['artifacts'])==2 and d['exact_board_gto_sources']==0
+          assert d['imputed_pool_locked_sources']==2 and d['new_authentic_board_cases']==2
+          assert {(x['flop'],x['cases'][0]['flop_line']) for x in d['artifacts']}=={
+              ('As9h2d','b33 c'),('KsQh4d','b33 c')}
+          assert all(x['version']=='exp_oop' for x in d['artifacts'])
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          ix=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+              run_id=d['source_run_id'],batch='B18_RIVERPAIR',
+              actual_spot_flop_version_jobs=2,
+              verified_cases=d['new_authentic_board_cases'],gto_cases=0,
+              locked_cases=d['imputed_pool_locked_sources'],
+              source_sha256=hashlib.sha256(raw).hexdigest(),
+              gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+              generic_model_certification=0,
+              locked_scope='TURN_RIVER_ONLY_FROM_PINNED_GTO_FLOP_PARENT_NO_FULL_FLOP_LOCK')
+          p.with_suffix('.index.json').write_text(json.dumps(ix,indent=2,ensure_ascii=False)+'\n')
+          p.unlink()
+          print('PASS two exact GTO-parent turn-only locked sources',ix)
+          PY
+      - name: Verify 392 exact board classifications and complete node-lock/depolarization audit
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_multiboard_consolidate.py tools/hu_highfreq_shortfalls.py
+          python3 tools/hu_multiboard_consolidate.py --root data --out data/nl2_hu_multiboard_status.json --doc docs/NL2_HU_MULTIBOARD_STATUS.md
+          python3 tools/hu_highfreq_shortfalls.py data data/nl2_hu_highfreq_shortfalls.json
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status.json --out data/nl2_hu_cert_lock_medium_audit.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          g=json.load(open('data/nl2_hu_highfreq_shortfalls.json'))
+          a=json.load(open('data/nl2_hu_cert_lock_medium_audit.json'))
+          assert s['TOTAL']==392 and s['CERT_MULTIBOARD']+s['APPROX']==392
+          assert s['CERT_MULTIBOARD']>=20
+          assert s['independently_verified_completed_batches']['B18_RIVERPAIR']['authentic_jobs']==2
+          assert g['certified_from_source']==s['CERT_MULTIBOARD'] and a['cert_multiboard']==s['CERT_MULTIBOARD']
+          assert all(len(x['certified_3_to_5_exact_flop_boards']) in (3,4,5) for x in s['records'].values() if x['label']=='CERT-MULTIBOARD')
+          print('PASS B18 truthful exact source + all CERT lock/b50 audit',s['CERT_MULTIBOARD'],'CERT',s['APPROX'],'APPROX')
+          PY
+      - name: Commit complete B18 verification and push to Draft PR#2, NEVER merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B18_RIVERPAIR.index.json data/solver_evidence/NL2_MULTIBOARD_B18_RIVERPAIR.json.gz data/nl2_hu_multiboard_status.json data/nl2_hu_highfreq_shortfalls.json data/nl2_hu_cert_lock_medium_audit.json docs/NL2_HU_MULTIBOARD_STATUS.md
+          git commit -m 'TASK-HYBRID Y: two independent exact GTO-parent NL2 hero river locks, recertify ranks 15/18'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - name: Preserve verified source archive if update races
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-Y-B18-exact-locked-source
+          path: trainer/data/solver_evidence/NL2_MULTIBOARD_B18_RIVERPAIR*
+          retention-days: 30
