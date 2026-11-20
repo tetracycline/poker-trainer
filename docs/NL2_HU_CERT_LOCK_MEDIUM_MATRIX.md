@@ -30,9 +30,9 @@ Verified: 24 CERT / 368 APPROX; 88 named boards.
 | 5 | ln-opfr-t_model-id38uf | Ks7h2d 9d | 44654973894 | 44654973894,44775751657 | unknown | unproven |
 | 6 | ln-bb-t_model-1n6d5u3 | 8s8h3d 5s | 44653774402 | 44653774402,44666285424 | unknown | candidate |
 | 6 | ln-bb-t_model-1n6d5u3 | 9s6h3d Ts | 44525865923 | 44525865923,44779505990 | unknown | candidate |
-| 6 | ln-bb-t_model-1n6d5u3 | Js9h4d Ts | 44653774402 | 44653774402 | unknown | candidate |
+| 6 | ln-bb-t_model-1n6d5u3 | Js9h4d Ts | 44653774402 | 44653774402,44798496352 | unknown | candidate |
 | 6 | ln-bb-t_model-1n6d5u3 | Ks7s2s 9d | 44525865923 | 44525865923,44779505990 | unknown | unproven |
-| 6 | ln-bb-t_model-1n6d5u3 | KsQh4d Tc | 44653774402 | 44653774402,44666285424 | unknown | unproven |
+| 6 | ln-bb-t_model-1n6d5u3 | KsQh4d Tc | 44653774402 | 44653774402,44666285424,44798496352 | unknown | unproven |
 | 7 | ln-iso-lmp_t_model-1e9jvm0 | 8s8h3d 5s | 44666294821 | 44666294821 | 13/10/8 | candidate |
 | 7 | ln-iso-lmp_t_model-1e9jvm0 | 9s6h3d Ts | 44666294821 | 44666294821 | 14/11/7 | candidate |
 | 7 | ln-iso-lmp_t_model-1e9jvm0 | KsQh4d Tc | 44666294821 | 44666294821 | 14/10/1 | candidate |
