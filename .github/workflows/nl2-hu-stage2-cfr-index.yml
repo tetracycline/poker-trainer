@@ -1,0 +1,58 @@
+name: NL2 stage-2 compressed exact-board CFR index and 392-model crosswalk
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage2-cfr-index.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  compress-and-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Audit all 347 exact-source subgames and 392 generic MODEL blockers
+        run: |
+          python3 tools/hu_cfr_build_index.py
+      - name: Check gzip roundtrip, independent metadata, and no false-cert
+        run: |
+          python3 - <<'PY'
+          import json,gzip,hashlib,pathlib
+          p=pathlib.Path('data')
+          a=(p/'nl2_hu_exact_boards.json').read_bytes()
+          b=gzip.decompress((p/'nl2_hu_exact_boards.json.gz').read_bytes())
+          assert a==b
+          ix=json.loads((p/'nl2_hu_exact_boards_index.json').read_text())
+          refs=json.loads((p/'nl2_hu_model_source_references.json').read_text())
+          assert hashlib.sha256(a).hexdigest()==ix['raw_data_sha256']
+          assert ix['genuine_exact_board_subgames']==347 and ix['models_certified_by_this_file']==0
+          assert refs['generic_models']==len(refs['items'])==392
+          assert all(x['status']=='REFERENCE_ONLY_NOT_CERTIFIED' for x in refs['items'].values())
+          print('PASS: source gzip, 347 exact cases, 392 MODEL never mislabeled CERT')
+          PY
+      - name: Push compact real-CFR index and source-references on Draft PR (never merge)
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_exact_boards.json.gz data/nl2_hu_exact_boards_index.json data/nl2_hu_model_source_references.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'stage2: source-checked CFR gzip and 392-model provenance crosswalk'
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+          fi
+      - name: Save evidence on push rejection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-stage2-cfr-index-verified
+          path: |
+            data/nl2_hu_exact_boards_index.json
+            data/nl2_hu_model_source_references.json
+          retention-days: 30
