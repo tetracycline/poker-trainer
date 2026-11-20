@@ -437,5 +437,7 @@ def main():
     a.out.parent.mkdir(parents=True,exist_ok=True)
     a.out.write_text(json.dumps(d,ensure_ascii=False,separators=(',',':'))+'\n')
     print(json.dumps({k:v for k,v in d.items() if k not in ('artifacts','errors')},ensure_ascii=False))
+    if d['errors']:
+        print('STRICT_SOURCE_REJECTIONS',json.dumps(d['errors'][:12],ensure_ascii=False),flush=True)
     if d['errors'] or d['new_authentic_board_cases']<1:raise SystemExit(1)
 if __name__=='__main__':main()
