@@ -1,0 +1,61 @@
+name: TASK-HYBRID B46 V3 all 27 CERT named-board locks and nonpolarized 50pct source review
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b46-v3-lock-matrix.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Run existing immutable per-source auditor on all V3 27 CERT, not just original top24
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_cert_lock_medium_audit.py tools/hu_b46_v3_lock_matrix.py
+          python3 tools/hu_b46_v3_lock_matrix.py
+      - name: Ensure 101 exact boards and no false observed NL2 private-card frequency
+        run: |
+          python3 - <<'PY'
+          import json,hashlib
+          x=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v3.json'))
+          r=json.load(open('data/nl2_hu_multiboard_status_v3_rank28.json'))
+          assert x['schema']=='NL2_CERT_PER_NAMED_BOARD_LOCK_AND_MEDIUM_PROVENANCE_V3'
+          assert x['CERT_MULTIBOARD']==27 and x['APPROX']==365
+          assert x['strict_aggregate']['named_board_proofs']==len(x['boards'])==101
+          assert x['strict_aggregate']['hero_lock_variants']>=109
+          assert x['do_not_generalize_pooled_marginals_to_private_cards']
+          assert x['source_v3_status_sha256']==hashlib.sha256(
+            open('data/nl2_hu_multiboard_status_v3_rank28.json','rb').read()).hexdigest()
+          assert x['LMP_restricted_single_50pct_flop_tree_not_unrestricted_GTO']
+          assert r['CERT_MULTIBOARD']==27 and r['APPROX']==365
+          print('PASS B46 all V3 27 real named models, 101 exact boards / bounded lock and b50 sources')
+          PY
+      - name: Commit full source transparency to Draft PR #2 only, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_cert_lock_medium_matrix_v3.json docs/NL2_HU_CERT_LOCK_MEDIUM_MATRIX_V3.md
+          git commit -m 'TASK-HYBRID B46: V3 27 CERT all named-board NL2 node locks and nonpolarized source gates'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B46-V3-all-locked-board-matrix
+          path: |
+            data/nl2_hu_cert_lock_medium_matrix_v3.json
+            docs/NL2_HU_CERT_LOCK_MEDIUM_MATRIX_V3.md
+          retention-days: 30

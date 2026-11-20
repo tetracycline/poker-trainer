@@ -7,7 +7,9 @@ remain explicitly unobserved, not empirical NL2 hole-card action data.
 import argparse,collections,hashlib,json,pathlib
 
 def audit(data):
-    assert data['schema']=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V1'
+    assert data['schema'] in ('NL2_HU_392_MULTIBOARD_CERT_STATUS_V1',
+                              'NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE',
+                              'NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28')
     assert data['CERT_MULTIBOARD']+data['APPROX']==data['TOTAL']==392
     models={};tot=collections.Counter();source_set=set()
     for model_id,m in data['records'].items():
