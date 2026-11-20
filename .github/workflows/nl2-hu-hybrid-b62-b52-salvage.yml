@@ -1,0 +1,121 @@
+name: TASK-HYBRID B62 salvage one verified CO_BB hero-IP lock, exclude failed SB_BB history
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b62-b52-salvage.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  independent-salvage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Fetch only the CO_BB successful authentic Rust job, exclude SB_BB rejected extraction
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          name='nl2-multiboard-B52_TWO_IP_LOCKS-CO_BB-exp_ip-8s8h3d'
+          mkdir -p "downloads/$name"
+          gh run download 44809135555 --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$name"
+          test -d "downloads/$name/evidence"
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 1
+      - name: Independently verify SHA, preflop source, exact public board/pot/SPR, hero seat, strict full-street reach
+        run: |
+          set -euo pipefail
+          mkdir -p trainer/data/solver_evidence
+          python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
+          python3 trainer/tools/verify_hu_multiboard_100bb.py             --downloads downloads --solver-root solver --run-id 44809135555             --out trainer/data/solver_evidence/NL2_MULTIBOARD_B52_TWO_IP_LOCKS.json
+      - name: Freeze strictly one valid CO_BB EXP_IP source; record rejected SB_BB separately
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,gzip,json,pathlib
+          root=pathlib.Path('trainer/data')
+          p=root/'solver_evidence/NL2_MULTIBOARD_B52_TWO_IP_LOCKS.json'
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert not d['errors'] and d['source_run_id']==44809135555
+          assert len(d['artifacts'])==1
+          a=d['artifacts'][0]
+          assert (a['spot'],a['flop'],a['version'])==('CO_BB','8s8h3d','exp_ip')
+          assert a['cases'] and not a['errors']
+          assert all(c['flop_line']=='x x' for c in a['cases'])
+          assert d['exact_board_gto_sources']==0
+          assert d['new_authentic_board_cases']==d['imputed_pool_locked_sources']>=1
+          raw=p.read_bytes()
+          gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          excluded=[dict(name='nl2-multiboard-B52_TWO_IP_LOCKS-SB_BB-exp_ip-9s6h3d',
+            source_run_id=44809135555,
+            reason='FOCUSED_FLOP_EXTRACT_MISMATCH_AGAINST_DECLARED_X_B100_C',
+            permissible_for_CERT=False)]
+          index=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+            batch='B52_TWO_IP_LOCKS',run_id=d['source_run_id'],
+            actual_spot_flop_version_jobs=1,
+            verified_cases=d['new_authentic_board_cases'],
+            gto_cases=0,locked_cases=d['imputed_pool_locked_sources'],
+            source_sha256=hashlib.sha256(raw).hexdigest(),
+            gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+            generic_model_certification=0,
+            original_solver_run_failed_whole_group=True,
+            independently_salvaged_one_valid_job=True,
+            excluded_invalid_source=excluded,
+            no_fake_observed_private_card_frequency=True)
+          p.with_suffix('.index.json').write_text(json.dumps(index,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          report=dict(schema='NL2_B62_B52_ONE_VALID_CO_BB_HERO_LOCK_SALVAGE_V1',
+            source_run_id=44809135555,valid_jobs=1,rejected_jobs=1,
+            valid_exact_boards=[dict(spot='CO_BB',flop='8s8h3d',actor='IP',line='x x')],
+            excluded_invalid_source=excluded,
+            frozen_V7_CERT=48,frozen_V7_APPROX=344,
+            no_generic_texture_certification=True,
+            old_historical_unknown_counts_unmodified=True,
+            PR2_must_remain_draft=True,never_merge=True)
+          (root/'nl2_hu_b62_B52_one_valid_one_rejected.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+          print('PASS B62 one genuine CO_BB lock, SB_BB rejected; no certification relabel',index)
+          PY
+      - name: Confirm V7 remains unchanged and source is not silently promoted
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          v=json.load(open('data/nl2_hu_multiboard_status_v7_batch59.json'))
+          assert v['CERT_MULTIBOARD']==48 and v['APPROX']==344
+          x=json.load(open('data/solver_evidence/NL2_MULTIBOARD_B52_TWO_IP_LOCKS.index.json'))
+          assert x['actual_spot_flop_version_jobs']==1 and x['locked_cases']>=1
+          assert len(x['excluded_invalid_source'])==1
+          print('PASS frozen V7 48/344 with exactly one salvaged actor-IP source')
+          PY
+      - name: Commit authentic CO_BB source only into Draft PR #2, never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B52_TWO_IP_LOCKS.index.json data/solver_evidence/NL2_MULTIBOARD_B52_TWO_IP_LOCKS.json.gz data/nl2_hu_b62_B52_one_valid_one_rejected.json
+          git commit -m 'TASK-HYBRID B62: salvage authentic CO_BB rank41 hero-IP lock; reject invalid SB_BB rank40 path'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B62-CO-BB-only-source
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B52_TWO_IP_LOCKS*
+            trainer/data/nl2_hu_b62_B52_one_valid_one_rejected.json
+          retention-days: 30
