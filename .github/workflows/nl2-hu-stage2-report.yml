@@ -30,7 +30,9 @@ jobs:
           assert d['schema']=='NL2_HU_EXACT_BOARD_EXPLOIT_MEDIUM_REPORT_V1'
           assert d['generic_model_certified']==0
           assert d['source_subgames']==ix['genuine_exact_board_subgames']==347
-          assert d['medium_nonpolarized_exact_board_candidates']==ix['nonpolarized_50pct_exact_board_candidate_nodes']
+          assert d['all_actors_including_locked_villain_nonpolarized_source_nodes']==ix['nonpolarized_50pct_exact_board_candidate_nodes']
+          assert 0<d['medium_nonpolarized_exact_board_candidates']<=ix['nonpolarized_50pct_exact_board_candidate_nodes']
+          assert 0<=d['nonpolarized_hero_or_gto_ev_preferred_nodes']<=d['medium_nonpolarized_exact_board_candidates']
           assert d['partial_locked_cases']<=ix['nl2_pool_locked_provisional_subgames']
           for x in d['top_medium']:
               assert x['eligible_medium_combos']>=20
