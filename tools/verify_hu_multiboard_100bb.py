@@ -221,12 +221,23 @@ def verify(root,source_pin,run_id):
                     raise ValueError('Declared river CFR node count wrong')
                 sequential,proof=game_reach(fr,d)
                 if not proof['sequential_actor_combo_nodes']:
-                    raise ValueError('All combos became unreachable after strict action gates')
+                    # Real CFR solved the game, but this branch is impossible
+                    # under the user-mandated max/near action policy.
+                    # Never publish an unreachable exact-board GTO example.
+                    info['excludes'].append(dict(line=c['line'],turn=c['turn'],
+                        source_sha256=c['source_sha256'],
+                        reason='SOLVED_CFR_BUT_ALL_COMBOS_UNREACHABLE_AFTER_STRICT_MULTISTREET_POLICY'))
+                    accum['authentic_cfr_cases_excluded_by_reachability']+=1
+                    continue
                 nodes=source_nodes(d,dict(nodes=sequential))
                 locked=lock_scope(d,m['locks'],m['version'])
                 gain=locked_model_gain(d,m['version'])
                 if not nodes:
-                    raise ValueError('No reachable legal action in verified multi-street game')
+                    info['excludes'].append(dict(line=c['line'],turn=c['turn'],
+                        source_sha256=c['source_sha256'],
+                        reason='SOLVED_CFR_BUT_NO_STRICT_ACTOR_COMBOS'))
+                    accum['authentic_cfr_cases_excluded_by_reachability']+=1
+                    continue
                 source=dict(run_id=run_id,artifact=ad.name,
                   pot_family=fam,spot=m['spot'],version=m['version'],flop=m['flop'],
                   turn=c['turn'],flop_line=c['line'],flop_root_pot_bb=pot,
