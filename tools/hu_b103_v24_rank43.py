@@ -57,7 +57,7 @@ def main():
     assert index['original_gto_parent_run']==44736420272
     assert index['original_parent_GTO_root_SHA256']==pin['original_GTO_flop_sha256']
     assert index['original_B101_parent_manifest_SHA256']==pin['original_GTO_manifest_sha256']
-    assert index['old_B5_cancelled_experiment_excluded'] is True
+    assert index['original_B5_cancelled_exp_oop_excluded'] is True
     assert index['original_pinned_GTO_flop_NOT_recomputed'] is True
     assert index['source_sha256']==sha(raw) and index['gzip_sha256']==digest(ARCH)
     assert proof['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
