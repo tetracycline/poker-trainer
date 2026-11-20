@@ -98,7 +98,7 @@ def main():
         original_rejected_SB_BB_is_not_CERT_source=True,
         no_observed_conditional_private_card_NL2_rates=True,never_merge=True)
     after['independently_verified_completed_batches']['B52_TWO_IP_LOCKS']=dict(
-       status='VERIFIED_SALVAGED_ONE_VALID_ARTIFACT_ONLY',run_id=ix['run_id'],
+       status='VERIFIED',salvaged_one_valid_job_only=True,original_group_failed=True,run_id=ix['run_id'],
        authentic_jobs=1,gto_cases=0,locked_cases=ix['locked_cases'],
        new_subgames=ix['verified_cases'],gzip_sha256=ix['gzip_sha256'],
        excluded_invalid_sources=ix['excluded_invalid_source'])
