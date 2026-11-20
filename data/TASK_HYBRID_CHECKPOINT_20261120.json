@@ -11,8 +11,8 @@
   "counts": {
     "models_total": 392,
     "models_classified": 392,
-    "cert_multiboard": 4,
-    "approx": 388,
+    "cert_multiboard": 12,
+    "approx": 380,
     "est": 0,
     "unclassified": 0,
     "high_frequency_preregistered": 24
@@ -37,7 +37,8 @@
       "verified_raw_cases": 247,
       "gto_exact_board_cases": 88,
       "nl2_partial_locked_cases": 159,
-      "index": "data/solver_evidence/NL2_MULTIBOARD_B1.index.json"
+      "index": "data/solver_evidence/NL2_MULTIBOARD_B1.index.json",
+      "included_in_certification_registry": true
     },
     "B3": {
       "run_id": 44666294821,
@@ -45,7 +46,8 @@
       "verified_raw_cases": 133,
       "gto_exact_board_cases": 43,
       "nl2_partial_locked_cases": 90,
-      "index": "data/solver_evidence/NL2_MULTIBOARD_B3.index.json"
+      "index": "data/solver_evidence/NL2_MULTIBOARD_B3.index.json",
+      "included_in_certification_registry": true
     }
   },
   "quarantined_batch": {
@@ -85,10 +87,26 @@
   },
   "next_atomic_batches_max_minutes": 30,
   "remaining": [
-    "Refresh source-gated 392-cell registry against verified completed B1 and B3 proofs; commit only after count/provenance audit.",
-    "Quarantine B2 failing SB3_BTN/8s8h3d GTO source; investigate failed job separately; do not count unverified outputs.",
-    "Complete remaining top-24 high-frequency cells with 3-5 distinct correctly matched real boards plus hero-side node-lock, SPR, and per-combo lineage.",
-    "For certified exact boards, demonstrate node-lock defaults and 50% pot depolarized outputs in training UI; keep generic class/texture actions labeled APPROX.",
-    "Repeat independent 100% river navigation and PR Draft/never-merge audit after each small evidence commit."
-  ]
+    "12/24 highest-frequency MODEL rows now CERT-MULTIBOARD; 12/24 still APPROX pending 3–5 exact-board GTO/hero-side locked proofs.",
+    "B2 run 44666290556 had 17 successful solve jobs but one failing SB3_BTN 8s8h3d GTO; verifier skipped, so quarantined and excluded from CERT.",
+    "368 lower-frequency MODEL rows intentionally remain APPROX by preregistered top-24 selection; no widening of scope.",
+    "Some high-priority histories lack compatible exact board, acting seat, pot/SPR, and 3–5 paired hero-locked source examples.",
+    "Full empirically observed NL2 opponent frequencies for every action-history × exact board × SPR × hidden-card combo do not exist in current aggregate dataset; assumptions must remain labeled.",
+    "Depolarized b50 examples are exact-board research candidates; no generalized optimal strategy claim.",
+    "Repeat 100% river navigation and per-combo source/regression audit on each small evidence-only batch. Stop any new >30-minute solve jobs until separately scoped."
+  ],
+  "classification_update_run_id": 44722836727,
+  "classification_update_commit": "aa4708b1e9b43c978ad1b1dd94e3783fe57a6da2",
+  "classification_update_source": "data/nl2_hu_multiboard_status.json",
+  "previously_certified_before_new_batch_proofs": 4,
+  "newly_certified_from_already_verified_B1_B3_sources": 8,
+  "current_verified_exact_source_totals": {
+    "previous_official_games": 644,
+    "already_completed_new_games_B1_B3": 380,
+    "total_games": 1024,
+    "actual_gto_exact_board_cases": 350,
+    "partial_nl2_locked_experimental_cases": 674,
+    "generic_392_node_CFR_certificates": 12,
+    "scope_note": "An authentic exact-board CFR game is not itself an abstract MODEL node certificate; only matched 3–5 board sets can earn CERT-MULTIBOARD."
+  }
 }
