@@ -1,28 +1,29 @@
 {
   "schema": "NL2_TOP24_FROZEN_MULTIBOARD_SHORTFALLS_V1",
   "top24": 24,
-  "certified_from_source": 13,
-  "still_approx": 11,
+  "certified_from_source": 14,
+  "still_approx": 10,
   "new_source_batches": [
     "NL2_MULTIBOARD_B1.json.gz",
     "NL2_MULTIBOARD_B2_PARTIAL.json.gz",
     "NL2_MULTIBOARD_B2_REPAIRED_GTO.json.gz",
-    "NL2_MULTIBOARD_B3.json.gz"
+    "NL2_MULTIBOARD_B3.json.gz",
+    "NL2_MULTIBOARD_B4_MICRO.json.gz"
   ],
   "sources": {
     "official_subgames": 644,
-    "new_subgames": 618,
+    "new_subgames": 678,
     "source_files": [
       "data/solver_evidence/NL2_MULTIBOARD_B1.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json.gz",
       "data/solver_evidence/NL2_MULTIBOARD_B2_REPAIRED_GTO.json.gz",
-      "data/solver_evidence/NL2_MULTIBOARD_B3.json.gz"
+      "data/solver_evidence/NL2_MULTIBOARD_B3.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B4_MICRO.json.gz"
     ]
   },
   "missing_by_spot": {
     "LMP_CO_BB": 1,
-    "SB_BB": 9,
-    "BTN_BB": 1
+    "SB_BB": 9
   },
   "recommendation": "Solve a few new exact flops ONLY where action history, actual SPR, actor, sequential legal combos, and hero-side NL2 lock can be matched; never grant CERT from texture alone.",
   "ranking_locked": true,
@@ -60,17 +61,20 @@
       "original_model_spr": 5.056,
       "current_label": "APPROX",
       "exact_matching_flops": [
+        "9s6h3d",
         "As9h2d"
       ],
       "flops_with_hero_lock": [
+        "9s6h3d",
         "As9h2d"
       ],
       "flops_without_hero_lock": [],
-      "distinct_matching_gto_flop_count": 1,
-      "distinct_gto_plus_hero_lock_count": 1,
-      "missing_required_flops": 2,
+      "distinct_matching_gto_flop_count": 2,
+      "distinct_gto_plus_hero_lock_count": 2,
+      "missing_required_flops": 1,
       "texture_labels_seen": [
-        "ACE_HIGH"
+        "ACE_HIGH",
+        "LOW"
       ],
       "recorded_line_examples": [
         {
@@ -79,11 +83,17 @@
           "node_spr": 5.055556,
           "line": "b100 c/",
           "lock_count": 1
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 5.055556,
+          "line": "b100 c/",
+          "lock_count": 1
         }
       ],
       "upcoming_preregistered_board_examples": [
         "KsQh4d",
-        "9s6h3d",
         "As7h3d",
         "Jh9d6s"
       ],
@@ -99,6 +109,7 @@
       "original_model_spr": 6.167,
       "current_label": "APPROX",
       "exact_matching_flops": [
+        "9s6h3d",
         "As9h2d",
         "AsTh4d",
         "Js9h4d",
@@ -109,10 +120,11 @@
         "Ks7h2d"
       ],
       "flops_without_hero_lock": [
+        "9s6h3d",
         "As9h2d",
         "Js9h4d"
       ],
-      "distinct_matching_gto_flop_count": 4,
+      "distinct_matching_gto_flop_count": 5,
       "distinct_gto_plus_hero_lock_count": 2,
       "missing_required_flops": 1,
       "texture_labels_seen": [
@@ -147,11 +159,17 @@
           "node_spr": 6.166667,
           "line": "b75 c/",
           "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 6.166667,
+          "line": "b75 c/",
+          "lock_count": 0
         }
       ],
       "upcoming_preregistered_board_examples": [
         "KsQh4d",
-        "9s6h3d",
         "As7h3d",
         "Jh9d6s"
       ],
@@ -217,6 +235,7 @@
       "current_label": "CERT-MULTIBOARD",
       "exact_matching_flops": [
         "8s8h3d",
+        "9s6h3d",
         "As9h2d",
         "AsTh4d",
         "Js9h4d",
@@ -224,19 +243,21 @@
       ],
       "flops_with_hero_lock": [
         "8s8h3d",
+        "9s6h3d",
         "As9h2d",
         "AsTh4d",
         "Js9h4d",
         "Ks7h2d"
       ],
       "flops_without_hero_lock": [],
-      "distinct_matching_gto_flop_count": 5,
-      "distinct_gto_plus_hero_lock_count": 5,
+      "distinct_matching_gto_flop_count": 6,
+      "distinct_gto_plus_hero_lock_count": 6,
       "missing_required_flops": 0,
       "texture_labels_seen": [
         "ACE_HIGH",
         "JT_HIGH",
         "KQ_HIGH",
+        "LOW",
         "PAIRED"
       ],
       "recorded_line_examples": [
@@ -274,11 +295,17 @@
           "node_spr": 16.166667,
           "line": "x x/",
           "lock_count": 1
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 16.166667,
+          "line": "x x/",
+          "lock_count": 1
         }
       ],
       "upcoming_preregistered_board_examples": [
         "KsQh4d",
-        "9s6h3d",
         "As7h3d",
         "Jh9d6s"
       ],
@@ -299,6 +326,7 @@
         "As9h2d",
         "AsAh5h",
         "AsQh8d",
+        "Jh9d6s",
         "Js9h4d",
         "Ks7s2s",
         "KsQh4d"
@@ -313,8 +341,10 @@
         "Ks7s2s",
         "KsQh4d"
       ],
-      "flops_without_hero_lock": [],
-      "distinct_matching_gto_flop_count": 8,
+      "flops_without_hero_lock": [
+        "Jh9d6s"
+      ],
+      "distinct_matching_gto_flop_count": 9,
       "distinct_gto_plus_hero_lock_count": 8,
       "missing_required_flops": 0,
       "texture_labels_seen": [
@@ -370,8 +400,7 @@
         }
       ],
       "upcoming_preregistered_board_examples": [
-        "As7h3d",
-        "Jh9d6s"
+        "As7h3d"
       ],
       "unproven_until_gto_and_hero_lock_solved": true,
       "no_source_match_reason": null
@@ -441,21 +470,24 @@
       "spot": "BTN_BB",
       "street": 1,
       "original_model_spr": 8.364,
-      "current_label": "APPROX",
+      "current_label": "CERT-MULTIBOARD",
       "exact_matching_flops": [
         "As9h2d",
+        "Jh9d6s",
         "KsQh4d"
       ],
       "flops_with_hero_lock": [
         "As9h2d",
+        "Jh9d6s",
         "KsQh4d"
       ],
       "flops_without_hero_lock": [],
-      "distinct_matching_gto_flop_count": 2,
-      "distinct_gto_plus_hero_lock_count": 2,
-      "missing_required_flops": 1,
+      "distinct_matching_gto_flop_count": 3,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
       "texture_labels_seen": [
         "ACE_HIGH",
+        "JT_HIGH",
         "KQ_HIGH"
       ],
       "recorded_line_examples": [
@@ -472,11 +504,17 @@
           "node_spr": 8.613636,
           "line": "b50 c/x",
           "lock_count": 1
+        },
+        {
+          "flop": "Jh9d6s",
+          "source_run_id": 44732810327,
+          "node_spr": 8.613636,
+          "line": "b50 c/x",
+          "lock_count": 1
         }
       ],
       "upcoming_preregistered_board_examples": [
         "As7h3d",
-        "Jh9d6s",
         "8s8h3d"
       ],
       "unproven_until_gto_and_hero_lock_solved": true,
@@ -492,24 +530,27 @@
       "current_label": "CERT-MULTIBOARD",
       "exact_matching_flops": [
         "8s8h3d",
+        "9s6h3d",
         "As9h2d",
         "Js9h4d",
         "Ks7h2d"
       ],
       "flops_with_hero_lock": [
         "8s8h3d",
+        "9s6h3d",
         "As9h2d",
         "Js9h4d",
         "Ks7h2d"
       ],
       "flops_without_hero_lock": [],
-      "distinct_matching_gto_flop_count": 4,
-      "distinct_gto_plus_hero_lock_count": 4,
+      "distinct_matching_gto_flop_count": 5,
+      "distinct_gto_plus_hero_lock_count": 5,
       "missing_required_flops": 0,
       "texture_labels_seen": [
         "ACE_HIGH",
         "JT_HIGH",
         "KQ_HIGH",
+        "LOW",
         "PAIRED"
       ],
       "recorded_line_examples": [
@@ -540,11 +581,17 @@
           "node_spr": 7.833333,
           "line": "x b50 c/",
           "lock_count": 1
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 7.833333,
+          "line": "x b50 c/",
+          "lock_count": 1
         }
       ],
       "upcoming_preregistered_board_examples": [
         "KsQh4d",
-        "9s6h3d",
         "As7h3d",
         "Jh9d6s"
       ],
@@ -621,6 +668,7 @@
         "8s8h3d",
         "9s6h3d",
         "As9h2d",
+        "Jh9d6s",
         "Js9h4d",
         "Ks7s2s",
         "KsQh4d"
@@ -633,8 +681,10 @@
         "Ks7s2s",
         "KsQh4d"
       ],
-      "flops_without_hero_lock": [],
-      "distinct_matching_gto_flop_count": 6,
+      "flops_without_hero_lock": [
+        "Jh9d6s"
+      ],
+      "distinct_matching_gto_flop_count": 7,
       "distinct_gto_plus_hero_lock_count": 6,
       "missing_required_flops": 0,
       "texture_labels_seen": [
@@ -690,8 +740,7 @@
         }
       ],
       "upcoming_preregistered_board_examples": [
-        "As7h3d",
-        "Jh9d6s"
+        "As7h3d"
       ],
       "unproven_until_gto_and_hero_lock_solved": true,
       "no_source_match_reason": null
@@ -706,6 +755,7 @@
       "current_label": "CERT-MULTIBOARD",
       "exact_matching_flops": [
         "8s8h3d",
+        "9s6h3d",
         "As9h2d",
         "Js9h4d",
         "Ks7h2d"
@@ -716,8 +766,10 @@
         "Js9h4d",
         "Ks7h2d"
       ],
-      "flops_without_hero_lock": [],
-      "distinct_matching_gto_flop_count": 4,
+      "flops_without_hero_lock": [
+        "9s6h3d"
+      ],
+      "distinct_matching_gto_flop_count": 5,
       "distinct_gto_plus_hero_lock_count": 4,
       "missing_required_flops": 0,
       "texture_labels_seen": [
@@ -754,11 +806,17 @@
           "node_spr": 7.833333,
           "line": "b50 c/x",
           "lock_count": 1
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 7.833333,
+          "line": "b50 c/x",
+          "lock_count": 0
         }
       ],
       "upcoming_preregistered_board_examples": [
         "KsQh4d",
-        "9s6h3d",
         "As7h3d",
         "Jh9d6s"
       ],
@@ -890,6 +948,7 @@
       "original_model_spr": 2.833,
       "current_label": "APPROX",
       "exact_matching_flops": [
+        "9s6h3d",
         "As9h2d",
         "AsTh4d",
         "Js9h4d",
@@ -900,10 +959,11 @@
         "Ks7h2d"
       ],
       "flops_without_hero_lock": [
+        "9s6h3d",
         "As9h2d",
         "Js9h4d"
       ],
-      "distinct_matching_gto_flop_count": 4,
+      "distinct_matching_gto_flop_count": 5,
       "distinct_gto_plus_hero_lock_count": 2,
       "missing_required_flops": 1,
       "texture_labels_seen": [
@@ -938,11 +998,17 @@
           "node_spr": 2.833333,
           "line": "b75 c/b50 c/",
           "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 2.833333,
+          "line": "b75 c/b50 c/",
+          "lock_count": 0
         }
       ],
       "upcoming_preregistered_board_examples": [
         "KsQh4d",
-        "9s6h3d",
         "As7h3d",
         "Jh9d6s"
       ],
@@ -958,22 +1024,32 @@
       "original_model_spr": 2.278,
       "current_label": "APPROX",
       "exact_matching_flops": [
+        "9s6h3d",
         "As9h2d",
         "Ks7h2d"
       ],
       "flops_with_hero_lock": [
+        "9s6h3d",
         "Ks7h2d"
       ],
       "flops_without_hero_lock": [
         "As9h2d"
       ],
-      "distinct_matching_gto_flop_count": 2,
-      "distinct_gto_plus_hero_lock_count": 1,
-      "missing_required_flops": 2,
+      "distinct_matching_gto_flop_count": 3,
+      "distinct_gto_plus_hero_lock_count": 2,
+      "missing_required_flops": 1,
       "texture_labels_seen": [
-        "KQ_HIGH"
+        "KQ_HIGH",
+        "LOW"
       ],
       "recorded_line_examples": [
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 2.277778,
+          "line": "b100 c/b50 c/",
+          "lock_count": 1
+        },
         {
           "flop": "Ks7h2d",
           "source_run_id": 44654973894,
@@ -991,7 +1067,6 @@
       ],
       "upcoming_preregistered_board_examples": [
         "KsQh4d",
-        "9s6h3d",
         "As7h3d",
         "Jh9d6s"
       ],
@@ -1008,6 +1083,7 @@
       "current_label": "CERT-MULTIBOARD",
       "exact_matching_flops": [
         "8s8h3d",
+        "9s6h3d",
         "As9h2d",
         "AsTh4d",
         "Js9h4d",
@@ -1015,6 +1091,7 @@
       ],
       "flops_with_hero_lock": [
         "8s8h3d",
+        "9s6h3d",
         "As9h2d",
         "AsTh4d",
         "Ks7h2d"
@@ -1022,12 +1099,13 @@
       "flops_without_hero_lock": [
         "Js9h4d"
       ],
-      "distinct_matching_gto_flop_count": 5,
-      "distinct_gto_plus_hero_lock_count": 4,
+      "distinct_matching_gto_flop_count": 6,
+      "distinct_gto_plus_hero_lock_count": 5,
       "missing_required_flops": 0,
       "texture_labels_seen": [
         "ACE_HIGH",
         "KQ_HIGH",
+        "LOW",
         "PAIRED"
       ],
       "recorded_line_examples": [
@@ -1065,11 +1143,17 @@
           "node_spr": 4.52008,
           "line": "b33 c/b50 c/",
           "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 4.52008,
+          "line": "b33 c/b50 c/",
+          "lock_count": 1
         }
       ],
       "upcoming_preregistered_board_examples": [
         "KsQh4d",
-        "9s6h3d",
         "As7h3d",
         "Jh9d6s"
       ],
@@ -1085,6 +1169,7 @@
       "original_model_spr": 2.833,
       "current_label": "APPROX",
       "exact_matching_flops": [
+        "9s6h3d",
         "As9h2d",
         "AsTh4d",
         "Js9h4d",
@@ -1095,10 +1180,11 @@
         "Ks7h2d"
       ],
       "flops_without_hero_lock": [
+        "9s6h3d",
         "As9h2d",
         "Js9h4d"
       ],
-      "distinct_matching_gto_flop_count": 4,
+      "distinct_matching_gto_flop_count": 5,
       "distinct_gto_plus_hero_lock_count": 2,
       "missing_required_flops": 1,
       "texture_labels_seen": [
@@ -1133,11 +1219,17 @@
           "node_spr": 2.833333,
           "line": "b75 c/b50 c/",
           "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 2.833333,
+          "line": "b75 c/b50 c/",
+          "lock_count": 0
         }
       ],
       "upcoming_preregistered_board_examples": [
         "KsQh4d",
-        "9s6h3d",
         "As7h3d",
         "Jh9d6s"
       ],
@@ -1233,6 +1325,7 @@
         "As9h2d",
         "AsAh5h",
         "AsQh8d",
+        "Jh9d6s",
         "Js9h4d",
         "Ks7s2s",
         "KsQh4d"
@@ -1243,13 +1336,14 @@
         "As9h2d",
         "AsAh5h",
         "AsQh8d",
+        "Jh9d6s",
         "Js9h4d",
         "Ks7s2s",
         "KsQh4d"
       ],
       "flops_without_hero_lock": [],
-      "distinct_matching_gto_flop_count": 8,
-      "distinct_gto_plus_hero_lock_count": 8,
+      "distinct_matching_gto_flop_count": 9,
+      "distinct_gto_plus_hero_lock_count": 9,
       "missing_required_flops": 0,
       "texture_labels_seen": [
         "ACE_HIGH",
@@ -1304,8 +1398,7 @@
         }
       ],
       "upcoming_preregistered_board_examples": [
-        "As7h3d",
-        "Jh9d6s"
+        "As7h3d"
       ],
       "unproven_until_gto_and_hero_lock_solved": true,
       "no_source_match_reason": null
@@ -1320,12 +1413,14 @@
       "current_label": "CERT-MULTIBOARD",
       "exact_matching_flops": [
         "8s8h3d",
+        "9s6h3d",
         "As9h2d",
         "AsTh4d",
         "Js9h4d",
         "Ks7h2d"
       ],
       "flops_with_hero_lock": [
+        "9s6h3d",
         "As9h2d",
         "AsTh4d",
         "Ks7h2d"
@@ -1334,12 +1429,13 @@
         "8s8h3d",
         "Js9h4d"
       ],
-      "distinct_matching_gto_flop_count": 5,
-      "distinct_gto_plus_hero_lock_count": 3,
+      "distinct_matching_gto_flop_count": 6,
+      "distinct_gto_plus_hero_lock_count": 4,
       "missing_required_flops": 0,
       "texture_labels_seen": [
         "ACE_HIGH",
-        "KQ_HIGH"
+        "KQ_HIGH",
+        "LOW"
       ],
       "recorded_line_examples": [
         {
@@ -1376,11 +1472,17 @@
           "node_spr": 7.833333,
           "line": "x x/b50 c/",
           "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 7.833333,
+          "line": "x x/b50 c/",
+          "lock_count": 1
         }
       ],
       "upcoming_preregistered_board_examples": [
         "KsQh4d",
-        "9s6h3d",
         "As7h3d",
         "Jh9d6s"
       ],
