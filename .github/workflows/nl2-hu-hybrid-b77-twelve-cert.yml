@@ -100,6 +100,10 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add data/nl2_hu_multiboard_status_v14_batch77.json data/nl2_hu_cert_lock_medium_matrix_v14.json docs/NL2_HU_B77_V14_TWELVE_CERT.md docs/NL2_HU_B77_V14_ALL_LOCKS_MEDIUM.md
+          if git diff --cached --quiet; then
+            echo 'B77 V14 has already been SHA-verified and committed on this branch; idempotent PASS'
+            exit 0
+          fi
           git commit -m 'TASK-HYBRID B77: twelve preregistered authentic multi-board models, V14 101 CERT/291 APPROX and 400 source-backed locks'
           for n in 1 2 3; do
             git fetch origin fix/nl2-hu-lines-audit-20261118
