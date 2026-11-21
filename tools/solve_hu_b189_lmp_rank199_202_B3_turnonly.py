@@ -26,7 +26,7 @@ def main():
     source=pin
     assert pin['schema']=='NL2_HU_B188_RANK199_202_B3_ORIGINAL_GTO_PARENT_PIN_V1'
     assert pin['source_run_id']==RUN and pin['original_B3_verified_archive_sha256']==sha(ROOT/'solver_evidence/NL2_MULTIBOARD_B3.json.gz')
-    assert (pin['spot'],pin['flop'],pin['turn'],pin['flop_line'],pin['turn_line'])==(
+    assert (pin['spot'],pin['flop'],pin['turn'],pin['original_GTO_flop_line'],pin['target_turn_line'])==(
         SPOT,FLOP,TURN,LINE,TURNLINE)
     assert pin['rank_targets']==[199,202] and pin['hero_actor']==1
     assert pin['exact_river_line']=='x b33 c/x b50 c/x'
@@ -155,7 +155,7 @@ def main():
             gto_gap_pct=data['info'].get('gto_expl_pct'),
             hero_gap_pct=data['info'].get('hero_gap_pct'),
             lock_stats=data['info'].get('lock_stats',{}),
-            status='REAL_B9_GTO_FLOP_TURN_RIVER_PARTIAL_NL2_IP_LOCK'))
+            status='REAL_B3_GTO_FLOP_TURN_RIVER_PARTIAL_NL2_IP_LOCK'))
     except Exception as e:
         report['failures'].append(dict(error=str(e),traceback=traceback.format_exc()[-1900:]))
     report['elapsed_seconds']=round(time.monotonic()-start,2)
