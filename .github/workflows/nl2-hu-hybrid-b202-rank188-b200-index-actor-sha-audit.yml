@@ -1,0 +1,140 @@
+name: TASK-HYBRID B202 rank188 correct source index rank after genuine B200 two SB_BB BB-IP Rust child, 575 lock+2475 audit (max12m)
+# Staged: B200 authentic independently successful GTO SHA/actor/SPR/strict
+# source must be bot-committed first. This changes ONLY source metadata rank
+# 159 -> 188, never raw Rust gzip or CERT model labels.
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  failclosed-correct-only-verified-source-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Authenticate B200 original B1/B4 pins, independently verified Rust raw SHA, exact BB IP action and 392 source-blind labels before rank metadata repair
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          d=pathlib.Path('data')
+          load=lambda p:json.loads(p.read_text())
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          current=d/'nl2_hu_multiboard_status_v36_b201_rank159.json'
+          v=load(current)
+          assert v['schema']=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V36_B201_RANK159'
+          assert (v['CERT_MULTIBOARD'],v['APPROX'],v['EST'],v['TOTAL'])==(149,243,0,392)
+          mid='ln-ipc-r_model-1s0a4ds'
+          assert v['records'][mid]['label']=='APPROX'
+          frozen=load(d/'nl2_hu_b175_v32_248_exact_GTO_source_provenance.json')
+          row=next(x for x in frozen['rows'] if x['rank']==188)
+          assert row['model_id']==mid and row['hero_seat']==1
+          assert row['distinct_GTO_plus_NL2_hero_flops']==['Ks7h2d']
+          src=d/'solver_evidence/NL2_MULTIBOARD_B200_R188_SBBB_2FLOP_EXP_IP.json.gz'
+          index=src.with_suffix('').with_suffix('.index.json')
+          assert src.is_file() and index.is_file()
+          old=load(index);raw=gzip.decompress(src.read_bytes())
+          evidence=json.loads(raw)
+          assert old['schema']=='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1'
+          assert (old['batch'],old['actual_spot_flop_version_jobs'],old['verified_cases'],old['gto_cases'],old['locked_cases'])==(
+            'B200_R188_SBBB_2FLOP_EXP_IP',2,2,0,2)
+          assert old['rank']==159, 'Index changed unexpectedly; fail-closed'
+          assert old['source_sha256']==hashlib.sha256(raw).hexdigest()
+          assert old['gzip_sha256']==sha(src)
+          assert old['exact_action_line']=='x b50 c/x b100 c/x' and old['actor_seat']==1
+          assert evidence['source_run_id']==old['run_id'] and not evidence['errors'] and len(evidence['artifacts'])==2
+          for artifact in evidence['artifacts']:
+            flop=artifact['flop']
+            assert flop in ('8s8h3d','9s6h3d')
+            assert (artifact['spot'],artifact['version'])==('SB_BB','exp_ip')
+            assert not artifact['errors'] and len(artifact['cases'])==1
+            pin=load(d/('nl2_hu_b199_rank188_'+flop+'_original_SB_BB_gto_pin.json'))
+            assert pin['schema']=='NL2_HU_B199_RANK188_ORIGINAL_SB_BB_GTO_SOURCE_PIN_V1'
+            assert (pin['target_rank'],pin['model_id'],pin['acting_seat'])==(188,mid,1)
+            assert pin['minimum_strict_original_actor_IP_combos']>0
+            assert pin['original_parent_GTO_not_recomputed'] is True
+            assert pin['exact_river_line']=='x b50 c/x b100 c/x'
+            assert (artifact['cases'][0]['flop_line'],artifact['cases'][0]['turn'])==('x b50 c',pin['turn'])
+            matching=[x for x in artifact['cases'][0]['nodes'] if
+              x['acting_seat']==1 and x['exact_node_line']=='x b50 c/x b100 c/x' and
+              x['strictly_reachable_combos']>0]
+            indexflop=old['real_B1_B5_GTO_pinned_flop_sources'][flop]
+            assert indexflop['strict_combos']==sum(z['strictly_reachable_combos'] for z in matching)
+            assert indexflop['nodes']==len(matching)
+            assert (indexflop['original_GTO_root_sha256'],indexflop['original_GTO_job_sha256'],
+              indexflop['original_GTO_manifest_sha256'])==(
+                pin['original_gto_root_sha256'],pin['original_gto_job_sha256'],pin['original_gto_manifest_sha256'])
+            original=[q for q in row['exact_authentic_gto_source_proofs'] if
+              q['flop']==flop and q['turn']==pin['turn'] and q['source_run']==pin['source_run_id'] and
+              q['source_sha']==pin['original_case_sha256'] and
+              q['exact_line']=='x b50 c/x b100 c/x' and q['actor']==1 and
+              q['strict_legal_combos']>0 and q['GTO_gap_pct']<=.5 and q['SPR_error_pct']<=5]
+            assert original and all(not q['true_NL2_actor_locked'] for q in original)
+          old['rank_metadata_prior_mislabel']=159
+          old['rank']=188
+          old['model_id']=mid
+          old['source_rank_corrected_after_full_original_SHA_actor_sequential_combo_validation']=True
+          old['original_raw_gzip_SHA_unchanged']=sha(src)
+          old['no_generic_model_certification']=True
+          old['PR2_Draft_never_merge']=True
+          index.write_text(json.dumps(old,ensure_ascii=False,indent=2)+'\n')
+          p=pathlib.Path('docs/NL2_HU_B202_R188_B200_RANK_METADATA_SOURCE_REAUDIT.md')
+          p.write_text('# B202 correct B200 rank metadata from 159 to 188 (no new solver or fake CERT)\n\n'
+            'Original B200 Rust compressed source sha256 '+sha(src)+
+            ' preserved byte-for-byte. Source verified original rank188 SB_BB B1/B4 GTO flop, '
+            'precise BB IP action x b50 c/x b100 c/x, strictly reachable original combos, '
+            'and independently audited source actor. Only index rank, model id, validation flags updated. '
+            'Original B200 workflow inherited index rank 159 from B195 template, now corrected. '
+            'True observed NL2 frequencies remain pooled street/size marginals; '
+            'never private-card opponent conditionals. V36 remains 149 CERT/243 APPROX, '
+            'full 575 board plus 2475 HU audits required; PR2 Draft, NEVER MERGE.\n')
+          print('PASS B202 original B200 SB_BB source SHA, actor, GTO root/SPR provenance, rank188 index correction only')
+          PY
+      - name: Independently audit all 149 CERT 575 actual GTO+NL2 boards, pooled/assumed/unknown source, 50pot and complete 2475 HU
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v36_b201_rank159.json --out nl2-audit/b202-locks.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('nl2-audit/b202-locks.json'))
+          assert (r['cert_multiboard'],r['approx'],r['EST'])==(149,243,0)
+          assert r['aggregate']['named_board_proofs']==575
+          assert r['aggregate']['paired_hero_locked_source_variants']>=664
+          assert r['aggregate']['board_examples_with_b50_candidate']>=132
+          assert r['not_generalized_handclass_GTO'] and r['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/contract.json
+          node tools/link_audit.js --md nl2-audit/link.md --json nl2-audit/links.json
+          node tools/reach_verify.js --log nl2-audit/reach.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/links.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU 2475/2475")'
+      - name: Commit only corrected source index and exact audit, original Rust compressed SHA not modified; PR2 Draft NEVER MERGE
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B200_R188_SBBB_2FLOP_EXP_IP.index.json docs/NL2_HU_B202_R188_B200_RANK_METADATA_SOURCE_REAUDIT.md
+          git diff --cached --quiet && exit 1
+          git commit -m 'TASK-HYBRID B202: true rank188 B200 SB BB IP source index rank corrected 159->188 only after original B1/B4 GTO SHA/actor proof +575/2475 audits; raw gzip unchanged'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B202-rank188-original-B200-index-only-575-2475
+          path: |
+            data/solver_evidence/NL2_MULTIBOARD_B200_R188_SBBB_2FLOP_EXP_IP.index.json
+            docs/NL2_HU_B202_R188_B200_RANK_METADATA_SOURCE_REAUDIT.md
+            nl2-audit/
+          retention-days: 30
