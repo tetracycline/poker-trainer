@@ -73,6 +73,57 @@ def authorized_b149_rank46_exact_gto_parent(m):
     except (OSError,KeyError,TypeError,ValueError):
         return False
 
+def authorized_b160_rank71_exact_true_gto_parent(m):
+    """Only original individually successful B156 full GTO and its independently
+    SHA-audited source/index can authorize true downstream exp_oop NL2.
+    The original LMP 169-class preflop is ASSUMED. Zero legal GTO
+    actor-OOP river combos fails closed; never manufacture a texture CERT.
+    """
+    if not (m.get('spot')=='LMP_CO_BB' and m.get('version')=='exp_oop' and
+            m.get('flop')=='Ks7h2d' and
+            m.get('selected_lines')==['b50 c'] and
+            m.get('selected_turn_lines')==['x b50 c'] and
+            m.get('gto_parent_source_run_id')==44860317844):
+        return False
+    d=pathlib.Path(__file__).resolve().parents[1]/'data'
+    pinfile=d/'nl2_hu_b156_rank71_lmp_ks7h2d_gto_parent_pin.json'
+    indexfile=d/'solver_evidence/NL2_MULTIBOARD_B156_R71_KS7H2D_GTO.index.json'
+    sourcegz=d/'solver_evidence/NL2_MULTIBOARD_B156_R71_KS7H2D_GTO.json.gz'
+    try:
+        p=json.loads(pinfile.read_text());i=json.loads(indexfile.read_text())
+        import gzip
+        raw=gzip.decompress(sourcegz.read_bytes())
+        return (
+          p['schema']=='NL2_HU_B156_RANK71_LMP_KS7H2D_GTO_PARENT_PIN_V1' and
+          p['source_run_id']==44860317844 and
+          p['source_gto_job_id'] is None and
+          (p['spot'],p['flop'],p['flop_line'],p['turn_line'])==(
+             'LMP_CO_BB','Ks7h2d','b50 c','x b50 c') and
+          p['target_rank']==71 and p['model_id']=='ln-iso-lmp_r_model-vlgh2t' and
+          p['original_full_100bb_lmp_gto_not_recomputed'] is True and
+          p['observed_preflop_ranges'] is False and
+          p['assumed_limped_169class'] is True and
+          p['target_exact_actor_OOP_river_nodes']>0 and
+          p['target_exact_actor_OOP_strict_combos']>0 and
+          p['no_generic_model_certification'] is True and
+          i['schema']=='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1' and
+          i['batch']=='B156_R71_KS7H2D_GTO' and
+          (i['run_id'],i['gto_cases'],i['locked_cases'],i['verified_cases'])==(
+             44860317844,1,0,1) and
+          i['exact_target_actor_OOP_river_nodes']>0 and
+          i['exact_target_actor_OOP_strict_combos']>0 and
+          i['no_generic_model_certification'] is True and
+          i['source_sha256']==hashlib.sha256(raw).hexdigest() and
+          i['gzip_sha256']==sha(sourcegz) and
+          p['original_gto_root_sha256']==m.get('gto_parent_source_sha256') and
+          p['original_gto_job_sha256']==m.get('flop_root_jobfile_sha256') and
+          p['original_gto_manifest_sha256']==m.get('gto_parent_source_manifest_sha256') and
+          i['original_parent_GTO_root_SHA256']==p['original_gto_root_sha256'] and
+          i['original_parent_GTO_job_SHA256']==p['original_gto_job_sha256'] and
+          i['original_parent_GTO_manifest_SHA256']==p['original_gto_manifest_sha256'])
+    except (OSError,KeyError,TypeError,ValueError,EOFError):
+        return False
+
 def strict_medium_evidence(n,raw,seq_mask):
     """Re-evaluate b50 relative-equity distribution ONLY after every past
     hero action was legal under max/near-mix and blockers.
@@ -505,6 +556,10 @@ def verify(root,source_pin,run_id):
                         m.get('gto_parent_source_manifest_sha256')=='113506aa83161e8a3ad8dd98875023c75f8ec4a51e610ba02ea7ab5485fcee52'):
                         raise ValueError('Focused x-b100-call turn allowed ONLY from B107 individually SHA-pinned original B2 CO_BB IP GTO root')
                     if turn_policy=='xb50only' and not (
+                        # B160: only individually source-proven B156 full GTO
+                        # and positive exact BB OOP strict river sequence.
+                        authorized_b160_rank71_exact_true_gto_parent(m)
+                        or
                         m['spot']=='UTG_CO' and m['version']=='exp_ip' and
                         m['flop']=='9s6h3d' and m.get('selected_lines')==['b75 c'] and
                         m.get('selected_turn_lines')==['x b50 c'] and
