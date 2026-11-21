@@ -224,6 +224,29 @@ el('node').addEventListener('change',selectNode);
 el('all-combos').addEventListener('change',fillCombos);
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v35=d=>{
+ if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V35_B193_RANK201'||
+    d.CERT_MULTIBOARD!==148||d.APPROX!==244||d.EST!==0||d.TOTAL!==392||
+    d.parent_v34_sha256?.length!==64||
+    d.B193_rank201_three_original_GTO_NL2_named_flops?.rank!==201||
+    d.B193_rank201_three_original_GTO_NL2_named_flops?.flops?.join(',')!=='8s8h3d,9s6h3d,KsQh4d'||
+    d.B193_rank201_three_original_GTO_NL2_named_flops?.exact_line!=='x b33 c/x b100 c/x'||
+    d.B193_rank201_three_original_GTO_NL2_named_flops?.actor!=='CO_IP'||
+    d.B193_rank201_three_original_GTO_NL2_named_flops?.original_GTO_B3_run!==44666294821||
+    d.B193_rank201_three_original_GTO_NL2_named_flops?.preflop_169class_ASSUMED_not_observed!==true||
+    d.records?.['ln-iso-lmp_r_model-qsgdjf']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-qsgdjf']?.proven_exact_board_count!==3||
+    d.records?.['ln-iso-lmp_r_model-10l8t7i']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-yh8124']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-ipfr-r_model-hqu5je']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-vlgh2t']?.label!=='APPROX'||
+    d.records?.['ln-iso-lmp_r_model-wpg493']?.label!=='APPROX'||
+    d.no_generic_texture_GTO!==true||d.no_observed_private_card_NL2_rates!==true||
+    d.PR2_remains_draft_never_merge!==true||
+    Object.keys(d.records||{}).length!==392)
+     throw Error('V35 rank201 strict original GTO/NL2 three-board source check failed');
+ return d;
+};
  const v34=d=>{
  if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V34_B190_RANK199_202'||
     d.CERT_MULTIBOARD!==147||d.APPROX!==245||d.EST!==0||d.TOTAL!==392||
@@ -638,7 +661,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v34_b190_rank199_202.json',{cache:'no-store'}).then(open).then(v34)
+ return fetch('data/nl2_hu_multiboard_status_v35_b193_rank201.json',{cache:'no-store'}).then(open).then(v35)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v34_b190_rank199_202.json',{cache:'no-store'}).then(open).then(v34))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v33_b179_rank138.json',{cache:'no-store'}).then(open).then(v33))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v32_b168_rank80.json',{cache:'no-store'}).then(open).then(v32))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v31_b161_rank150.json',{cache:'no-store'}).then(open).then(v31))
