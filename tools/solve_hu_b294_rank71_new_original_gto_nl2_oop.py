@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """B294 rank71 BB-OOP true NL2 downstream partially Rust-locked 100bb subgame,
-ONLY after original B290/B293/B296 GTO completed and pinned SHA/genuine strict actor
+ONLY after original B290/B293/B296/B298 GTO completed and pinned SHA/genuine strict actor
 river combos > 0. Whole-flop GTO bytes unchanged. Original limped preflop
 169 class distributions ASSUMED, NOT observed NL2 private-card conditionals.
 No generic model CERT without three different authentic paired flops.
@@ -11,7 +11,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]/'data'
 PIN=None
 SPOT='LMP_CO_BB';FLOP=None;LINE='b50 c';TURNLINE='x b50 c'
 RUN=None
-PINS={'As7h3d':('B290',44948738190),'QsJh4d':('B293',44949223231),'Js8h3d':('B296',44949515514)}
+PINS={'As7h3d':('B290',44948738190),'QsJh4d':('B293',44949223231),'Js8h3d':('B296',44949515514),'5s5h3d':('B298',44950943882)}
 
 def main():
     ap=argparse.ArgumentParser()
