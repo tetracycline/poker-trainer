@@ -1,0 +1,100 @@
+name: TASK-HYBRID B267 V40 all 587 CERT exact NL2 lock observed/assumed/UNKNOWN 133 b50 HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b267-v40-587-exact-lock-source-medium-gap.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  all-V40-587-source-first-NL2-lock-medium-provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Independently reconcile V39 all 584 immutable actor NL2 source locks versus V40 new 3 genuine rank313 GTO/CO-IP NL2 SHA board proofs
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b267_v40_all_587_actor_lock_medium_provenance.py
+          python3 tools/hu_b267_v40_all_587_actor_lock_medium_provenance.py
+      - name: Recompute 587 independent model GTO and NL2 source rates, UNKNOWN not measured, 50pct named research only
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import csv,hashlib,json,pathlib
+          d=pathlib.Path('data')
+          p=d/'nl2_hu_b267_v40_all_587_lock_rate_source_nonpolar_priority.json'
+          x=json.loads(p.read_text())
+          assert x['schema']=='NL2_HU_B267_V40_ALL_587_GENUINE_GTO_ACTOR_NL2_LOCK_MEDIUM_SOURCE_V1'
+          assert (x['CERT_MULTIBOARD'],x['APPROX'],x['EST'],x['TOTAL'])==(153,239,0,392)
+          assert (x['genuine_named_boards'],x['real_hero_NL2_lock_variants'])==(587,679)
+          assert x['exact_board_b50_candidates']==133
+          assert x['V40_status_sha256']==hashlib.sha256((d/'nl2_hu_multiboard_status_v40_b265_rank313.json').read_bytes()).hexdigest()
+          assert x['V40_matrix_sha256']==hashlib.sha256((d/'nl2_hu_cert_lock_medium_matrix_v40_b265.json').read_bytes()).hexdigest()
+          assert x['unchanged_V39_584_exact_GTO_SHA_and_actor_NL2_locks']
+          assert x['additive_rank313_three_named_flops']==['6s5h3d','9s6h3d','KsQh4d']
+          assert x['all_private_card_NL2_conditionals_unmeasured']
+          assert x['unknown_and_assumed_never_treated_as_observed']
+          assert x['b50_only_exact_board_not_all_textures']
+          assert x['no_generic_handclass_GTO_or_CERT_inferred']
+          assert x['PR2_Draft_NEVER_MERGE']
+          rows=x['per_exact_board_source_provenance']
+          assert len(rows)==587
+          assert len({(z['model_id'],z['flop'],z['turn'],z['exact_action_line'],z['actor_seat']) for z in rows})==587
+          assert sum(z['lock_variants'] for z in rows)==679
+          assert sum(z['exact_board_only_50pct_depolarization_research'] for z in rows)==133
+          assert all(not z['observed_NL2_private_card_conditionals'] and
+            not z['generic_texture_certification'] and not z['universal_50pct_recommendation']
+            and z['strict_hero_combos']>0 and len(z['genuine_GTO_sha256'])==64 for z in rows)
+          with (d/'nl2_hu_b267_v40_all_587_lock_rate_source_nonpolar_priority.csv').open(encoding='utf8',newline='') as f:
+            assert len(list(csv.DictReader(f)))==587
+          print('PASS B267 all 587 exact named GTO+NL2 locks, 679 distinct hero lock variants, b50 133, unknown flags')
+          PY
+      - name: Full 153 CERT source-lock / 50pct research audit with all 2475 HU links, legal ancestry and model contract
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v40_b265_rank313.json --out nl2-audit/b267-lock-medium.json
+          python3 - <<'PY'
+          import json
+          z=json.load(open('nl2-audit/b267-lock-medium.json'))
+          assert (z['cert_multiboard'],z['approx'],z['EST'])==(153,239,0)
+          assert (z['aggregate']['named_board_proofs'],
+            z['aggregate']['paired_hero_locked_source_variants'],
+            z['aggregate']['board_examples_with_b50_candidate'])==(587,679,133)
+          assert z['not_generalized_handclass_GTO'] and z['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS V40 587 source and HU2475/2475")'
+      - name: Commit only after full original GTO SHA source and 587 NL2 actor lock / HU2475 PASS, PR2 Draft NO MERGE
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b267_v40_all_587_lock_rate_source_nonpolar_priority.json             data/nl2_hu_b267_v40_all_587_lock_rate_source_nonpolar_priority.csv             docs/NL2_HU_B267_V40_ALL_587_TRUE_GTO_NL2_LOCK_RATE_AND_MEDIUM_SOURCE.md
+          git commit -m 'TASK-HYBRID B267 V40: all 587 exact GTO+real NL2 actor lock sources observed/default/UNKNOWN and 133 b50, HU2475 PASS; 153 CERT/239 APPROX'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B267-V40-all-587-actor-locked-true-GTO-medium-HU2475
+          path: |
+            data/nl2_hu_b267_v40_all_587_lock_rate_source_nonpolar_priority.json
+            data/nl2_hu_b267_v40_all_587_lock_rate_source_nonpolar_priority.csv
+            docs/NL2_HU_B267_V40_ALL_587_TRUE_GTO_NL2_LOCK_RATE_AND_MEDIUM_SOURCE.md
+            nl2-audit/
+          retention-days: 30
