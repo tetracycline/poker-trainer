@@ -1,0 +1,141 @@
+name: TASK-HYBRID B220 prereg B212/213/214 exact GTO source/actor fail-closed 581-board NL2 HU2475 audit (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b220-three-conditional-gto-source-gates-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  strict-three-frozen-original-gto-child-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Compile all 3 real Rust NL2 child scripts and independent proof whitelist with no generic actor exemption
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            tools/solve_hu_b212_lmp_rank71_turnonly.py \
+            tools/solve_hu_b213_lmp_rank313_turnonly.py \
+            tools/solve_hu_b214_lmp_rank46_as9h2d_turnonly.py \
+            tools/verify_hu_multiboard_100bb.py
+      - name: Require fail-closed wrong GTO SHA, actor, source run, flop and preflop policy for all B212 B213 B214 before any solver run
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import copy,hashlib,json,pathlib,sys
+          sys.path.insert(0,'tools')
+          import verify_hu_multiboard_100bb as v
+          d=pathlib.Path('data')
+          stat=d/'nl2_hu_multiboard_status_v38_b206_rank190.json'
+          a=json.loads(stat.read_text())
+          assert (a['schema'],a['CERT_MULTIBOARD'],a['APPROX'],a['EST'],a['TOTAL'])==(
+            'NL2_HU_392_MULTIBOARD_CERT_STATUS_V38_B206_RANK190',151,241,0,392)
+          checks=[
+           ('B212',v.authorized_b212_rank71_exact_B207_gto_parent,71,'6s4h2d','exp_oop','b50 c','x b50 c','oop-b50only','xb50only',44882288427),
+           ('B213',v.authorized_b213_rank313_exact_B208_gto_parent,313,'8s7h4d','exp_ip','b75 r c','x b50 c','oop-b75raisecall','xb50only',44882298058),
+           ('B214',v.authorized_b214_rank46_exact_B211_gto_parent,46,'As9h2d','exp_ip','x b50 c','x x','checked-b50only','xxonly',44882967346)]
+          trials=0
+          for name,fn,rank,flop,actor,line,turn,floppolicy,turnpolicy,run in checks:
+            base=dict(spot='LMP_CO_BB',version=actor,flop=flop,
+                selected_lines=[line],selected_turn_lines=[turn],
+                flop_parent_mode='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK',
+                flop_line_policy=floppolicy,turn_line_policy=turnpolicy,
+                original_full_GTO_flop_byte_identical_not_recomputed=True,
+                preflop_ranges=dict(source='ASSUMED_EXPLICIT_169CLASS'),
+                gto_parent_source_run_id=run,
+                **{f'original_{name}_parent_pin_sha256':'0'*64})
+            negatives=[
+             ('wrong_actor',dict(base,version='exp_ip' if actor=='exp_oop' else 'exp_oop')),
+             ('wrong_flop',dict(base,flop='2s3h4d')),
+             ('wrong_run',dict(base,gto_parent_source_run_id=run+1)),
+             ('wrong_preflop',dict(base,preflop_ranges=dict(source='OBSERVED_NL2_PRIVATE_CARDS'))),
+             ('wrong_turn',dict(base,selected_turn_lines=['x b75 c'])),
+             ('wrong_SHA',base)]
+            for test,payload in negatives:
+              assert fn(payload) is False, (name,test)
+              trials+=1
+            expected=d/('nl2_hu_b'+name[1:]+'_rank'+str(rank)+'_lmp_'+flop+'_gto_parent_pin.json')
+            # No invented original proof: assert function cannot certify an
+            # unverified child in presence of an invalid parent pin SHA.
+            assert len(base[f'original_{name}_parent_pin_sha256'])==64
+          assert trials==18
+          names=['tools/solve_hu_b212_lmp_rank71_turnonly.py',
+            'tools/solve_hu_b213_lmp_rank313_turnonly.py',
+            'tools/solve_hu_b214_lmp_rank46_as9h2d_turnonly.py']
+          assert all(pathlib.Path(p).is_file() for p in names)
+          sha=lambda p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
+          out=d/'nl2_hu_b220_v38_three_true_GTO_actor_source_gates.json'
+          data=dict(schema='NL2_HU_B220_TRUE_GTO_SHA_ACTOR_FAILCLOSED_PREFLIGHT_V1',
+            V38_status_sha256=sha(stat),CERT_MULTIBOARD=151,APPROX=241,EST=0,TOTAL=392,
+            verified_negative_cases=trials,conditional_child_batches=[x[0] for x in checks],
+            new_positive_GTO_source_claims=0,new_Rust_NL2_evidence_claims=0,
+            zero_combo_automatically_certified=False,
+            original_LMP_169class_preflop_assumed_not_measured=True,
+            observed_NL2_hole_card_conditionals_claimed=False,
+            source_sha256={path:sha(path) for path in names},
+            verifier_sha256=sha('tools/verify_hu_multiboard_100bb.py'),
+            PR2_Draft_NEVER_MERGE=True)
+          out.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+          report=pathlib.Path('docs/NL2_HU_B220_V38_THREE_CONDITIONAL_GTO_SHA_FAILCLOSED.md')
+          report.write_text('# B220 V38 B212/B213/B214 fail-closed original GTO source and actor gate regression\n\n'
+            '**151 CERT/241 APPROX/0 EST**. 18 independent incorrect-parent/actor/flop/line/preflop'
+            ' metadata cases rejected before child source certification. No positive GTO source'
+            ' is inferred; B207, B208 and B211 exact named-flop original solve outcomes'
+            ' control whether the child is ever launched. Child scripts compile. '
+            'Limped preflop 169-class source remains an assumption. '
+            'NL2 frequencies only pooled street/size marginals versus explicit defaults/unknown.'
+            ' Full 581 named board GTO+NL2 source and 2475/2475 HU audit required before commit. '
+            'PR2 Draft NEVER MERGE.\n')
+          print('PASS 18/18 fail-closed rank71 OOP/rank313 IP/rank46 IP GTO parent cases',data)
+          PY
+      - name: Full independent V38 581 true named board GTO NL2 node-lock/50pot and HU 2475 route, act first
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v38_b206_rank190.json --out nl2-audit/b220-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b220-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(151,241,0)
+          assert a['aggregate']['named_board_proofs']==581
+          assert a['aggregate']['paired_hero_locked_source_variants']==673
+          assert a['aggregate']['board_examples_with_b50_candidate']==133
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/contract.json
+          node tools/link_audit.js --md nl2-audit/links.md --json nl2-audit/links.json
+          node tools/reach_verify.js --log nl2-audit/reach.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+          node -e 'const c=require("./nl2-audit/links.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU 2475/2475")'
+      - name: Commit B220 fail-closed source-gate regression only after all 581 exact named NL2 sources, 133 b50 and 2475 HU PASS; PR2 Draft NEVER MERGE
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b220_v38_three_true_GTO_actor_source_gates.json docs/NL2_HU_B220_V38_THREE_CONDITIONAL_GTO_SHA_FAILCLOSED.md
+          git commit -m 'TASK-HYBRID B220: exact B212/B213/B214 original GTO actor/SHA failclosed tests 18/18, V38 all 581 genuine boards 673 locks 133 b50 and HU2475 PASS; PR2 Draft'
+          for n in 1 2 3 4 5; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B220-18-failclosed-GTO-parent-actors-581-2475
+          path: |
+            data/nl2_hu_b220_v38_three_true_GTO_actor_source_gates.json
+            docs/NL2_HU_B220_V38_THREE_CONDITIONAL_GTO_SHA_FAILCLOSED.md
+            nl2-audit/
+          retention-days: 30
