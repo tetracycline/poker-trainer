@@ -1,0 +1,126 @@
+name: TASK-HYBRID B303 original B300 4s4h3d negative + all 593 authentic actor NL2 lock and 134 medium b50 HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b303-r71-b300-zero-all593-hu2475.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  source-locked-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify original B300 immutable GTO SHA true zero and all B291 exact-board real NL2 paired actor evidence, no invented rate
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json,gzip,hashlib
+          d=pathlib.Path('data')
+          load=lambda p:json.loads(p.read_text())
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          pin=load(d/'nl2_hu_b300_rank71_lmp_4s4h3d_gto_parent_pin.json')
+          ix=load(d/'solver_evidence/NL2_MULTIBOARD_B300_R71_4S4H3D_GTO.index.json')
+          gz=d/'solver_evidence/NL2_MULTIBOARD_B300_R71_4S4H3D_GTO.json.gz'
+          assert (pin['source_run_id'],ix['run_id'],ix['gto_cases'],ix['locked_cases'])==(44956029074,44956029074,1,0)
+          assert sha(gz)==ix['gzip_sha256']
+          assert hashlib.sha256(gzip.decompress(gz.read_bytes())).hexdigest()==ix['source_sha256']
+          assert (ix['original_parent_GTO_root_SHA256'],ix['original_parent_GTO_job_SHA256'],ix['original_parent_GTO_manifest_SHA256'])==(pin['original_gto_root_sha256'],pin['original_gto_job_sha256'],pin['original_gto_manifest_sha256'])
+          assert (pin['flop'],pin['turn'],pin['flop_line'],pin['turn_line'])==('4s4h3d','7c','b50 c','x b50 c')
+          assert (pin['target_exact_actor_OOP_river_nodes'],pin['target_exact_actor_OOP_strict_combos'],ix['exact_target_actor_OOP_strict_combos'])==(0,0,0)
+          assert not pin['direct_nl2_lock_source_present'] and pin['assumed_limped_169class'] and not pin['observed_preflop_ranges']
+          a=load(d/'nl2_hu_b291_v42_all_593_exact_lock_rate_medium_gap_priority.json')
+          q=load(d/'nl2_hu_b292_v42_237_approx_sourceblind_real_pair_gap_priority.json')
+          assert a['V42_status_sha256']==q['V42_status_sha256']==sha(d/'nl2_hu_multiboard_status_v42_b289_rank46.json')
+          assert a['V42_matrix_sha256']==sha(d/'nl2_hu_cert_lock_medium_matrix_v42_b289.json')
+          assert (a['CERT_MULTIBOARD'],a['APPROX'],a['EST'],a['TOTAL'])==(155,237,0,392)
+          rows=a['per_exact_board_source_provenance']
+          assert len(rows)==593 and len({(z['model_id'],z['flop'],z['turn'],z['exact_action_line'],z['actor_seat']) for z in rows})==593
+          assert sum(z['lock_variant_count'] for z in rows)==685
+          assert sum(bool(z['exact_50pct_depolarized_board_research_only']) for z in rows)==134
+          assert sum(bool(z['measured_rate_incomplete']) for z in rows)==578
+          assert sum(z['historical_unknown_lock_variants'] for z in rows)==324
+          assert all(z['strict_hero_combos']>0 and len(z['genuine_GTO_sha256'])==64 and z['lock_variant_count']>0 and z['real_NL2_hero_lock_runs'] for z in rows)
+          assert all(not z['observed_NL2_private_card_conditional_rates'] and not z['all_handclass_texture_actions_certified'] and not z['universal_50pct_bet_advice'] for z in rows)
+          assert len(q['all_237_APPROX_source_gap_rows'])==237
+          assert q['only_one_flop_short_rank71_flops']==['4s4h2d','7s5h3d']
+          assert q['all_237_APPROX_source_gap_rows'][0]['rank']==71
+          assert q['all_237_APPROX_source_gap_rows'][0]['genuine_paired_flop_count']==2
+          assert '4s4h3d' not in q['all_237_APPROX_source_gap_rows'][0]['actor_legal_GTO_plus_REAL_NL2_locked_flops']
+          print('PASS B300 authentic original GTO 0 exact BB-OOP strict combos; existing 593 exact GTO+NL2 boards, 685 locks, 134 research b50')
+          PY
+      - name: Full 392 nodes source/actor/SPR provenance, 593 paired board locks and HU 2475 of 2475 navigation audit
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v42_b289_rank46.json --out nl2-audit/b303-lock-medium.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('nl2-audit/b303-lock-medium.json'))
+          assert (x['cert_multiboard'],x['approx'],x['EST'])==(155,237,0)
+          assert (x['aggregate']['named_board_proofs'],x['aggregate']['paired_hero_locked_source_variants'],x['aggregate']['board_examples_with_b50_candidate'])==(593,685,134)
+          assert x['not_generalized_handclass_GTO'] and x['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B303 HU2475/2475")'
+      - name: Commit verified original Rust B300 zero source and all 593 GTO/NL2 actor lock + medium evidence ONLY after complete PASS
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json,hashlib
+          d=pathlib.Path('data')
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          a=dict(schema='NL2_HU_B303_V42_B300_GTO_SOURCE_ZERO_AND_CERT_LOCK_MEDIUM_AUDIT_V1',
+            B300_original_Rust_run=44956029074,B300_exact_flop='4s4h3d',B300_exact_turn='7c',
+            B300_original_GTO_SHA_index=sha(d/'solver_evidence/NL2_MULTIBOARD_B300_R71_4S4H3D_GTO.index.json'),
+            B300_original_GTO_pin_SHA=sha(d/'nl2_hu_b300_rank71_lmp_4s4h3d_gto_parent_pin.json'),
+            B300_target_line='b50 c/x b50 c/',B300_exact_BB_OOP_strict_40_70_combos=0,
+            B300_true_actor_matched_NL2_lock=False,B300_certification=0,
+            certified_models=155,approx_models=237,EST=0,total_models=392,
+            exact_authentic_GTO_plus_actor_NL2_public_boards=593,real_partial_NL2_lock_variants=685,
+            pooled_measured_NL2_marginal_source_nodes=4544,assumed_source_nodes=2143,
+            unmatched_source_nodes=3871,unknown_denominator_NL2_lock_variants=324,
+            named_boards_with_incomplete_measured_rate=578,
+            genuine_exact_board_b50_nonpolarized_research_flags_only=134,
+            verified_HU_river_paths='2475/2475',
+            rank71='APPROX',rank71_existing_qualified_flops=['4s4h2d','7s5h3d'],
+            other_running_GTO_not_counted_until_its_own_verified_source_and_true_actor_lock=True,
+            no_measured_NL2_private_card_conditional_claim=True,not_generalized_board_strategy=True,
+            PR2_Draft_NEVER_MERGE=True)
+          (d/'nl2_hu_b303_v42_B300_source_closeout_all593.json').write_text(json.dumps(a,ensure_ascii=False,indent=2)+'\n')
+          pathlib.Path('docs/NL2_HU_B303_R71_B300_NEGATIVE_ALL593_ACTOR_LOCK_MEDIUM.md').write_text(
+             '# B303 source-verified checkpoint\n\n'
+             'B300 original genuine 100bb LMP Rust GTO 4s4h3d/7c is SHA-pinned from Actions 44956029074. Exact b50 c/x b50 c/ BB-OOP river has **zero 40/70 sequentially legal combos**; no matched downstream NL2 partial lock, and **no rank71 CERT promotion**.\n\n'
+             'Existing V42 **155 CERT-MULTIBOARD, 237 APPROX, 0 EST**. Independently audited all 593 certified named public board GTO plus real actor NL2 lock sources, 685 actor-matched lock variants and 134 only exact-board nonpolarized 50% pot research flags. The 134 flags are not generic advice. 324 historical lock variants have UNKNOWN sample denominators; 578 boards have incomplete measured NL2 marginal frequency evidence. No measured per-private-card NL2 conditional data.\n\n'
+             'Full 392-model/source contract and HU 2475/2475 route audits passed before publication. rank71 still has only 4s4h2d and 7s5h3d qualified flop+lock pairs; pending runs never count. PR2 Draft/Open; never merge or force push.\n')
+          print('PASS B303 verification files frozen')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b303_v42_B300_source_closeout_all593.json docs/NL2_HU_B303_R71_B300_NEGATIVE_ALL593_ACTOR_LOCK_MEDIUM.md
+          git commit -m 'TASK-HYBRID B303: original B300 0 legal BB-OOP combos, all593 authentic GTO+NL2 lock+b50 research and HU2475 PASS; 155 CERT'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B303-v42-B300-true-GTO-zero-all593-NL2-actor-lock-HU2475
+          path: |
+            data/nl2_hu_b303_v42_B300_source_closeout_all593.json
+            docs/NL2_HU_B303_R71_B300_NEGATIVE_ALL593_ACTOR_LOCK_MEDIUM.md
+            nl2-audit/
+          retention-days: 30
