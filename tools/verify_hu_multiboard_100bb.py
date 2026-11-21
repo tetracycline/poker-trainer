@@ -886,10 +886,10 @@ def authorized_b210_rank46_original_B3_LMP_CO_IP_xb50_x(m):
 
 def authorized_b294_rank71_new_exact_GTO_OOP_child(m):
     """Only a fully SHA-pinned, positive legal BB-OOP actor RIVER original
-    100bb GTO on B290/B293 exact FLOP/TURN can authorize a genuine NL2
+    100bb GTO on B290/B293/B296 exact FLOP/TURN can authorize a genuine NL2
     downstream-only Rust partial OOP lock, never a generic model CERT.
     """
-    specs={'As7h3d':('B290',44948738190),'QsJh4d':('B293',44949223231)}
+    specs={'As7h3d':('B290',44948738190),'QsJh4d':('B293',44949223231),'Js8h3d':('B296',44949515514)}
     flop=m.get('flop')
     if flop not in specs:return False
     batch,run=specs[flop]
