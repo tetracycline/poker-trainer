@@ -119,7 +119,7 @@ jobs:
            '169_class_LMP_preflop_ranges':'ASSUMED_NOT_OBSERVED',
            'no_private_hand_NL2_conditional_data_claim':True,'PR2_remains_Draft_NEVER_MERGE':True
           }
-          (d/'nl2_hu_b301_rank71_three_run_closeout.json').write_text(json.dumps(closeout,indent=2,ensure_ascii=False)+'\\n')
+          (d/'nl2_hu_b301_rank71_three_run_closeout.json').write_text(json.dumps(closeout,indent=2,ensure_ascii=False)+'\n')
           pathlib.Path('docs/NL2_HU_B301_RANK71_THREE_RUN_CLOSEOUT.md').write_text('''# B301 rank71 original-GTO exact-source closeout
 
 - B298 44950943882: PASS original 100bb Rust GTO 5s5h3d/Kd, immutable SHA verified; exact BB-OOP river b50 c/x b50 c/ has 0 strict sequential combos, no paired real NL2 lock; never promote.
