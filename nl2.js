@@ -151,13 +151,16 @@ function pfOk(a, b) {
   if (!a.pf || !b.pf) return true;
   return a.pf === b.pf;
 }
+const CATC = new Map();
 function lineCatalog(sp) {
+  if (CATC.has(sp)) return CATC.get(sp);
   const out = [];
   for (const nd of nodesOf(sp)) {
     if (!nodeVisible(sp, nd)) continue;
     const lns = lineList(sp, nd).length ? lineList(sp, nd) : [null];
     for (const ln of lns) out.push(catItem(sp, nd, ln));
   }
+  CATC.set(sp, out);
   return out;
 }
 function facingOk(face) { return !/你/.test(face || ''); }
@@ -256,9 +259,33 @@ function branchLab(x, item, verb) {
   }
   return secLab(x);
 }
+// 延伸表（沒有例題的後續線，nl2_titles.js 按需產生）：id → {item, parent}；存 localStorage 讓重新整理也找得到
+const EXTI = new Map();
+const EXT_LS = 'nl2ext1';
+function extSave(x, parent) {
+  try { const m = JSON.parse(localStorage.getItem(EXT_LS) || '{}'); if (!m[x.id]) { m[x.id] = [x.sp, x.nd, x.pf || '', x.key || '', parent ? parent.id : '']; const ks = Object.keys(m); if (ks.length > 3000) delete m[ks[0]]; localStorage.setItem(EXT_LS, JSON.stringify(m)); } } catch (e) {}
+}
+function extGet(id) {
+  if (EXTI.has(id)) return EXTI.get(id);
+  try { const v = JSON.parse(localStorage.getItem(EXT_LS) || '{}')[id]; if (!v || !TITLES || !TITLES.lineByKey) return null;
+    const ln = TITLES.lineByKey(v[0], v[1], v[2], v[3]); if (!ln || !ln.visible) return null;
+    const x = catItem(v[0], v[1], ln); if (x.id !== id) return null;
+    const rec = { item: x, parentId: v[4] }; EXTI.set(id, rec); return rec; } catch (e) { return null; }
+}
+function allNext(cat, item, verb) {
+  const nx = nextEntries(cat, item, verb).slice();
+  if (TITLES && TITLES.follow && item && item.ln && verb) for (const f of TITLES.follow(item.sp, item.nd, item.ln, verb)) {
+    const x = catItem(item.sp, f.nd, f.line);
+    if (nx.some(y => y.id === x.id)) continue;
+    nx.push(x);
+    if (f.line.syn && !EXTI.has(x.id)) { EXTI.set(x.id, { item: x, parentId: item.id }); extSave(x, item); }
+  }
+  const rank = face => !face ? 0 : face === '對手過' ? 1 : face === '對手下注' ? 2 : 3;
+  return nx.sort((a, b) => (b.st - a.st) || rank((a.key || '').split('|').pop()) - rank((b.key || '').split('|').pop()) || a.nd.localeCompare(b.nd));
+}
 function nextLinks(cat, item, a, bt) {
   const verb = VERB_OF[a] || (a === 'big' || a === 'small' ? '下注' : '');
-  const nx = nextEntries(cat, item, verb);
+  const nx = allNext(cat, item, verb);
   const through = nx.filter(x => x.st === item.st + 1 && isThrough(x));
   const nextOther = nx.filter(x => x.st === item.st + 1 && !through.includes(x));
   const same = nx.filter(x => x.st === item.st);
@@ -345,7 +372,8 @@ function cellInner(r, nd, href, extras) {
 function navHtml(cat, item) {
   if (!cat || !item) return '';
   const bits = [];
-  const prev = prevEntry(cat, item);
+  const ext = EXTI.get(item.id);
+  const prev = prevEntry(cat, item) || (ext && ext.parentId ? { id: ext.parentId } : null);
   if (prev) bits.push(`<a class="jmp" href="#${prev.id}">↑ 上一步</a>`);
   const seen = new Set();
   for (const v of ['下注', '過', '跟', '加注']) for (const x of nextEntries(cat, item, v)) {
@@ -377,7 +405,7 @@ function gridMw(sp, nd, me, line, cat) {
     const r = base.find(r => (r.cl || '全部') === k && r.hc.includes(h));
     if (!r || !reached(r, h)) return '<td class="na">—</td>';
     const sh = shownOf(r);
-    const nl = item ? nextLinks(cat, item, sh.a) : { href: '', extras: [] };
+    const nl = (item && !/全下/.test(actText(sh.a, r))) ? nextLinks(cat, item, sh.a) : { href: '', extras: [] };
     return `<td class="${ACL(sh.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, nl.href, nl.extras)}</td>`;
   };
   let html = `<div class="tw"><table class="rt lt"><tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>` +
@@ -424,7 +452,7 @@ function gridOne(sp, nd, me, line, ro, cat) {
     const r = findR(g, zh, h);
     if (!r || !reached(r, h)) return '<td class="na">—</td>';
     const sh = shownOf(r);
-    const nl = item ? nextLinks(cat, item, sh.a, btOf(zh)) : { href: '', extras: [] };
+    const nl = (item && !/全下/.test(actText(sh.a, r))) ? nextLinks(cat, item, sh.a, btOf(zh)) : { href: '', extras: [] }; // 全下：沒有後續決定
     return `<td class="${ACL(sh.a)}${me && me.id === r.id ? ' me' : ''}">${cellInner(r, nd, nl.href, nl.extras)}</td>`;
   };
   const head = `<tr><th></th>${cols.map(c => `<th>${dfs(hlabel(c, nd))}</th>`).join('')}</tr>`;
@@ -466,7 +494,7 @@ function lines() {
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
     return `${esc(nodeLabel(sp, nd))} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(nodeLabel(s2, n2))}」`; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
-  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、2/3、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔（⅔ 也在這組裡）；池估是牌池實際下注均值再靠檔，不是精確到 1%。格子只寫動作和「GTO」或「剝削」（剝削＝牌池估算比 GTO 更賺，不是封閉證明），不列樣本數或頻率。下注、加注會標尺寸（⅓、½、⅔、¾、1、1½ 或全下）。面對下注時，若資料有尺寸分檔，格子會寫門檻（例：面對小注 跟、面對 ≥¾ 棄）；翻牌／轉牌資料沒有分檔時不另造門檻。點動作或「→ 下一步」會跳到同一街的後續表（過→面對下注、下注／加注→被加注）或下一街同一條線的表，對得到就停在同一種牌面列；多人會對在同一條翻前線。後面的表有「↑ 上一步」。棄牌沒有下一步。同一條行動線一張表。橫列固定、跟翻牌同一套，順序是：9 以下低牌面、J/T 高面、K/Q 高面、A 高面、成對面、單色面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽，以及舊的「最高張 9 以下／T 以上」分半，都併入這六列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。格子裡動作、根據（GTO 或剝削）、以及每個「若…」連結各佔一行、置中。下注或加注之後，連「若對手跟注→」（下一街同一條線，你先行動或對手過牌）、「下一街面對下注→」（跟注後對手在下一街先下注，這不是同一街的面對下注），以及「若被加注→」（同一街被加注）。過牌之後，連「若對手過→」（過完進下一街）和「若面對下注→」或「若面對超池→」（同一街對手先下注）。跟注之後若有下一街表，標「下一街→」。已下注的格子不會再標同一街的「若面對下注」。棄牌、全下、河牌已結束的格子不再標「（無後續表）」。若資料還沒有下一街的表，格子不標終點，只保留同一街小連結（若有）。樣本很少或剝削動作與 GTO 頻率差很多的格子會標「低把握」。詳細樣本與頻率在「顯示每格的數據」。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、2/3、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔（⅔ 也在這組裡）；池估是牌池實際下注均值再靠檔，不是精確到 1%。格子只寫動作和「GTO」或「剝削」（剝削＝牌池估算比 GTO 更賺，不是封閉證明），不列樣本數或頻率。下注、加注會標尺寸（⅓、½、⅔、¾、1、1½ 或全下）。面對下注時，若資料有尺寸分檔，格子會寫門檻（例：面對小注 跟、面對 ≥¾ 棄）；翻牌／轉牌資料沒有分檔時不另造門檻。點動作或「→ 下一步」會跳到同一街的後續表（過→面對下注、下注／加注→被加注）或下一街同一條線的表，對得到就停在同一種牌面列；多人會對在同一條翻前線。後面的表有「↑ 上一步」。棄牌沒有下一步。同一條行動線一張表。橫列固定、跟翻牌同一套，順序是：9 以下低牌面、J/T 高面、K/Q 高面、A 高面、成對面、單色面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽，以及舊的「最高張 9 以下／T 以上」分半，都併入這六列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。格子裡動作、根據（GTO 或剝削）、以及每個「若…」連結各佔一行、置中。下注或加注之後，連「若對手跟注→」（下一街同一條線，你先行動或對手過牌）、「下一街面對下注→」（跟注後對手在下一街先下注，這不是同一街的面對下注），以及「若被加注→」（同一街被加注）。過牌之後，連「若對手過→」（過完進下一街）和「若面對下注→」或「若面對超池→」（同一街對手先下注）。跟注之後若有下一街表，標「下一街→」。已下注的格子不會再標同一街的「若面對下注」。棄牌、全下、河牌已結束的格子不再標「（無後續表）」。有例題的線先列在頁面上；沒有例題的後續線，點連結時才產生「延伸表」（放在頁面最下面，答案取自同一節點的策略列；翻後策略列不分翻前位置），所以跟注、過牌、下注、加注之後都連得到下一步。只有資料裡根本沒有那個決定點時才沒有連結。全下之後沒有後續。樣本很少或剝削動作與 GTO 頻率差很多的格子會標「低把握」。詳細樣本與頻率在「顯示每格的數據」。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>` + defsHtml(false) + `
@@ -477,7 +505,7 @@ function lines() {
     return use.map(ln => { const g = gridHtml(sp, nd, null, ln, null, cat); if (!g) return '';
       const item = catItem(sp, nd, ln);
       return `<div class="sec" data-node="${sp}/${nd}" id="${item.id}"><b class="ttl">${ln ? ln.titleHtml : esc(nodeLabel(sp, nd))}</b>${navHtml(cat, item)}${faceHtml(sp, nd, ln)}${g}${LS.data ? dataHtml(sp, nd, ln) : ''}</div>`; });
-  }).join(''); })() +
+  }).join(''); })() + '<div id="extwrap"></div>' +
   (alias.length ? `<div class="sec small"><span class="lab">其他點</span>　${aln ? esc(aln) + '。' : ''}沒有自己的數據，照下面的表：<ul>${alias.map(a => `<li>${a}</li>`).join('')}</ul></div>` : '');
 }
 const f0 = x => Number(x).toLocaleString('en-US'), pc = (a, b) => Math.round(a / b * 1000) / 10 + '%';
@@ -611,8 +639,18 @@ function hashInfo() {
   if (h === 'drill' || h === 'river') return {tab: h};
   return {tab: 'card'};
 }
+function extHtml(id) { // 延伸表的整段 HTML（被連到時才產生）
+  const rec = extGet(id); if (!rec) return '';
+  const x = rec.item, cat = lineCatalog(x.sp);
+  const g = gridHtml(x.sp, x.nd, null, x.ln, null, cat); if (!g) return '';
+  return `<div class="sec ext" data-node="${x.sp}/${x.nd}" id="${x.id}"><b class="ttl">${x.ln.titleHtml}</b>${navHtml(cat, x)}<p class="small muted">延伸表：這條線在資料裡沒有實際例題，答案取自同一節點的策略列（翻後策略列不分翻前位置）。</p>${g}${LS.data ? dataHtml(x.sp, x.nd, x.ln) : ''}</div>`;
+}
 function goAnchor(info) {
   if (!info || !info.id || !document.getElementById) return;
+  if (!document.getElementById(info.table)) {
+    const rec = extGet(info.table), wrap = document.getElementById('extwrap');
+    if (rec && wrap && rec.item.sp === LS.sp) wrap.insertAdjacentHTML('beforeend', extHtml(info.table));
+  }
   const el = document.getElementById(info.id) || document.getElementById(info.table);
   if (el) el.scrollIntoView({block: 'start', behavior: 'smooth'});
 }
@@ -648,7 +686,7 @@ app.addEventListener('click', e => {
 if (window.__LINES_QA) window.__linesQA = { tableOnly, egCond, egInException, egOk,
   answer: a => lanswer(a, {classList: {add() {}}}),
   render: sp => { LS.sp = sp; lines(); }, pool, card, DEF, defsHtml, drill, gridHtml, story, nodesOf, stOf, nodeVisible, rowReached, REACH, TITLES, lineList,
-  lineCatalog, nextEntries, prevEntry, nextLinks, catItem, lid, keyForLid, shownOf, VERB_OF, isThrough, branchLab, facingOk
+  lineCatalog, nextEntries, prevEntry, nextLinks, allNext, extHtml, extGet, EXTI, catItem, lid, keyForLid, shownOf, VERB_OF, isThrough, branchLab, facingOk
 };
 window.addEventListener('hashchange', route); route();
 })();

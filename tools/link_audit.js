@@ -39,7 +39,7 @@ function actOf(text) {
   return '?';
 }
 function parseSecs(html) {
-  const parts = html.split(/<div class="sec"/).slice(1), secs = [];
+  const parts = html.split(/<div class="sec(?=[ "])/).slice(1), secs = [];
   for (const p of parts) {
     const node = (p.match(/data-node="([^"]+)"/) || [])[1];
     const id = (p.match(/\bid="([^"]+)"/) || [])[1];
@@ -79,12 +79,27 @@ function parseSecs(html) {
 const { ctx, app } = loadRenderer();
 const L = ctx.NLL, Q = ctx.__linesQA;
 const allSecs = [], idMap = new Map();
+let nExt = 0;
 for (const spot of L.spots) {
   Q.render(spot.id);
-  for (const s of parseSecs(app.innerHTML)) {
-    allSecs.push(s);
-    if (s.id) idMap.set(s.id, s);
-    for (const r of s.rows) if (r.id) idMap.set(r.id, s);
+  let frontier = parseSecs(app.innerHTML);
+  // 延伸表（沒有例題的後續線）點了才產生：從連結一路展開，全部一起檢查
+  while (frontier.length) {
+    const next = [];
+    for (const s of frontier) {
+      allSecs.push(s);
+      if (s.id) idMap.set(s.id, s);
+      for (const r of s.rows) if (r.id) idMap.set(r.id, s);
+    }
+    for (const s of frontier) for (const r of s.rows) for (const c of r.cells) for (const h of [c.href].concat(c.extras || [])) {
+      const b = String(h || '').replace(BT_RE, '');
+      if (!b || idMap.has(b) || !Q.extHtml) continue;
+      const html = Q.extHtml(b);
+      if (!html) continue;
+      nExt++;
+      for (const x of parseSecs(html)) { x.ext = true; if (!idMap.has(x.id)) { idMap.set(x.id, x); next.push(x); } }
+    }
+    frontier = next;
   }
 }
 
@@ -114,6 +129,7 @@ const itemById = new Map();
 for (const spot of L.spots) {
   for (const it of catOf(spot.id)) if (it && it.id) itemById.set(it.id, it);
 }
+if (Q.EXTI) for (const [id, rec] of Q.EXTI) itemById.set(id, rec.item);
 
 const missingNext = new Map(); // key -> {sp,nd,key,verb,title,n}
 function addMissing(s, verb, n) {

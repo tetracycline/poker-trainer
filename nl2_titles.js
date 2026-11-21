@@ -406,12 +406,17 @@ function canonAct(k) {
       }
       if (!buckets.size) { const k0 = Array(rec.st + 1).fill('').join('|'); buckets.set(k0, { key: k0, pf: '', egs: [], er: [] }); }
       const lines = [];
-      for (const b of buckets.values()) {
+      for (const b of buckets.values()) lines.push(makeLine(rec, b, lines.length, false));
+      lineMap.set(rec.key, lines);
+    }
+    function makeLine(rec, b, idx, syn) {
+      const rows = nodeIndex.get(rec.key).rows;
+      {
         const sig = e => JSON.stringify({ t: e.t, me: e.me, pa: e.pa, pc: e.pc, pretext: e.pretext || '' });
         const top = (mostCommon(b.egs.map(sig)) || [])[0];
         const eObj = top ? b.egs.find(e => sig(e) === top) : null;
         const segs = segsFromKey(b.key);
-        const preToks = preflopTokens(eObj || guessPre(rec));
+        const preToks = preflopTokens(eObj || canonEg(b.pf) || guessPre(rec));
         const titles = buildTitle(preToks, segs, rec.kind, rec.st);
         const F = lineFacts(segs, preToks);
         const decs = decisionsOf(rec, b.key);
@@ -434,25 +439,130 @@ function canonAct(k) {
           cache.set(ck, ok);
           return ok;
         }
-        const hands = HANDS.filter(h => rows.some(r => !r.x && rowOk(r, h)));
+        let hands = syn ? null : HANDS.filter(h => rows.some(r => !r.x && rowOk(r, h)));
         // 同一翻前桶共用一個合法例題當標題，避免下一街翻前文字對不上
         let eUse = eObj, tUse = titles;
         const eCanon = canonEg(b.pf);
         if (eCanon) { eUse = eCanon; tUse = buildTitle(preflopTokens(eCanon), segs, rec.kind, rec.st); }
         const fixPre = (t) => String(t || '').replace(/你 (UTG|HJ|CO|BTN) 過/g, '你 $1 未開');
         if (tUse) { tUse = { titleText: fixPre(tUse.titleText), titleHtml: fixPre(tUse.titleHtml) }; }
-        const visible = hands.length > 0;
-        if (!visible) {
+        const visible = syn ? null : hands.length > 0;
+        if (!syn && !visible) {
           const miss = decs.filter(d => !d.nds.length);
           removed.push({ sp: rec.sp, nd: rec.nd, line: tUse.titleText, key: b.key,
             reason: miss.length ? miss.map(d => `${STN[d.st]}「${d.prefix.split('|').pop() || '你先行動'}」之後你${d.verb}：資料裡沒有這個決定點`).join('；')
               : '沒有任何牌型照前面各街的答案會走到這條線' });
         }
-        lines.push({ id: rec.sp + '/' + rec.nd + '#' + lines.length, key: b.key, pf: b.pf || '', eg: eUse, facts: F, decisions: decs,
-          titleText: tUse.titleText, titleHtml: tUse.titleHtml, nEg: b.egs.length, hands, visible, rowOk });
+        const ln = { id: rec.sp + '/' + rec.nd + '#' + idx, key: b.key, pf: b.pf || '', eg: eUse, facts: F, decisions: decs,
+          titleText: tUse.titleText, titleHtml: tUse.titleHtml, nEg: b.egs.length, rowOk, syn: !!syn };
+        if (!syn) { ln.hands = hands; ln.visible = visible; }
+        else { // 延伸線：被連到時才算可達性
+          let hv = null;
+          const calc = () => hv || (hv = HANDS.filter(h => rows.some(r => !r.x && rowOk(r, h))));
+          Object.defineProperty(ln, 'hands', { get: calc, enumerable: true });
+          Object.defineProperty(ln, 'visible', { get: () => calc().length > 0, enumerable: true });
+        }
+        return ln;
       }
-      lineMap.set(rec.key, lines);
     }
+    // ---- 延伸行動線（按需產生）----
+    // 例題只蓋到部分翻前位置與行動史，所以很多「你跟／過／下注／加注之後」的下一個決定點沒有例題、沒有表。
+    // 表的策略列不分位置（只分翻前加注者與先前行動條件），所以：先找資料裡完全相同的行動史（任何翻前位置）
+    // 屬於哪個節點；找不到，再用「上一街誰最後加注＋本街到你之前的動作」（多人：是否面對下注／被加注）
+    // 對到唯一的節點種類。對不到唯一節點就不接（是真正的資料缺口）。誰先行動照標題的翻前位置。
+    // 延伸表不放進 lines()（頁面只先列有例題的表），被連到時才產生；可達性用同一套 rowOk。
+    const EXT = (function () {
+      const PO = ['SB', 'BB', 'UTG', 'HJ', 'CO', 'BTN'];
+      const bitsOf = seg => String(seg || '').split('、').filter(Boolean);
+      const canonBits = a => { const o = []; for (const b of a) { if (o.length && o[o.length - 1] === b && !b.startsWith('你')) continue; o.push(b); } return o.filter((b, i) => !(b === '對手跟' && i > 0 && /^對手(下注|加注|全下)/.test(o[i - 1]))); };
+      const prevSum = seg => { let last = 'x'; for (const b of bitsOf(seg)) if (/下注|加注|全下/.test(b)) last = b.startsWith('你') ? 'h' : 'v'; return last; };
+      const faceCls = seg => { const b = bitsOf(seg); const hi = b.map(x => x.startsWith('你') && /下注|加注|全下/.test(x)).lastIndexOf(true);
+        if (hi >= 0 && b.slice(hi + 1).some(x => /^對手加注/.test(x))) return 'xr';
+        if (b.some(x => /^對手(下注|超池下注|加注|全下)/.test(x))) return 'bet'; return 'open'; };
+      const sigOf = (sp, pfx, st, key) => { const segs = key.split('|'); return sp === 'mw' ? [sp, pfx, st, faceCls(segs[st])].join('#') : [sp, pfx, st, st ? prevSum(segs[st - 1]) : '', segs[st] || ''].join('#'); };
+      const SIG = new Map();
+      const coarseOf = (sp, pfx, st, key) => [sp, pfx, st, '*', key.split('|')[st] || ''].join('#'); // 細的對不到時才用：不看上一街
+      const SIG2 = new Map();
+      for (const [k, nds] of DECI) { const [sp, pfx, st, ...rest] = k.split('#');
+        for (const [M, sg] of [[SIG, sigOf(sp, pfx, Number(st), rest.join('#'))], [SIG2, coarseOf(sp, pfx, Number(st), rest.join('#'))]]) {
+          if (!M.has(sg)) M.set(sg, new Set()); for (const nd of nds) M.get(sg).add(nd); } }
+      const recByNd = new Map(nodeList.map(r => [r.sp + '|' + r.nd, r]));
+      const synMap = new Map();
+      function nodesFor(sp, pfx, st, key) {
+        const ex = DECI.get([sp, pfx, st, key].join('#'));
+        if (ex && ex.size) return [...ex];
+        const sg = SIG.get(sigOf(sp, pfx, st, key));
+        if (sg) return sg.size === 1 ? [...sg] : [];
+        const sg2 = sp === 'mw' ? null : SIG2.get(coarseOf(sp, pfx, st, key));
+        return sg2 && sg2.size === 1 ? [...sg2] : [];
+      }
+      function seats(ln) { // 由標題翻前文字讀出位置
+        const pre = (String(ln.titleText || '').match(/翻前：([^→]+)/) || [])[1] || '';
+        const me = (pre.match(/你\s*(SB|BB|UTG|HJ|CO|BTN)/) || [])[1];
+        const others = [...new Set([...pre.matchAll(/\b(SB|BB|UTG|HJ|CO|BTN)\b/g)].map(m => m[1]).filter(p => p !== me))];
+        if (!me || !others.length) return null;
+        return { before: others.filter(p => PO.indexOf(p) < PO.indexOf(me)).length, after: others.filter(p => PO.indexOf(p) > PO.indexOf(me)).length };
+      }
+      function lineAt(rec, pf, key) { // 有例題的線優先；沒有就產生延伸線（快取）
+        const seed = (lineMap.get(rec.key) || []).find(l => l.key === key && (l.pf || '') === (pf || ''));
+        if (seed) return seed;
+        const ck = rec.key + '##' + (pf || '') + '##' + key;
+        if (synMap.has(ck)) return synMap.get(ck);
+        const dk = [rec.sp, rec.pfx, rec.st, key].join('#');
+        if (!DECI.has(dk)) DECI.set(dk, new Set());
+        DECI.get(dk).add(rec.nd);
+        const ln = makeLine(rec, { key, pf, egs: [], er: [] }, 'x' + synMap.size, true);
+        synMap.set(ck, ln);
+        return ln;
+      }
+      function seatsOf(rec, ln) {
+        const S = seats(ln);
+        if (rec.sp !== 'mw') return S;
+        // 多人：標題翻前可能只寫出一位對手；跟這條線翻牌的實際順序不合時，改用翻牌行動推位置
+        const b0 = bitsOf(segsFromKey(ln.key)[0]);
+        const hi = b0.findIndex(b => b.startsWith('你'));
+        if (hi < 0) return S;
+        const kb = { before: canonBits(b0.slice(0, hi)).length ? Math.max(1, b0.slice(0, hi).filter(b => /^對手/.test(b)).length) : 0, after: b0.slice(hi + 1).some(b => /^對手/.test(b)) ? 1 : 0 };
+        if (!S) return kb;
+        if ((S.before === 0) !== (kb.before === 0)) return { before: kb.before, after: Math.max(kb.after, S.after ? 1 : 0) };
+        return S;
+      }
+      function candidates(rec, ln, v) { // [{st, key}]
+        const S = seatsOf(rec, ln); if (!S) return [];
+        const mw = rec.sp === 'mw', st = rec.st, segs = segsFromKey(ln.key);
+        while (segs.length < st + 1) segs.push('');
+        const cur = bitsOf(segs[st]);
+        const facing = faceCls(segs[st]) !== 'open' && !(cur.length && cur[cur.length - 1].startsWith('你'));
+        if (!(facing ? ['跟', '加注'] : ['過', '下注']).includes(v)) return [];
+        const out = [], done = cur.concat(['你' + v]);
+        const same = o => out.push({ st, key: segs.slice(0, st).concat([canonBits(done.concat(o)).join('、')]).join('|') });
+        if (v === '過' && S.after > 0) [['對手下注'], ['對手超池下注']].concat(S.after > 1 ? [['對手過', '對手下注']] : []).forEach(same);
+        if ((v === '下注' || v === '加注') && !cur.includes('對手加注')) [['對手加注']].concat(mw ? [['對手跟', '對手加注']] : []).forEach(same);
+        if (st < 2) {
+          const tails = v === '跟' ? (mw ? [[], ['對手跟']] : [[]]) : v === '過' ? [S.after > 0 ? ['對手過'] : []] : [['對手跟']];
+          const opens = S.before === 0 ? [''] : ['對手過', '對手下注', '對手超池下注'].concat(S.before > 1 ? ['對手過、對手下注'] : []);
+          for (const t of tails) { const seg = canonBits(done.concat(t)).join('、'); for (const o of opens) out.push({ st: st + 1, key: segs.slice(0, st).concat([seg, o]).join('|') }); }
+        }
+        return out;
+      }
+      // 你在 (sp, nd, ln) 做 v（過／跟／下注／加注）之後的後續表（有例題的線或延伸線；只回傳走得到的）
+      function follow(sp, nd, ln, v) {
+        const rec = recByNd.get(sp + '|' + nd);
+        if (!rec || !ln) return [];
+        const out = [], seen = new Set();
+        for (const c of candidates(rec, ln, v)) for (const nd2 of nodesFor(rec.sp, rec.pfx, c.st, c.key)) {
+          const r2 = recByNd.get(sp + '|' + nd2);
+          if (!r2 || r2.st !== c.st) continue;
+          const l2 = lineAt(r2, ln.pf, c.key);
+          if (!l2 || !l2.visible || seen.has(l2)) continue;
+          seen.add(l2); out.push({ nd: nd2, st: c.st, line: l2 });
+        }
+        return out;
+      }
+      function synLines(sp, nd) { const k = sp + '|' + nd + '##'; return [...synMap.entries()].filter(([ck, l]) => ck.startsWith(k) && l.visible).map(x => x[1]); }
+      function lineByKey(sp, nd, pf, key) { const rec = recByNd.get(sp + '|' + nd); return rec ? lineAt(rec, pf, key) : null; }
+      return { follow, synLines, lineByKey, nodesFor, size: () => synMap.size, SIG, sigOf };
+    })();
 
     function guessPre(rec) {
       for (const r of L.rows) if (r.sp === rec.sp && (r.eg || [])[0]) return r.eg[0];
@@ -496,7 +606,7 @@ function canonAct(k) {
       }
       return { all, removed, unsure: [], nNodes: nodeList.length, nSplit, nTables, nOmittedNodes };
     }
-    return { lines, nodeVisible, rowReached, titleForEg, lineKeyFromEg, dump, audit, HANDS, topAct, actsOfRow };
+    return { lines, nodeVisible, rowReached, titleForEg, lineKeyFromEg, dump, audit, HANDS, topAct, actsOfRow, follow: EXT.follow, synLines: EXT.synLines, lineByKey: EXT.lineByKey, extSize: EXT.size, EXT };
   }
 
   root.NL2TITLES = { build, lineKeyFromEg, streetOf, splitNd };
