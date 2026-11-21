@@ -1,0 +1,145 @@
+name: TASK-HYBRID B129 rank69 fast true actor-IP BTN_BB turn-only child from SHA-pinned B124 GTO (max28m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b129-rank69-btn-fast-child.yml', 'tools/solve_hu_b129_btn_rank69_turnonly.py']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Fetch only immutable finished successful B124 GTO raw flop, not the still-running EXP flop
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p gto_parent
+          gh run download 44839543260 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B124_R69_BTN_ACE_B33XX-BTN_BB-gto-As7h3d' --dir gto_parent
+          test -s gto_parent/evidence/BTN_BB-gto-As7h3d.json
+          test -s gto_parent/solver/postflop/out/BTN_BB/gto/As7h3d_multiboard.json
+          test -s gto_parent/solver/postflop/out/BTN_BB/gto/As7h3d_multiboard.job.json
+      - name: Compile pinned authentic Rust CFR, strict B124 GTO parent SHA audited
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_b129_btn_rank69_turnonly.py trainer/tools/verify_hu_multiboard_100bb.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve real Rust turn-only NL2 actor-IP x-x / turn Kd from unchanged B124 root
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-engine-pin.txt
+          python3 trainer/tools/solve_hu_b129_btn_rank69_turnonly.py --solver-root solver --gto-artifact-root gto_parent --manifest evidence/BTN_BB-As7h3d-b33c-xx-exp_ip.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B129_R69_BTN_B33XX-BTN_BB-exp_ip-As7h3d
+          path: |
+            evidence/
+            solver/postflop/out/
+          retention-days: 30
+          if-no-files-found: warn
+  verify-and-commit:
+    needs: solve
+    if: ${{ needs.solve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download one verified genuine Rust turn-only IP NL2 source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          name='nl2-multiboard-B129_R69_BTN_B33XX-BTN_BB-exp_ip-As7h3d'
+          mkdir -p "downloads/$name"
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$name"
+          test -s "downloads/$name/evidence/BTN_BB-As7h3d-b33c-xx-exp_ip.json"
+      - name: Independent source SHA, strict combo reach, exact actor and original B124 GTO root checksum
+        run: |
+          set -euo pipefail
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver --run-id "$GITHUB_RUN_ID" --out trainer/data/solver_evidence/NL2_MULTIBOARD_B129_R69_BTN_B33XX.json
+      - name: Preserve SHA-authenticated exact turn actor-IP source and strict source-blind target gate
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B129_R69_BTN_B33XX.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert not d['errors'] and len(d['artifacts'])==1
+          assert d['exact_board_gto_sources']==0
+          assert d['imputed_pool_locked_sources']==d['new_authentic_board_cases']>=1
+          a=d['artifacts'][0]
+          assert (a['spot'],a['version'],a['flop'])==('BTN_BB','exp_ip','As7h3d')
+          assert not a['errors'] and len(a['cases'])==1
+          c=a['cases'][0]
+          assert (c['flop_line'],c['turn'])==('b33 c','Kd')
+          hero=[n for n in c['nodes'] if n['exact_node_line']=='b33 c/x x/x' and
+             n['acting_seat']==1 and n['strictly_reachable_combos']>0]
+          reason=None if hero else 'NO_STRICT_ACTOR_IP_TURN_COMBOS_KEEP_RANK41_APPROX'
+          raw=p.read_bytes()
+          gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          idx=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+            batch='B129_R69_BTN_B33XX',run_id=d['source_run_id'],
+            actual_spot_flop_version_jobs=1,
+            verified_cases=d['new_authentic_board_cases'],
+            gto_cases=0,locked_cases=d['imputed_pool_locked_sources'],
+            source_sha256=hashlib.sha256(raw).hexdigest(),
+            gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+            generic_model_certification=0,
+            original_gto_parent_run=44839543260,
+            original_parent_GTO_root_SHA256='afc78d90660b563671bad694f20e9de4eb9aa4b7c38101a7136b926a3b6e80c1',
+            original_parent_GTO_job_SHA256='f76c10266568e783726d05aeed4107c0db9295bc7dfe1cd9a055526d38fea036',
+            original_parent_GTO_manifest_SHA256='009a322dc392543e9675a3c03582fa9cd2bda5e7ef48aafcc8bff8f1450945f0',
+            original_GTO_flop_NOT_recomputed=True,
+            exact_actor_IP_river_nodes=len(hero),strict_failure_reason=reason,
+            rank69_frozen_missing_exact_flop='As7h3d',
+            immediate_CERT_upgrades=0)
+          p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          print('PASS B129 independently verified authentic B124 GTO-pinned IP-turn child',idx)
+          PY
+      - name: Push exact-source B129 archive to Draft PR2, do not claim rank69 CERT before separate matching gate
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B129_R69_BTN_B33XX.json.gz data/solver_evidence/NL2_MULTIBOARD_B129_R69_BTN_B33XX.index.json
+          git commit -m 'TASK-HYBRID B129: authentic BTN_BB As7h3d actor-IP turn-only NL2 lock from untouched SHA-pinned B124 GTO root'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B129-verified-actor-IP-child
+          path: trainer/data/solver_evidence/NL2_MULTIBOARD_B129_R69_BTN_B33XX*
+          retention-days: 30
