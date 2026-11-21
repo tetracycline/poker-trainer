@@ -1,0 +1,104 @@
+name: TASK-HYBRID B230 B226/B227 21m canceled source failclosed and V38 581/2475 regression (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b230-b226-b227-cancelled-source-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  strict-timed-out-original-source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Confirm both original Rust jobs canceled and dependent genuine GTO verification skipped
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for run in 44891611131 44891646629; do
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq .conclusion)" = cancelled
+            solve="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/jobs" --jq '.jobs[] | select(.name=="original-gto-solve") | .conclusion')"
+            audit="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/jobs" --jq '.jobs[] | select(.name=="independent-audit-and-source-commit") | .conclusion')"
+            test "$solve" = cancelled && test "$audit" = skipped
+          done
+          for f in             data/nl2_hu_b226_rank71_lmp_6s4h3d_gto_parent_pin.json             data/nl2_hu_b227_rank313_lmp_9s8h4d_gto_parent_pin.json             data/solver_evidence/NL2_MULTIBOARD_B226_R71_6S4H3D_GTO.index.json             data/solver_evidence/NL2_MULTIBOARD_B227_R313_9S8H4D_GTO.index.json; do
+            test ! -f "$f"
+          done
+      - name: Full 581 source locks 133 50%-pot candidates and 2475 HU navigation regression
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v38_b206_rank190.json --out nl2-audit/b230-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b230-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(151,241,0)
+          ag=a['aggregate']
+          assert (ag['named_board_proofs'],ag['paired_hero_locked_source_variants'],ag['board_examples_with_b50_candidate'])==(581,673,133)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS 2475/2475")'
+      - name: Commit only verified cancellation metadata and unchanged V38 source labels; PR2 draft never merge
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib,hashlib
+          d=pathlib.Path('data');p=d/'nl2_hu_multiboard_status_v38_b206_rank190.json'
+          s=json.loads(p.read_text())
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(151,241,0,392)
+          e=[
+            {'batch':'B226','rank':71,'flop':'6s4h3d','source_run_id':44891611131},
+            {'batch':'B227','rank':313,'flop':'9s8h4d','source_run_id':44891646629}]
+          out=dict(schema='NL2_HU_B230_ORIGINAL_B226_B227_RUST_CANCELLED_FAILCLOSED_V1',
+            rejected_original_GTO_sources=e,original_GTO_completed=0,original_job_conclusions=['cancelled','cancelled'],
+            independent_verification_conclusions=['skipped','skipped'],
+            no_new_SHA_verified_Rust_GTO=True,no_new_hero_lock=True,no_generic_cert=True,
+            V38_status_sha256=hashlib.sha256(p.read_bytes()).hexdigest(),
+            CERT_MULTIBOARD=151,APPROX=241,EST=0,TOTAL=392,board_proofs=581,
+            hero_lock_variants=673,medium50_exact_board_research_cases=133,HU_river_paths=2475,
+            no_hole_card_NL2_empirical_frequency_claim=True,PR2_Draft_NEVER_MERGE=True)
+          (d/'nl2_hu_b230_b226_b227_canceled_failclosed.json').write_text(json.dumps(out,indent=2)+'\n')
+          pathlib.Path('docs/NL2_HU_B230_B226_B227_CANCELLED_FAILCLOSED.md').write_text(
+            '# B230: B226 and B227 original Rust GTO cancelled — source fail-closed\n\n'
+            'Original GTO runs 44891611131 (rank71 6s4h3d) and 44891646629 (rank313 9s8h4d) '
+            'were cancelled with dependent source verification/commit jobs skipped. '
+            'Neither output is a verified original GTO board or paired NL2 hero lock; '
+            'partial artifacts must NOT be counted toward the required three to five distinct boards.\n\n'
+            'Full V38 source check and HU 2475/2475 remain PASS: **151 CERT-MULTIBOARD, '
+            '241 APPROX, 0 EST; 581 genuine named board proofs, 673 existing hero locks, '
+            '133 exact-board-only 50%-pot research candidates**. No fabricated frequencies '
+            'and no generic texture extrapolation.\n\nPR #2 stays Draft / Open; NEVER MERGE.\n')
+          print('PASS B230 negative source record',json.dumps(out))
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b230_b226_b227_canceled_failclosed.json docs/NL2_HU_B230_B226_B227_CANCELLED_FAILCLOSED.md
+          git commit -m 'TASK-HYBRID B230: B226 B227 Rust cancelled failclosed, 581 locks and HU2475 PASS; no false CERT'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-b230-B226-B227-GTO-cancelled-failclosed-HU2475
+          path: |
+            data/nl2_hu_b230_b226_b227_canceled_failclosed.json
+            docs/NL2_HU_B230_B226_B227_CANCELLED_FAILCLOSED.md
+            nl2-audit/
+          retention-days: 30
