@@ -1,0 +1,140 @@
+name: TASK-HYBRID B153 independently archive B147 rank46 true source CANCELLED, no false CERT and full HU audit (max11m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b153-rank46-b147-timeout-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-original-cancel-and-commit-negative:
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Confirm completed original B147 18min CANCELLED and download ONLY authentic incomplete Rust input job
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run view 44853428350 --repo "$GITHUB_REPOSITORY" --json status,conclusion > original-run.json
+          mkdir -p original
+          gh run download 44853428350 --repo "$GITHUB_REPOSITORY" \
+            --name nl2-multiboard-B147_R46_LMP_AS9H2D-LMP_CO_BB-gto-As9h2d --dir original
+          test -s original/evidence/poker-solver-pin.txt
+          test -s original/evidence/rust-engine-pin.txt
+          test -s original/solver/postflop/out/LMP_CO_BB/gto/As9h2d_multiboard.job.json
+          test ! -e original/solver/postflop/out/LMP_CO_BB/gto/As9h2d_multiboard.json
+          test ! -e original/evidence/LMP_CO_BB-gto-As9h2d.json
+      - name: Cryptographically archive exact job-only evidence, label zero GTO and zero NL2 locks (no manufactured progress)
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,shutil
+          src=pathlib.Path('original')
+          run=json.loads(pathlib.Path('original-run.json').read_text())
+          assert run['status']=='completed' and run['conclusion']=='cancelled'
+          gto_pin=(src/'evidence/poker-solver-pin.txt').read_text().strip()
+          rust_pin=(src/'evidence/rust-engine-pin.txt').read_text().strip()
+          assert gto_pin=='abe310c3aad02dd4a7c77fb2831801fd490cf51b'
+          assert rust_pin=='9d1509fe5077d019825f833eed04b16d342dfda1'
+          job=src/'solver/postflop/out/LMP_CO_BB/gto/As9h2d_multiboard.job.json'
+          j=json.loads(job.read_text())
+          assert (j['flop'],j['pot'],j['stack'],j['rake_rate'],j['rake_cap'])==(
+              'As9h2d',250,9900,.05,1000)
+          assert not j.get('hero') and not j.get('locks')
+          assert all(z in j['flop_oop'] and z in j['flop_ip']
+              for z in ('33%','50%','75%','100%'))
+          targets=[e for e in j['extract'] if e['prefix']]
+          assert len(targets)==1 and targets[0]['prefix'][:3]==['x','b50','c']
+          assert len(targets[0]['prefix'])==4
+          turn=targets[0]['prefix'][-1]
+          assert turn=='Kd',('source drift',turn)
+          base=pathlib.Path('trainer/data/solver_evidence')
+          base.mkdir(parents=True,exist_ok=True)
+          dest=base/'NL2_MULTIBOARD_B153_R46_B147_CANCELLED.job.json'
+          shutil.copy2(job,dest)
+          sha=lambda x:hashlib.sha256(x).hexdigest()
+          index=dict(schema='NL2_MULTIBOARD_CANCELLED_NO_SOLVER_OUTPUT_V1',
+              original_run_id=44853428350,original_conclusion='cancelled',
+              original_solver_job_timeout_minutes=18,
+              authentic_job_input_only=True,original_gto_cases=0,
+              original_nl2_lock_cases=0,original_gto_river_nodes=0,
+              real_solver_root_json_absent=True,real_solver_case_manifest_absent=True,
+              input_job_sha256=sha(job.read_bytes()),
+              archived_input_job_sha256=sha(dest.read_bytes()),
+              pinned_poker_solver_commit=gto_pin,pinned_rust_backend_commit=rust_pin,
+              frozen_high_frequency_rank=71,
+              frozen_target_model_id='ln-iso-lmp_t_model-17z0wyl',
+              actual_spot='LMP_CO_BB',actual_flop='As9h2d',
+              input_turn=turn,declared_flop_action='x b50 c',
+              target_river_actor='CO_IP',
+              NOT_a_GTO_source=True,
+              NOT_an_NL2_lock_source=True,
+              rank46_remains_APPROX=True,
+              immediate_CERT_upgrades=0,
+              subsequent_rerun_requires_new_Batch_and_full_genuine_source=True)
+          output=base/'NL2_MULTIBOARD_B153_R46_B147_CANCELLED.index.json'
+          output.write_text(json.dumps(index,ensure_ascii=False,indent=2)+'\n')
+          doc=pathlib.Path('trainer/docs/NL2_HU_B153_RANK46_B147_GENUINE_TIMEOUT_NEGATIVE.md')
+          doc.write_text('# B153 | B147 authentic Rust GTO timeout negative, source-only\n\n'
+              'Original Actions run [44853428350](https://github.com/tetracycline/poker-trainer/actions/runs/44853428350) '
+              'cancelled after its 18-minute solver job limit. '
+              'Only SHA-pinned input job exists; **no genuine solver root or GTO case manifest**. '
+              'Flop As9h2d, chosen first turn Jd, flop x b50 c, '
+              'LMP 100bb original 169-class preflop ASSUMED. '
+              'Cannot certify GTO/NL2 or create an action recommendation from job configuration alone. '
+              'Rank71 remains APPROX. V30 142 CERT/250 APPROX, '
+              '554 named per-board existing locks, 2475/2475 navigational reach. '
+              'PR#2 remains Draft; NEVER MERGE.\n')
+          print('PASS authentic B147 source NEGATIVE, zero GTO or NL2 cases',index)
+          PY
+      - name: Independently test V30 142/250 registry, 554 actual certified locks and every 2475 continuing HU river navigation
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 - <<'PY'
+          import json
+          v=json.load(open('data/nl2_hu_multiboard_status_v30_b145_rank47.json'))
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v30_b145.json'))
+          assert (v['CERT_MULTIBOARD'],v['APPROX'],v['EST'],v['TOTAL'])==(142,250,0,392)
+          assert len(m['boards'])==554 and len(m['models'])==142
+          assert v['records']['ln-iso-lmp_t_model-17z0wyl']['label']=='APPROX'
+          assert v['independently_verified_completed_batches']['B4_MICRO']['status']=='VERIFIED'
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS 2475/2475")'
+      - name: Push independently verified B147 genuine negative to PR #2 Draft only, no change to certified count and never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B153_R46_B147_CANCELLED.job.json data/solver_evidence/NL2_MULTIBOARD_B153_R46_B147_CANCELLED.index.json docs/NL2_HU_B153_RANK46_B147_GENUINE_TIMEOUT_NEGATIVE.md
+          git commit -m 'TASK-HYBRID B153: independently archive authentic B147 18min cancelled GTO job-only source, zero CERT increment, full 2475 river audit'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B153-source-negative-18min-and-HU-2475-audit
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B153_R46_B147_CANCELLED.*
+            trainer/docs/NL2_HU_B153_RANK46_B147_GENUINE_TIMEOUT_NEGATIVE.md
+            trainer/nl2-audit/
+          retention-days: 30
