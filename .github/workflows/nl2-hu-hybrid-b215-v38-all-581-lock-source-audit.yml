@@ -99,8 +99,8 @@ jobs:
           rows.sort(key=lambda q:(q['rank'],q['flop'],q['turn']))
           gaps=[q for q in rows if q['assumed_default_source_nodes']>0 or
             q['historical_source_proofs_missing_denominator']>0 or q['measured_aggregate_pool_source_nodes']==0]
-          out=d/'nl2_hu_b215_v38_563_exact_lock_provenance.json'
-          obj=dict(schema='NL2_HU_B215_V38_563_CERT_NAMED_BOARD_LOCK_MEASURED_ASSUMED_UNKNOWN_V1',
+          out=d/'nl2_hu_b215_v38_581_exact_lock_provenance.json'
+          obj=dict(schema='NL2_HU_B215_V38_581_CERT_NAMED_BOARD_LOCK_MEASURED_ASSUMED_UNKNOWN_V1',
             V38_sha256=sha(sf),original_B206_medium_matrix_sha256=sha(mf),
             CERT_MULTIBOARD=151,APPROX=241,EST=0,TOTAL=392,
             exact_named_GTO_NL2_board_proofs=581,hero_lock_variants=summary['hero_lock_variants'],
@@ -112,7 +112,7 @@ jobs:
             missing_measured_rates_NOT_replaced_by_assumption=True,
             no_general_50pct_bet_sizing_advice=True,PR2_Draft_NEVER_MERGE=True)
           out.write_text(json.dumps(obj,ensure_ascii=False,indent=2)+'\n')
-          md=pathlib.Path('docs/NL2_HU_B215_V38_ALL_563_MEASURED_VS_ASSUMED_LOCK_AND_B50.md')
+          md=pathlib.Path('docs/NL2_HU_B215_V38_ALL_581_MEASURED_VS_ASSUMED_LOCK_AND_B50.md')
           lines=['# B215 exact named-board NL2 lock rate provenance audit','','151 CERT /241 APPROX /0 EST.',
             f"All 581 named boards and {summary['hero_lock_variants']} exact actor-lock variants were reconciled against B206 V38 independent sources.",
             f"50%-pot nonpolarized action is an exact-board research flag on {summary['b50_research_candidate_boards']} named boards only.",
@@ -130,7 +130,7 @@ jobs:
               str(q['unknown_unmatched_villain_source_nodes'])+'|'+
               str(q['historical_source_proofs_missing_denominator'])+'|'+
               ('exact-board candidate' if q['nonpolar50_exact_board_research'] else 'not proven')+'|')
-          lines += ['','Complete all-581 source data: data/nl2_hu_b215_v38_563_exact_lock_provenance.json.',
+          lines += ['','Complete all-581 source data: data/nl2_hu_b215_v38_581_exact_lock_provenance.json.',
             'Must pass full 2475/2475 HU link, reach, node-lock and contract audits before push.',
             'PR2 remains Draft. NEVER MERGE.']
           md.write_text('\n'.join(lines)+'\n')
@@ -160,7 +160,7 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/nl2_hu_b215_v38_563_exact_lock_provenance.json docs/NL2_HU_B215_V38_ALL_563_MEASURED_VS_ASSUMED_LOCK_AND_B50.md
+          git add data/nl2_hu_b215_v38_581_exact_lock_provenance.json docs/NL2_HU_B215_V38_ALL_581_MEASURED_VS_ASSUMED_LOCK_AND_B50.md
           git commit -m 'TASK-HYBRID B215 V38: all 581 CERT board real NL2 locks measured/default/unknown provenance, exact-board only medium50 research and 2475 HU PASS'
           for n in 1 2 3 4; do
             git fetch origin fix/nl2-hu-lines-audit-20261118
@@ -174,7 +174,7 @@ jobs:
         with:
           name: TASK-HYBRID-B215-V38-581-measured-assumed-132-b50-HU2475
           path: |
-            data/nl2_hu_b215_v38_563_exact_lock_provenance.json
-            docs/NL2_HU_B215_V38_ALL_563_MEASURED_VS_ASSUMED_LOCK_AND_B50.md
+            data/nl2_hu_b215_v38_581_exact_lock_provenance.json
+            docs/NL2_HU_B215_V38_ALL_581_MEASURED_VS_ASSUMED_LOCK_AND_B50.md
             nl2-audit/
           retention-days: 30
