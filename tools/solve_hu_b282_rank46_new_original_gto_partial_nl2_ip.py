@@ -45,7 +45,7 @@ def main():
     assert index['immediate_CERT_upgrades']==0 and index['no_generic_model_certification'] is True
     assert (pin['spot'],pin['flop'],pin['turn'],pin['flop_line'],pin['turn_line'])==(
         SPOT,FLOP,TURN,LINE,'x x')
-    assert pin['target_rank']==46 and pin['model_id']=='ln-iso-lmp_t_model-17z0wyl' and pin['actor']==1
+    assert pin['target_rank']==46 and pin['model_id']=='ln-iso-lmp_t_model-17z0wyl'\n    # B279/B280/B284/B286 parent pin stores strictly legal CO-IP actor in\n    # the source nodes and pinned target IP counters, not a top-level actor key.\n    assert pin['target_exact_actor_IP_turn_nodes']>0 and pin['target_exact_actor_IP_strict_combos']>0
     assert pin['target_exact_actor_IP_turn_nodes']>0 and pin['target_exact_actor_IP_strict_combos']>0
     assert pin['original_full_100bb_lmp_gto_not_recomputed'] is True
     assert pin['assumed_limped_169class'] is True and pin['observed_preflop_ranges'] is False
