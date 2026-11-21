@@ -1,0 +1,91 @@
+name: TASK-HYBRID B232 rank71 original Rust donor decision vs strict ancestry reach + all 581/2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b232-r71-donk50-raw-vs-strict-rootcause.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  actor-line-source-vs-sequential-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Download original B216 full-flop GTO root, and B231 independently-verified real new river-donk50 GTO/EXP jobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b232_rank71_exact_source_vs_reach.py
+          python3 - <<'PY'
+          import pathlib,hashlib,json
+          d=pathlib.Path('data/solver_evidence')
+          q=d/'NL2_MULTIBOARD_B231_R71_9S8H4D_DONK50_PAIR.index.json'
+          p=json.loads(q.read_text())
+          assert p['b231_current_run_id']==44893879199
+          assert p['true_original_Rust_subgames']==2
+          assert p['paired_exact_line_actor_SPR_reach'] is False
+          assert p['automatic_generic_model_CERT_upgrades']==0
+          assert all(p['records'][v]['river_target_strict_combos']==0 for v in ['gto','exp_oop'])
+          print('B231 source prerequisite PASS')
+          PY
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/44893879199" --jq .conclusion)" = success
+          mkdir -p downloads/parent downloads/new
+          gh run download 44884042851 --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B216_R71_LMP_9S8H4D-LMP_CO_BB-gto-9s8h4d'             --dir downloads/parent
+          gh run download 44893879199 --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B231-R71-9S8H4D-DONK50-GTO-EXP'             --dir downloads/new
+          test -s downloads/parent/solver/postflop/out/LMP_CO_BB/gto/9s8h4d_multiboard.json
+          test -s downloads/new/solver/postflop/out/LMP_CO_BB/gto/9s8h4d_b50c_Ah.job.json
+          test -s downloads/new/solver/postflop/out/LMP_CO_BB/exp_oop/9s8h4d_b50c_Ah.job.json
+      - name: Independently recompute true original Rust node existence and 40pct/70pct strict actor reach without relaxing ancestry
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b232_rank71_exact_source_vs_reach.py             --parent downloads/parent --new downloads/new
+          test -s data/nl2_hu_b232_b231_original_vs_strict_actor_reach.json
+      - name: Full V38 exact 581 original GTO+NL2 locks / medium50 audit and independent HU2475 paths
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v38_b206_rank190.json --out nl2-audit/b232-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b232-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(151,241,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],
+                  a['aggregate']['board_examples_with_b50_candidate'])==(581,673,133)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU2475/2475")'
+      - name: Commit exact SHA-backed actor rootcause only after all source and navigation tests, Draft PR #2 no merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b232_b231_original_vs_strict_actor_reach.json docs/NL2_HU_B232_REAL_RIVER_DONK50_GTO_VS_STRICT_NODE_REACH.md
+          git commit -m 'TASK-HYBRID B232: raw Rust river-donk50 actor nodes vs legal 40/70 ancestry rootcause, all 581 locks and HU2475 PASS'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-B232-true-GTO-NL2-actor-rootcause-HU2475
+          path: |
+            data/nl2_hu_b232_b231_original_vs_strict_actor_reach.json
+            docs/NL2_HU_B232_REAL_RIVER_DONK50_GTO_VS_STRICT_NODE_REACH.md
+            nl2-audit/
+          retention-days: 30
