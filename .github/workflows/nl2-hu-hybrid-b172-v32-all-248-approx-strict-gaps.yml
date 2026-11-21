@@ -1,0 +1,182 @@
+name: TASK-HYBRID B172 independent V32 all 248 APPROX true GTO/NL2 source gap scan, 560 locks +2475 HU (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b172-v32-all-248-approx-strict-gaps.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  audit-248-sourceblind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Independent V32 source SHA, all 255 ORIGINAL B112 candidates, 248 remaining only, count true board/actor-paired gaps
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import sys,pathlib,json,collections,copy,hashlib,gzip
+          sys.path.insert(0,'tools')
+          from hu_multiboard_promote import build_source_index,candidates,choose_3_5,hero_seat,texture
+          from hu_cert_lock_medium_audit import audit
+          d=pathlib.Path('data')
+          load=lambda p:json.loads(p.read_text())
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          current=d/'nl2_hu_multiboard_status_v32_b168_rank80.json'
+          previous=d/'nl2_hu_b166_v31_249_APPROX_true_sourceblind_gaps.json'
+          frozen=d/'nl2_hu_b112_all_approx_frozen_frequency_gaps.json'
+          p=load(current);old=load(previous);f=load(frozen)
+          assert p['schema']=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V32_B168_RANK80'
+          assert (p['CERT_MULTIBOARD'],p['APPROX'],p['EST'],p['TOTAL'])==(144,248,0,392)
+          assert p['B166_sourceblind_audit_sha256']==sha(previous)
+          assert old['row_count']==249 and len(f['rows'])==255
+          assert p['records']['ln-iso-lmp_r_model-17pklmg']['label']=='CERT-MULTIBOARD'
+          source=[pathlib.Path(x) for x in p['source_evidence']['source_files']]
+          assert source and len(source)==len(set(source)) and all(x.is_file() for x in source)
+          for batch in ('B165_R80_7S5H3D_GTO','B167_R80_7S5H3D_EXP_IP'):
+              file=d/('solver_evidence/NL2_MULTIBOARD_'+batch+'.json.gz')
+              idx=file.with_suffix('').with_suffix('.index.json')
+              assert file in source and idx.is_file()
+              z=load(idx)
+              assert z['batch']==batch and z['verified_cases']==1
+              assert z['source_sha256']==hashlib.sha256(gzip.decompress(file.read_bytes())).hexdigest()
+              assert z['gzip_sha256']==sha(file)
+          gto,locked,meta=build_source_index(d,source)
+          ranks={z['rank_by_empirically_grounded_frequency_proxy']:z for z in load(d/'nl2_hu_multiboard_prerank.json')['nodes']}
+          models={z['model_id']:z for z in load(d/'nl2_hu_stage2_queue.json')['records']}
+          assert len(p['records'])==len(ranks)==len(models)==392
+          counts=collections.Counter();rows=[];ready=[]
+          for oldrow in sorted(f['rows'],key=lambda q:q['rank']):
+              rank=oldrow['rank'];mid=oldrow['model_id']
+              assert ranks[rank]['model_id']==mid
+              curr=p['records'][mid]
+              if curr['label']=='CERT-MULTIBOARD':
+                  counts['already_certified_since_B112']+=1
+                  continue
+              assert curr['label']=='APPROX'
+              model=models[mid]
+              assert model['solver_profile']==oldrow['spot'] and model['family']==oldrow['family']
+              query=copy.deepcopy(ranks[rank])
+              query['preflop_text']=model['preflop_text']
+              query['abstract_action_history']=model['abstract_action_history']
+              options,why=candidates(query,gto,locked,None)
+              gt=sorted({x['flop'] for x in options})
+              paired=sorted({x['flop'] for x in options if x['nl2_locked_variants']})
+              chosen,why2=choose_3_5(options)
+              gate=bool(chosen and why is None and why2 is None)
+              if gate:ready.append(dict(rank=rank,model_id=mid,flops=sorted(x['flop'] for x in chosen)))
+              missing=max(0,3-len(paired))
+              counts['current_APPROX']+=1
+              counts['missing_exact_locked_GTO_flops']+=len(set(gt)-set(paired))
+              counts['one_board_short']+=int(missing==1)
+              counts['two_boards_short']+=int(missing==2)
+              counts['three_or_more_short']+=int(missing>=3)
+              rows.append(dict(rank=rank,model_id=mid,spot=oldrow['spot'],family=oldrow['family'],
+                  frozen_frequency_proxy=oldrow['frozen_frequency_proxy'],
+                  hero_actor=hero_seat(model['preflop_text']),
+                  genuine_GTO_legal_flops=gt,genuine_NL2_actor_paired_flops=paired,
+                  missing_distinct_flops_to_3=missing,existing_textures=sorted({texture(q) for q in paired}),
+                  missing_actor_NL2_locks_on_GTO=sorted(set(gt)-set(paired)),
+                  source_ready_for_3_5_board_cert=gate,blocked_reason=None if gate else why2 or why or 'INSUFFICIENT_AUTHENTIC_MATCH',
+                  no_generic_texture_certification=True))
+          assert counts['current_APPROX']==len(rows)==248
+          assert counts['already_certified_since_B112']==7
+          byrank={z['rank']:z for z in rows}
+          assert byrank[71]['missing_distinct_flops_to_3']>=1
+          assert byrank[313]['missing_distinct_flops_to_3']>=1
+          a=audit(p);agg=a['aggregate']
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(144,248,0)
+          assert agg['named_board_proofs']==560
+          assert agg['paired_hero_locked_source_variants']>=649
+          assert agg['board_examples_with_b50_candidate']>=131
+          assert a['not_actual_NL2_earnings'] and a['not_generalized_handclass_GTO']
+          out=d/'nl2_hu_b172_v32_248_APPROX_true_sourceblind_gaps.json'
+          data=dict(schema='NL2_HU_B172_V32_ALL_248_APPROX_SOURCEBLIND_GAPS_V1',
+                    parent_V32_sha256=sha(current),previous_B166_sha256=sha(previous),
+                    frozen_B112_sha256=sha(frozen),
+                    CERT_MULTIBOARD=144,APPROX=248,EST=0,TOTAL=392,
+                    current_APPROX_count=len(rows),ready_3_5_true_source_rows=ready,
+                    source_index=meta,source_file_count=len(source),
+                    existing_genuine_CERThead_named_boards=560,
+                    existing_NL2_actor_lock_pairs=agg['paired_hero_locked_source_variants'],
+                    existing_exact_50pct_nonpolar_research_candidates=agg['board_examples_with_b50_candidate'],
+                    summary=dict(counts),rows=rows,
+                    no_automatic_CERT=True,no_observed_private_combo_NL2_rates=True,
+                    PR2_remains_Draft_NEVER_MERGE=True)
+          out.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+          doc=pathlib.Path('docs/NL2_HU_B172_V32_ALL_248_APPROX_STRICT_GAPS.md')
+          lines=['# B172 V32 | All 248 remaining APPROX independently rescanned',
+            '',
+            '**144 CERT / 248 APPROX / 0 EST** of 392. **560** genuine named boards; **'+
+              str(agg['paired_hero_locked_source_variants'])+'** valid NL2 hero-lock source pairs; **'+
+              str(agg['board_examples_with_b50_candidate'])+'** exact-board b50 nonpolar research cases.',
+            '',
+            'Original B112 ranks frozen, original B165 and B167 GTO/NL2 SHA rechecked. No private-card NL2 conditional frequencies claimed.',
+            'No generic hand-class or texture CERT. Source-ready new candidates: '+str(len(ready))+'.',
+            '',
+            '| Rank | Model | genuine GTO flops | matched NL2 actor-lock flops | distinct flops missing |',
+            '| ---: | --- | --- | --- | ---: |']
+          for z in rows[:45]:
+              lines.append('| '+str(z['rank'])+' | '+z['model_id']+' | '+
+                (', '.join(z['genuine_GTO_legal_flops']) or 'none')+' | '+
+                (', '.join(z['genuine_NL2_actor_paired_flops']) or 'none')+' | '+
+                str(z['missing_distinct_flops_to_3'])+' |')
+          lines.extend(['','Detailed all-248 strict gaps: '+str(out)+'.',
+            'Missing strict actor river combos cannot count toward CERT.',
+            'Require full 2475/2475 link audit before any commit.',
+            'PR2 Draft only. NEVER MERGE.',''])
+          doc.write_text('\n'.join(lines))
+          print(json.dumps(dict(PASS=True,CERT=144,APPROX=248,ready=len(ready),
+                rank71_missing=byrank[71]['missing_distinct_flops_to_3'],
+                rank313_missing=byrank[313]['missing_distinct_flops_to_3'],
+                named_boards=560,locks=agg['paired_hero_locked_source_variants'],
+                b50=agg['board_examples_with_b50_candidate']),ensure_ascii=False))
+          PY
+      - name: Full independent V32 560 named CERT node-lock/medium50 research and HU all 2475 river routes
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v32_b168_rank80.json --out nl2-audit/b172-lock-medium.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('nl2-audit/b172-lock-medium.json'))
+          assert (x['cert_multiboard'],x['approx'],x['EST'])==(144,248,0)
+          assert x['aggregate']['named_board_proofs']==560
+          assert x['aggregate']['paired_hero_locked_source_variants']>=649
+          assert x['aggregate']['board_examples_with_b50_candidate']>=131
+          assert x['not_generalized_handclass_GTO'] and x['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU 2475/2475")'
+      - name: Commit full 248 gap audit ONLY after complete independent PASS; keep 144 CERT/248 APPROX and PR2 DRAFT NEVER MERGE
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b172_v32_248_APPROX_true_sourceblind_gaps.json docs/NL2_HU_B172_V32_ALL_248_APPROX_STRICT_GAPS.md
+          git commit -m 'TASK-HYBRID B172 V32: scan all 248 APPROX true GTO/NL2 source gaps, 560 board source/2475 HU PASS'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B172-V32-all-248-true-sources-560-locks-2475
+          path: |
+            data/nl2_hu_b172_v32_248_APPROX_true_sourceblind_gaps.json
+            docs/NL2_HU_B172_V32_ALL_248_APPROX_STRICT_GAPS.md
+            nl2-audit/
+          retention-days: 30
