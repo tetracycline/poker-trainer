@@ -175,6 +175,66 @@ def authorized_b163_rank313_exact_true_gto_parent(m):
     except (OSError,KeyError,TypeError,ValueError,EOFError):
         return False
 
+def authorized_b167_rank80_exact_true_gto_parent(m):
+    """Fail-closed new B165 original 7s5h3d LMP IP river GTO parent.
+
+    Only its exact SHA-pinned B165 original GTO source, verified positive
+    actor CO-IP full-street combo reach, and b33-call/x-x/x partial tree
+    may be accepted. No texture/general model CERT from this predicate.
+    """
+    if not (m.get('spot')=='LMP_CO_BB' and m.get('version')=='exp_ip' and
+            m.get('flop')=='7s5h3d' and
+            m.get('selected_lines')==['b33 c'] and
+            m.get('selected_turn_lines')==['x x'] and
+            m.get('turn_line_policy')=='xxonly' and
+            m.get('flop_line_policy')=='oop-b33only' and
+            m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK' and
+            m.get('gto_parent_source_run_id')==44862108987 and
+            m.get('NL2_hero_lock_scope')=='TURN_RIVER_ONLY_FROM_SHA_PINNED_B165_TRUE_GTO' and
+            m.get('original_full_GTO_flop_byte_identical_not_recomputed') is True and
+            m.get('preflop_ranges',{}).get('source')=='ASSUMED_EXPLICIT_169CLASS'):
+        return False
+    d=pathlib.Path(__file__).resolve().parents[1]/'data'
+    pinfile=d/'nl2_hu_b165_rank80_lmp_7s5h3d_gto_parent_pin.json'
+    indexfile=d/'solver_evidence/NL2_MULTIBOARD_B165_R80_7S5H3D_GTO.index.json'
+    sourcegz=d/'solver_evidence/NL2_MULTIBOARD_B165_R80_7S5H3D_GTO.json.gz'
+    try:
+        import gzip
+        p=json.loads(pinfile.read_text());i=json.loads(indexfile.read_text())
+        raw=gzip.decompress(sourcegz.read_bytes())
+        return (
+          p['schema']=='NL2_HU_B165_RANK80_LMP_7S5H3D_GTO_PARENT_PIN_V1' and
+          (p['source_run_id'],i['run_id'])==(44862108987,44862108987) and
+          p['source_gto_job_id'] is None and
+          (p['spot'],p['flop'],p['flop_line'],p['turn_line'])==(
+             'LMP_CO_BB','7s5h3d','b33 c','x x') and
+          p['turn']=='6c' and
+          p['target_rank']==80 and p['model_id']=='ln-iso-lmp_r_model-17pklmg' and
+          p['target_exact_actor_IP_river_nodes']>0 and
+          p['target_exact_actor_IP_strict_combos']>0 and
+          p['original_full_100bb_lmp_gto_not_recomputed'] is True and
+          p['observed_preflop_ranges'] is False and
+          p['assumed_limped_169class'] is True and
+          p['no_generic_model_certification'] is True and
+          i['schema']=='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1' and
+          i['batch']=='B165_R80_7S5H3D_GTO' and
+          (i['gto_cases'],i['locked_cases'],i['verified_cases'])==(1,0,1) and
+          i['exact_target_actor_IP_river_nodes']>0 and
+          i['exact_target_actor_IP_strict_combos']>0 and
+          i['no_generic_model_certification'] is True and
+          i['source_sha256']==hashlib.sha256(raw).hexdigest() and
+          i['gzip_sha256']==sha(sourcegz) and
+          p['original_gto_root_sha256']==m.get('gto_parent_source_sha256') and
+          p['original_gto_job_sha256']==m.get('flop_root_jobfile_sha256') and
+          p['original_gto_manifest_sha256']==m.get('gto_parent_source_manifest_sha256') and
+          i['original_parent_GTO_root_SHA256']==p['original_gto_root_sha256'] and
+          i['original_parent_GTO_job_SHA256']==p['original_gto_job_sha256'] and
+          i['original_parent_GTO_manifest_SHA256']==p['original_gto_manifest_sha256'] and
+          m.get('original_B167_parent_pin_sha256')==sha(pinfile))
+    except (OSError,KeyError,TypeError,ValueError,EOFError):
+        return False
+
+
 def strict_medium_evidence(n,raw,seq_mask):
     """Re-evaluate b50 relative-equity distribution ONLY after every past
     hero action was legal under max/near-mix and blockers.
@@ -519,6 +579,10 @@ def verify(root,source_pin,run_id):
                         m.get('gto_parent_source_manifest_sha256')=='ab08f31291ed6feb19bdca412c56f8adc9ee5bc06ff43fe6ae6303b0660c2b3f'):
                         raise ValueError('Focused b50-call turn allowed ONLY from byte-identical B117 SB3 Jh9d6s actor OOP GTO parent')
                     if turn_policy=='xxonly' and not (
+                        # B167: independently verified exact B165 7s5h3d
+                        # GTO parent, IP CO after b33-call/x-x, fixed SHAs.
+                        authorized_b167_rank80_exact_true_gto_parent(m)
+                        or
                         # B164: individually SUCCESS original B9 genuine
                         # 100bb LMP full-sized GTO flop 4s4h2d, BB OOP
                         # bet33-call, turn 8s OOP check, CO hero IP x-x
@@ -608,7 +672,7 @@ def verify(root,source_pin,run_id):
                          m.get('gto_parent_source_sha256')=='afc78d90660b563671bad694f20e9de4eb9aa4b7c38101a7136b926a3b6e80c1' and
                          m.get('flop_root_jobfile_sha256')=='f76c10266568e783726d05aeed4107c0db9295bc7dfe1cd9a055526d38fea036' and
                          m.get('gto_parent_source_manifest_sha256')=='009a322dc392543e9675a3c03582fa9cd2bda5e7ef48aafcc8bff8f1450945f0')):
-                        raise ValueError('x-x extraction outside one strictly SHA-pinned B98/B101/B104/B129 actor parent')
+                        raise ValueError('x-x extraction outside individually SHA-pinned B98/B101/B104/B129/B164/B167 actor parents')
                     if turn_policy=='xb100only' and not (
                         m['spot']=='CO_BB' and m['version']=='exp_ip' and
                         m['flop']=='Js9h4d' and m.get('selected_lines')==['x b33 c'] and
