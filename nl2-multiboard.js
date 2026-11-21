@@ -224,6 +224,26 @@ el('node').addEventListener('change',selectNode);
 el('all-combos').addEventListener('change',fillCombos);
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v32=d=>{
+ if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V32_B168_RANK80'||
+    d.CERT_MULTIBOARD!==144||d.APPROX!==248||d.EST!==0||d.TOTAL!==392||
+    d.original_v31_cert!==143||d.original_v31_approx!==249||
+    d.original_top24_cutoff_unchanged!==true||
+    d.B168_rank80_true_third_flop?.rank!==80||
+    d.B168_rank80_true_third_flop?.flops?.join(',')!=='4s4h2d,7s5h3d,KsQh4d'||
+    d.B168_rank80_true_third_flop?.exact_action_line!=='b33 c/x x/x'||
+    d.B168_rank80_true_third_flop?.preflop_169class_assumed!==true||
+    Object.keys(d.records||{}).length!==392||
+    d.records?.['ln-iso-lmp_r_model-17pklmg']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-17pklmg']?.proven_exact_board_count!==3||
+    d.records?.['ln-iso-lmp_r_model-vlgh2t']?.label!=='APPROX'||
+    d.records?.['ln-iso-lmp_r_model-wpg493']?.label!=='APPROX'||
+    d.no_generic_texture_GTO!==true||
+    d.no_observed_private_card_NL2_rates!==true||
+    d.PR2_remains_draft_never_merge!==true)
+      throw Error('V32 not genuinely verified 3-board rank80 CERT');
+ return d;
+};
  const v31=d=>{
    if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V31_B161_RANK150'||
       d.CERT_MULTIBOARD!==143||d.APPROX!==249||d.EST!==0||d.TOTAL!==392||
@@ -573,7 +593,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v31_b161_rank150.json',{cache:'no-store'}).then(open).then(v31)
+ return fetch('data/nl2_hu_multiboard_status_v32_b168_rank80.json',{cache:'no-store'}).then(open).then(v32)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v31_b161_rank150.json',{cache:'no-store'}).then(open).then(v31))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v30_b145_rank47.json',{cache:'no-store'}).then(open).then(v30))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v29_b142_rank88.json',{cache:'no-store'}).then(open).then(v29))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v28_b133_rank69.json',{cache:'no-store'}).then(open).then(v28))
