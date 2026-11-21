@@ -19,6 +19,8 @@ PINS={
  'Js9h2d':('B310',44959162296), # pending true GTO; strict source gate before use
  '8s7h4d':('B314',44959459086), # LOW texture, source gated after true GTO
  'KsJh4d':('B315',44959462500), # KQ_HIGH texture, source gated after true GTO
+ 'Js9s4s':('B322',44960098050), # MONOTONE separate texture, no child without strict source
+ '9s7h4d':('B323',44960100932), # LOW separate texture, no child without strict source
 }
 def main():
     ap=argparse.ArgumentParser()
