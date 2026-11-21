@@ -394,6 +394,64 @@ def authorized_b178_rank138_b04_co_ip_xx(m):
         return False
 
 
+def authorized_b189_rank199_202_B3_original_gto_IP_xb33_xb50(m):
+    """Only exact original B3 8s8h3d or 9s6h3d GTO SHA for CO-IP hero.
+
+    B175 source-blind proves actor and full street legal GTO combos; B188
+    pins original root/job/manifest. New NL2 actor-IP Rust turn-river solve
+    must remain an independent source; no other flop or action-line accepted.
+    """
+    if not (m.get('spot')=='LMP_CO_BB' and m.get('version')=='exp_ip' and
+            m.get('flop') in ('8s8h3d','9s6h3d') and
+            m.get('selected_lines')==['x b33 c'] and
+            m.get('selected_turn_lines')==['x b50 c'] and
+            m.get('flop_line_policy')=='checked-b33only' and
+            m.get('turn_line_policy')=='xb50only' and
+            m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK' and
+            m.get('gto_parent_source_run_id')==44666294821 and
+            m.get('NL2_hero_lock_scope')=='TURN_RIVER_ONLY_FROM_SHA_PINNED_B3_RANK199_202_GTO' and
+            m.get('original_full_GTO_flop_byte_identical_not_recomputed') is True and
+            m.get('preflop_ranges',{}).get('source')=='ASSUMED_EXPLICIT_169CLASS'):
+        return False
+    d=pathlib.Path(__file__).resolve().parents[1]/'data'
+    pinfile=d/('nl2_hu_b188_rank199_202_'+m['flop']+'_B3_gto_pin.json')
+    idx=d/'solver_evidence/NL2_MULTIBOARD_B3.index.json'
+    arch=d/'solver_evidence/NL2_MULTIBOARD_B3.json.gz'
+    b175=d/'nl2_hu_b175_v32_248_exact_GTO_source_provenance.json'
+    try:
+        import gzip
+        p=json.loads(pinfile.read_text())
+        i=json.loads(idx.read_text())
+        prov=json.loads(b175.read_text())
+        assert p['schema']=='NL2_HU_B188_RANK199_202_B3_ORIGINAL_GTO_PARENT_PIN_V1'
+        assert (p['spot'],p['flop'],p['original_GTO_flop_line'],p['target_turn_line'])==(
+            'LMP_CO_BB',m['flop'],'x b33 c','x b50 c')
+        assert p['rank_targets']==[199,202] and p['hero_actor']==1
+        assert p['source_run_id']==i['run_id']==44666294821
+        assert p['original_full_GTO_flop_not_recomputed'] is True
+        assert p['assumed_limped_preflop_169class_not_observed'] is True
+        assert p['original_B3_verified_archive_sha256']==i['gzip_sha256']==sha(arch)
+        assert i['source_sha256']==hashlib.sha256(gzip.decompress(arch.read_bytes())).hexdigest()
+        assert p['original_B3_index_sha256']==sha(idx)
+        assert m['turns']==[p['turn']]
+        assert m['original_B188_parent_pin_sha256']==sha(pinfile)
+        assert m['gto_parent_source_sha256']==p['original_gto_root_sha256']
+        assert m['flop_root_jobfile_sha256']==p['original_gto_job_sha256']
+        assert m['gto_parent_source_manifest_sha256']==p['original_gto_manifest_sha256']
+        for rank in (199,202):
+            row=next(x for x in prov['rows'] if x['rank']==rank)
+            assert any(q['flop']==p['flop'] and q['turn']==p['turn'] and
+                q['source_run']==44666294821 and
+                q['source_sha']==p['original_GTO_case_SHA256'] and
+                q['exact_line']=='x b33 c/x b50 c/x' and
+                q['actor']==1 and q['strict_legal_combos']>0 and
+                q['GTO_gap_pct']<=.5 and q['SPR_error_pct']<=5
+                for q in row['exact_authentic_gto_source_proofs'])
+        return True
+    except (OSError,KeyError,TypeError,ValueError,EOFError,StopIteration,AssertionError):
+        return False
+
+
 def strict_medium_evidence(n,raw,seq_mask):
     """Re-evaluate b50 relative-equity distribution ONLY after every past
     hero action was legal under max/near-mix and blockers.
@@ -863,6 +921,10 @@ def verify(root,source_pin,run_id):
                         m.get('gto_parent_source_manifest_sha256')=='113506aa83161e8a3ad8dd98875023c75f8ec4a51e610ba02ea7ab5485fcee52'):
                         raise ValueError('Focused x-b100-call turn allowed ONLY from B107 individually SHA-pinned original B2 CO_BB IP GTO root')
                     if turn_policy=='xb50only' and not (
+                        # B189: exact B188 SHA-pinned B3 original LMP CO-IP
+                        # x b33 c / x b50 c, only on two original true GTO flops.
+                        authorized_b189_rank199_202_B3_original_gto_IP_xb33_xb50(m)
+                        or
                         # B181: only B180 positive legal actor-BB-OOP, exact 7s7h2d
                         # GTO pinned job/root/manifest SHA; never texture generalization.
                         authorized_b181_rank71_exact_B180_gto_parent(m)
