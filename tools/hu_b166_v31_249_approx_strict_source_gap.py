@@ -36,7 +36,9 @@ def checked_source(key,p):
     assert ix['batch']==key
     assert ix['source_sha256']==hashlib.sha256(raw).hexdigest()
     assert ix['gzip_sha256']==sha(p)
-    assert ix['generic_model_certification']==0 and ix['immediate_CERT_upgrades']==0
+    assert (ix.get('generic_model_certification')==0 or
+            ix.get('no_generic_model_certification') is True),('no generic GTO',key)
+    assert ix['immediate_CERT_upgrades']==0
     assert e['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
     assert e['source_run_id']==ix['run_id'] and not e['errors']
     assert len(e['artifacts'])==ix['actual_spot_flop_version_jobs']==1
