@@ -294,6 +294,55 @@ def authorized_b176_rank138_exact_b2_co_ip_xx(m):
         return False
 
 
+def authorized_b178_rank138_b04_co_ip_xx(m):
+    """Only original run44653774402 CO_BB 8s8h3d/5s legacy GTO source.
+    Freeze exact original job/root/manifest SHA, actor-IP legal combos and
+    original historical restricted bet menu. No board texture expansion.
+    """
+    if not (m.get('spot')=='CO_BB' and m.get('version')=='exp_ip' and
+      m.get('flop')=='8s8h3d' and m.get('selected_lines')==['x x'] and
+      m.get('selected_turn_lines')==['x x'] and m.get('turns')==['5s'] and
+      m.get('flop_line_policy')=='checkcheck' and
+      m.get('turn_line_policy')=='xxonly' and
+      m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK' and
+      m.get('pinned_official_legacy_source_id')==44653774402 and
+      m.get('gto_parent_source_run_id')==44653774402 and
+      m.get('flop_size_profile')=='legacy-official-pinned' and
+      m.get('restricted_original_GTO_tree') is True and
+      m.get('NL2_hero_lock_scope')=='TURN_RIVER_ONLY_FROM_SHA_PINNED_B04_RANK138_LEGACY_GTO'):
+        return False
+    d=pathlib.Path(__file__).resolve().parents[1]/'data'
+    file=d/'nl2_hu_b177_rank138_co_bb_8s8h3d_b04_gto_parent_pin.json'
+    old=d/'nl2_hu_b175_v32_248_exact_GTO_source_provenance.json'
+    arc=d/'nl2_hu_exact_boards_b04.json.gz'
+    ix=d/'nl2_hu_exact_boards_b04.index.json'
+    try:
+        p=json.loads(file.read_text())
+        a=json.loads(old.read_text())
+        z=json.loads(ix.read_text())
+        row=next(q for q in a['rows'] if q['rank']==138)
+        genuine=[q for q in row['exact_authentic_gto_source_proofs'] if
+           q['flop']=='8s8h3d' and q['turn']=='5s' and q['actor']==1 and
+           q['exact_line']=='x x/x x/x' and q['source_run']==44653774402 and
+           q['source_sha']==p['source_original_GTO_case_SHA256'] and
+           q['strict_legal_combos']>0 and q['GTO_gap_pct']<=.5 and
+           q['SPR_error_pct']<=5 and not q['true_NL2_actor_locked']]
+        return (p['schema']=='NL2_HU_B177_RANK138_B04_CO_BB_8S8H3D_GTO_PARENT_PIN_V1' and
+          p['original_run_id']==44653774402 and p['target_rank']==138 and
+          p['target_model_id']=='ln-ipfr-r_model-hqu5je' and
+          p['strict_original_GTO_combo_min']>0 and bool(genuine) and
+          p['historical_restricted_tree_not_full_modern_GTO'] is True and
+          p['original_flop_root_sha256']==m.get('gto_parent_source_sha256') and
+          p['original_job_sha256']==m.get('flop_root_jobfile_sha256') and
+          p['original_manifest_sha256']==m.get('gto_parent_source_manifest_sha256') and
+          p['original_stage2_archive_sha256']==sha(arc)==z['gz_sha256'] and
+          p['original_stage2_index_sha256']==sha(ix) and
+          m.get('original_B177_rank138_GTO_pin_sha256')==sha(file) and
+          m.get('flop_action_sizes')==dict(oop='',ip='33%,50%,75%',raise_sizes='3x,a'))
+    except (OSError,KeyError,TypeError,ValueError,StopIteration):
+        return False
+
+
 def strict_medium_evidence(n,raw,seq_mask):
     """Re-evaluate b50 relative-equity distribution ONLY after every past
     hero action was legal under max/near-mix and blockers.
@@ -508,6 +557,20 @@ def verify(root,source_pin,run_id):
                         'c6bdcce708415f34195b7582d35f6dcd5820f90a45339ab3bb647afcc772ffed',
                         '707e525006628c2fda778bf6e8cc6950773f59c3c212f6fc3f79e5ab814082f7',
                         'e4e65078adc3883d0993f947a38fe482e9573553ac847450eda53a3f3f259949')}
+                    # B178 original historical B04 CO_BB 8s8h3d, exact root and
+                    # full source pin: no blanket new historical spot exemption.
+                    if (m.get('spot'),m.get('flop'),m.get('version'),
+                        m.get('selected_lines'),m.get('selected_turn_lines'))==(
+                          'CO_BB','8s8h3d','exp_ip',['x x'],['x x']):
+                        b178pin=json.loads((pathlib.Path(__file__).resolve().parents[1]/
+                          'data/nl2_hu_b177_rank138_co_bb_8s8h3d_b04_gto_parent_pin.json').read_text())
+                        assert b178pin['schema']=='NL2_HU_B177_RANK138_B04_CO_BB_8S8H3D_GTO_PARENT_PIN_V1'
+                        assert b178pin['original_run_id']==44653774402
+                        assert b178pin['strict_original_GTO_combo_min']>0
+                        pinned_origins[(44653774402,'CO_BB','8s8h3d')]=(
+                          b178pin['original_manifest_sha256'],
+                          b178pin['original_flop_root_sha256'],
+                          b178pin['original_job_sha256'])
                     key=(m['pinned_official_legacy_source_id'],m['spot'],m['flop'])
                     original=pinned_origins.get(key)
                     if original is None:raise ValueError('Original historical GTO source not preregistered')
@@ -638,6 +701,9 @@ def verify(root,source_pin,run_id):
                         m.get('gto_parent_source_manifest_sha256')=='ab08f31291ed6feb19bdca412c56f8adc9ee5bc06ff43fe6ae6303b0660c2b3f'):
                         raise ValueError('Focused b50-call turn allowed ONLY from byte-identical B117 SB3 Jh9d6s actor OOP GTO parent')
                     if turn_policy=='xxonly' and not (
+                        # B178 historical B04 CO IP 8s8h3d/5s x-x/x-x only.
+                        authorized_b178_rank138_b04_co_ip_xx(m)
+                        or
                         # B176 rank138 only: B2 independently-successful original
                         # Js9h4d full GTO parent x-x / x-x CO IP run+SHA.
                         authorized_b176_rank138_exact_b2_co_ip_xx(m)
