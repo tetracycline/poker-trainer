@@ -1,0 +1,162 @@
+name: TASK-HYBRID B231 rank71 SHA-frozen B216 original GTO, river donk50 real GTO+NL2 hero lock, 581 HU2475 (max29m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b231-rank71-river-donk50-original-gto-nl2.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  genuine-pinned-GTO-plus-NL2-partial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Require original B216 successful 100bb full flop pinned SHA and strict historical ZERO actor to motivate river-donk experiment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json
+          d=pathlib.Path('trainer/data')
+          p=json.loads((d/'nl2_hu_b216_rank71_lmp_9s8h4d_gto_parent_pin.json').read_text())
+          i=json.loads((d/'solver_evidence/NL2_MULTIBOARD_B216_R71_9S8H4D_GTO.index.json').read_text())
+          assert (p['source_run_id'],i['run_id'])==(44884042851,44884042851)
+          assert (p['spot'],p['flop'],p['turn'])==('LMP_CO_BB','9s8h4d','Ah')
+          assert (p['flop_line'],p['turn_line'])==('b50 c','x b50 c')
+          assert p['target_rank']==71 and p['model_id']=='ln-iso-lmp_r_model-vlgh2t'
+          assert p['original_full_100bb_lmp_gto_not_recomputed'] is True
+          assert (p['target_exact_actor_OOP_river_nodes'],p['target_exact_actor_OOP_strict_combos'])==(0,0)
+          assert p['observed_preflop_ranges'] is False and p['assumed_limped_169class'] is True
+          assert (i['gto_cases'],i['locked_cases'])==(1,0)
+          print('PASS B231 B216 original GTO SHA source preflight')
+          PY
+          mkdir -p gto_parent
+          gh run download 44884042851 --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B216_R71_LMP_9S8H4D-LMP_CO_BB-gto-9s8h4d'             --dir gto_parent
+          test -s gto_parent/evidence/LMP_CO_BB-gto-9s8h4d.json
+          test -s gto_parent/solver/postflop/out/LMP_CO_BB/gto/9s8h4d_multiboard.json
+          test -s gto_parent/solver/postflop/out/LMP_CO_BB/gto/9s8h4d_multiboard.job.json
+      - name: Compile original SHA-pinned Rust CFR and B231 independent scripts
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_b231_lmp_rank71_river_donk50.py trainer/tools/verify_hu_b231_rank71_donk50_pair.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve genuine original Rust GTO and separate real NL2 actor-OOP partial lock with SAME NEW RIVER DONK50 game tree
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-engine-pin.txt
+          python3 trainer/tools/solve_hu_b231_lmp_rank71_river_donk50.py             --solver-root solver --gto-artifact-root gto_parent             --manifest evidence/LMP_CO_BB-exp_oop-9s8h4d-donk50.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B231-R71-9S8H4D-DONK50-GTO-EXP
+          path: |
+            evidence/
+            solver/postflop/out/LMP_CO_BB/gto/9s8h4d_b50c_Ah.json
+            solver/postflop/out/LMP_CO_BB/gto/9s8h4d_b50c_Ah.job.json
+            solver/postflop/out/LMP_CO_BB/exp_oop/9s8h4d_b50c_Ah.json
+            solver/postflop/out/LMP_CO_BB/exp_oop/9s8h4d_b50c_Ah.job.json
+          retention-days: 30
+          if-no-files-found: warn
+  independent-source-HU-audit-and-commit:
+    needs: genuine-pinned-GTO-plus-NL2-partial
+    if: ${{ needs.genuine-pinned-GTO-plus-NL2-partial.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Fetch immutable ORIGINAL B216 100bb GTO and separate FRESH real Rust GTO/EXP subgame artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads/parent downloads/fresh
+          gh run download 44884042851 --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B216_R71_LMP_9S8H4D-LMP_CO_BB-gto-9s8h4d'             --dir downloads/parent
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B231-R71-9S8H4D-DONK50-GTO-EXP'             --dir downloads/fresh
+          test -s downloads/fresh/evidence/LMP_CO_BB-exp_oop-9s8h4d-donk50.json
+          test -s downloads/fresh/solver/postflop/out/LMP_CO_BB/gto/9s8h4d_b50c_Ah.json
+          test -s downloads/fresh/solver/postflop/out/LMP_CO_BB/exp_oop/9s8h4d_b50c_Ah.json
+      - name: Recompute exact actor-line/board/SPR combo reach independently for REAL GTO and EXP, check actual source SHA
+        run: |
+          set -euo pipefail
+          python3 trainer/tools/verify_hu_b231_rank71_donk50_pair.py --parent downloads/parent --new downloads/fresh
+          python3 - <<'PY'
+          import pathlib,json,gzip,hashlib
+          d=pathlib.Path('trainer/data/solver_evidence')
+          i=json.loads((d/'NL2_MULTIBOARD_B231_R71_9S8H4D_DONK50_PAIR.index.json').read_text())
+          assert i['schema']=='NL2_MULTIBOARD_B231_EXACT_SHA_GTO_PLUS_PARTIAL_NL2_DONK50_V1'
+          assert i['true_original_Rust_subgames']==2
+          assert i['automatic_generic_model_CERT_upgrades']==0
+          for name in ('gto','exp_oop'):
+            a=i['records'][name]
+            p=pathlib.Path('trainer')/a['archive_path']
+            assert p.is_file()
+            assert hashlib.sha256(p.read_bytes()).hexdigest()==a['gzip_sha256']
+            assert hashlib.sha256(gzip.decompress(p.read_bytes())).hexdigest()==a['raw_sha256']
+          print('PASS authentic source/gzip index and independent actor/SPR reach',i['paired_exact_line_actor_SPR_reach'])
+          PY
+      - name: Complete unchanged V38 581 certified boards, 673 actor locks, 133 exact b50 candidates, 2475 HU paths
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v38_b206_rank190.json --out nl2-audit/b231-lock-medium.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status_v38_b206_rank190.json'))
+          a=json.load(open('nl2-audit/b231-lock-medium.json'))
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(151,241,0,392)
+          assert s['records']['ln-iso-lmp_r_model-vlgh2t']['label']=='APPROX'
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(151,241,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],
+             a['aggregate']['board_examples_with_b50_candidate'])==(581,673,133)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B231 HU2475")'
+      - name: Commit exact raw GTO and NL2 partial child SHA index only after full source and navigation PASS, PR2 Draft NO MERGE
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add             data/solver_evidence/NL2_MULTIBOARD_B231_R71_9S8H4D_DONK50_GTO.json.gz             data/solver_evidence/NL2_MULTIBOARD_B231_R71_9S8H4D_DONK50_EXP_OOP.json.gz             data/solver_evidence/NL2_MULTIBOARD_B231_R71_9S8H4D_DONK50_PAIR.index.json             docs/NL2_HU_B231_R71_ACTUAL_RIVER_DONK50_EXACT_SOURCE.md
+          git commit -m 'TASK-HYBRID B231: original B216 GTO parent SHA, newly solved river-donk50 GTO+NL2 actor-OOP paired audit with full 581 locks HU2475; no false CERT'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B231-original-GTO-exp-river-donk50-581-HU2475
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B231_R71_9S8H4D_DONK50*
+            trainer/docs/NL2_HU_B231_R71_ACTUAL_RIVER_DONK50_EXACT_SOURCE.md
+            trainer/nl2-audit/
+          retention-days: 30
