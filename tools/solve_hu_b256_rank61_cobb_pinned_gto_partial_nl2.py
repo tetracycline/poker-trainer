@@ -12,6 +12,8 @@ SPOT='CO_BB';LINE='x b100 c';MID='ln-ipfr-t_model-qpx6tn'
 PINS={
  'KsQh4d':('B253',44902146101),
  '8s8h3d':('B254',44902150376),
+ 'As9h2d':('B260',44902742001),
+ 'Js9h5d':('B262',44902831383),
 }
 def main():
     ap=argparse.ArgumentParser()
