@@ -1,0 +1,97 @@
+name: TASK-HYBRID B249 V39 584 exact CERT boards 676 NL2 locks measured-default-unknown + b50 HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b249-v39-all-584-exact-lock-medium-source-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  v39-all-584-locked-source-priority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Independently recompute all V39 exact 584 named true GTO boards, 676 NL2 partial lock rate source categories and b50 flags
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b249_v39_all_cert_measured_lock_nonpolar_priority.py
+          python3 tools/hu_b249_v39_all_cert_measured_lock_nonpolar_priority.py
+      - name: Independently require all 152 models, 584 unique board source labels, 676 real lock sources, 133 nonpolar-only and full V38 unchanged proof
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import csv,json,pathlib,hashlib
+          d=pathlib.Path('data');s=d/'nl2_hu_multiboard_status_v39_b247_rank30.json'
+          a=json.loads((d/'nl2_hu_b249_v39_all_584_measured_lock_medium_source_gaps.json').read_text())
+          assert a['schema']=='NL2_HU_B249_V39_ALL_584_TRUE_CERT_BOARD_NL2_LOCK_MEDIUM_GAP_V1'
+          assert (a['CERT_MULTIBOARD'],a['APPROX'],a['EST'],a['TOTAL'])==(152,240,0,392)
+          assert a['parent_status_sha256']==hashlib.sha256(s.read_bytes()).hexdigest()
+          assert (a['genuine_named_boards'],a['real_hero_NL2_lock_variants'],
+            a['exact_50pct_only_research_candidates'])==(584,676,133)
+          x=a['counts']
+          assert (x['observed_nodes'],x['assumed_nodes'],x['unmatched_nodes'],
+            x['historical_unknown_lock_variants'])==(4510,2139,3850,318)
+          assert x['board_has_assumed_or_unknown_or_no_observed_marginal']==570
+          assert a['old_581_V38_exact_board_GTO_and_NL2_source_provenance_identical']
+          assert a['rank30_3_new_true_actor_GTO_partial_NL2_boards_with_unknown_pattern_denominators']==3
+          assert a['all_new_NL2_private_hand_conditional_rates_unmeasured']
+          assert a['b50_never_generalized_to_all_textures']
+          assert a['PR2_Draft_NEVER_MERGE']
+          rows=a['per_exact_board_source_provenance']
+          assert len(rows)==584 and len({(z['model_id'],z['flop'],z['turn'],z['exact_action_line'],z['actor_seat']) for z in rows})==584
+          assert sum(z['real_NL2_hero_lock_variants'] for z in rows)==676
+          assert sum(z['exact_named_board_50pct_nonpolar_research_only'] for z in rows)==133
+          assert all(z['new_empirical_NL2_private_card_conditional_rates']==0 and
+            not z['universal_50pct_recommendation'] for z in rows)
+          with (d/'nl2_hu_b249_v39_all_584_lock_medium_source_gap_priority.csv').open(newline='',encoding='utf8') as f:
+            assert len(list(csv.DictReader(f)))==584
+          print('PASS B249 all 584 exact board provenance, 676 actor partial lock sources, 133 b50, no false observed cards')
+          PY
+      - name: Complete independent V39 GTO/NL2 source audit, exact 584 board lock/medium, 392 model line contract, 2475 HU river paths
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v39_b247_rank30.json --out nl2-audit/b249-lock-medium.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('nl2-audit/b249-lock-medium.json'))
+          assert (x['cert_multiboard'],x['approx'],x['EST'])==(152,240,0)
+          assert (x['aggregate']['named_board_proofs'],x['aggregate']['paired_hero_locked_source_variants'],
+             x['aggregate']['board_examples_with_b50_candidate'])==(584,676,133)
+          assert x['not_generalized_handclass_GTO'] and x['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU2475/2475")'
+      - name: Only after all true V39 source, distinct board, real NL2 locks, nonpolar scope and HU Actions PASS commit B249 to Draft PR #2 NEVER MERGE
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b249_v39_all_584_measured_lock_medium_source_gaps.json             data/nl2_hu_b249_v39_all_584_lock_medium_source_gap_priority.csv             docs/NL2_HU_B249_V39_ALL_584_NAMED_BOARD_LOCK_MEDIUM_EVIDENCE_GAPS.md
+          git commit -m 'TASK-HYBRID B249 V39: 584 real CERT board 676 NL2 lock source measured/default/UNKNOWN, 133 exact b50-only, 2475 HU PASS'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-B249-V39-584-real-NL2-hero-lock-rates-nonpolar-HU2475
+          path: |
+            data/nl2_hu_b249_v39_all_584_measured_lock_medium_source_gaps.json
+            data/nl2_hu_b249_v39_all_584_lock_medium_source_gap_priority.csv
+            docs/NL2_HU_B249_V39_ALL_584_NAMED_BOARD_LOCK_MEDIUM_EVIDENCE_GAPS.md
+            nl2-audit/
+          retention-days: 30
