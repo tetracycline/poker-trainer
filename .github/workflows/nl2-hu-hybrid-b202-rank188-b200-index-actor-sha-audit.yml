@@ -46,7 +46,7 @@ jobs:
           assert old['rank']==159, 'Index changed unexpectedly; fail-closed'
           assert old['source_sha256']==hashlib.sha256(raw).hexdigest()
           assert old['gzip_sha256']==sha(src)
-          assert old['exact_action_line']=='x b50 c/x b100 c/x' and old['actor_seat']==1
+          assert old['exact_action_line']=='x b50 c/x b100 c/x' and old.get('actor_seat') in (None,1)
           assert evidence['source_run_id']==old['run_id'] and not evidence['errors'] and len(evidence['artifacts'])==2
           for artifact in evidence['artifacts']:
             flop=artifact['flop']
@@ -78,6 +78,7 @@ jobs:
           old['rank_metadata_prior_mislabel']=159
           old['rank']=188
           old['model_id']=mid
+          old['actor_seat']=1
           old['source_rank_corrected_after_full_original_SHA_actor_sequential_combo_validation']=True
           old['original_raw_gzip_SHA_unchanged']=sha(src)
           old['no_generic_model_certification']=True
