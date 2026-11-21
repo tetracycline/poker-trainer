@@ -1,0 +1,239 @@
+{
+  "schema": "NL2_HU_B257_CO_BB_EXACT_ORIGINAL_GTO_PLUS_REAL_NL2_IP_PARTIAL_LOCK_V1",
+  "source_run_id": 44935281174,
+  "source_batch": "B269",
+  "original_GTO_batch": "B266",
+  "original_GTO_source_run": 44934430727,
+  "gto_pin_sha256": "5db8f49c6d9a70707f1e8d0b10d33bfa9dd9937b506c85334d555d946ff5dd40",
+  "gto_index_sha256": "b1ebd57de31e482f43d776be2bba52616b56e84021276dd9b0c15e416160a9bc",
+  "gto_archive_sha256": "8466ee8d49cafffb3afe07e89a23f42355bb14285e6ecf0bdb73ac832e18cc7f",
+  "original_GTO_root_sha256": "64a86778eb42be8901bd7368436c3698d38c4ba355c87b20e1fe9ff03c467a65",
+  "original_GTO_job_sha256": "e5cb52ef8d43cdf57a8638aec2e0bb053334ba462a2477d235c434600c567272",
+  "original_GTO_exploitability_pct": 0.4306200444698334,
+  "authentic_NL2_Rust_source_sha256": "06fd05a7e1ff5ca947117e3a7135cd5062b763ef40a892edc6f4a6bb02d81bfb",
+  "nl2_job_sha256": "a8d3ec78a53f12eb2fbe939f6bac46dc9621d79aee55004af3306b656a5e52c9",
+  "authentic_NL2_Rust_gzip_sha256": "89b22183aa331d4bdfd7addd2d3319c736d4a939f3216a7a43fa9664a60e4ea8",
+  "spot": "CO_BB",
+  "rank": 61,
+  "model_id": "ln-ipfr-t_model-qpx6tn",
+  "flop": "QsJh4d",
+  "turn": "7s",
+  "exact_line": "x b100 c/x",
+  "actor": "CO_IP",
+  "acting_seat": 1,
+  "model_SPR": 5.576,
+  "original_GTO_actor_strict_combos": 80,
+  "NL2_actor_strict_combos": 80,
+  "NL2_actor_model_SPR_eligible_combos": 80,
+  "genuine_actor_matched_GTO_NL2_board": true,
+  "genuine_actor_node_examples": [
+    {
+      "board": "4dJhQs7s",
+      "strict_combos": 80,
+      "actual_spr": 5.5757576,
+      "relative_spr_error_pct": 0.0043,
+      "allowed_actions": [
+        "x",
+        "b50",
+        "b100"
+      ]
+    }
+  ],
+  "NL2_source_lock_patterns": [
+    {
+      "pat": "^x b33$",
+      "source_scope": null,
+      "n": 44459,
+      "source": "SRP_PFR_IP.vs_cbet_by_size[≤33%] + texture IP|rainbow|unpaired|K/Q高 (n=24316)"
+    },
+    {
+      "pat": "^x b75$",
+      "source_scope": null,
+      "n": 48596,
+      "source": "SRP_PFR_IP.vs_cbet_by_size[56-80%] + texture IP|rainbow|unpaired|K/Q高 (n=24316)"
+    },
+    {
+      "pat": "^x b\\d+ c/x b66$",
+      "source_scope": null,
+      "n": 17914,
+      "source": "SRP_PFR_IP.vs_turn_barrel_by_size[56-80%]"
+    },
+    {
+      "pat": "^x b\\d+ c/x b50$",
+      "source_scope": null,
+      "n": 15700,
+      "source": "SRP_PFR_IP.vs_turn_barrel_by_size[34-55%]"
+    },
+    {
+      "pat": "^x b\\d+ c/x b100$",
+      "source_scope": null,
+      "n": 4480,
+      "source": "SRP_PFR_IP.vs_turn_barrel_by_size[81-110%]"
+    },
+    {
+      "pat": "^x x/$",
+      "source_scope": null,
+      "n": 133319,
+      "source": "SRP_probe"
+    },
+    {
+      "pat": "^x x/x b\\d+$",
+      "source_scope": null,
+      "n": 32036,
+      "source": "SRP_PFR_IP.vs_delayed_cbet"
+    },
+    {
+      "pat": "^x b\\d+ c/x b\\d+ c/x b75$",
+      "source_scope": null,
+      "n": 2706,
+      "source": "SRP_PFR_IP.vs_river_barrel_by_size[56-80%]"
+    },
+    {
+      "pat": "^x b\\d+ c/x b\\d+ c/x b50$",
+      "source_scope": null,
+      "n": 2052,
+      "source": "SRP_PFR_IP.vs_river_barrel_by_size[34-55%]"
+    },
+    {
+      "pat": "^x b\\d+ c/x b\\d+ c/x b100$",
+      "source_scope": null,
+      "n": 1555,
+      "source": "SRP_PFR_IP.vs_river_barrel_by_size[81-110%]"
+    },
+    {
+      "pat": "^x b\\d+ c/x b\\d+ c/x a$",
+      "source_scope": null,
+      "n": 1185,
+      "source": "SRP_PFR_IP.vs_river_barrel_by_size[>110%]"
+    },
+    {
+      "pat": "(?:^|[ /])b33$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+      "n": 134321,
+      "source": "NL2.HU_facing_bet[1].by_size[≤33%]"
+    },
+    {
+      "pat": "(?:^|[ /])b50$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+      "n": 275923,
+      "source": "NL2.HU_facing_bet[1].by_size[34-55%]"
+    },
+    {
+      "pat": "(?:^|[ /])b75$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+      "n": 130318,
+      "source": "NL2.HU_facing_bet[1].by_size[56-80%]"
+    },
+    {
+      "pat": "(?:^|[ /])b100$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+      "n": 55927,
+      "source": "NL2.HU_facing_bet[1].by_size[81-110%]"
+    },
+    {
+      "pat": "(?:^|[ /])r$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_RAISE_MARGINAL",
+      "n": 56113,
+      "source": "NL2.HU_facing_bet[1].bettor_vs_raise"
+    },
+    {
+      "pat": "(?:^|[ /])b33$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+      "n": 71741,
+      "source": "NL2.HU_facing_bet[2].by_size[≤33%]"
+    },
+    {
+      "pat": "(?:^|[ /])b50$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+      "n": 144567,
+      "source": "NL2.HU_facing_bet[2].by_size[34-55%]"
+    },
+    {
+      "pat": "(?:^|[ /])b75$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+      "n": 112817,
+      "source": "NL2.HU_facing_bet[2].by_size[56-80%]"
+    },
+    {
+      "pat": "(?:^|[ /])b100$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+      "n": 43254,
+      "source": "NL2.HU_facing_bet[2].by_size[81-110%]"
+    },
+    {
+      "pat": "(?:^|[ /])r$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_RAISE_MARGINAL",
+      "n": 32933,
+      "source": "NL2.HU_facing_bet[2].bettor_vs_raise"
+    },
+    {
+      "pat": "(?:^|[ /])b33$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+      "n": 46891,
+      "source": "NL2.HU_facing_bet[3].by_size[≤33%]"
+    },
+    {
+      "pat": "(?:^|[ /])b50$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+      "n": 64272,
+      "source": "NL2.HU_facing_bet[3].by_size[34-55%]"
+    },
+    {
+      "pat": "(?:^|[ /])b75$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+      "n": 58736,
+      "source": "NL2.HU_facing_bet[3].by_size[56-80%]"
+    },
+    {
+      "pat": "(?:^|[ /])b100$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+      "n": 43634,
+      "source": "NL2.HU_facing_bet[3].by_size[81-110%]"
+    },
+    {
+      "pat": "(?:^|[ /])r$",
+      "source_scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_RAISE_MARGINAL",
+      "n": 20265,
+      "source": "NL2.HU_facing_bet[3].bettor_vs_raise"
+    },
+    {
+      "pat": "^$",
+      "source_scope": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT",
+      "n": 343183,
+      "source": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT; NL2_OBSERVED_PFR_CBET_SIZE_AGGREGATE_NOT_EXACT_NODE"
+    },
+    {
+      "pat": "^x$",
+      "source_scope": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT",
+      "n": 343183,
+      "source": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT; NL2_OBSERVED_PFR_CBET_SIZE_AGGREGATE_NOT_EXACT_NODE"
+    },
+    {
+      "pat": ".*/x$",
+      "source_scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+      "n": 0,
+      "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10"
+    },
+    {
+      "pat": ".*/$",
+      "source_scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+      "n": 0,
+      "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10"
+    }
+  ],
+  "actual_hero_gap_pct": 0.42813020944595337,
+  "authentic_rust_40_70_reach_stats": {
+    "nodes": 30,
+    "source_actor_combo_nodes": 3672,
+    "sequential_actor_combo_nodes": 1611,
+    "removed_by_parent_action_policy": 2061
+  },
+  "original_preflop_CFR_not_observed_NL2_private_cards": true,
+  "partial_downstream_only_not_whole_flop_lock": true,
+  "no_observed_per_private_hand_NL2_conditionals": true,
+  "no_generalized_nonpolar50_bet_advice": true,
+  "no_generic_CERT_upgrade": true,
+  "current_V40_CERT": 153,
+  "current_V40_APPROX": 239,
+  "PR2_Draft_NEVER_MERGE": true
+}
