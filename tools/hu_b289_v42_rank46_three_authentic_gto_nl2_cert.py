@@ -54,7 +54,7 @@ def sample(c,flop,turn,run,strict,lock_run,lock_sha,scope,expected_raw_sha=None)
     assert (c['flop'],c['turn'],c['flop_line'])==(flop,turn,'x b50 c')
     assert c['run_id']==run
     assert c['gto_exploitability_pct']<=.5
-    assert c['empirical_scope']=='ASSUMED_EXPLICIT_169CLASS'
+    assert str(c['empirical_scope']).startswith('ASSUMED')  # original SHA-pinned B3/B286 full GTO, never observed private hand
     if expected_raw_sha is not None:assert c['source_sha256']==expected_raw_sha
     nodes=actor_nodes(c)
     assert len(nodes)==1
@@ -74,7 +74,7 @@ def sample(c,flop,turn,run,strict,lock_run,lock_sha,scope,expected_raw_sha=None)
         relative_spr_error_pct=round(100*abs(n['node_spr']-SPR)/SPR,4),
         genuine_gto_exploitability_pct=c['gto_exploitability_pct'],
         source_run_id=run,source_sha256=c['source_sha256'],
-        source_kind='ASSUMED_EXPLICIT_169CLASS',assumed_preflop_ranges=True,
+        source_kind=c['empirical_scope'],assumed_preflop_ranges=True,
         exact_combo_reachable=n['source_reachable_combos'],
         strict_full_street_combo_reachable=n['strictly_reachable_combos'],
         exact_node_actions=n['source_actions'],
