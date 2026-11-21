@@ -1,0 +1,139 @@
+name: TASK-HYBRID B139 audit exact B134 rank71 LMP 9s6h3d Ts original GTO SHA, preserve source (max11m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b139-rank71-gto-parent-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-archive-full-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Download only the individually successful B134 GTO Rust source, not the cancelled EXP job
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          name='nl2-multiboard-B134_R71_LMP_9S6H3D-LMP_CO_BB-gto-9s6h3d'
+          mkdir -p "downloads/$name"
+          gh run download 44841724661 --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$name"
+          test -s "downloads/$name/evidence/LMP_CO_BB-gto-9s6h3d.json"
+          test -s "downloads/$name/solver/postflop/out/LMP_CO_BB/gto/9s6h3d_multiboard.json"
+          test -s "downloads/$name/solver/postflop/out/LMP_CO_BB/gto/9s6h3d_multiboard.job.json"
+      - name: Independent Rust CFR root/turn SHA, range policy, rake, SPR, hand reach, GTO gap and exact GTO path
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver --run-id 44841724661 --out trainer/data/solver_evidence/NL2_MULTIBOARD_B139_R71_GTO_B134.json
+      - name: Seal genuine GTO positive or negative source without auto-promoting rank71
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,gzip,hashlib,pathlib
+          D=pathlib.Path('trainer/data')
+          p=D/'solver_evidence/NL2_MULTIBOARD_B139_R71_GTO_B134.json'
+          j=json.loads(p.read_text())
+          assert j['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert j['source_run_id']==44841724661 and not j['errors']
+          assert (j['exact_board_gto_sources'],j['imputed_pool_locked_sources'],j['new_authentic_board_cases'])==(1,0,1)
+          assert len(j['artifacts'])==1
+          a=j['artifacts'][0]
+          assert not a['errors'] and (a['spot'],a['version'],a['flop'])==('LMP_CO_BB','gto','9s6h3d')
+          assert len(a['cases'])==1
+          c=a['cases'][0]
+          assert (c['flop_line'],c['turn'])==('b50 c','Ts')
+          assert c['gto_exploitability_pct'] is not None and c['gto_exploitability_pct']<=0.5
+          strict=[n for n in c['nodes'] if n['acting_seat']==0
+                  and n['exact_node_line']=='b50 c/x b50 c/'
+                  and n['strictly_reachable_combos']>0]
+          pin=json.loads((D/'nl2_hu_b138_rank71_b134_gto_parent_pin.json').read_text())
+          assert pin['source_run_id']==j['source_run_id'] and pin['target_rank']==71
+          assert pin['gto_root_sha256']=='cab2bcdadebdaafc1dcacd0a9b1eb9c656b8864f486f2542b1abe39ebe6c2eb6'
+          assert pin['gto_root_job_sha256']=='3f7c036d8aac871a2cabc5ddffc94c42ce51d43520d9cdee620add8dbe6072bf'
+          assert pin['gto_manifest_sha256']=='2ec67f19079a7946bb0b771d5a865372cc90a645c350663bda352ad8e5bb569c'
+          raw=p.read_bytes()
+          gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          ix=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+             batch='B139_R71_GTO_B134',run_id=j['source_run_id'],
+             actual_spot_flop_version_jobs=1,verified_cases=1,gto_cases=1,locked_cases=0,
+             source_sha256=hashlib.sha256(raw).hexdigest(),
+             gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+             original_parent_GTO_root_SHA256=pin['gto_root_sha256'],
+             original_parent_GTO_job_SHA256=pin['gto_root_job_sha256'],
+             original_parent_GTO_manifest_SHA256=pin['gto_manifest_sha256'],
+             exact_target_actor_OOP_gto_river_nodes=len(strict),
+             exact_target_actor_OOP_gto_strict_combo_sum=sum(n['strictly_reachable_combos'] for n in strict),
+             target_flop='9s6h3d',target_turn='Ts',target_line='b50 c/x b50 c/',
+             starting_limp_preflop_ranges_assumed=True,
+             cancelled_original_B134_EXP_not_reused=True,
+             B134_GTO_flop_not_recomputed=True,
+             rank71_remains_APPROX_until_complete_two_source_three_board_gate=True,
+             generic_model_certification=0,immediate_CERT_upgrades=0)
+          p.with_suffix('.index.json').write_text(json.dumps(ix,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          doc=pathlib.Path('trainer/docs/NL2_HU_B139_RANK71_ORIGINAL_B134_GTO_SOURCE.md')
+          doc.write_text('# B139 | B134 original exact LMP GTO source\n\n'
+              'Run 44841724661, flop 9s6h3d, turn Ts, line b50 c/x b50 c/.\n'
+              'True original GTO legal OOP river nodes: '+str(len(strict))+'; strict combos: '
+              +str(ix['exact_target_actor_OOP_gto_strict_combo_sum'])+'.\n'
+              'Limp preflop 169-class range **ASSUMED**, NL2 conditional private-card rates NOT observed.\n'
+              'GTO source verified independently; true actor OOP NL2 locked turn child still required. '
+              'No generic GTO recommendation. Rank71 APPROX. V28 remains 140 CERT/252 APPROX. PR2 Draft, NEVER MERGE.\n')
+          print('PASS B139 authentic SHA-verified original B134 GTO source, strict source-only',ix)
+          PY
+      - name: Full source-independent HU 2475/2475 river contract and unchanged V28/548 board coverage
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 - <<'PY'
+          import json
+          v=json.load(open('data/nl2_hu_multiboard_status_v28_b133_rank69.json'))
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v28_b133.json'))
+          assert (v['CERT_MULTIBOARD'],v['APPROX'],v['EST'],v['TOTAL'])==(140,252,0,392)
+          assert len(m['boards'])==548 and len(m['models'])==140
+          assert v['records']['ln-iso-lmp_r_model-vlgh2t']['label']=='APPROX'
+          assert v['independently_verified_completed_batches']['B4_MICRO']['status']=='VERIFIED'
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS 2475/2475")'
+      - name: Commit independent SHA source and true reach evidence only to PR2 Draft, NEVER merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B139_R71_GTO_B134.json.gz data/solver_evidence/NL2_MULTIBOARD_B139_R71_GTO_B134.index.json docs/NL2_HU_B139_RANK71_ORIGINAL_B134_GTO_SOURCE.md
+          git commit -m 'TASK-HYBRID B139: independently archive genuine B134 LMP rank71 original GTO source on 9s6h3d Ts, strict OOP reach and complete HU audit'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B139-R71-original-GTO-proof
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B139_R71_GTO_B134.*
+            trainer/docs/NL2_HU_B139_RANK71_ORIGINAL_B134_GTO_SOURCE.md
+            trainer/nl2-audit/
+          retention-days: 30
