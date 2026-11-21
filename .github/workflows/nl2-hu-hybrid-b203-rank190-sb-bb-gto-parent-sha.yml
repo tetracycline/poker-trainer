@@ -43,7 +43,7 @@ jobs:
           sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
           vfile=d/'nl2_hu_multiboard_status_v36_b201_rank159.json'
           v=load(vfile)
-          assert v['schema']=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V35_B193_RANK201'
+          assert v['schema']=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V36_B201_RANK159'
           assert (v['CERT_MULTIBOARD'],v['APPROX'],v['EST'],v['TOTAL'])==(149,243,0,392)
           orig=d/'nl2_hu_b175_v32_248_exact_GTO_source_provenance.json'
           b=load(orig)
@@ -53,8 +53,8 @@ jobs:
           assert v['records'][mid]['label']=='APPROX'
           assert row['distinct_GTO_plus_NL2_hero_flops']==['Ks7h2d']
           docs=['# B203 rank190 original SB_BB two true GTO parent source SHA-pins','',
-            'Rank190 currently APPROX. Existing GTO+NL2 paired exact flop Ks7h2d. '
-            'Two separately original GTO positive CO? NO: hero is BB IP versus SB OOP, never confuse positions.',
+            'Rank190 remains APPROX with frozen positive GTO+NL2 paired Ks7h2d; these other two flops are original GTO only. '
+            'Hero BB is IP versus SB OOP. True NL2 BB-IP child sources must be solved separately before any CERT.',
             'Target exact river line x b75 c/x b100 c/x on flop/turn. Each parent fully original B1/B1 and no re-solve.',
             'Preflop ranges pinned solver CFR, **not** observed NL2 private-card villain conditionals.','']
           records=[]
