@@ -1,0 +1,153 @@
+name: TASK-HYBRID B175 source-blind 248 exact GTO run/turn SHA lineage + B173 zero-reach + 560 lock/2475 audit (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b175-v32-248-exact-gto-provenance.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  b175-provenance-gap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Independently recompute all genuine source GTO/actor/turn/run SHA from sourceblind V32 and B173 strict-zero parent, no texture upgrade
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import sys,pathlib,gzip,hashlib,json,copy,collections
+          sys.path.insert(0,'tools')
+          from hu_multiboard_promote import build_source_index,candidates,choose_3_5,hero_seat,texture
+          d=pathlib.Path('data')
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          load=lambda p:json.loads(p.read_text())
+          current=d/'nl2_hu_multiboard_status_v32_b168_rank80.json'
+          prev=d/'nl2_hu_b172_v32_248_APPROX_true_sourceblind_gaps.json'
+          v32=load(current);old=load(prev)
+          assert (v32['CERT_MULTIBOARD'],v32['APPROX'],v32['EST'],v32['TOTAL'])==(144,248,0,392)
+          assert old['parent_V32_sha256']==sha(current)
+          assert old['current_APPROX_count']==248 and not old['ready_3_5_true_source_rows']
+          z=d/'solver_evidence/NL2_MULTIBOARD_B173_R71_9S6H3D_GTO.json.gz'
+          zi=z.with_suffix('').with_suffix('.index.json')
+          pin=d/'nl2_hu_b173_rank71_lmp_9s6h3d_gto_parent_pin.json'
+          assert z.is_file() and zi.is_file() and pin.is_file()
+          idx=load(zi);pp=load(pin)
+          assert (idx['batch'],idx['run_id'],idx['gto_cases'],idx['locked_cases'])==('B173_R71_9S6H3D_GTO',44866269911,1,0)
+          assert idx['source_sha256']==hashlib.sha256(gzip.decompress(z.read_bytes())).hexdigest()
+          assert idx['gzip_sha256']==sha(z)
+          assert (pp['target_exact_actor_OOP_river_nodes'],pp['target_exact_actor_OOP_strict_combos'])==(0,0)
+          assert pp['original_gto_root_sha256']==idx['original_parent_GTO_root_SHA256']
+          assert pp['original_gto_job_sha256']==idx['original_parent_GTO_job_SHA256']
+          source=[pathlib.Path(q) for q in v32['source_evidence']['source_files']]
+          assert len(source)==len(set(source)) and all(p.is_file() for p in source) and z not in source
+          source.append(z)
+          gto,locks,meta=build_source_index(d,source)
+          ranking={q['rank_by_empirically_grounded_frequency_proxy']:q for q in load(d/'nl2_hu_multiboard_prerank.json')['nodes']}
+          models={q['model_id']:q for q in load(d/'nl2_hu_stage2_queue.json')['records']}
+          rows=[];source_run_counts=collections.Counter();ready=[]
+          for oldrow in old['rows']:
+              rank=oldrow['rank'];mid=oldrow['model_id'];rec=v32['records'][mid]
+              assert rec['label']=='APPROX' and ranking[rank]['model_id']==mid
+              m=models[mid];q=copy.deepcopy(ranking[rank]);q['preflop_text']=m['preflop_text'];q['abstract_action_history']=m['abstract_action_history']
+              matches,reason=candidates(q,gto,locks,None)
+              selected,why=choose_3_5(matches)
+              proofs=[]
+              for x in matches:
+                  if not x['strict_full_street_combo_reachable'] or not x['source_sha256']:
+                      raise ValueError('Ghost exact candidate')
+                  source_run_counts[str(x['source_run_id'])]+=1
+                  proofs.append(dict(flop=x['flop'],turn=x['turn'],actor=x['acting_seat'],
+                      exact_line=x['actual_exact_action_line'],source_run=x['source_run_id'],
+                      source_sha=x['source_sha256'],GTO_gap_pct=x['genuine_gto_exploitability_pct'],
+                      strict_legal_combos=x['strict_full_street_combo_reachable'],
+                      SPR_error_pct=x['relative_spr_error_pct'],
+                      true_NL2_actor_locked=bool(x['nl2_locked_variants']),
+                      paired_lock_runs=sorted({z['run_id'] for z in x['nl2_locked_variants']})))
+              if selected and not reason and not why:
+                  ready.append(dict(rank=rank,model_id=mid))
+              rows.append(dict(rank=rank,model_id=mid,model_SPR=rec['assumed_model_node_spr'],
+                  model_history=m['abstract_action_history'],hero_seat=hero_seat(m['preflop_text']),
+                  exact_authentic_gto_source_proofs=sorted(proofs,key=lambda x:(x['flop'],x['turn'],x['source_run'])),
+                  distinct_real_GTO_flops=sorted({x['flop'] for x in matches}),
+                  distinct_GTO_plus_NL2_hero_flops=sorted({x['flop'] for x in matches if x['nl2_locked_variants']}),
+                  blocked_reason=None if selected else why or reason,
+                  candidate_cert_really_ready=bool(selected and not reason and not why)))
+          assert len(rows)==248 and not ready
+          for rank in (71,138,313):
+              assert next(x for x in rows if x['rank']==rank)['candidate_cert_really_ready'] is False
+          assert not any(x['source_run']==44866269911 for r in rows for x in r['exact_authentic_gto_source_proofs'] if r['rank']==71)
+          report=dict(schema='NL2_HU_B175_V32_ALL_248_GENUINE_GTO_RUN_ACTOR_TURN_SHA_PROVENANCE_V1',
+              v32_sha256=sha(current),B172_sha256=sha(prev),B173_original_zero_actor_sha256=sha(zi),
+              B173_run=44866269911,rank71_B173_original_actor_OOP_river_strict_zero=True,
+              CERT_MULTIBOARD=144,APPROX=248,EST=0,TOTAL=392,
+              source_summary=meta,source_file_count=len(source),
+              run_frequency=dict(source_run_counts),source_ready_now=ready,
+              rows=rows,PR2_draft_never_merge=True,observed_private_card_NL2_conditionals_claimed=False)
+          out=d/'nl2_hu_b175_v32_248_exact_GTO_source_provenance.json'
+          out.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+          lines=['# B175 exact source run/turn SHA audit for remaining V32 248 APPROX','',
+            '144 CERT /248 APPROX /0 EST. No automatic upgrades. B173 original 9s6h3d full Rust GTO passed, rank71 correct OOP river strict combos=0 (NOT CERT).',
+            'All other authentic GTO source candidates include exact run, turn, actor, line, SHA and SPR; see complete JSON.',
+            'No private-card villain NL2 conditionals are invented.','',
+            '|Rank|Model|Authentic exact GTO flops (run IDs)|True paired lock flops|',
+            '|---:|---|---|---|']
+          for r in sorted(rows,key=lambda z:z['rank'])[:40]:
+              pps=sorted({(a['flop'],a['source_run']) for a in r['exact_authentic_gto_source_proofs']})
+              lines.append('|'+str(r['rank'])+'|'+r['model_id']+'|'+
+                (', '.join(str(f)+':'+str(rn) for f,rn in pps) or 'none')+'|'+
+                (', '.join(r['distinct_GTO_plus_NL2_hero_flops']) or 'none')+'|')
+          lines.extend(['','Full 248-row report at '+str(out)+'.','Full 560-board NL2 locked/medium and 2475/2475 HU audits required before commit.','PR2 Draft, NEVER MERGE.',''])
+          pathlib.Path('docs/NL2_HU_B175_ALL_248_GTO_EXACT_RUN_TURN_SHA.md').write_text('\n'.join(lines))
+          for rank in (71,138,313):
+              row=next(x for x in rows if x['rank']==rank)
+              print('B175_RANK',rank,[(a['flop'],a['turn'],a['source_run'],a['strict_legal_combos']) for a in row['exact_authentic_gto_source_proofs']],flush=True)
+          print('PASS all 248 original true GTO run IDs and B173 strict zero; no fabricated certification',flush=True)
+          PY
+      - name: Reaudit 144 CERT 560 named boards, NL2 source/assumptions, 50pct nonpolar studies, 2475 HU river links
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v32_b168_rank80.json --out nl2-audit/b175-lock-medium.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('nl2-audit/b175-lock-medium.json'))
+          assert (r['cert_multiboard'],r['approx'],r['EST'])==(144,248,0)
+          assert r['aggregate']['named_board_proofs']==560
+          assert r['aggregate']['paired_hero_locked_source_variants']>=652
+          assert r['aggregate']['board_examples_with_b50_candidate']>=131
+          assert r['not_generalized_handclass_GTO'] and r['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS 2475/2475")'
+      - name: Commit only after complete source/GTO/lock/HU success; retain Draft PR2, NEVER MERGE
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b175_v32_248_exact_GTO_source_provenance.json docs/NL2_HU_B175_ALL_248_GTO_EXACT_RUN_TURN_SHA.md
+          git commit -m 'TASK-HYBRID B175 V32: all 248 exact GTO run/turn/actor source SHAs, B173 true negative, 560 locks and 2475 HU audit PASS'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B175-V32-all248-run-SHA-560-locks-HU2475
+          path: |
+            data/nl2_hu_b175_v32_248_exact_GTO_source_provenance.json
+            docs/NL2_HU_B175_ALL_248_GTO_EXACT_RUN_TURN_SHA.md
+            nl2-audit/
+          retention-days: 30
