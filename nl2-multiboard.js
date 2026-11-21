@@ -224,6 +224,23 @@ el('node').addEventListener('change',selectNode);
 el('all-combos').addEventListener('change',fillCombos);
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v30=d=>{
+   if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V30_B145_RANK47'||
+      d.CERT_MULTIBOARD!==142||d.APPROX!==250||d.EST!==0||d.TOTAL!==392||
+      d.original_v29_cert!==141||d.original_v29_approx!==251||
+      d.original_top24_cutoff_unchanged!==true||
+      String(d.source_blind_expansion_ranks)!=='41,47,69,88,236'||
+      d.supplementary_cert_count!==118||
+      d.B145_rank47_true_two_missing_flops?.rank!==47||
+      d.B145_rank47_true_two_missing_flops?.flops?.join(',')!=='8s8h3d,9s6h3d,KsQh4d'||
+      d.B145_rank47_true_two_missing_flops?.limped_preflop_169class_assumed!==true||
+      d.B145_rank47_true_two_missing_flops?.exact_action_line!=='x b33 c/x'||
+      Object.keys(d.records||{}).length!==392||
+      d.records?.['ln-iso-lmp_t_model-1oaypnl']?.label!=='CERT-MULTIBOARD'||
+      d.records?.['ln-3bp-3b_r_model-8uwbze']?.label!=='CERT-MULTIBOARD')
+      throw Error('B145 V30 original B3 actor-IP rank47 3-flop certificate invalid');
+   return d;
+ };
  const v29=d=>{
    if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V29_B142_RANK88'||
       d.CERT_MULTIBOARD!==141||d.APPROX!==251||d.EST!==0||
@@ -538,7 +555,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v29_b142_rank88.json',{cache:'no-store'}).then(open).then(v29)
+ return fetch('data/nl2_hu_multiboard_status_v30_b145_rank47.json',{cache:'no-store'}).then(open).then(v30)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v29_b142_rank88.json',{cache:'no-store'}).then(open).then(v29))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v28_b133_rank69.json',{cache:'no-store'}).then(open).then(v28))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v27_b123_r41_236.json',{cache:'no-store'}).then(open).then(v27))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v26_b111_rank215_220.json',{cache:'no-store'}).then(open).then(v26))
