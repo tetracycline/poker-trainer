@@ -159,7 +159,7 @@ def main():
           z for z in resultrows if z['measured_rate_incomplete']][:60],
        pool_marginal_does_not_equal_private_hand_conditionals=True,
        UNKNOWN_never_reclassified_as_observed=True,
-       50pct_only_proven_exact_board_nonpolarized_research=True,
+       exact_board_50pct_nonpolarized_research_only=True,
        no_unverified_generic_strategy_certification=True,PR2_Draft_NEVER_MERGE=True)
     OUT.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
     md=['# B273 V41 true GTO+NL2 actor-lock / 50% pot per-board evidence gaps','',
