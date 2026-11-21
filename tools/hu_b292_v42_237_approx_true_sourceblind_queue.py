@@ -133,5 +133,5 @@ def main():
       'navigation checks must PASS before commit. PR #2 Draft NEVER MERGE.']
     MD.write_text('\n'.join(doc)+'\n')
     print('PASS B292',json.dumps(dict(CERT=155,APPROX=237,cohorts=dict(cohorts),
-       one_flop_short=71,rank71_original_zero_sources=9),flush=True))
+       one_flop_short=71,rank71_original_zero_sources=9)),flush=True)
 if __name__=='__main__':main()
