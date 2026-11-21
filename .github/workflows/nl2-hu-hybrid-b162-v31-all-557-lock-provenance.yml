@@ -1,6 +1,9 @@
 name: TASK-HYBRID B162 all 557 V31 CERT named boards, every NL2 hero lock source and 2475 HU audit (max12m)
 # Staged until verified B161 V31 is fully committed.
 on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b162-v31-all-557-lock-provenance.yml']
   workflow_dispatch:
 permissions:
   contents: write
