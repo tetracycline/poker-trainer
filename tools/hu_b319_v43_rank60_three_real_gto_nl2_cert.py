@@ -209,7 +209,7 @@ def main():
           NL2_run=z['nl2_locked_variants'][0]['run_id'],
           NL2_raw_case_sha=z['nl2_locked_variants'][0]['sha256'],
           strict_GTO_actor_combos=z['strict_full_street_combo_reachable'])
-         for z in boards]),
+         for z in boards],
        B2_historic_source=pfirst,B261_B304_source=psecond,third_new_source=pthird,
        new_CERT_count=1,no_generic_texture_CERT=True,
        all_other_391_models_unchanged=True))
