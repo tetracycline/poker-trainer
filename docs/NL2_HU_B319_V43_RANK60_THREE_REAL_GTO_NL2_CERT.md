@@ -1,0 +1,5 @@
+# B319 V43 Rank60 three true GTO + actual NL2 CO-IP partial locks
+
+V43 156 CERT /236 APPROX /0 EST (392). Precisely rank60 upgraded from V42 after 3 genuinely independent exact public flop/turn/action examples: Js9h4d/Ts, Js9h5d/Ah, Js9s4s/8c.
+Original 100bb genuine GTO source actions CO_BB x b50 c/x, actor CO-IP, SPR8.614 +/-5%, 40/70 sequential legal per-combo, GTO exploitability <=0.5%, and at least two genuine textures. Original separate real NL2 Rust downstream actor locks retain original full flop GTO byte-identical; not fully NL2-locked flop. Preflop pinned poker-solver CFR, not observed NL2 private-hand data. Pooled opponent marginal frequencies are NOT observed conditional per-card decisions; unknown node counts stay unknown.
+All other 391 status records unchanged. 596 named authentic GTO+actor NL2 public boards, 688 partial lock source variants. 50%-pot nonpolarized flags apply only to individual named boards for research; never generalized optimal-size advice. Source SHA, SPR and HU2475 independent audit must PASS before any UI update/commit. PR#2 stays DRAFT, NEVER MERGE.

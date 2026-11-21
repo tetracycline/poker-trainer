@@ -105,7 +105,33 @@ function schedule(){if(!pending){pending=true;queueMicrotask(render)}}
 new MutationObserver(schedule).observe(app,{childList:true,subtree:true});
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
- const v42=d=>{
+ const v43=d=>{
+ const q=d.B319_rank60_three_true_GTO_NL2_CO_IP_flops;
+ if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V43_B319_RANK60'||
+    d.CERT_MULTIBOARD!==156||d.APPROX!==236||d.EST!==0||d.TOTAL!==392||
+    d.parent_v42_sha256?.length!==64||
+    q?.rank!==60||q?.model_id!=='ln-ipfr-t_model-hxdit'||
+    q?.actor!=='CO_IP'||q?.exact_line!=='x b50 c/x'||q?.model_SPR!==8.614||
+    !['B314','B315','B322','B323'].includes(q?.prereg_third_batch)||
+    q?.flops?.length!==3||new Set(q.flops).size!==3||
+    !q.flops.includes('Js9h4d')||!q.flops.includes('Js9h5d')||
+    q?.textures?.length<2||new Set(q.textures).size<2||
+    q?.GTO_and_NL2_source_shas?.length!==3||
+    q?.GTO_and_NL2_source_shas?.some(p=>
+      !q.flops.includes(p.flop)||p.GTO_run<=0||p.NL2_run<=0||
+      p.GTO_case_sha?.length!==64||p.NL2_raw_case_sha?.length!==64||
+      p.strict_GTO_actor_combos<=0)!==false||
+    d.records?.['ln-ipfr-t_model-hxdit']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-ipfr-t_model-hxdit']?.proven_exact_board_count!==3||
+    d.records?.['ln-iso-lmp_t_model-17z0wyl']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-vlgh2t']?.label!=='APPROX'||
+    d.no_generic_texture_GTO!==true||d.no_observed_private_card_NL2_rates!==true||
+    d.PR2_remains_draft_never_merge!==true||
+    Object.keys(d.records||{}).length!==392)
+      throw Error('V43 rank60 original GTO plus genuine actor-IP Rust NL2 exact 3 flop SHA + multiple-texture failclosed');
+ return d;
+};
+const v42=d=>{
  const z=d.B289_rank46_three_true_GTO_NL2_CO_IP_flops;
  if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V42_B289_RANK46'||
     d.CERT_MULTIBOARD!==155||d.APPROX!==237||d.EST!==0||d.TOTAL!==392||
@@ -736,7 +762,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v42_b289_rank46.json',{cache:'no-store'}).then(open).then(v42)
+ return fetch('data/nl2_hu_multiboard_status_v43_b319_rank60.json',{cache:'no-store'}).then(open).then(v43)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v42_b289_rank46.json',{cache:'no-store'}).then(open).then(v42))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v41_b271_rank61.json',{cache:'no-store'}).then(open).then(v41))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v40_b265_rank313.json',{cache:'no-store'}).then(open).then(v40))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v39_b247_rank30.json',{cache:'no-store'}).then(open).then(v39))
