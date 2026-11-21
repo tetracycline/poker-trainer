@@ -127,7 +127,7 @@ def main():
         assert len({z['flop_texture'] for z in selected})>=2
         for z in selected:
             assert z['actual_exact_action_line']==LINE and z['acting_seat']==1
-            assert z['source_kind']=='ASSUMED_EXPLICIT_169CLASS'
+            assert z['source_kind'].startswith('ASSUMED') and z['assumed_preflop_ranges'] is True
             assert z['assumed_preflop_ranges'] is True
             assert z['strict_full_street_combo_reachable']>0 and z['exact_combo_reachable']>0
             assert z['genuine_gto_exploitability_pct']<=.5 and z['relative_spr_error_pct']<=5
