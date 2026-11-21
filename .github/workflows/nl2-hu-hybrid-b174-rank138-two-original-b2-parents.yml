@@ -74,6 +74,7 @@ jobs:
                   and z['actual_exact_action_line']=='x x/x x/x' and z['acting_seat']==1
                   and z['strict_full_street_combo_reachable']>0 and z['genuine_gto_exploitability_pct']<=.5
                   and z['relative_spr_error_pct']<=5),key=lambda z:(-z['strict_full_street_combo_reachable'],z['turn']))
+              print('B174_DIAGNOSTIC_TRUE_CANDIDATES',flop,[(z['source_run_id'],z['actual_exact_action_line'],z['acting_seat'],z['turn'],z['strict_full_street_combo_reachable'],z['genuine_gto_exploitability_pct'],z['relative_spr_error_pct']) for z in cs if z['flop']==flop],flush=True)
               assert arr,('No strict original B2 GTO actor-IP source',flop)
               sample=arr[0]
               assert not sample['nl2_locked_variants']
