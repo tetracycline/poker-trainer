@@ -208,11 +208,17 @@
   // 混合策略：頻率差很多時只跟最高者。行動 a 走進這條線 iff f(a) 為最高，或 f(a)≥40% 且 f(a)≥70%×最高頻率。
   const MIX_FLOOR = 0.40, MIX_RATIO = 0.70;
   function isHiSplitEx(r) { return /(^|・)最高張 (9 以下|T 以上)$/.test(r.cl || ''); }
-  function pfKey(e) {
+  // 翻前線識別。多人底池另加「實際參與者集合」（pc＋你＋開池者，照翻後順序），
+  // 否則同一開池位置但人數／座位不同的例題會被併成一條線，標題與翻後行動史對不上。
+  const PF_PO = ['SB', 'BB', 'UTG', 'HJ', 'CO', 'BTN'];
+  function pfKey(e, sp) {
     if (!e) return '';
     const typ = e.t || 'SRP';
     const hero = e.me && e.me === e.pa ? (typ === '3BP' ? '你是3-bet者' : '你是開池者') : '你是跟注者';
-    return typ + '\t' + hero + '\t' + (e.pa || '') + '\t' + (e.me || '');
+    const base = typ + '\t' + hero + '\t' + (e.pa || '') + '\t' + (e.me || '');
+    if (sp !== 'mw') return base;
+    const ps = [...new Set([e.me, e.pa].concat(e.pc || []).filter(Boolean))].sort((a, b) => PF_PO.indexOf(a) - PF_PO.indexOf(b));
+    return base + '\t' + ps.join(',');
   }
   function pretLegal(e) {
     if (!e) return true;
@@ -341,13 +347,14 @@ function canonAct(k) {
     const rowsOf = (sp, nd) => (nodeIndex.get(sp + '|' + nd) || { rows: [] }).rows;
     const sigPf = e => JSON.stringify({ t: e.t, me: e.me, pa: e.pa, pc: e.pc, pretext: e.pretext || '' });
     const pfEgs = new Map();
-    for (const r of L.rows) if (r.eg) for (const e of r.eg) {
-      const pf = pfKey(e); if (!pf) continue;
-      if (!pfEgs.has(pf)) pfEgs.set(pf, []);
-      pfEgs.get(pf).push(e);
+    for (const r of L.rows) if (r.eg) for (const e of r.eg) { // 代表例題只在同一情境、同一翻前線裡選
+      const pf = pfKey(e, r.sp); if (!pf) continue;
+      const k = r.sp + '|' + pf;
+      if (!pfEgs.has(k)) pfEgs.set(k, []);
+      pfEgs.get(k).push(e);
     }
-    function canonEg(pf) {
-      const all = pfEgs.get(pf) || [];
+    function canonEg(sp, pf) {
+      const all = pfEgs.get(sp + '|' + pf) || [];
       const legal = all.filter(pretLegal);
       const pool = legal.length ? legal : all;
       const top = (mostCommon(pool.map(sigPf)) || [])[0];
@@ -399,7 +406,7 @@ function canonAct(k) {
           segs[segs.length - 1] = (segs[segs.length - 1] || '').replace(/對手下注/g, '對手超池下注');
           post = segs.join('|');
         }
-        const pf = pfKey(e);
+        const pf = pfKey(e, rec.sp);
         const bkey = pf ? pf + '##' + post : post;
         if (!buckets.has(bkey)) buckets.set(bkey, { key: post, pf, egs: [], er: [] });
         buckets.get(bkey).egs.push(e); buckets.get(bkey).er.push({ e, r });
@@ -416,7 +423,7 @@ function canonAct(k) {
         const top = (mostCommon(b.egs.map(sig)) || [])[0];
         const eObj = top ? b.egs.find(e => sig(e) === top) : null;
         const segs = segsFromKey(b.key);
-        const preToks = preflopTokens(eObj || canonEg(b.pf) || guessPre(rec));
+        const preToks = preflopTokens(eObj || canonEg(rec.sp, b.pf) || guessPre(rec));
         const titles = buildTitle(preToks, segs, rec.kind, rec.st);
         const F = lineFacts(segs, preToks);
         const decs = decisionsOf(rec, b.key);
@@ -442,7 +449,7 @@ function canonAct(k) {
         let hands = syn ? null : HANDS.filter(h => rows.some(r => !r.x && rowOk(r, h)));
         // 同一翻前桶共用一個合法例題當標題，避免下一街翻前文字對不上
         let eUse = eObj, tUse = titles;
-        const eCanon = canonEg(b.pf);
+        const eCanon = canonEg(rec.sp, b.pf);
         if (eCanon) { eUse = eCanon; tUse = buildTitle(preflopTokens(eCanon), segs, rec.kind, rec.st); }
         const fixPre = (t) => String(t || '').replace(/你 (UTG|HJ|CO|BTN) 過/g, '你 $1 未開');
         if (tUse) { tUse = { titleText: fixPre(tUse.titleText), titleHtml: fixPre(tUse.titleHtml) }; }
@@ -486,15 +493,24 @@ function canonAct(k) {
       for (const [k, nds] of DECI) { const [sp, pfx, st, ...rest] = k.split('#');
         for (const [M, sg] of [[SIG, sigOf(sp, pfx, Number(st), rest.join('#'))], [SIG2, coarseOf(sp, pfx, Number(st), rest.join('#'))]]) {
           if (!M.has(sg)) M.set(sg, new Set()); for (const nd of nds) M.get(sg).add(nd); } }
+      // 有多個候選節點時的指定（交叉稽核 2026-11-21 Claude 標出的 48 格）：
+      // 上一街你最後加注 → 繼續下注（barrel／first）；上一街對手最後加注、這街對手過 → stab，對手下注 → vs_barrel。
+      const PREFER = {
+        '3bp#3b_#1#h#': '3b_t_barrel',            // 3b_f_vs_xr 你下注、對手加注、你加注、對手跟 → 轉牌你先動
+        'ipc##1#v#對手過': 't_stab',               // ipc/f_vs_3b 你加注被再加注後跟 → 轉牌對手過
+        'ipc##1#v#對手下注': 't_vs_barrel',        // 同上 → 轉牌對手下注
+        'iso#iso_#1#*#': 'iso_t_first'             // iso_f_vs_cbet 你過、對手下注、你加注、對手跟 → 轉牌你先動（非翻牌過完的 probe）
+      };
       const recByNd = new Map(nodeList.map(r => [r.sp + '|' + r.nd, r]));
       const synMap = new Map();
       function nodesFor(sp, pfx, st, key) {
         const ex = DECI.get([sp, pfx, st, key].join('#'));
         if (ex && ex.size) return [...ex];
-        const sg = SIG.get(sigOf(sp, pfx, st, key));
-        if (sg) return sg.size === 1 ? [...sg] : [];
-        const sg2 = sp === 'mw' ? null : SIG2.get(coarseOf(sp, pfx, st, key));
-        return sg2 && sg2.size === 1 ? [...sg2] : [];
+        const k1 = sigOf(sp, pfx, st, key), sg = SIG.get(k1);
+        const pick = (k, set) => set.size === 1 ? [...set] : (PREFER[k] && set.has(PREFER[k]) ? [PREFER[k]] : []);
+        if (sg) return pick(k1, sg);
+        const k2 = coarseOf(sp, pfx, st, key), sg2 = sp === 'mw' ? null : SIG2.get(k2);
+        return sg2 ? pick(k2, sg2) : [];
       }
       function seats(ln) { // 由標題翻前文字讀出位置
         const pre = (String(ln.titleText || '').match(/翻前：([^→]+)/) || [])[1] || '';
