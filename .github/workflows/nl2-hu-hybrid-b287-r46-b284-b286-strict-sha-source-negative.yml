@@ -1,0 +1,93 @@
+name: TASK-HYBRID B287 rank46 B284/B286 true 100bb original GTO source 26 forged SHA/actor negatives, V41 590 HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b287-r46-b284-b286-strict-sha-source-negative.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  strict-real-Rust-NL2-source-only-after-B284-B286-positive-GTO:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify complete B282 Rust solver/preflop original SHA whitelist B284/B286 and 26 synthetic actor/line/SPR source forgeries rejected
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/verify_hu_multiboard_100bb.py tools/solve_hu_b282_rank46_new_original_gto_partial_nl2_ip.py tools/test_hu_b287_rank46_new_B284_B286_source_sha_failclosed.py
+          python3 tools/test_hu_b287_rank46_new_B284_B286_source_sha_failclosed.py
+      - name: Independent no-GTO-only-CERT and V41 unchanged source SHA metadata snapshot
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          d=pathlib.Path('data')
+          p=d/'nl2_hu_b287_rank46_B284_B286_GTO_COIP_SHA_auth_negative_tests.json'
+          a=json.loads(p.read_text())
+          assert a['schema']=='NL2_HU_B287_RANK46_B284_B286_26_NEGATIVE_ORIGINAL_GTO_NL2_SOURCE_GATE_V1'
+          assert (a['CERT_MULTIBOARD'],a['APPROX'],a['EST'],a['TOTAL'])==(154,238,0,392)
+          assert a['V41_status_sha256']==hashlib.sha256((d/'nl2_hu_multiboard_status_v41_b271_rank61.json').read_bytes()).hexdigest()
+          assert a['B282_solver_sha256']==hashlib.sha256(pathlib.Path('tools/solve_hu_b282_rank46_new_original_gto_partial_nl2_ip.py').read_bytes()).hexdigest()
+          assert a['core_verifier_sha256']==hashlib.sha256(pathlib.Path('tools/verify_hu_multiboard_100bb.py').read_bytes()).hexdigest()
+          assert a['prereg_allowed_exact_flops_and_run_ids']=={
+            '7s5h3d':['B284',44938881037],'7s7h2d':['B286',44939456600]}
+          assert a['negative_forgery_case_count']==26 and a['all_26_synthetic_attacks_rejected']
+          assert len(a['negative_test_results'])==26
+          assert all(x=='REJECTED' for x in a['negative_test_results'].values())
+          assert a['no_unverified_B284_B286_GTO_case_claimed']
+          assert a['no_new_authentic_NL2_partial_Rust_solve_claimed']
+          assert a['no_B279_or_B280_false_source_rehabilitated']
+          assert a['no_generic_textures_or_unobserved_NL2_private_cards_certified']
+          assert (a['exact_named_boards'],a['genuine_actor_lock_variants'],
+            a['exact_board_b50_nonpolar_research_only'])==(590,682,134)
+          assert a['PR2_Draft_NEVER_MERGE']
+          print('PASS 26 forged B284/B286 original source cases rejected; V41 154/238 unchanged')
+          PY
+      - name: All 590 original named 100bb GTO and real actor-NL2 locks / 134 50pct source proof + full HU2475 paths
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v41_b271_rank61.json --out nl2-audit/b287-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b287-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(154,238,0)
+          assert (a['aggregate']['named_board_proofs'],
+            a['aggregate']['paired_hero_locked_source_variants'],
+            a['aggregate']['board_examples_with_b50_candidate'])==(590,682,134)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B287 HU 2475/2475")'
+      - name: Commit 26/26 failclosed only after full actor source / HU2475 PASS, non-force normal push PR2 Draft NEVER MERGE
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b287_rank46_B284_B286_GTO_COIP_SHA_auth_negative_tests.json docs/NL2_HU_B287_R46_B284_B286_SHA_COIP_SOURCE_FAILCLOSED.md
+          git commit -m 'TASK-HYBRID B287: 26/26 forged B284/B286 rank46 original GTO SHA-to-NL2 CO-IP sources rejected, 590 original GTO/NL2 locks HU2475 PASS, V41 154/238'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B287-r46-B284-B286-26-adversarial-original-GTO-SHA-HU2475
+          path: |
+            data/nl2_hu_b287_rank46_B284_B286_GTO_COIP_SHA_auth_negative_tests.json
+            docs/NL2_HU_B287_R46_B284_B286_SHA_COIP_SOURCE_FAILCLOSED.md
+            nl2-audit/
+          retention-days: 30
