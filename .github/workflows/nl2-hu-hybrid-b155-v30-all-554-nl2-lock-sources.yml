@@ -1,0 +1,130 @@
+name: TASK-HYBRID B155 exhaustive 554 real named boards, 646 NL2 hero locks, full source/50pct/2475 audit (max13m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b155-v30-all-554-nl2-lock-sources.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  enumerate-every-lock-verify-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Export all 646 genuine NL2 hero lock variants across 554 named CERT boards with SHA, actor, rates and per-board 50pct support
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b155_full_cert_board_lock_export.py
+          python3 tools/hu_b155_full_cert_board_lock_export.py
+      - name: Independent source SHA, export no holes, 554 unique boards, 646 total variants, 131 eligible 50pct, 423 no evidence
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import csv,hashlib,json,pathlib
+          d=pathlib.Path('data')
+          p=d/'nl2_hu_b155_v30_all_554_named_board_lock_sources.csv'
+          ix=d/'nl2_hu_b155_v30_all_554_named_board_lock_sources.index.json'
+          original=d/'nl2_hu_multiboard_status_v30_b145_rank47.json'
+          mat=d/'nl2_hu_cert_lock_medium_matrix_v30_b145.json'
+          sha=lambda x:hashlib.sha256(x.read_bytes()).hexdigest()
+          i=json.loads(ix.read_text())
+          assert i['schema']=='NL2_HU_B155_V30_ALL_CERT_NAMED_BOARD_NL2_HERO_LOCK_EVIDENCE_EXPORT_V1'
+          assert (i['declared_CERT'],i['declared_APPROX'],i['declared_EST'])==(142,250,0)
+          assert i['status_sha256']==sha(original) and i['parent_matrix_sha256']==sha(mat)
+          assert i['csv_sha256']==sha(p)
+          assert (i['named_boards'],i['genuine_hero_lock_variants'])==(554,646)
+          assert (i['aggregate']['b50_candidate_boards'],i['aggregate']['b50_unproven_boards'])==(131,423)
+          assert i['no_new_CERT_upgrades'] and i['all_554_boards_have_true_source_and_lock']
+          assert i['PR2_remains_draft_never_merge'] and i['realized_profit_not_verified']
+          with p.open(newline='',encoding='utf-8') as fh:
+              r=csv.DictReader(fh)
+              assert r.fieldnames==i['csv_columns']
+              data=list(r)
+          assert len(data)==i['rows']==646
+          assert len({(x['model_id'],x['named_flop']) for x in data})==554
+          assert len({x['model_id'] for x in data})==142
+          per_board={}
+          for x in data:
+              k=(x['model_id'],x['named_flop'])
+              per_board.setdefault(k,[]).append(x)
+              assert x['no_general_texture_or_bucket_gto']=='True'
+              assert x['no_actual_private_hand_conditional_nl2_rate']=='True'
+              assert x['strict_reachable_combo_count'] not in ('','0')
+              assert x['nl2_lock_version'] in ('exp_ip','exp_oop')
+              assert len(x['gto_sha256'])==64 and len(x['nl2_lock_sha256'])==64
+              unknown=x['unknown_historical_source_counts']=='True'
+              assert unknown==all(x[z]=='' for z in (
+                 'observed_pool_marginal_node_count','assumed_default_node_count',
+                 'unmatched_unlocked_villain_node_count'))
+              if not unknown:
+                  assert all(int(x[z])>=0 for z in (
+                   'observed_pool_marginal_node_count','assumed_default_node_count',
+                   'unmatched_unlocked_villain_node_count'))
+              if x['b50_exact_board_research_status']=='EXACT_BOARD_NONPOLARIZED_RESEARCH_CANDIDATE':
+                  assert int(x['b50_eligible_combo_count'])>0
+          assert all(sorted(int(z['nl2_hero_lock_source_idx']) for z in values)==
+                     list(range(1,len(values)+1)) and
+                     all(int(z['nl2_hero_lock_source_variant_count'])==len(values) for z in values)
+                     for values in per_board.values())
+          assert len({k for k,vals in per_board.items()
+                      if vals[0]['b50_exact_board_research_status']=='EXACT_BOARD_NONPOLARIZED_RESEARCH_CANDIDATE'})==131
+          print('PASS 554/554 genuine boards, 646/646 source variants, measured/assumed/unknown disjoint and 131/423 board-specific 50pct classification')
+          PY
+      - name: Independent all-142 CERT source integrity, 554 named locks and 50pct provenance audit
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v30_b145_rank47.json --out nl2-audit/cert-lock-medium-independent.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('nl2-audit/cert-lock-medium-independent.json'))
+          i=json.load(open('data/nl2_hu_b155_v30_all_554_named_board_lock_sources.index.json'))
+          a=x['aggregate'];c=i['aggregate']
+          assert (x['cert_multiboard'],x['approx'],x['EST'])==(142,250,0)
+          assert a['named_board_proofs']==c['named_boards']==554
+          assert a['paired_hero_locked_source_variants']==c['hero_lock_variants']==646
+          assert a['board_examples_with_b50_candidate']==c['b50_candidate_boards']==131
+          assert a['source_nodes_from_measured_NL2_marginals']==c['measured_source_nodes']
+          assert a['source_nodes_from_assumed_defaults']==c['assumed_default_source_nodes']
+          assert a['source_villain_nodes_unmatched_unlocked']==c['unmatched_unlocked_villain_source_nodes']
+          assert x['not_generalized_handclass_GTO'] and x['not_actual_NL2_earnings']
+          print('PASS 646 true per-lock source rows match all 554 independent GTO+NL2 board audit and 50pct research flags')
+          PY
+      - name: Complete all 4 independent HU structural, link, combo route checks; 2475 of 2475 river links
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU 2475/2475")'
+      - name: Commit exhaustive measured/assumed per-NL2-source evidence, no new CERT, Draft PR2 NEVER merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b155_v30_all_554_named_board_lock_sources.csv data/nl2_hu_b155_v30_all_554_named_board_lock_sources.index.json docs/NL2_HU_B155_ALL_554_BOARDS_NL2_LOCK_AND_B50_PROVENANCE.md
+          git commit -m 'TASK-HYBRID B155: SHA trace all 646 NL2 hero-lock variants on 554 certified boards, measured vs assumed vs unknown pooled rates and 131 exact 50pct candidates, full 2475 audit'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B155-554-boards-646-NL2-locks-131-b50-2475-audit
+          path: |
+            data/nl2_hu_b155_v30_all_554_named_board_lock_sources.csv
+            data/nl2_hu_b155_v30_all_554_named_board_lock_sources.index.json
+            docs/NL2_HU_B155_ALL_554_BOARDS_NL2_LOCK_AND_B50_PROVENANCE.md
+            nl2-audit/
+          retention-days: 30
