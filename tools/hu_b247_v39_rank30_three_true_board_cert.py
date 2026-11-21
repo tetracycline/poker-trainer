@@ -121,7 +121,7 @@ def one_board(spec,approx_spr):
     # ONE strict hero combo on these flops cannot justify a depolarized 50% distribution.
     assert not medium and n['strictly_reachable_combos']<20
     relative=100*abs(n['node_spr']-approx_spr)/max(1.,n['node_spr'])
-    result=dict(flop=flop,turn=turn,public_board=n['public_board'],
+    result=dict(flop=flop,flop_texture=texture(flop),turn=turn,public_board=n['public_board'],
        actual_exact_action_line=LINE,acting_seat=0,exact_flop_action='b50 c',
        actual_pot_bb=n['pot_bb'],actual_effective_stack_bb=n['remaining_bb'],
        actual_spr=n['node_spr'],model_assumed_spr=approx_spr,
