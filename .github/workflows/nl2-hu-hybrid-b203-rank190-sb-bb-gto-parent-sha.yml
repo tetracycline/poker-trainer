@@ -1,0 +1,159 @@
+name: TASK-HYBRID B203 rank190 two original SB_BB GTO 8s8h3d/Js9h4d 100bb SHA parents + 572 lock HU2475 (max13m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b203-rank190-sb-bb-gto-parent-sha.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  frozen-original-SB-BB-true-GTO-parent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Download exactly successful original B1 SB_BB 8s8h3d GTO and original B1 SB_BB Js9h4d GTO
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for spec in "8s8h3d 44666285424 B1" "Js9h4d 44666285424 B1"; do
+            set -- $spec
+            flop="$1";id="$2";batch="$3"
+            mkdir -p "raw/$flop"
+            gh run download "$id" --repo "$GITHUB_REPOSITORY" \
+              --name "nl2-multiboard-$batch-SB_BB-gto-$flop" --dir "raw/$flop"
+            test -s "raw/$flop/evidence/SB_BB-gto-$flop.json"
+            test -s "raw/$flop/solver/postflop/out/SB_BB/gto/$flop""_multiboard.json"
+            test -s "raw/$flop/solver/postflop/out/SB_BB/gto/$flop""_multiboard.job.json"
+          done
+      - name: Authenticated exact rank190 SB BB actor IP x-b100 call / x-x / x GTO source, full-street reach, independent prior archive SHA
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          d=pathlib.Path('data')
+          load=lambda p:json.loads(p.read_text())
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          vfile=d/'nl2_hu_multiboard_status_v36_b201_rank159.json'
+          v=load(vfile)
+          assert v['schema']=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V35_B193_RANK201'
+          assert (v['CERT_MULTIBOARD'],v['APPROX'],v['EST'],v['TOTAL'])==(149,243,0,392)
+          orig=d/'nl2_hu_b175_v32_248_exact_GTO_source_provenance.json'
+          b=load(orig)
+          assert b['schema']=='NL2_HU_B175_V32_ALL_248_GENUINE_GTO_RUN_ACTOR_TURN_SHA_PROVENANCE_V1'
+          rank=190;mid='ln-ipc-r_model-dfikbd';row=next(q for q in b['rows'] if q['rank']==rank)
+          assert row['model_id']==mid and row['hero_seat']==1
+          assert v['records'][mid]['label']=='APPROX'
+          assert row['distinct_GTO_plus_NL2_hero_flops']==['Ks7h2d']
+          docs=['# B203 rank190 original SB_BB two true GTO parent source SHA-pins','',
+            'Rank190 currently APPROX. Existing GTO+NL2 paired exact flop Ks7h2d. '
+            'Two separately original GTO positive CO? NO: hero is BB IP versus SB OOP, never confuse positions.',
+            'Target exact river line x b75 c/x b100 c/x on flop/turn. Each parent fully original B1/B1 and no re-solve.',
+            'Preflop ranges pinned solver CFR, **not** observed NL2 private-card villain conditionals.','']
+          records=[]
+          for flop,turn,run,batch,case_sha in [
+            ('8s8h3d','5s',44666285424,'B1','1905ddc6cc41acb760c497c61070c1a49cf9f0d0e2d95666011d76941ba350a5'),
+            ('Js9h4d','Ts',44666285424,'B1','4ca1238faac2b45401be3fbe29d5c3488a82ff3396353e5419d4b90a7c519398')]:
+            base=pathlib.Path('raw')/flop
+            mf=base/('evidence/SB_BB-gto-'+flop+'.json')
+            root=base/('solver/postflop/out/SB_BB/gto/'+flop+'_multiboard.json')
+            job=root.with_suffix('.job.json')
+            assert all(x.is_file() for x in (mf,root,job))
+            m,f,j=load(mf),load(root),load(job)
+            assert m['schema']=='NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1'
+            assert (m['spot'],m['version'],m['flop'])==('SB_BB','gto',flop)
+            assert not m['failures'] and m['no_generic_certification'] is True
+            assert m['preflop_ranges']['source']=='PINNED_POKER_SOLVER_PREFLOP_CFR'
+            assert (m['root_pot_bb'],m['root_remaining_bb'])==(6.0,97.0)
+            assert (f['flop'],f['pot'],f['stack'])==(flop,600,9700)
+            assert (j['pot'],j['stack'],j['rake_rate'],j['rake_cap'])==(600,9700,.05,1000)
+            assert j.get('hero') is None and not j.get('locks')
+            assert f['info']['gto_expl_pct']<=.5
+            assert any(z['line']=='x b75 c' and z['turn']==turn and z['gto_gap_pct']<=.5 for z in m['cases'])
+            assert any(z['line']=='x b75 c/' and z['board'][-2:]==turn for z in f['nodes'])
+            source=[z for z in row['exact_authentic_gto_source_proofs'] if
+              z['flop']==flop and z['turn']==turn and z['source_run']==run and
+              z['source_sha']==case_sha and z['exact_line']=='x b75 c/x b100 c/x' and
+              z['actor']==1 and z['strict_legal_combos']>0 and z['GTO_gap_pct']<=.5 and
+              z['SPR_error_pct']<=5 and not z['true_NL2_actor_locked']]
+            assert source,('No original rank190 exact BB-IP positive GTO',flop)
+            archive=d/('solver_evidence/NL2_MULTIBOARD_'+batch+'.json.gz')
+            index=d/('solver_evidence/NL2_MULTIBOARD_'+batch+'.index.json')
+            ix=load(index)
+            assert (ix['batch'],ix['run_id'])==(batch,run) and ix['gto_cases']>0
+            assert ix['gzip_sha256']==sha(archive)
+            assert ix['source_sha256']==hashlib.sha256(gzip.decompress(archive.read_bytes())).hexdigest()
+            pin=dict(schema='NL2_HU_B203_RANK190_ORIGINAL_SB_BB_GTO_SOURCE_PIN_V1',
+              source_run_id=run,source_batch=batch,target_rank=rank,model_id=mid,
+              spot='SB_BB',acting_seat=1,acting_position='BB_IP',
+              flop=flop,turn=turn,flop_line='x b75 c',turn_line='x b100 c',
+              exact_river_line='x b75 c/x b100 c/x',
+              original_case_sha256=case_sha,
+              minimum_strict_original_actor_IP_combos=min(z['strict_legal_combos'] for z in source),
+              root_pot_bb=6.0,root_remaining_bb=97.0,
+              preflop_source='PINNED_POKER_SOLVER_PREFLOP_CFR',
+              original_root_flop_menu=dict(oop=j.get('flop_oop'),ip=j.get('flop_ip'),raises=j.get('flop_raise')),
+              original_gto_manifest_sha256=sha(mf),
+              original_gto_root_sha256=sha(root),
+              original_gto_job_sha256=sha(job),
+              original_archive_sha256=sha(archive),original_index_sha256=sha(index),
+              original_parent_GTO_not_recomputed=True,
+              true_NL2_BB_IP_child_NOT_YET_SOLVED=True,
+              observed_NL2_private_hand_conditional_rates=False,
+              no_generic_MODEL_certification=True,PR2_draft_never_merge=True)
+            (d/('nl2_hu_b203_rank190_'+flop+'_original_SB_BB_gto_pin.json')).write_text(json.dumps(pin,ensure_ascii=False,indent=2)+'\n')
+            records.append(pin)
+            docs.append(f"- {flop}/{turn}, source run {run}, original strict BB-IP combos >= {pin['minimum_strict_original_actor_IP_combos']}, manifest/root/job SHA frozen. Original menu {pin['original_root_flop_menu']}")
+          assert len(records)==2 and {q['flop'] for q in records}=={'8s8h3d','Js9h4d'}
+          pathlib.Path('docs/NL2_HU_B203_R190_TWO_ORIGINAL_SB_BB_GTO_SHA_PINS.md').write_text('\n'.join(docs)+'\n')
+          print('PASS rank190 SB BB original exact BB-IP two GTO flops + true source SHA; keep APPROX')
+          PY
+      - name: Full source audit all 149 CERT 575 genuine named boards, NL2 locks, medium50 research and HU 2475 paths
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v36_b201_rank159.json --out nl2-audit/b203-lock.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('nl2-audit/b203-lock.json'))
+          assert (r['cert_multiboard'],r['approx'],r['EST'])==(149,243,0)
+          assert r['aggregate']['named_board_proofs']==575
+          assert r['aggregate']['paired_hero_locked_source_variants']>=664
+          assert r['aggregate']['board_examples_with_b50_candidate']>=132
+          assert r['not_generalized_handclass_GTO'] and r['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/contract.json
+          node tools/link_audit.js --md nl2-audit/link.md --json nl2-audit/links.json
+          node tools/reach_verify.js --log nl2-audit/reach.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/links.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU 2475/2475")'
+      - name: Only after complete exact GTO/actor/SPR and full 575/2475 audits commit original SHA pins to PR2 Draft NEVER MERGE
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b203_rank190_*_original_SB_BB_gto_pin.json docs/NL2_HU_B203_R190_TWO_ORIGINAL_SB_BB_GTO_SHA_PINS.md
+          git commit -m 'TASK-HYBRID B203: original SB_BB rank190 two true BB-IP 100bb GTO SHA-pins, 149 CERT 575 NL2 locks and HU 2475 audited, keep APPROX'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B203-r159-two-SB-BB-original-GTO-SHA-pins-HU2475
+          path: |
+            data/nl2_hu_b203_rank190_*_original_SB_BB_gto_pin.json
+            docs/NL2_HU_B203_R190_TWO_ORIGINAL_SB_BB_GTO_SHA_PINS.md
+            nl2-audit/
+          retention-days: 30
