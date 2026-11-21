@@ -1,0 +1,122 @@
+name: TASK-HYBRID B329 V43 exact 236 APPROX sourceblind 1-flop rank71 priority and all596 actor lock HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b329-v43-236-approx-sourceblind-priority.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  freeze-236-approx-no-lookahead-and-complete-source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Construct V43 frozen 236 APPROX priority by immutable V42 sourceblind queue plus exact SHA authenticated V43 rank60 promotion, no GTO-only false CERT
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json,hashlib
+          d=pathlib.Path('data')
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          v42=d/'nl2_hu_b292_v42_237_approx_sourceblind_real_pair_gap_priority.json'
+          source=json.loads(v42.read_text())
+          v43=d/'nl2_hu_multiboard_status_v43_b319_rank60.json'
+          status=json.loads(v43.read_text())
+          rank60='ln-ipfr-t_model-hxdit'
+          assert (status['CERT_MULTIBOARD'],status['APPROX'],status['EST'],status['TOTAL'])==(156,236,0,392)
+          assert status['records'][rank60]['label']=='CERT-MULTIBOARD'
+          assert source['V42_status_sha256']==sha(d/'nl2_hu_multiboard_status_v42_b289_rank46.json')
+          assert (source['CERT_MULTIBOARD'],source['APPROX'],source['EST'],source['TOTAL'])==(155,237,0,392)
+          old=source['all_237_APPROX_source_gap_rows']
+          assert len(old)==237
+          rank60rows=[z for z in old if z['model_id']==rank60]
+          assert len(rank60rows)==1 and rank60rows[0]['rank']==60
+          rows=[]
+          for x in old:
+              mid=x['model_id']
+              if mid==rank60:continue
+              assert status['records'][mid]['label']=='APPROX'
+              assert x['V42_status_label']=='APPROX'
+              assert x['actor_legal_GTO_plus_REAL_NL2_locked_flops']==x['genuine_historical_GTO_flops'] if x['rank']==71 else True
+              y=dict(x)
+              y['V43_status_label']='APPROX'
+              y['sourceblind_historical_snapshot_may_omit_later_unverified_GTO_only_evidence']=True
+              y['no_GTO_only_or_expired_workflow_counted_as_NL2_actor_pair']=True
+              rows.append(y)
+          assert len(rows)==236 and len({y['model_id'] for y in rows})==236
+          assert {x['model_id'] for x in rows}=={k for k,v in status['records'].items() if v['label']=='APPROX'}
+          assert rows[0]['rank']==71 and rows[0]['model_id']=='ln-iso-lmp_r_model-vlgh2t'
+          assert rows[0]['genuine_paired_flop_count']==2
+          assert rows[0]['actor_legal_GTO_plus_REAL_NL2_locked_flops']==['4s4h2d','7s5h3d']
+          assert rows[0]['minimum_remaining_new_exact_flop_actor_lock_pairs']==1
+          assert not any(y['rank']==60 for y in rows)
+          assert all(y['minimum_remaining_new_exact_flop_actor_lock_pairs']>=1 and
+              y['V43_status_label']=='APPROX' for y in rows)
+          out=dict(schema='NL2_HU_B329_V43_236_APPROX_FROZEN_SOURCEBLIND_PRIORITY_V1',
+             V42_historical_237_sourceblind_sha256=sha(v42),
+             V43_source_status_sha256=sha(v43),
+             CERT_MULTIBOARD=156,APPROX=236,EST=0,TOTAL=392,
+             latest_one_distinct_genuine_GTO_plus_NL2_actor_flop_short_rank=71,
+             rank71_existing_genuine_actor_paired_flops=['4s4h2d','7s5h3d'],
+             rank60_removed_due_to_independently_audited_B319_V43_3_flop_CERT=True,
+             no_premature_cert_from_B326_B327_pending_GTO=True,
+             historical_evidence_is_not_updated_from_unverified_future_sources=True,
+             all_236_APPROX_source_gap_rows=rows,
+             all_596_existing_V43_named_board_proofs_not_generalized=True,
+             no_observed_private_card_conditional_NL2_frequencies_claimed=True,
+             PR2_Draft_NEVER_MERGE=True)
+          path=d/'nl2_hu_b329_v43_236_approx_sourceblind_oneflop_priority.json'
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+          pathlib.Path('docs/NL2_HU_B329_V43_236_APPROX_SOURCEBLIND.md').write_text(
+             '# B329 V43 original source-blind APPROX priority\n\n'
+             'Latest V43 156 CERT / 236 APPROX / 0 EST across 392. The B319 authentic rank60 three-flop two-texture source-gated promotion is excluded; source-blind 236 remaining historical gaps remain unchanged and are not guessed or counted as new GTO.\n\n'
+             'Only rank71 is one authentic actor-matched separate original GTO+Rust NL2 flop short: previously authenticated 4s4h2d and 7s5h3d. Multiple GTO-only rank71 flops have zero strict BB-OOP root b50 40/70 combos; no fake third source and no private-card marginal assumption presented as empirical. B326 and B327 must each independently PASS genuine original SHA/actor/GTO reach before any separate NL2 lock.\n\n'
+             'All 596 current certified named public boards, 688 genuine actor partial NL2 lock source variants, 134 exact-board 50% nonpolarized research flags, HU 2475/2475 must independently PASS before B329 commit. PR #2 stays Draft/Open, never merge.\n')
+          print('PASS B329 V43 236 strictly APPROX sourceblind; rank71 one distinct true GTO+NL2 pair short; rank60 removed only after B319 verified')
+          PY
+      - name: Independently check all V43 596 authentic GTO boards, 688 NL2 actor partial locks, b50 research only and full HU 2475 pathways
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v43_b319_rank60.json --out nl2-audit/b329-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b329-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(156,236,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'])==(596,688)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B329 V43 HU2475/2475")'
+      - name: Commit only 236 APPROX true source-blind snapshot after all V43 independent GTO/NL2 source and HU2475 PASS; Draft PR2 never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b329_v43_236_approx_sourceblind_oneflop_priority.json docs/NL2_HU_B329_V43_236_APPROX_SOURCEBLIND.md
+          git commit -m 'TASK-HYBRID B329: V43 236 sourceblind APPROX true rank71 one-flop priority, 596 GTO+688 NL2 locks HU2475 PASS'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B329-v43-236-approx-rank71-one-flop-priority-596-HU2475
+          path: |
+            data/nl2_hu_b329_v43_236_approx_sourceblind_oneflop_priority.json
+            docs/NL2_HU_B329_V43_236_APPROX_SOURCEBLIND.md
+            nl2-audit/
+          retention-days: 30
