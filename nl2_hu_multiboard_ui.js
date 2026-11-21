@@ -105,6 +105,35 @@ function schedule(){if(!pending){pending=true;queueMicrotask(render)}}
 new MutationObserver(schedule).observe(app,{childList:true,subtree:true});
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v41=d=>{
+ const z=d.B271_rank61_three_authentic_GTO_NL2_CO_IP_flops;
+ if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V41_B271_RANK61'||
+    d.CERT_MULTIBOARD!==154||d.APPROX!==238||d.EST!==0||d.TOTAL!==392||
+    d.parent_v40_sha256?.length!==64||
+    z?.rank!==61||z?.model_id!=='ln-ipfr-t_model-qpx6tn'||
+    z?.flops?.join(',')!=='Js9h5d,KsQh4d,QsJh4d'||
+    z?.exact_line!=='x b100 c/x'||z?.actor!=='CO_IP'||
+    z?.true_100bb_preflop_CFR_source_frozen_not_observed_NL2_private_card!==true||
+    z?.only_exact_public_board_actions_actor_SPR_certified!==true||
+    z?.original_GTO_and_NL2_actor_locked_source_pins?.length!==3||
+    z?.original_GTO_and_NL2_actor_locked_source_pins?.some(p=>
+      !['KsQh4d','Js9h5d','QsJh4d'].includes(p.flop)||
+      ![44902146101,44902831383,44934430727].includes(p.original_GTO_run)||
+      ![44902973337,44903478906,44935281174].includes(p.source_lock_run)||
+      p.pin_sha256?.length!==64||p.gto_archive_sha256?.length!==64||
+      p.NL2_archive_sha256?.length!==64||
+      p.GTO_strict_actor_combos<=0||p.NL2_SPR_eligible_combos<=0)!==false||
+    d.records?.['ln-ipfr-t_model-qpx6tn']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-ipfr-t_model-qpx6tn']?.proven_exact_board_count!==3||
+    d.records?.['ln-iso-lmp_r_model-wpg493']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-opfr-t_model-1hmsxaw']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-vlgh2t']?.label!=='APPROX'||
+    d.no_generic_texture_GTO!==true||d.no_observed_private_card_NL2_rates!==true||
+    d.PR2_remains_draft_never_merge!==true||
+    Object.keys(d.records||{}).length!==392)
+    throw Error('V41 exact source-rank61 three original CO-IP GTO + true NL2 Rust source gate failed');
+ return d;
+};
  const v40=d=>{
  if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V40_B265_RANK313'||
     d.CERT_MULTIBOARD!==153||d.APPROX!==239||d.EST!==0||d.TOTAL!==392||
@@ -674,7 +703,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v40_b265_rank313.json',{cache:'no-store'}).then(open).then(v40)
+ return fetch('data/nl2_hu_multiboard_status_v41_b271_rank61.json',{cache:'no-store'}).then(open).then(v41)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v40_b265_rank313.json',{cache:'no-store'}).then(open).then(v40))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v39_b247_rank30.json',{cache:'no-store'}).then(open).then(v39))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v38_b206_rank190.json',{cache:'no-store'}).then(open).then(v38))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v37_b205_rank188.json',{cache:'no-store'}).then(open).then(v37))
