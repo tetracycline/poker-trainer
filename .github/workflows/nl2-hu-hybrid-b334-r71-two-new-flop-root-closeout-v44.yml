@@ -1,0 +1,146 @@
+name: TASK-HYBRID B334 genuine rank71 B326/B327 GTO root BB-b50 40/70 diagnosis, V44 597/689 HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b334-r71-two-new-flop-root-closeout-v44.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  original-source-actor-flop-preflight-then-full-hu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify B326 and B327 finished independently and download their genuine original full GTO parent roots
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_rank71_gto_root_40_70_preflight.py tools/hu_sequential_cfr_reach.py
+          for run in 44961024646 44961047553; do
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq .conclusion)" = success
+          done
+          mkdir -p sources/B326 sources/B327
+          gh run download 44961024646 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-multiboard-B326_R71_LMP_6S6H2D-LMP_CO_BB-gto-6s6h2d' --dir sources/B326
+          gh run download 44961047553 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-multiboard-B327_R71_LMP_6S5H4D-LMP_CO_BB-gto-6s5h4d' --dir sources/B327
+          test -s sources/B326/solver/postflop/out/LMP_CO_BB/gto/6s6h2d_multiboard.json
+          test -s sources/B327/solver/postflop/out/LMP_CO_BB/gto/6s5h4d_multiboard.json
+      - name: Recompute each exact SHA pinned original BB flop b50 strict 40/70 parent mask, distinguish zero-flop from downstream-zero
+        run: |
+          set -euo pipefail
+          python3 tools/hu_rank71_gto_root_40_70_preflight.py \
+            --case B326 6s6h2d 44961024646 sources/B326 \
+            --case B327 6s5h4d 44961047553 sources/B327 \
+            --out data/nl2_hu_b334_rank71_B326_B327_original_GTO_root_diagnosis.json
+          python3 - <<'PY'
+          import json,hashlib,pathlib,gzip
+          d=pathlib.Path('data')
+          f=d/'nl2_hu_b334_rank71_B326_B327_original_GTO_root_diagnosis.json'
+          a=json.loads(f.read_text());r=a['exact_original_board_results']
+          assert a['schema']=='NL2_HU_RANK71_SHA_PINNED_GTO_FLOP_B50_ROOT_40_70_PREFLIGHT_V1'
+          assert [(z['batch'],z['flop'],z['source_run_id']) for z in r]==[
+            ('B326','6s6h2d',44961024646),('B327','6s5h4d',44961047553)]
+          assert len({z['flop'] for z in r})==2
+          for z in r:
+            src=d/f"solver_evidence/NL2_MULTIBOARD_{z['batch']}_R71_{z['flop'].upper()}_GTO.json.gz"
+            idx=json.loads((src.parent/(src.name.replace('.json.gz','.index.json'))).read_text())
+            pin=json.loads((d/f"nl2_hu_{z['batch'].lower()}_rank71_lmp_{z['flop']}_gto_parent_pin.json").read_text())
+            assert (idx['gto_cases'],idx['locked_cases'],idx['verified_cases'])==(1,0,1)
+            assert idx['source_sha256']==hashlib.sha256(gzip.decompress(src.read_bytes())).hexdigest()
+            assert idx['gzip_sha256']==hashlib.sha256(src.read_bytes()).hexdigest()
+            assert z['original_root_flop_active_combo_count']>0
+            assert z['strict_40_70_b50_flop_combo_count']>=0
+            assert z['original_target_actor_OOP_strict_combos']==0
+            assert idx['exact_target_actor_OOP_strict_combos']==pin['target_exact_actor_OOP_strict_combos']==0
+            assert not pin['direct_nl2_lock_source_present'] and pin['assumed_limped_169class']
+            assert z['not_new_GTO_solve'] and z['not_new_actor_NL2_lock']
+            assert z['not_observed_NL2_per_private_hand_action_rates']
+            assert len(z['source_gto_pin_sha256'])==64 and len(z['original_full_flop_root_SHA256'])==64 if 'original_full_flop_root_SHA256' in z else len(z['original_GTO_full_flop_root_sha256'])==64
+          assert a['no_generic_CERT_from_preflight'] and a['PR2_Draft_NEVER_MERGE']
+          print('PASS B334 originals B326/B327 true SHA matched and exact flop root b50 candidate counts:',
+                [(z['flop'],z['strict_40_70_b50_flop_combo_count']) for z in r])
+          PY
+      - name: Independently verify entire current V44 156 CERT 597 original GTO plus real NL2 actor locks 689 and HU2475 legal lines
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json \
+            --out nl2-audit/b334-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b334-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'],a['models_total'])==(156,236,0,392)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'])==(597,689)
+          assert a['aggregate']['board_examples_with_b50_candidate']==134
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B334 2475/2475")'
+      - name: Commit independent real root-cause report after full source and HU PASS; keep rank71 APPROX until true new NL2 child
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json,hashlib
+          p=pathlib.Path('data/nl2_hu_b334_rank71_B326_B327_original_GTO_root_diagnosis.json')
+          a=json.loads(p.read_text())
+          for z in a['exact_original_board_results']:
+            z['exact_root_flop_b50_failure_category']=(
+              'FLOP_B50_NOT_REACHABLE_UNDER_STRICT_40_70'
+              if z['strict_40_70_b50_flop_combo_count']==0 else
+              'TARGET_TURN_RIVER_STRICT_ZERO_DESPITE_NONZERO_FLOP_B50')
+            z['other_flops_or_turns_not_proven_failures']=True
+          a.update(schema='NL2_HU_B334_RANK71_B326_B327_GTO_ACTOR_ROOT_CLOSEOUT_V1',
+            V44_status_SHA256=hashlib.sha256(pathlib.Path('data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json').read_bytes()).hexdigest(),
+            V44_CERT_MULTIBOARD=156,V44_APPROX=236,EST=0,TOTAL=392,
+            V44_authentic_GTO_plus_NL2_named_cert_boards=597,
+            V44_authentic_actor_partial_NL2_lock_variants=689,
+            V44_named_board_b50_research_only=134,
+            rank71_still_APPROX=True,rank71_current_authentic_actor_locked_flops=['4s4h2d','7s5h3d'],
+            additional_rank71_CERT_from_B326_B327=0,
+            no_claim_other_flops_or_alternative_turns_invalid=True,
+            full_HU2475_navigation_passed=True,PR2_Draft_NEVER_MERGE=True)
+          p.write_text(json.dumps(a,ensure_ascii=False,indent=2)+'\n')
+          rows=a['exact_original_board_results']
+          lines=['# B334 genuine B326/B327 rank71 original 100bb GTO root reach diagnosis','',
+            'Original pinned full GTO root, job, manifest, compressed and decompressed source SHA are independently authenticated. The 40%/70% parent BB flop b50 action is evaluated using the canonical per-combo code.']
+          for z in rows:
+            lines.extend(['',f"- {z['batch']} {z['flop']}/{z['turn']}: BB flop b50 eligible combos **{z['strict_40_70_b50_flop_combo_count']}**, exact target BB-OOP river strict combos **{z['original_target_actor_OOP_strict_combos']}**, GTO run {z['source_run_id']}"])
+            lines.append('  - '+z['exact_root_flop_b50_failure_category'])
+          lines+=['','If flop b50 has zero legal combos, all descendants following that identical root action are impossible. If flop b50 is positive but a specified turn/river branch is zero, only that exact continuation is rejected; other turns require separate predeclared evaluation.',
+            '', 'V44 unchanged **156 CERT /236 APPROX /0 EST**; rank71 remains APPROX with two genuine paired boards. Current 597 real named GTO+NL2 actor-lock board proofs, 689 genuine partial lock variants, 134 exact-board medium 50% research-only flags; HU 2475/2475 audited.',
+            '', 'No invented per-private-card NL2 conditional opponent rates; no false texture-level GTO. PR #2 Draft/Open, no force-push or merge.']
+          pathlib.Path('docs/NL2_HU_B334_R71_B326_B327_REAL_GTO_ROOT_REACH_CLOSEOUT.md').write_text('\n'.join(lines)+'\n')
+          print('PASS B334 source evidence and V44 HU2475 completed; rank71 no false CERT')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b334_rank71_B326_B327_original_GTO_root_diagnosis.json docs/NL2_HU_B334_R71_B326_B327_REAL_GTO_ROOT_REACH_CLOSEOUT.md
+          git commit -m 'TASK-HYBRID B334: original B326/B327 rank71 SHA/BB-b50 strict 40-70 root diagnosis, V44 597 source HU2475 PASS; no false CERT'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B334-B326-B327-original-root-40-70-V44-597-HU2475
+          path: |
+            data/nl2_hu_b334_rank71_B326_B327_original_GTO_root_diagnosis.json
+            docs/NL2_HU_B334_R71_B326_B327_REAL_GTO_ROOT_REACH_CLOSEOUT.md
+            nl2-audit/
+          retention-days: 30
