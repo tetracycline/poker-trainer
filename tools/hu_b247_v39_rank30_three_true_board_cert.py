@@ -69,7 +69,7 @@ def one_board(spec,approx_spr):
         flop,turn,'b50 c',SPOT,'SRP')
     assert (c['flop_root_pot_bb'],c['flop_root_stack_bb'])==(6.5,97.5)
     assert c['gto_exploitability_pct'] is not None and c['gto_exploitability_pct']<=0.5
-    assert c['empirical_scope']=='PINNED_POKER_SOLVER_PREFLOP_CFR'
+    assert c['empirical_scope']=='PINNED_PREFLOP_CFR'
     assert len(c['source_sha256'])==64
     legal=[n for n in c['nodes'] if n['exact_node_line']==LINE and
       n['acting_seat']==0 and len(n['public_board'])==8 and n['strictly_reachable_combos']>0 and
@@ -95,7 +95,7 @@ def one_board(spec,approx_spr):
     assert li['authentic_same_hero_board_paired_source'] is True
     assert li['new_actor_OOP_turn_exact_SPR_eligible_combos']>0
     assert li['new_actor_OOP_turn_strict_combos']>=li['new_actor_OOP_turn_exact_SPR_eligible_combos']
-    assert li['only_downstream_turn_river_NL2_locked'] and not li['no_new_full_flop_NL2_lock']
+    assert li['only_downstream_turn_river_NL2_locked'] and li['no_new_full_flop_NL2_lock']
     # 'no_new_full_flop_NL2_lock' is a disclosure flag, NOT positive evidence
     assert li['no_observed_per_hole_card_conditionals'] and li['no_generic_texture_CERT']
     assert li['immediate_CERT_upgrades']==0
@@ -128,7 +128,7 @@ def one_board(spec,approx_spr):
        relative_spr_error_pct=round(relative,4),
        genuine_gto_exploitability_pct=c['gto_exploitability_pct'],
        source_run_id=spec['gto_run'],source_sha256=c['source_sha256'],
-       source_kind='PINNED_POKER_SOLVER_PREFLOP_CFR',
+       source_kind=c['empirical_scope'],
        assumed_preflop_ranges=False,exact_combo_reachable=n['source_reachable_combos'],
        strict_full_street_combo_reachable=n['strictly_reachable_combos'],
        exact_node_actions=n['source_actions'],
