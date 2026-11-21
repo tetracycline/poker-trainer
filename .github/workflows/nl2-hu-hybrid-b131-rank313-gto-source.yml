@@ -1,4 +1,4 @@
-name: TASK-HYBRID B131 rank313 exact B119 original GTO source SHA audit and archive, no shortcut (max9m)
+name: TASK-HYBRID B131 rank313 original GTO negative strict hero audit and archive, no false CERT (max9m)
 on:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
@@ -35,7 +35,7 @@ jobs:
           python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
           mkdir -p trainer/data/solver_evidence
           python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver --run-id 44837834984 --out trainer/data/solver_evidence/NL2_MULTIBOARD_B131_R313_GTO_B119.json
-      - name: Source blind freeze original GTO and SHA alongside independently archived B128 actor IP Rust lock
+      - name: Source blind verify original GTO ZERO hero weight versus positive B128 actor IP source; archive negative
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -54,7 +54,7 @@ jobs:
           hero=[n for c in a['cases'] for n in c['nodes']
               if n['exact_node_line']=='b75 r c/x b50 c/x' and
               n['acting_seat']==1 and n['strictly_reachable_combos']>0]
-          assert hero,'GTO original target hero IP river not actually strict reachable'
+          assert not hero,'Source discrepancy: original B119 GTO now has positive legal hero, review before any CERT'
           assert all(c['gto_exploitability_pct']<=0.5 for c in a['cases'])
           pin=json.loads((D/'nl2_hu_b128_rank313_b119_gto_parent_pin.json').read_text())
           assert pin['run_id']==44837834984 and pin['original_Rust_GTO_root_sha256']=='3531438b93c5185182fa7bb0ab4d95dd1025e7e1fe5da3d18b58cee4eec87573'
@@ -71,22 +71,25 @@ jobs:
             source_sha256=hashlib.sha256(raw).hexdigest(),
             gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
             original_gto_parent_SHA256=pin['original_Rust_GTO_root_sha256'],
-            rank313_original_GTO_actor_IP_legal_nodes=len(hero),
+            rank313_original_GTO_actor_IP_legal_nodes=0,
+            rank313_EXP_IP_actor_nodes=b128['exact_actor_IP_river_nodes'],
+            rank313_remains_APPROX=True,
+            no_certification_reason='ZERO_STRICT_GTO_IP_RIVER_WEIGHT_DESPITE_POSITIVE_NL2_IP_SOURCE',
             matched_authentic_B128_actor_IP_source_run=b128['run_id'],
             preflop_limped_169class_ranges_assumed=True,
             generic_model_certification=0,immediate_CERT_upgrades=0)
           p.with_suffix('.index.json').write_text(json.dumps(index,ensure_ascii=False,indent=2)+'\n')
           p.unlink()
-          print('PASS B131 original GTO and B128 true actor-IP strict matched source, no generic CERT',index)
+          print('PASS B131 original GTO and NL2 source are NONmatching; rank313 remains APPROX',index)
           PY
-      - name: Commit independent full GTO source to PR #2 Draft, not model promotion until third board source-blind audit
+      - name: Commit independently verified GTO-negative source to Draft PR 2, preserve APPROX without false upgrade
         working-directory: trainer
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add data/solver_evidence/NL2_MULTIBOARD_B131_R313_GTO_B119.json.gz data/solver_evidence/NL2_MULTIBOARD_B131_R313_GTO_B119.index.json
-          git commit -m 'TASK-HYBRID B131: independent source SHA audit genuine B119 rank313 original GTO + B128 NL2 IP reach, ready for prereg source-blind certification'
+          git commit -m 'TASK-HYBRID B131: source SHA verify B119 rank313 true GTO zero strict hero vs B128 IP-positive; preserve negative, keep APPROX'
           for n in 1 2 3; do
             git fetch origin fix/nl2-hu-lines-audit-20261118
             git rebase origin/fix/nl2-hu-lines-audit-20261118
