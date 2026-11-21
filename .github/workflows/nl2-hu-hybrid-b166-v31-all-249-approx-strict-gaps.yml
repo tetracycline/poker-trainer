@@ -1,4 +1,6 @@
 name: TASK-HYBRID B166 re-audit all 249 V31 APPROX with B156/B158 GTO and B164 true NL2 IP source + 2475 HU (max11m)
+# Strict source-index schema: original GTO has no_generic_model_certification=true,
+# while verified EXP partial indexes carry generic_model_certification=0. Both must be explicitly certified non-generic.
 on:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
