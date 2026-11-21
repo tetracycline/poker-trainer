@@ -141,7 +141,14 @@ def main():
     assert count['assumed_default_source_nodes']>=priorcounts['assumed_nodes']
     assert count['unmatched_villain_nodes']>=priorcounts['unmatched_nodes']
     assert count['unknown_lock_source_variant_denominators']>=priorcounts['historical_unknown_lock_variants']
-    assert count['boards_with_missing_measured_rate_evidence']>=priorcounts['board_has_assumed_or_unknown_or_no_observed_marginal']+3
+    # Existing V39 all 584 rows were independently compared byte-for-byte;
+    # a new rank313 board can be missing or have actual measured pooled-marginal
+    # source patterns. Count only verified missing flags, never assume UNKNOWN.
+    newly_missing=sum(z['rank_specific_source_rate_gap']
+        for z in rows if key(z) in newkeys)
+    assert count['boards_with_missing_measured_rate_evidence']==(
+        priorcounts['board_has_assumed_or_unknown_or_no_observed_marginal']+newly_missing)
+    assert 0<=newly_missing<=3
     rows.sort(key=lambda z:(z['rank'],-z['historical_unknown_lock_variants'],
         -z['assumed_default_nodes'],z['flop'],z['turn']))
     fields=['rank','model_id','spot','flop','turn','exact_action_line','actor_seat',
