@@ -57,7 +57,7 @@ def main():
     assert report['preflop_ranges']==m0['preflop_ranges']
     assert report['no_generic_certification'] and not report['failures'] and report['solved_cases']==1
     assert report['new_genuine_unlocked_GTO_child'] is not None and len(report['cases'])==1
-    assert report['locks'] and not report['not_observed_exact_NL2_hero_EV'] is False
+    assert report['locks'] and report['not_observed_exact_NL2_hero_EV'] is True
     base=fresh/'solver/postflop'
     output={}
     for v in ('gto','exp_oop'):
