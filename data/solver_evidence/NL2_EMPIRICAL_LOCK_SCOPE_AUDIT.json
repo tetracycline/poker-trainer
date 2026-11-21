@@ -1,0 +1,663 @@
+{
+  "schema": "NL2_STAGE2_EMPIRICAL_LOCK_SCOPE_AUDIT_V1",
+  "reviewed_pr_commit": "564cb62659490cfed310a78aa645b2d1c54e1b90",
+  "observed_bucket_response_only": {
+    "source": {
+      "repository": "tetracycline/poker-solver",
+      "pinned_checkout_commit": "abe310c3aad02dd4a7c77fb2831801fd490cf51b",
+      "source_file_last_commit": "ffe3218798dca102622676b91e02a65d6e1b12ab",
+      "path": "gto_check/data/pool_counts.json",
+      "sha256": "0a151499a878ca5cdb168eb764b600e3bcfdc5fd435815050965f1b5abd39353",
+      "parser": "gto_check/pool_post.py",
+      "table": "cntm"
+    },
+    "hand_counts_before_size_filter": {
+      "SRP": 110876,
+      "3BP": 28156
+    },
+    "scope": {
+      "stake": "NL2",
+      "table_players": 6,
+      "heads_up_to_flop": true,
+      "starting_effective_stack_bb_min": 40,
+      "SRP": "BB calls UTG/HJ/CO/BTN IP raiser",
+      "3BP": "SB/BB OOP 3bettor versus IP caller",
+      "dates_in_aggregate_artifact": null,
+      "no_board_or_spr_conditioning": true,
+      "exact_positions_grouped_within_family": true
+    },
+    "size_token_schema": {
+      "flop": {
+        "bS": [
+          0.25,
+          0.42
+        ],
+        "bB": [
+          0.6,
+          0.9
+        ]
+      },
+      "turn_river": {
+        "bS": [
+          0.4,
+          0.6
+        ],
+        "bB": [
+          0.8,
+          1.2
+        ]
+      },
+      "bO": "strictly >1.20 pot",
+      "r": "raise with no size subclass"
+    },
+    "row_filter": {
+      "minimum_n": 500,
+      "only_observed_actions_allowed": [
+        "f",
+        "c",
+        "r"
+      ],
+      "must_face_bet_or_raise": true,
+      "no_extrapolation": true,
+      "scope_label": "EMPIRICAL_BUCKET_RESPONSE_ONLY"
+    },
+    "totals_by_family_street": {
+      "SRP": {
+        "1": 8,
+        "2": 7,
+        "3": 6
+      },
+      "3BP": {
+        "1": 5,
+        "2": 2,
+        "3": 0
+      }
+    },
+    "rows": [
+      {
+        "source_key": "IP|bB",
+        "family": "3BP",
+        "actor": "IP",
+        "street": 1,
+        "coarse_history": "bB",
+        "n": 3136,
+        "counts": {
+          "fold": 1697,
+          "call": 1156,
+          "raise": 283
+        },
+        "rates": {
+          "fold": 0.5411352041,
+          "call": 0.368622449,
+          "raise": 0.0902423469
+        }
+      },
+      {
+        "source_key": "IP|bS",
+        "family": "3BP",
+        "actor": "IP",
+        "street": 1,
+        "coarse_history": "bS",
+        "n": 7484,
+        "counts": {
+          "fold": 2286,
+          "call": 4237,
+          "raise": 961
+        },
+        "rates": {
+          "fold": 0.3054516301,
+          "call": 0.566141101,
+          "raise": 0.1284072688
+        }
+      },
+      {
+        "source_key": "IP|bS c/bS",
+        "family": "3BP",
+        "actor": "IP",
+        "street": 2,
+        "coarse_history": "bS c/bS",
+        "n": 733,
+        "counts": {
+          "fold": 295,
+          "call": 367,
+          "raise": 71
+        },
+        "rates": {
+          "fold": 0.4024556617,
+          "call": 0.5006821282,
+          "raise": 0.0968622101
+        }
+      },
+      {
+        "source_key": "IP|x x/bS",
+        "family": "3BP",
+        "actor": "IP",
+        "street": 2,
+        "coarse_history": "x x/bS",
+        "n": 1066,
+        "counts": {
+          "fold": 521,
+          "call": 471,
+          "raise": 74
+        },
+        "rates": {
+          "fold": 0.4887429644,
+          "call": 0.4418386492,
+          "raise": 0.0694183865
+        }
+      },
+      {
+        "source_key": "OOP|bS r",
+        "family": "3BP",
+        "actor": "OOP",
+        "street": 1,
+        "coarse_history": "bS r",
+        "n": 961,
+        "counts": {
+          "fold": 478,
+          "call": 365,
+          "raise": 118
+        },
+        "rates": {
+          "fold": 0.4973985432,
+          "call": 0.3798126951,
+          "raise": 0.1227887617
+        }
+      },
+      {
+        "source_key": "OOP|x bB",
+        "family": "3BP",
+        "actor": "OOP",
+        "street": 1,
+        "coarse_history": "x bB",
+        "n": 574,
+        "counts": {
+          "fold": 289,
+          "call": 217,
+          "raise": 68
+        },
+        "rates": {
+          "fold": 0.5034843206,
+          "call": 0.3780487805,
+          "raise": 0.118466899
+        }
+      },
+      {
+        "source_key": "OOP|x bS",
+        "family": "3BP",
+        "actor": "OOP",
+        "street": 1,
+        "coarse_history": "x bS",
+        "n": 1494,
+        "counts": {
+          "fold": 387,
+          "call": 889,
+          "raise": 218
+        },
+        "rates": {
+          "fold": 0.2590361446,
+          "call": 0.5950468541,
+          "raise": 0.1459170013
+        }
+      },
+      {
+        "source_key": "IP|bB",
+        "family": "SRP",
+        "actor": "IP",
+        "street": 1,
+        "coarse_history": "bB",
+        "n": 1988,
+        "counts": {
+          "fold": 865,
+          "call": 917,
+          "raise": 206
+        },
+        "rates": {
+          "fold": 0.435110664,
+          "call": 0.4612676056,
+          "raise": 0.1036217304
+        }
+      },
+      {
+        "source_key": "IP|bS",
+        "family": "SRP",
+        "actor": "IP",
+        "street": 1,
+        "coarse_history": "bS",
+        "n": 3893,
+        "counts": {
+          "fold": 949,
+          "call": 2231,
+          "raise": 713
+        },
+        "rates": {
+          "fold": 0.2437708708,
+          "call": 0.573079887,
+          "raise": 0.1831492422
+        }
+      },
+      {
+        "source_key": "IP|x bB r",
+        "family": "SRP",
+        "actor": "IP",
+        "street": 1,
+        "coarse_history": "x bB r",
+        "n": 565,
+        "counts": {
+          "fold": 206,
+          "call": 292,
+          "raise": 67
+        },
+        "rates": {
+          "fold": 0.3646017699,
+          "call": 0.5168141593,
+          "raise": 0.1185840708
+        }
+      },
+      {
+        "source_key": "IP|x bS c/x x/bB",
+        "family": "SRP",
+        "actor": "IP",
+        "street": 3,
+        "coarse_history": "x bS c/x x/bB",
+        "n": 510,
+        "counts": {
+          "fold": 369,
+          "call": 112,
+          "raise": 29
+        },
+        "rates": {
+          "fold": 0.7235294118,
+          "call": 0.2196078431,
+          "raise": 0.0568627451
+        }
+      },
+      {
+        "source_key": "IP|x bS c/x x/bS",
+        "family": "SRP",
+        "actor": "IP",
+        "street": 3,
+        "coarse_history": "x bS c/x x/bS",
+        "n": 653,
+        "counts": {
+          "fold": 416,
+          "call": 190,
+          "raise": 47
+        },
+        "rates": {
+          "fold": 0.6370597243,
+          "call": 0.2909647779,
+          "raise": 0.0719754977
+        }
+      },
+      {
+        "source_key": "IP|x bS r",
+        "family": "SRP",
+        "actor": "IP",
+        "street": 1,
+        "coarse_history": "x bS r",
+        "n": 2015,
+        "counts": {
+          "fold": 930,
+          "call": 974,
+          "raise": 111
+        },
+        "rates": {
+          "fold": 0.4615384615,
+          "call": 0.4833746898,
+          "raise": 0.0550868486
+        }
+      },
+      {
+        "source_key": "IP|x x/bB",
+        "family": "SRP",
+        "actor": "IP",
+        "street": 2,
+        "coarse_history": "x x/bB",
+        "n": 2063,
+        "counts": {
+          "fold": 1302,
+          "call": 667,
+          "raise": 94
+        },
+        "rates": {
+          "fold": 0.6311197286,
+          "call": 0.3233155599,
+          "raise": 0.0455647116
+        }
+      },
+      {
+        "source_key": "IP|x x/bS",
+        "family": "SRP",
+        "actor": "IP",
+        "street": 2,
+        "coarse_history": "x x/bS",
+        "n": 5283,
+        "counts": {
+          "fold": 2695,
+          "call": 2230,
+          "raise": 358
+        },
+        "rates": {
+          "fold": 0.5101268219,
+          "call": 0.4221086504,
+          "raise": 0.0677645277
+        }
+      },
+      {
+        "source_key": "IP|x x/x x/bB",
+        "family": "SRP",
+        "actor": "IP",
+        "street": 3,
+        "coarse_history": "x x/x x/bB",
+        "n": 883,
+        "counts": {
+          "fold": 662,
+          "call": 171,
+          "raise": 50
+        },
+        "rates": {
+          "fold": 0.7497168743,
+          "call": 0.1936579841,
+          "raise": 0.0566251416
+        }
+      },
+      {
+        "source_key": "IP|x x/x x/bS",
+        "family": "SRP",
+        "actor": "IP",
+        "street": 3,
+        "coarse_history": "x x/x x/bS",
+        "n": 968,
+        "counts": {
+          "fold": 651,
+          "call": 239,
+          "raise": 78
+        },
+        "rates": {
+          "fold": 0.6725206612,
+          "call": 0.2469008264,
+          "raise": 0.0805785124
+        }
+      },
+      {
+        "source_key": "OOP|bS r",
+        "family": "SRP",
+        "actor": "OOP",
+        "street": 1,
+        "coarse_history": "bS r",
+        "n": 713,
+        "counts": {
+          "fold": 262,
+          "call": 411,
+          "raise": 40
+        },
+        "rates": {
+          "fold": 0.3674614306,
+          "call": 0.5764375877,
+          "raise": 0.0561009818
+        }
+      },
+      {
+        "source_key": "OOP|x bB",
+        "family": "SRP",
+        "actor": "OOP",
+        "street": 1,
+        "coarse_history": "x bB",
+        "n": 11096,
+        "counts": {
+          "fold": 6267,
+          "call": 4264,
+          "raise": 565
+        },
+        "rates": {
+          "fold": 0.5647981255,
+          "call": 0.3842826244,
+          "raise": 0.0509192502
+        }
+      },
+      {
+        "source_key": "OOP|x bB c/x bS",
+        "family": "SRP",
+        "actor": "OOP",
+        "street": 2,
+        "coarse_history": "x bB c/x bS",
+        "n": 545,
+        "counts": {
+          "fold": 167,
+          "call": 324,
+          "raise": 54
+        },
+        "rates": {
+          "fold": 0.3064220183,
+          "call": 0.5944954128,
+          "raise": 0.0990825688
+        }
+      },
+      {
+        "source_key": "OOP|x bO",
+        "family": "SRP",
+        "actor": "OOP",
+        "street": 1,
+        "coarse_history": "x bO",
+        "n": 527,
+        "counts": {
+          "fold": 403,
+          "call": 104,
+          "raise": 20
+        },
+        "rates": {
+          "fold": 0.7647058824,
+          "call": 0.1973434535,
+          "raise": 0.0379506641
+        }
+      },
+      {
+        "source_key": "OOP|x bS",
+        "family": "SRP",
+        "actor": "OOP",
+        "street": 1,
+        "coarse_history": "x bS",
+        "n": 23284,
+        "counts": {
+          "fold": 9442,
+          "call": 11827,
+          "raise": 2015
+        },
+        "rates": {
+          "fold": 0.4055145164,
+          "call": 0.5079453702,
+          "raise": 0.0865401134
+        }
+      },
+      {
+        "source_key": "OOP|x bS c/x bB",
+        "family": "SRP",
+        "actor": "OOP",
+        "street": 2,
+        "coarse_history": "x bS c/x bB",
+        "n": 674,
+        "counts": {
+          "fold": 355,
+          "call": 272,
+          "raise": 47
+        },
+        "rates": {
+          "fold": 0.5267062315,
+          "call": 0.4035608309,
+          "raise": 0.0697329377
+        }
+      },
+      {
+        "source_key": "OOP|x bS c/x bS",
+        "family": "SRP",
+        "actor": "OOP",
+        "street": 2,
+        "coarse_history": "x bS c/x bS",
+        "n": 1633,
+        "counts": {
+          "fold": 649,
+          "call": 833,
+          "raise": 151
+        },
+        "rates": {
+          "fold": 0.3974280465,
+          "call": 0.5101041029,
+          "raise": 0.0924678506
+        }
+      },
+      {
+        "source_key": "OOP|x x/x bB",
+        "family": "SRP",
+        "actor": "OOP",
+        "street": 2,
+        "coarse_history": "x x/x bB",
+        "n": 1225,
+        "counts": {
+          "fold": 853,
+          "call": 337,
+          "raise": 35
+        },
+        "rates": {
+          "fold": 0.6963265306,
+          "call": 0.2751020408,
+          "raise": 0.0285714286
+        }
+      },
+      {
+        "source_key": "OOP|x x/x bS",
+        "family": "SRP",
+        "actor": "OOP",
+        "street": 2,
+        "coarse_history": "x x/x bS",
+        "n": 3430,
+        "counts": {
+          "fold": 1988,
+          "call": 1312,
+          "raise": 130
+        },
+        "rates": {
+          "fold": 0.5795918367,
+          "call": 0.3825072886,
+          "raise": 0.0379008746
+        }
+      },
+      {
+        "source_key": "OOP|x x/x x/x bB",
+        "family": "SRP",
+        "actor": "OOP",
+        "street": 3,
+        "coarse_history": "x x/x x/x bB",
+        "n": 531,
+        "counts": {
+          "fold": 426,
+          "call": 93,
+          "raise": 12
+        },
+        "rates": {
+          "fold": 0.802259887,
+          "call": 0.1751412429,
+          "raise": 0.0225988701
+        }
+      },
+      {
+        "source_key": "OOP|x x/x x/x bS",
+        "family": "SRP",
+        "actor": "OOP",
+        "street": 3,
+        "coarse_history": "x x/x x/x bS",
+        "n": 621,
+        "counts": {
+          "fold": 444,
+          "call": 160,
+          "raise": 17
+        },
+        "rates": {
+          "fold": 0.7149758454,
+          "call": 0.2576489533,
+          "raise": 0.0273752013
+        }
+      }
+    ]
+  },
+  "official_regex_coverage": {
+    "sources": [
+      {
+        "path": "data/nl2_hu_exact_boards.json.gz",
+        "sha256": "838e2c8372af7c9b196e09bf4a8a3083481a193738bdcc006abe5de02f501ef3",
+        "counts": {
+          "EXPERIMENTAL_POOL_LOCKED": 233,
+          "matched_nodes": 733,
+          "unmatched_nodes": 5553,
+          "villain_nodes": 6286,
+          "subgames_with_all_villain_nodes_regex_matched": 1,
+          "CERT_EXACT_BOARD_GTO": 114
+        }
+      },
+      {
+        "path": "data/nl2_hu_exact_boards_b04.json.gz",
+        "sha256": "d2f80ffb483073fd94f8df3a069f81eec66fd7bf3487b8f5d4d208aea8854249",
+        "counts": {
+          "EXPERIMENTAL_POOL_LOCKED": 103,
+          "matched_nodes": 352,
+          "unmatched_nodes": 2316,
+          "villain_nodes": 2668,
+          "subgames_with_all_villain_nodes_regex_matched": 2,
+          "CERT_EXACT_BOARD_GTO": 55
+        }
+      },
+      {
+        "path": "data/nl2_hu_exact_boards_b05.json.gz",
+        "sha256": "b047336279e595f5eff29b8fdc8e6badb83851e6fe0b2f6701e56bfb4c6877f4",
+        "counts": {
+          "EXPERIMENTAL_POOL_LOCKED": 89,
+          "matched_nodes": 169,
+          "unmatched_nodes": 2008,
+          "villain_nodes": 2177,
+          "subgames_with_all_villain_nodes_regex_matched": 0,
+          "CERT_EXACT_BOARD_GTO": 50
+        }
+      }
+    ],
+    "totals": {
+      "EXPERIMENTAL_POOL_LOCKED": 425,
+      "matched_nodes": 1254,
+      "unmatched_nodes": 9877,
+      "villain_nodes": 11131,
+      "subgames_with_all_villain_nodes_regex_matched": 3,
+      "CERT_EXACT_BOARD_GTO": 219
+    },
+    "matched_share": 0.11265834156859222,
+    "unit": "Reachable villain decision-node occurrences across experimental published subgames; not unique observed NL2 hands, source rows or statistical samples.",
+    "exact_joint_empirical_rows_verified": 0,
+    "warning": "Action-line regex match is not exact joint empirical input coverage or proof achieved target frequencies. ISO/LMP marginal-only 16 subgames excluded here."
+  },
+  "generic_model_crosswalk": {
+    "model_rows": 392,
+    "without_history_source": 152,
+    "history_only_nonmatching_spr": 140,
+    "history_and_within_1pct_spr_only": 100,
+    "cert": 0,
+    "est": 0,
+    "exact_target_join_missing": [
+      "frozen preflop range/position quantities",
+      "exact public card prefix and all exact prior action amounts",
+      "node pot, stack, actor and action menu",
+      "path-level compatible weighted combo reach",
+      "solver and empirical source provenance"
+    ]
+  },
+  "exact_joint_contract": {
+    "required": [
+      "lawful sample corpus hash and dates",
+      "deduplicated independent hand/session IDs with inclusion/rejection counts",
+      "stake/table/rake/positions/preflop legal action amounts",
+      "public board prefix, exact named actors and tokens at all prior streets",
+      "integer chips, pot/slack/stack and exact size, with all-in designation",
+      "current-street action legal menu and observed raw counts/N/unmeasured categories",
+      "minimum n and confidence interval; unmeasured stays unlocked",
+      "solver source hash and tree/input checks, weighted range lineage, convergence and post-lock residual"
+    ],
+    "combo_specific": "Requires private-hand sampling independent of showdown or an explicit labeled estimation design. Aggregate bucket frequencies cannot identify per-combo actions."
+  }
+}

@@ -1,0 +1,147 @@
+name: TASK-HYBRID B99 real pinned B3 LMP x-x river NL2 OOP lock for rank77/78 (max28m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b99-lmp-xx-river.yml', 'tools/solve_hu_b99_lmp_turnonly_b3.py']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Download only byte-pinned B3 original LMP 8s8h3d full-tree GTO parent
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p gto_parent
+          gh run download 44666294821 --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B3-LMP_CO_BB-gto-8s8h3d' --dir gto_parent
+          test -f gto_parent/evidence/LMP_CO_BB-gto-8s8h3d.json
+          test -f gto_parent/solver/postflop/out/LMP_CO_BB/gto/8s8h3d_multiboard.json
+          test -f gto_parent/solver/postflop/out/LMP_CO_BB/gto/8s8h3d_multiboard.job.json
+      - name: Build authentic frozen Rust driver and compile B99 source-only actor-specific solver
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_b99_lmp_turnonly_b3.py trainer/tools/verify_hu_multiboard_100bb.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve one actual NL2 partially locked OOP turn+river, preserve original GTO flop without rerun
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-engine-pin.txt
+          python3 trainer/tools/solve_hu_b99_lmp_turnonly_b3.py              --solver-root solver --gto-artifact-root gto_parent              --manifest evidence/LMP_CO_BB-8s8h3d-x-x-exp_oop.json
+      - if: always()
+        name: Retain genuine Rust node and B98-pinned ancestor byte material even on failure
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B99_LMP_XX_RIVER-LMP_CO_BB-exp_oop-8s8h3d
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  independently-verify-and-commit:
+    needs: solve
+    if: ${{ needs.solve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Fetch EXACTLY the one immutable genuine B99 Rust turn-only artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          name='nl2-multiboard-B99_LMP_XX_RIVER-LMP_CO_BB-exp_oop-8s8h3d'
+          mkdir -p "downloads/$name"
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$name"
+          test -s "downloads/$name/evidence/LMP_CO_BB-8s8h3d-x-x-exp_oop.json"
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 1
+      - name: Authenticate SHA/root/job actor/SPR/rake all sequential private combos and partial NL2 marginal lock
+        run: |
+          set -euo pipefail
+          mkdir -p trainer/data/solver_evidence
+          python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
+          python3 trainer/tools/verify_hu_multiboard_100bb.py             --downloads downloads --solver-root solver --run-id "$GITHUB_RUN_ID"             --out trainer/data/solver_evidence/NL2_MULTIBOARD_B99_LMP_XX_RIVER.json
+      - name: Pin verified exact 8s8h3d flop x-x and turn x-x OOP hero nodes, archive SHA and no automatic CERT
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B99_LMP_XX_RIVER.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert not d['errors'] and len(d['artifacts'])==1
+          assert d['exact_board_gto_sources']==0
+          assert d['imputed_pool_locked_sources']==d['new_authentic_board_cases']>=1
+          a=d['artifacts'][0]
+          assert (a['spot'],a['version'],a['flop'])==('LMP_CO_BB','exp_oop','8s8h3d')
+          assert not a['errors'] and a['cases']
+          assert len(a['cases'])==1 and a['cases'][0]['flop_line']=='x x' and a['cases'][0]['turn']=='5s'
+          hero=[n for n in a['cases'][0]['nodes'] if n['acting_seat']==0 and
+                 n['exact_node_line']=='x x/x x/' and n['strictly_reachable_combos']>0]
+          assert hero, 'Genuine solve exists but no OOP hero river x-x node: cannot certify'
+          assert any(v['board'] for v in hero)
+          raw=p.read_bytes()
+          dest=p.with_suffix('.json.gz')
+          dest.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          idx=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+             run_id=d['source_run_id'],batch='B99_LMP_XX_RIVER',
+             actual_spot_flop_version_jobs=1,
+             verified_cases=d['new_authentic_board_cases'],
+             gto_cases=0,locked_cases=d['imputed_pool_locked_sources'],
+             source_sha256=hashlib.sha256(raw).hexdigest(),
+             gzip_sha256=hashlib.sha256(dest.read_bytes()).hexdigest(),
+             generic_model_certification=0,
+             original_gto_parent_run=44666294821,
+             original_parent_GTO_root_SHA256='c5861d2bbcc0361f095b13a8ed3e393785c48ec2a517cee1cafb7c52567ed61c',
+             original_B98_parent_manifest_SHA256='f6922cc27956249d6d69e1c4a184956dc356f67ba8b577194a88a2eccebd3bb7',
+             certified_pinned_GTO_parent_not_recomputed=True,
+             new_turn_only_OOP_hero_node_count=len(hero),
+             frozen_rank_targets=[77,78],generic_model_CERT_count=0)
+          p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          print('PASS B99 exactly one true pinned B3 LMP OOP x-x river lock with strict real hero nodes',idx)
+          PY
+      - name: Commit true per-board Rust source to Draft PR#2 only; do not relabel until independent B100 overlay
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B99_LMP_XX_RIVER.json.gz data/solver_evidence/NL2_MULTIBOARD_B99_LMP_XX_RIVER.index.json
+          git commit -m 'TASK-HYBRID B99: authentic B3-pinned LMP 8s8h3d OOP x-x turn river NL2 partial lock, SHA archived'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B99-8s8h3d-pinned-river-sources
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B99_LMP_XX_RIVER*
+          retention-days: 30

@@ -1,0 +1,68 @@
+name: TASK-HYBRID B112 all 255 frozen V26 APPROX exact-source one-board short audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b112-approx-priority.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  all-approx-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Freeze all 255 original NL2 frequency APPROX, then independently evaluate actual source/GTO/hero-lock
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b112_all_approx_priority.py
+          python3 tools/hu_b112_all_approx_priority.py
+      - name: Verify exact source blind 255 cohort, counts, all rank items, Batch E and explicit unknown/default source policy
+        run: |
+          python3 - <<'PY'
+          import json,hashlib
+          path='data/nl2_hu_b112_all_approx_frozen_frequency_gaps.json'
+          d=json.load(open(path))
+          v=json.load(open('data/nl2_hu_multiboard_status_v26_b111_rank215_220.json'))
+          assert d['schema']=='NL2_HU_B112_V26_ALL_APPROX_SOURCE_BLIND_FREQUENCY_AUDIT_V1'
+          assert d['candidate_count']==len(d['rows'])==255
+          assert d['candidate_count_reconciles']
+          assert d['source_blind_all_APPROX_preselected'] and d['no_current_reclassification']
+          assert d['parent_V26_sha256']==hashlib.sha256(open('data/nl2_hu_multiboard_status_v26_b111_rank215_220.json','rb').read()).hexdigest()
+          assert d['frozen_rank_sha256']==hashlib.sha256(open('data/nl2_hu_multiboard_prerank.json','rb').read()).hexdigest()
+          assert (v['CERT_MULTIBOARD'],v['APPROX'],v['TOTAL'])==(137,255,392)
+          assert d['source_ready_count']+d['one_board_short_count']+d['two_board_short_count']+d['three_or_more_missing_count']==255
+          assert all(v['records'][r['model_id']]['label']=='APPROX' for r in d['rows'])
+          assert [r['rank'] for r in d['rows']]==sorted(r['rank'] for r in d['rows'])
+          assert all(0<=r['missing_real_hero_flops_to_3']<=3 for r in d['rows'])
+          assert all(3<=len(r['authentic_3_to_5_flops'])<=5 for r in d['rows'] if r['exact_source_ready'])
+          assert all(r['missing_real_hero_flops_to_3']==1 for r in d['rows'] if r['rank'] in d['one_board_short_ranks'])
+          assert v['independently_verified_completed_batches']['B4_MICRO']['run_id']==44732810327
+          assert d['no_private_card_NL2_observation_claim'] and d['no_generic_texture_GTO']
+          print('PASS B112 V26 full frozen source-blind 255-APPROX audit; 137/255 unchanged')
+          PY
+      - name: Commit exact source-priority proof report to Draft PR#2, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b112_all_approx_frozen_frequency_gaps.json docs/NL2_HU_B112_V26_ALL_APPROX_GAP_QUEUE.md
+          git commit -m 'TASK-HYBRID B112: independently audit all remaining 255 APPROX, prioritize true one-board GTO/hero-lock gaps, no label promotion'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B112-all-APPROX-source-blind
+          path: |
+            data/nl2_hu_b112_all_approx_frozen_frequency_gaps.json
+            docs/NL2_HU_B112_V26_ALL_APPROX_GAP_QUEUE.md
+          retention-days: 30

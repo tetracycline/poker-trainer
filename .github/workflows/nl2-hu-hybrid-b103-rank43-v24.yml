@@ -1,0 +1,146 @@
+name: TASK-HYBRID B103 V24 real B5/B102 rank43 three-flop OOP lock CERT 134/258
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b103-rank43-v24.yml', 'tools/hu_b103_v24_rank43.py']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Independently authenticate the original B5 full GTO SHA and B102 Rust actor-OOP source, 3 exact flops
+        run: |
+          set -euo pipefail
+          test -s data/solver_evidence/NL2_MULTIBOARD_B102_SB_XX_RIVER.index.json
+          test -s data/solver_evidence/NL2_MULTIBOARD_B102_SB_XX_RIVER.json.gz
+          python3 -m py_compile tools/hu_b103_v24_rank43.py tools/hu_cert_lock_medium_audit.py
+          python3 tools/hu_b103_v24_rank43.py
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+      - name: Independent V23 SHA, one rank43 upgrade, 530 locked boards, Batch E 30+30, 2475 river links
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib
+          base='data/nl2_hu_multiboard_status_v23_b100_lmp_pair.json'
+          path='data/nl2_hu_multiboard_status_v24_b103_rank43.json'
+          old=json.load(open(base));new=json.load(open(path))
+          matrix=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v24.json'))
+          idx=json.load(open('data/solver_evidence/NL2_MULTIBOARD_B102_SB_XX_RIVER.index.json'))
+          pin=json.load(open('data/nl2_hu_b101_sb_as7h3d_b5_gto_parent_pin.json'))
+          nav=json.load(open('data/nl2_hu_b34_full_integrity.json'))['navigation']
+          assert (old['CERT_MULTIBOARD'],old['APPROX'])==(133,259)
+          assert (new['CERT_MULTIBOARD'],new['APPROX'],new['TOTAL'])==(134,258,392)
+          assert new['parent_v23_sha256']==hashlib.sha256(open(base,'rb').read()).hexdigest()
+          changed={x for x in new['records'] if new['records'][x]!=old['records'][x]}
+          assert changed=={'ln-opfr-r_model-1e6gydx'}
+          upgraded=new['records']['ln-opfr-r_model-1e6gydx']
+          assert upgraded['label']=='CERT-MULTIBOARD'
+          boards=upgraded['certified_3_to_5_exact_flop_boards']
+          assert len(boards)==3 and {x['flop'] for x in boards}=={'As7h3d','As9h2d','Ks7h2d'}
+          assert all(x['acting_seat']==0 and x['strict_full_street_combo_reachable']>0 and
+                     x['nl2_locked_variants'] and x['relative_spr_error_pct']<=5 for x in boards)
+          missing=next(x for x in boards if x['flop']=='As7h3d')
+          assert missing['source_run_id']==44736420272
+          assert any(y['run_id']==idx['run_id'] for y in missing['nl2_locked_variants'])
+          assert idx['run_id']==44830517362 and pin['original_B5_EXP_OOP_cancelled_and_not_accepted']
+          assert new['records']['ln-ipfr-t_model-sxr0qa']['label']=='APPROX'
+          assert matrix['CERT_MULTIBOARD']==134 and matrix['APPROX']==258
+          assert len(matrix['boards'])==matrix['strict_aggregate']['named_board_proofs']==530
+          assert matrix['parent_v24_status_sha256']==hashlib.sha256(open(path,'rb').read()).hexdigest()
+          assert all(b['hero_lock_proofs'] and b['strictly_reachable_combo_count']>0 and
+                     b['no_general_bet_size_recommendation'] for b in matrix['boards'])
+          assert new['independently_verified_completed_batches']['B102_SB_XX_RIVER']['run_id']==44830517362
+          E=new['independently_verified_completed_batches']['B4_MICRO']
+          assert E['run_id']==44732810327 and E['status']=='VERIFIED'
+          assert E['gto_cases']==E['locked_cases']==30
+          assert nav['continuing']==nav['reach_river']==2475 and nav['share_pct']==100
+          assert nav['missing_river']==nav['link_misses']==nav['reach_violations']==nav['modeled_path_violations']==0
+          print('PASS V24 134 CERT/258 APPROX, 530 exact GTO+OOP locks, Batch E and 2475 river links')
+          PY
+      - name: Verify complete V24-to-V1 JSON fallback for both certification frontends
+        run: |
+          node - <<'JS'
+          const fs=require('fs'),assert=require('assert').strict;
+          const urls=[
+           'data/nl2_hu_multiboard_status_v24_b103_rank43.json',
+           'data/nl2_hu_multiboard_status_v23_b100_lmp_pair.json',
+           'data/nl2_hu_multiboard_status_v22_batch94.json',
+           'data/nl2_hu_multiboard_status_v21_batch92.json',
+           'data/nl2_hu_multiboard_status_v20_batch90.json',
+           'data/nl2_hu_multiboard_status_v19_batch88.json',
+           'data/nl2_hu_multiboard_status_v18_batch86.json',
+           'data/nl2_hu_multiboard_status_v17_batch84.json',
+           'data/nl2_hu_multiboard_status_v16_batch82.json',
+           'data/nl2_hu_multiboard_status_v15_batch80.json',
+           'data/nl2_hu_multiboard_status_v14_batch77.json',
+           'data/nl2_hu_multiboard_status_v13_batch75.json',
+           'data/nl2_hu_multiboard_status_v12_batch73.json',
+           'data/nl2_hu_multiboard_status_v11_batch71.json',
+           'data/nl2_hu_multiboard_status_v10_batch69.json',
+           'data/nl2_hu_multiboard_status_v9_rank40_b67.json',
+           'data/nl2_hu_multiboard_status_v8_batch61.json',
+           'data/nl2_hu_multiboard_status_v7_batch59.json',
+           'data/nl2_hu_multiboard_status_v6_rank33.json',
+           'data/nl2_hu_multiboard_status_v5_batch55.json',
+           'data/nl2_hu_multiboard_status_v4_batch50.json',
+           'data/nl2_hu_multiboard_status_v3_rank28.json',
+           'data/nl2_hu_multiboard_status_v2_tie.json',
+           'data/nl2_hu_multiboard_status.json'
+          ];
+          const evidence=urls.map(url=>JSON.parse(fs.readFileSync(url,'utf8')));
+          async function check(path){
+            const src=fs.readFileSync(path,'utf8'),a=src.indexOf('function fetchCertifiedRegistry(){'),
+              b=src.indexOf('\nfetchCertifiedRegistry()\n .then(d=>{',a);
+            assert(a>=0&&b>a);
+            assert(!src.includes('fetchCertifiedRegistry()\n .then(r=>'));
+            const f=src.slice(a,b),xs=[...f.matchAll(/fetch\('([^']+)'/g)].map(z=>z[1]);
+            assert.deepEqual(xs,urls,'V24-to-V1 source priority must be complete and unique');
+            const fn=new Function('fetch',f+';return fetchCertifiedRegistry();');
+            for(let i=0;i<urls.length;i++){
+              const visited=[];
+              const d=await fn(async url=>{
+                const k=urls.indexOf(url);assert(k>=0);visited.push(k);
+                return k<i?{ok:false,status:404}:{ok:true,json:async()=>evidence[k]};
+              });
+              assert.strictEqual(d,evidence[i]);assert.deepEqual(visited,Array.from({length:i+1},(_,x)=>x));
+            }
+          }
+          (async()=>{
+            await check('nl2-multiboard.js');await check('nl2_hu_multiboard_ui.js');
+            console.log('PASS both V24-to-V1 24-step frontend fallbacks');
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+          JS
+      - name: Commit B103 V24 source-backed 134/258 and full 530 node-lock/50% evidence to Draft PR only
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v24_b103_rank43.json data/nl2_hu_cert_lock_medium_matrix_v24.json docs/NL2_HU_B103_V24_RANK43_CERT.md docs/NL2_HU_B103_V24_LOCK_MEDIUM.md
+          git commit -m 'TASK-HYBRID B103: original B5 3-GTO boards plus genuine B102 OOP river lock; V24 134 CERT/258 APPROX'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B103-V24-rank43-exact-proofs
+          path: |
+            data/nl2_hu_multiboard_status_v24_b103_rank43.json
+            data/nl2_hu_cert_lock_medium_matrix_v24.json
+            docs/NL2_HU_B103_V24_RANK43_CERT.md
+            docs/NL2_HU_B103_V24_LOCK_MEDIUM.md
+          retention-days: 30

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><meta name="color-scheme" content="dark">
+<title>NL2｜真實 CFR 組合級河牌節點證據</title>
+<style>
+:root{color-scheme:dark}body{font:16px/1.5 system-ui,"Noto Sans TC",sans-serif;background:#0f1a14;color:#e8f1ea;margin:0}
+header{background:#132219;border-bottom:1px solid #335442;padding:12px max(12px,calc((100vw - 1150px)/2))}
+a{color:#83e4ac}main{max-width:1150px;margin:auto;padding:16px}
+h1{font-size:22px;margin:5px 0}.info{font-size:14px;color:#b1c9b7}.warn{padding:12px;border:1px solid #7c683c;border-radius:10px;background:#262318}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.filters>*{background:#1b3023;border:1px solid #41654c;border-radius:7px;color:#fff;padding:8px;max-width:100%}
+panel,.panel{display:block;background:#132219;border:1px solid #335442;padding:12px;margin:12px 0;border-radius:10px}
+strong{color:#91e8b0}.meta{font-size:13px;color:#b2c8b9;overflow-wrap:anywhere}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{border:1px solid #345642;padding:5px 7px;text-align:left}
+th{position:sticky;top:0;background:#294333}.scroll{overflow:auto;max-height:65vh}
+.tag{display:inline-block;font-size:12px;border-radius:6px;background:#315a3e;padding:3px 7px}.tag.exp{background:#695124}
+button{background:#285b3b;border:1px solid #568969;border-radius:7px;color:#fff;padding:8px;cursor:pointer}
+code{font-size:12px;white-space:pre-wrap}
+</style></head>
+<body>
+<header><a href="nl2.html#lines">返回 NL2 行動線對照表</a>　<a href="nl2-exploit.html">局部剝削與中尺寸下注</a><h1>真實 CFR：精確牌面、完整行動線與逐 combo 可達性</h1>
+<div class="info">真實 Rust CFR 原始輸出，含 GitHub Actions 與離線解算；每個來源附 SHA-256 和執行編號。</div></header>
+<main>
+<p class="warn"><b>認證範圍：</b>「CERT」僅代表<strong>下方明確標出的公牌＋下注歷史＋底池與 SPR</strong>之 GTO 解算。
+它不代表上頁 392 張 MODEL 摘要表全部被真實解算。NL2 玩家池剝削（EXP）只在來源節點有實測頻率鎖定時可解讀，沒有測到的節點不視為已鎖。</p>
+<div id="status" class="info">載入已驗證的原始解算索引……</div>
+<div class="filters">
+<select id="spot" aria-label="位置"></select><select id="ver" aria-label="解算版本"></select>
+<select id="game" aria-label="確切翻牌與轉牌"></select><select id="node" aria-label="確切行動線"></select>
+<select id="focus" aria-label="篩選節點"><option value="all">全部真實節點</option><option value="b50">只看 50% pot 去極化候選</option></select>
+</div><div class="panel" id="details">選擇一個已驗證的子局和行動節點。</div>
+<div class="panel"><b>合法動作篩選：</b>每個有權重的 combo 僅保留最高頻動作；第二動作須同時滿足 f≥40% 與 f≥最高頻的 70%。權重為 0 的 combo 不會出現。有跨街稽核的子局還會排除前街不應走到此處的組合；未稽核的子局會明示。<label><input id="showall" type="checkbox"> 顯示全部可達組合（預設前 100）</label></div>
+<div class="scroll"><table><thead><tr><th>確切 Hole Cards</th><th>允許動作（依 CFR）</th><th>此節點行動 EV 最高（僅對照，不自動加路徑）</th></tr></thead><tbody id="combos"></tbody></table></div>
+</main>
+<script src="nl2-cfr.js?v=stage2-b12-scope"></script>
+</body></html>

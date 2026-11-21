@@ -1,0 +1,54 @@
+name: TASK-HYBRID short batch D priority gap audit (<10 min)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-next-shortfalls.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Compute top24 true missing-board proof from B1, 17+1 B2, B3 source snapshots
+        run: |
+          python3 tools/hu_highfreq_shortfalls.py data data/nl2_hu_highfreq_shortfalls.json
+      - name: Ensure frozen scope and current classification counts are unmodified
+        run: |
+          python3 - <<'PY'
+          import json
+          d=json.load(open('data/nl2_hu_highfreq_shortfalls.json'))
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          assert d['schema']=='NL2_TOP24_FROZEN_MULTIBOARD_SHORTFALLS_V1'
+          assert d['top24']==len(d['rows'])==24
+          assert d['certified_from_source']==s['CERT_MULTIBOARD']
+          assert d['still_approx']==24-s['CERT_MULTIBOARD']
+          assert len(d['new_source_batches'])==4
+          assert all(x['rank']<=24 and x['unproven_until_gto_and_hero_lock_solved'] for x in d['rows'])
+          print('PASS source-grounded 24 ranked candidates,',d['still_approx'],'pending GTO/EXP board sets')
+          PY
+      - name: Commit frozen 24-row missing-source report to PR #2 Draft, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_highfreq_shortfalls.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'TASK-HYBRID D: commit verified 11 remaining top24 per-board solver shortfalls'
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+          fi
+      - name: Retain exact gap report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-TASK-HYBRID-top24-board-gaps
+          path: data/nl2_hu_highfreq_shortfalls.json
+          retention-days: 30

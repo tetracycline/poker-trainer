@@ -1,0 +1,109 @@
+name: TASK-HYBRID B159 source-blind 250 APPROX exact GTO/NL2 gaps plus 554 locks & 2475 HU audit (max11m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b159-all-250-approx-gap-reaudit.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  source-blind-recheck-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Recompute all 250 current APPROX missing distinct genuine hero-locked GTO boards, never infer a generic texture
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b159_v30_frozen_approx_source_gap.py tools/hu_multiboard_promote.py tools/hu_cert_lock_medium_audit.py
+          python3 tools/hu_b159_v30_frozen_approx_source_gap.py
+      - name: Independent V30 SHA/250 frozen gaps/B154 strict negative/554 CERT lock and 131 b50 labels audited
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          d=pathlib.Path('data')
+          f=d/'nl2_hu_b159_v30_250_APPROX_strict_source_gap.json'
+          a=json.loads(f.read_text())
+          status=d/'nl2_hu_multiboard_status_v30_b145_rank47.json'
+          old=d/'nl2_hu_b112_all_approx_frozen_frequency_gaps.json'
+          z=d/'solver_evidence/NL2_MULTIBOARD_B154_R46_4S4H2D_GTO.json.gz'
+          idx=z.with_suffix('').with_suffix('.index.json')
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          assert a['schema']=='NL2_HU_B159_V30_FULL_250_APPROX_SOURCE_BLIND_STRICT_GAP_V1'
+          assert a['parent_V30_sha256']==sha(status)
+          assert a['parent_B112_frozen_sha256']==sha(old)
+          assert a['parent_GTO_B154_source_index_sha256']==sha(idx)
+          assert (a['CERT_MULTIBOARD'],a['APPROX'],a['EST'],a['TOTAL'])==(142,250,0,392)
+          assert (a['existing_real_named_board_proofs'],a['existing_NL2_lock_source_variants'],a['existing_b50_exact_board_research_candidates'])==(554,646,131)
+          assert a['count']==len(a['rows'])==250
+          assert a['source_gap_counts']['CURRENT_APPROX']==250
+          assert a['source_gap_counts']['original_frozen_ALREADY_PROMOTED']==5
+          assert len({x['model_id'] for x in a['rows']})==250
+          assert len({x['rank'] for x in a['rows']})==250
+          assert all(x['GTO_case_convergence_required_pct_max']==0.5 and
+                     x['SPR_relative_error_pct_max']==5 and
+                     x['measured_NL2_private_combo_conditional_rates'] is False and
+                     x['no_generic_texture_model_CERT'] for x in a['rows'])
+          assert a['not_a_promotion'] and a['PR2_draft_never_merge']
+          assert a['all_B154_rank46_4s4h2d_true_GTO_strict_IP_ZERO']
+          assert all(x['rank']!=46 or x['remaining_DISTINCT_flops_to_3']>=1 for x in a['rows'])
+          for r in a['ready_for_independent_3_5_full_cert_gate']:
+              assert r['rank'] in {x['rank'] for x in a['rows']}
+              assert len(r['matched_flops'])>=3
+          source=json.loads(idx.read_text())
+          assert source['source_sha256']==hashlib.sha256(gzip.decompress(z.read_bytes())).hexdigest()
+          assert source['exact_target_actor_IP_checked_turn_nodes']==source['exact_target_actor_IP_strict_combos']==0
+          print('PASS 250 exact sourceblind gaps, 5 earlier promotions, B154 zero strict target, no premature cert')
+          PY
+      - name: Independently re-check every 554 CERT named boards and 646 hero node locks, distinguish pooled measured/assumed/unknown and 131 b50 eligible
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v30_b145_rank47.json --out nl2-audit/lock-medium-audit.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/lock-medium-audit.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(142,250,0)
+          assert a['aggregate']['named_board_proofs']==554
+          assert a['aggregate']['paired_hero_locked_source_variants']==646
+          assert a['aggregate']['board_examples_with_b50_candidate']==131
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          print('PASS independent 554/646 per board lock/50pct source completeness')
+          PY
+      - name: Complete 4 independent HU contract, reach, link and model path audits; all 2475 continuing routes to river
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU 2475/2475")'
+      - name: Commit all 250 frozen APPROX evidence-only gap audit after complete Actions and 554 lock regression, never merge Draft PR#2
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b159_v30_250_APPROX_strict_source_gap.json docs/NL2_HU_B159_V30_ALL_250_APPROX_SOURCE_GAP.md
+          git commit -m 'TASK-HYBRID B159: SHA-audit all 250 remaining APPROX sourceblind exact GTO/actor NL2 gaps; B154 zero strict source and 554 board lock/50pct/2475 HU PASS, no false CERT'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B159-all-250-approx-real-source-gap-and-2475-audit
+          path: |
+            data/nl2_hu_b159_v30_250_APPROX_strict_source_gap.json
+            docs/NL2_HU_B159_V30_ALL_250_APPROX_SOURCE_GAP.md
+            nl2-audit/
+          retention-days: 30

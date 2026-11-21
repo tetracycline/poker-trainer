@@ -1,0 +1,5 @@
+# B13 CO vs BTN 3-bet pot: exact OOP-lead subgame
+
+One exact GTO result passed raw-archive and export checks (0 errors; solver gap 0.38809%). Preflop: CO opens, calls BTN's 3-bet; 16.5 bb pot and 92.5 bb stack; source range chain verified. The flop OOP lead is restricted to 50%, IP has 33/50/75%, and turn bets are 50/100% with an all-in-only raise menu. The GTO certificate is for this exact tree, not a larger tree.
+
+On K♣ 9♣ 4♣ / 7♥, the targeted double barrel for abstract MODEL `2uuo7v` has no eligible private hands on either tested river after the full-path filter. The BTN river decision for `1mjg9wj` has 40 eligible combos on [J♠ in the exact viewer](../nl2-cfr.html?spot=CO3_BTN&version=gto&sha=bf88d071fd4da64c58ef10592514fe8f9725979021513695887b7525a05bdec8&board=4c9cKc7hJs&line=b50%20c%2Fx%20x%2Fx), none on 2♦. Exact SPR 2.553 does not match the abstract 3.164. No generic MODEL promotion. No observed position/path/size/SPR-specific pool export was available; no empirical lock was invented.

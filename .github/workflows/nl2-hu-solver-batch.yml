@@ -1,0 +1,223 @@
+name: NL2 authentic HU solver batch (GitHub-hosted 16GB)
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: 'First deterministic representative flop index'
+        required: true
+        default: '0'
+      count:
+        description: 'Number of flops in this batch'
+        required: true
+        default: '1'
+      version:
+        description: 'GTO or solved opponent-locked BR'
+        type: choice
+        options: [gto, exp_ip, exp_oop]
+        default: gto
+
+concurrency:
+  group: nl2-hu-solver-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  authentic-solver:
+    # Public repository's standard Linux GitHub-hosted runner: 4 vCPU / 16 GB RAM.
+    # Each job solves one flop at a time; raw JSON is uploaded as resumable artifact.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+        - {spot: BTN_BB, start: 0, count: 2, version: gto}
+        - {spot: BTN_BB, start: 0, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 0, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 2, count: 2, version: gto}
+        - {spot: BTN_BB, start: 2, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 2, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 4, count: 2, version: gto}
+        - {spot: BTN_BB, start: 4, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 4, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 6, count: 2, version: gto}
+        - {spot: BTN_BB, start: 6, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 6, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 8, count: 2, version: gto}
+        - {spot: BTN_BB, start: 8, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 8, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 10, count: 2, version: gto}
+        - {spot: BTN_BB, start: 10, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 10, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 12, count: 2, version: gto}
+        - {spot: BTN_BB, start: 12, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 12, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 14, count: 2, version: gto}
+        - {spot: BTN_BB, start: 14, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 14, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 16, count: 2, version: gto}
+        - {spot: BTN_BB, start: 16, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 16, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 18, count: 2, version: gto}
+        - {spot: BTN_BB, start: 18, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 18, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 20, count: 2, version: gto}
+        - {spot: BTN_BB, start: 20, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 20, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 22, count: 2, version: gto}
+        - {spot: BTN_BB, start: 22, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 22, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 24, count: 2, version: gto}
+        - {spot: BTN_BB, start: 24, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 24, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 26, count: 2, version: gto}
+        - {spot: BTN_BB, start: 26, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 26, count: 2, version: exp_oop}
+        - {spot: BTN_BB, start: 28, count: 2, version: gto}
+        - {spot: BTN_BB, start: 28, count: 2, version: exp_ip}
+        - {spot: BTN_BB, start: 28, count: 2, version: exp_oop}
+        - {spot: CO_BB, start: 0, count: 2, version: gto}
+        - {spot: CO_BB, start: 0, count: 2, version: exp_ip}
+        - {spot: CO_BB, start: 0, count: 2, version: exp_oop}
+        - {spot: CO_BB, start: 2, count: 2, version: gto}
+        - {spot: CO_BB, start: 2, count: 2, version: exp_ip}
+        - {spot: CO_BB, start: 2, count: 2, version: exp_oop}
+        - {spot: CO_BB, start: 4, count: 2, version: gto}
+        - {spot: CO_BB, start: 4, count: 2, version: exp_ip}
+        - {spot: CO_BB, start: 4, count: 2, version: exp_oop}
+        - {spot: CO_BB, start: 6, count: 2, version: gto}
+        - {spot: CO_BB, start: 6, count: 2, version: exp_ip}
+        - {spot: CO_BB, start: 6, count: 2, version: exp_oop}
+        - {spot: CO_BB, start: 8, count: 2, version: gto}
+        - {spot: CO_BB, start: 8, count: 2, version: exp_ip}
+        - {spot: CO_BB, start: 8, count: 2, version: exp_oop}
+        - {spot: CO_BB, start: 10, count: 2, version: gto}
+        - {spot: CO_BB, start: 10, count: 2, version: exp_ip}
+        - {spot: CO_BB, start: 10, count: 2, version: exp_oop}
+        - {spot: SB_BB, start: 0, count: 2, version: gto}
+        - {spot: SB_BB, start: 0, count: 2, version: exp_ip}
+        - {spot: SB_BB, start: 0, count: 2, version: exp_oop}
+        - {spot: SB_BB, start: 2, count: 2, version: gto}
+        - {spot: SB_BB, start: 2, count: 2, version: exp_ip}
+        - {spot: SB_BB, start: 2, count: 2, version: exp_oop}
+        - {spot: SB_BB, start: 4, count: 2, version: gto}
+        - {spot: SB_BB, start: 4, count: 2, version: exp_ip}
+        - {spot: SB_BB, start: 4, count: 2, version: exp_oop}
+        - {spot: SB_BB, start: 6, count: 2, version: gto}
+        - {spot: SB_BB, start: 6, count: 2, version: exp_ip}
+        - {spot: SB_BB, start: 6, count: 2, version: exp_oop}
+        - {spot: SB_BB, start: 8, count: 2, version: gto}
+        - {spot: SB_BB, start: 8, count: 2, version: exp_ip}
+        - {spot: SB_BB, start: 8, count: 2, version: exp_oop}
+        - {spot: SB_BB, start: 10, count: 2, version: gto}
+        - {spot: SB_BB, start: 10, count: 2, version: exp_ip}
+        - {spot: SB_BB, start: 10, count: 2, version: exp_oop}
+        - {spot: UTG_BB, start: 0, count: 2, version: gto}
+        - {spot: UTG_BB, start: 0, count: 2, version: exp_ip}
+        - {spot: UTG_BB, start: 0, count: 2, version: exp_oop}
+        - {spot: UTG_BB, start: 2, count: 2, version: gto}
+        - {spot: UTG_BB, start: 2, count: 2, version: exp_ip}
+        - {spot: UTG_BB, start: 2, count: 2, version: exp_oop}
+        - {spot: UTG_BB, start: 4, count: 2, version: gto}
+        - {spot: UTG_BB, start: 4, count: 2, version: exp_ip}
+        - {spot: UTG_BB, start: 4, count: 2, version: exp_oop}
+        - {spot: UTG_BB, start: 6, count: 2, version: gto}
+        - {spot: UTG_BB, start: 6, count: 2, version: exp_ip}
+        - {spot: UTG_BB, start: 6, count: 2, version: exp_oop}
+        - {spot: HJ_BB, start: 0, count: 2, version: gto}
+        - {spot: HJ_BB, start: 0, count: 2, version: exp_ip}
+        - {spot: HJ_BB, start: 0, count: 2, version: exp_oop}
+        - {spot: HJ_BB, start: 2, count: 2, version: gto}
+        - {spot: HJ_BB, start: 2, count: 2, version: exp_ip}
+        - {spot: HJ_BB, start: 2, count: 2, version: exp_oop}
+        - {spot: HJ_BB, start: 4, count: 2, version: gto}
+        - {spot: HJ_BB, start: 4, count: 2, version: exp_ip}
+        - {spot: HJ_BB, start: 4, count: 2, version: exp_oop}
+        - {spot: HJ_BB, start: 6, count: 2, version: gto}
+        - {spot: HJ_BB, start: 6, count: 2, version: exp_ip}
+        - {spot: HJ_BB, start: 6, count: 2, version: exp_oop}
+        - {spot: SB3_BTN, start: 0, count: 2, version: gto}
+        - {spot: SB3_BTN, start: 0, count: 2, version: exp_ip}
+        - {spot: SB3_BTN, start: 0, count: 2, version: exp_oop}
+        - {spot: SB3_BTN, start: 2, count: 2, version: gto}
+        - {spot: SB3_BTN, start: 2, count: 2, version: exp_ip}
+        - {spot: SB3_BTN, start: 2, count: 2, version: exp_oop}
+        - {spot: SB3_BTN, start: 4, count: 2, version: gto}
+        - {spot: SB3_BTN, start: 4, count: 2, version: exp_ip}
+        - {spot: SB3_BTN, start: 4, count: 2, version: exp_oop}
+        - {spot: SB3_BTN, start: 6, count: 2, version: gto}
+        - {spot: SB3_BTN, start: 6, count: 2, version: exp_ip}
+        - {spot: SB3_BTN, start: 6, count: 2, version: exp_oop}
+        - {spot: SB3_BTN, start: 8, count: 2, version: gto}
+        - {spot: SB3_BTN, start: 8, count: 2, version: exp_ip}
+        - {spot: SB3_BTN, start: 8, count: 2, version: exp_oop}
+        - {spot: BB3_BTN, start: 0, count: 2, version: gto}
+        - {spot: BB3_BTN, start: 0, count: 2, version: exp_ip}
+        - {spot: BB3_BTN, start: 0, count: 2, version: exp_oop}
+        - {spot: BB3_BTN, start: 2, count: 2, version: gto}
+        - {spot: BB3_BTN, start: 2, count: 2, version: exp_ip}
+        - {spot: BB3_BTN, start: 2, count: 2, version: exp_oop}
+        - {spot: BB3_BTN, start: 4, count: 2, version: gto}
+        - {spot: BB3_BTN, start: 4, count: 2, version: exp_ip}
+        - {spot: BB3_BTN, start: 4, count: 2, version: exp_oop}
+        - {spot: BB3_BTN, start: 6, count: 2, version: gto}
+        - {spot: BB3_BTN, start: 6, count: 2, version: exp_ip}
+        - {spot: BB3_BTN, start: 6, count: 2, version: exp_oop}
+        - {spot: BB3_BTN, start: 8, count: 2, version: gto}
+        - {spot: BB3_BTN, start: 8, count: 2, version: exp_ip}
+        - {spot: BB3_BTN, start: 8, count: 2, version: exp_oop}
+    timeout-minutes: 330
+    permissions:
+      contents: read
+    env:
+      SPOT: ${{ matrix.spot }}
+      START: ${{ matrix.start }}
+      COUNT: ${{ matrix.count }}
+      VERSION: ${{ matrix.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: main
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Python dependencies
+        run: python -m pip install numpy matplotlib
+      - name: Checkout exact external Rust CFR engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+      - name: Build solver driver (legacy upstream Rust lint compatibility)
+        working-directory: solver/postflop/pfdriver
+        env:
+          RUSTFLAGS: '-A dangerous_implicit_autorefs'
+          CARGO_BUILD_JOBS: '2'
+        run: cargo build --release --locked
+      - name: Run real CFR solve and emit hash manifest (no fabricated NL2 cells)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-commit.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/engine-commit.txt
+          python trainer/tools/solve_hu_batch.py \
+            --solver-root solver --spot "$SPOT" --start "$START" --count "$COUNT" \
+            --version "$VERSION" --manifest evidence/solver-manifest.json
+      - name: Preserve raw CFR output and reproducibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-real-solver-${{ env.SPOT }}-${{ env.VERSION }}-${{ env.START }}
+          path: |
+            evidence/
+            solver/postflop/out/
+          retention-days: 30
+          if-no-files-found: warn

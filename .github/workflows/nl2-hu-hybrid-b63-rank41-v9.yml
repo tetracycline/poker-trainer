@@ -1,0 +1,107 @@
+name: TASK-HYBRID B63 V9 rank41 three authentic boards, CO_BB valid-only B62 salvage
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b63-rank41-v9.yml', 'tools/hu_b63_rank41_v9.py']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify original B52 failure and B62 exact CO_BB source, source-blind rank41, all 222 lock proofs
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b63_rank41_v9.py tools/hu_cert_lock_medium_audit.py
+          python3 tools/hu_b63_rank41_v9.py
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+      - name: Strict V9 57/335, archived B52 one valid only, immutable V8, 222 real boards and river gate
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib
+          p=json.load(open('data/nl2_hu_multiboard_status_v8_batch61.json'))
+          d=json.load(open('data/nl2_hu_multiboard_status_v9_rank41.json'))
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v9.json'))
+          nav=json.load(open('data/nl2_hu_b34_full_integrity.json'))['navigation']
+          assert (p['CERT_MULTIBOARD'],p['APPROX'])==(56,336)
+          assert (d['CERT_MULTIBOARD'],d['APPROX'])==(57,335)
+          assert d['parent_v8_sha256']==hashlib.sha256(open('data/nl2_hu_multiboard_status_v8_batch61.json','rb').read()).hexdigest()
+          assert d['strict_B62_salvage_exclusion_sha256']==hashlib.sha256(open('data/nl2_hu_b62_B52_one_valid_one_rejected.json','rb').read()).hexdigest()
+          changed={k for k in p['records'] if p['records'][k]!=d['records'][k]}
+          assert changed=={'ln-ipfr-t_model-sxr0qa'}
+          b=d['independently_verified_completed_batches']['B52_TWO_IP_LOCKS']
+          assert b['status']=='VERIFIED' and b['authentic_jobs']==1 and b['locked_cases']>=1
+          assert b['salvaged_one_valid_job_only'] and b['original_group_failed']
+          assert len(b['excluded_invalid_sources'])==1
+          assert d['original_rejected_SB_BB_is_not_CERT_source']
+          assert m['CERT_MULTIBOARD']==57 and m['APPROX']==335 and len(m['boards'])==222
+          assert m['strict_aggregate']['named_board_proofs']==222
+          assert m['parent_v9_status_sha256']==hashlib.sha256(open('data/nl2_hu_multiboard_status_v9_rank41.json','rb').read()).hexdigest()
+          assert all(z['hero_lock_proofs'] and z['strictly_reachable_combo_count']>0 and z['no_general_bet_size_recommendation'] for z in m['boards'])
+          assert nav['continuing']==nav['reach_river']==2475 and nav['share_pct']==100
+          assert d['independently_verified_completed_batches']['B4_MICRO']['run_id']==44732810327
+          print('PASS B63 V9 57/335, 222 exact genuine boards; B52 rejected SB excluded')
+          PY
+          node - <<'JS'
+          const fs=require('fs'),assert=require('assert').strict;
+          const f=['data/nl2_hu_multiboard_status_v9_rank41.json',
+            'data/nl2_hu_multiboard_status_v8_batch61.json',
+            'data/nl2_hu_multiboard_status_v7_batch59.json',
+            'data/nl2_hu_multiboard_status_v6_rank33.json',
+            'data/nl2_hu_multiboard_status_v5_batch55.json',
+            'data/nl2_hu_multiboard_status_v4_batch50.json',
+            'data/nl2_hu_multiboard_status_v3_rank28.json',
+            'data/nl2_hu_multiboard_status_v2_tie.json',
+            'data/nl2_hu_multiboard_status.json'];
+          const d=f.map(x=>JSON.parse(fs.readFileSync(x,'utf8')));
+          async function check(path){
+            const s=fs.readFileSync(path,'utf8');
+            const a=s.indexOf('function fetchCertifiedRegistry(){'),b=s.indexOf('\nfetchCertifiedRegistry()\n .then(d=>{',a);
+            assert(a>=0&&b>a);
+            const fn=new Function('fetch',s.slice(a,b)+';return fetchCertifiedRegistry();');
+            for(let i=0;i<f.length;i++){
+              const r=await fn(async url=>{
+                const j=f.findIndex(x=>url.includes(x));assert(j>=0);
+                return j<i?{ok:false,status:404}:{ok:true,json:async()=>d[j]};
+              });
+              assert.strictEqual(r,d[i]);
+            }
+          }
+          (async()=>{await check('nl2-multiboard.js');await check('nl2_hu_multiboard_ui.js');
+            console.log('PASS V9 to V1 fallback');
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+          JS
+      - name: Commit V9 rank41 named-source lock/medium registry; PR #2 remains Draft, no merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v9_rank41.json data/nl2_hu_cert_lock_medium_matrix_v9.json docs/NL2_HU_B63_V9_RANK41_CERT.md docs/NL2_HU_B63_V9_LOCK_MEDIUM.md
+          git commit -m 'TASK-HYBRID B63: 1 source-verified CO_BB rank41 model; V9 57 CERT/335 APPROX, reject invalid SB_BB'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B63-V9-CO-BB-only-proof
+          path: |
+            data/nl2_hu_multiboard_status_v9_rank41.json
+            data/nl2_hu_cert_lock_medium_matrix_v9.json
+            docs/NL2_HU_B63_V9_RANK41_CERT.md
+            docs/NL2_HU_B63_V9_LOCK_MEDIUM.md
+          retention-days: 30

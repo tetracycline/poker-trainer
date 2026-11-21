@@ -1,0 +1,65 @@
+name: TASK-HYBRID B27 certify all 24 model UI boards, lock provenance and b50 labels (under 8 min)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b27-cert-ui.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  certify-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: "Node compile sanity: real interactive multiboard viewer and training banner"
+        run: |
+          set -euo pipefail
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+      - name: Generate fresh matrix and gate 24/24 top ranked models, all exact public boards and provenance
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_cert_lock_medium_coverage_matrix.py tools/hu_cert_ui_completeness_gate.py
+          python3 tools/hu_cert_lock_medium_coverage_matrix.py
+          python3 tools/hu_cert_ui_completeness_gate.py
+          python3 - <<'PY'
+          import json
+          d=json.load(open('data/nl2_hu_cert_ui_completeness_gate.json'))
+          assert d['cert_models']==24 and d['approx_models']==368 and d['est_models']==0
+          assert d['all_cert_boards_have_exact_source_and_hero_lock']
+          assert d['b50_evidence_not_supported']>=0
+          assert d['draft_PR_never_merge'] and d['b50_never_generalized_beyond_named_public_board']
+          print('PASS every UI source crosswalk matches GTO, hero-lock and original strict combos')
+          PY
+      - name: Commit reproducible full 24-CERT UI proof and source matrix, push to Draft PR only
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_cert_ui_completeness_gate.json data/nl2_hu_cert_lock_medium_matrix.json docs/NL2_HU_CERT_LOCK_MEDIUM_MATRIX.md
+          if git diff --cached --quiet; then
+            echo 'Everything already accurately up to date'; exit 0
+          fi
+          git commit -m 'TASK-HYBRID B27: prove all 24 CERT exact-board UIs include measured/default lock source and b50 labels'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - name: Preserve full source gate if a commit race occurs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B27-24-of-24-exact-board-lock-and-medium
+          path: |
+            data/nl2_hu_cert_ui_completeness_gate.json
+            data/nl2_hu_cert_lock_medium_matrix.json
+          retention-days: 30

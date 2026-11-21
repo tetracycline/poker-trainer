@@ -1,0 +1,147 @@
+name: TASK-HYBRID B105 pinned B1 BTN_BB As9h2d real IP turn-river NL2 lock (max28m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b105-btn-xx-river.yml', 'tools/solve_hu_b105_btn_turnonly_b1.py']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Download ONLY B104 byte-pinned original B1 GTO, not any preexisting unrelated EXP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p gto_parent
+          gh run download 44666285424 --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B1-BTN_BB-gto-As9h2d' --dir gto_parent
+          test -s gto_parent/evidence/BTN_BB-gto-As9h2d.json
+          test -s gto_parent/solver/postflop/out/BTN_BB/gto/As9h2d_multiboard.json
+          test -s gto_parent/solver/postflop/out/BTN_BB/gto/As9h2d_multiboard.job.json
+      - name: Build pinned authentic Rust postflop solver
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_b105_btn_turnonly_b1.py trainer/tools/verify_hu_multiboard_100bb.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve only turn Kd x-x and river; original 5.5bb pot GTO flop weights byte-for-byte unchanged
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-driver-pin.txt
+          python3 trainer/tools/solve_hu_b105_btn_turnonly_b1.py             --solver-root solver --gto-artifact-root gto_parent             --manifest evidence/BTN_BB-As9h2d-xb100c-exp_ip.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B105_BTN_XX_RIVER-BTN_BB-exp_ip-As9h2d
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-and-commit:
+    needs: solve
+    if: ${{ needs.solve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download exactly one original B105 raw Rust artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          name='nl2-multiboard-B105_BTN_XX_RIVER-BTN_BB-exp_ip-As9h2d'
+          mkdir -p "downloads/$name"
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$name"
+          test -s "downloads/$name/evidence/BTN_BB-As9h2d-xb100c-exp_ip.json"
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 1
+      - name: Reverify full SHA lineage, actual 100bb pot, rake, actor, SPR, legal combos and pooled NL2 partial locks
+        run: |
+          set -euo pipefail
+          mkdir -p trainer/data/solver_evidence
+          python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
+          python3 trainer/tools/verify_hu_multiboard_100bb.py             --downloads downloads --solver-root solver --run-id "$GITHUB_RUN_ID"             --out trainer/data/solver_evidence/NL2_MULTIBOARD_B105_BTN_XX_RIVER.json
+      - name: Require genuine strict positive-reach IP river xb100c x-x actor node; freeze SHA only if valid
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B105_BTN_XX_RIVER.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert not d['errors'] and len(d['artifacts'])==1
+          assert d['exact_board_gto_sources']==0
+          assert d['imputed_pool_locked_sources']==d['new_authentic_board_cases']>=1
+          a=d['artifacts'][0]
+          assert (a['spot'],a['version'],a['flop'])==('BTN_BB','exp_ip','As9h2d')
+          assert not a['errors'] and len(a['cases'])==1
+          c=a['cases'][0]
+          assert (c['flop_line'],c['turn'])==('x b100 c','Kd')
+          hero=[n for n in c['nodes'] if n['acting_seat']==1 and
+                n['exact_node_line']=='x b100 c/x x/x' and n['strictly_reachable_combos']>0]
+          assert hero, 'True source has no positive-reach IP hero river; leave rank43 APPROX'
+          assert all(n['public_board'] for n in hero)
+          raw=p.read_bytes()
+          gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          ix={'schema':'NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+            'batch':'B105_BTN_XX_RIVER','run_id':d['source_run_id'],
+            'actual_spot_flop_version_jobs':1,'verified_cases':d['new_authentic_board_cases'],
+            'gto_cases':0,'locked_cases':d['imputed_pool_locked_sources'],
+            'source_sha256':hashlib.sha256(raw).hexdigest(),
+            'gzip_sha256':hashlib.sha256(gz.read_bytes()).hexdigest(),
+            'generic_model_certification':0,
+            'original_gto_parent_run':44666285424,
+            'original_parent_GTO_root_SHA256':'80cbf4e9c56d01f6fb56400006b02029088de5114d3e70d848c3a233157e7a8e',
+            'original_B104_parent_manifest_SHA256':'385c2fc4341b185633345d617638ea71c1a922b5cfe6297625c0a44cb6678fbb',
+            'preexisting_B1_EXP_IP_not_matching_target_river':True,
+            'original_pinned_GTO_flop_NOT_recomputed':True,
+            'actor_IP_positive_reach_river_nodes':len(hero),
+            'source_blind_rank':135,'immediate_CERT_upgrades':0}
+          p.with_suffix('.index.json').write_text(json.dumps(ix,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          print('PASS B105 authentic Rust IP NL2 river actor lock, original B1 GTO SHA held',ix)
+          PY
+      - name: Commit verified original B105 Rust archive to Draft PR #2, no merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B105_BTN_XX_RIVER.json.gz data/solver_evidence/NL2_MULTIBOARD_B105_BTN_XX_RIVER.index.json
+          git commit -m 'TASK-HYBRID B105: original B1 GTO SHA pinned BTN_BB As9h2d, genuine IP NL2 turn x-x river lock'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B105-original-B1-river-locked
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B105_BTN_XX_RIVER*
+          retention-days: 30

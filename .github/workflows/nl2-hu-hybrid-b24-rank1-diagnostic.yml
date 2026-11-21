@@ -1,0 +1,57 @@
+name: TASK-HYBRID B24 diagnose why verified B23 LMP sources do not certify rank1 (under 8m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b24-rank1-diagnostic.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: SHA-indexed original Rust source match diagnostic with strict acting seat / SPR / combo / lock gates
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_rank1_b23_source_mismatch.py
+          python3 tools/hu_rank1_b23_source_mismatch.py
+          python3 - <<'PY'
+          import json
+          d=json.load(open('data/nl2_hu_rank1_B23_strict_source_mismatch.json'))
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          assert d['rank']==1 and d['model_id']=='ln-iso-lmp_t_model-19hfq8v'
+          assert d['schema']=='TASK_HYBRID_B24_LMP_RANK1_RAW_B23_STRICT_MISMATCH_V1'
+          assert d['unchanged_classification']['cert']==s['CERT_MULTIBOARD']
+          assert s['records'][d['model_id']]['label']=='APPROX'
+          assert d['frozen_rank_top24'] and d['unsupported_cards_or_histories_must_not_be_relabelled']
+          assert d['source_batch_run']==44764901527
+          print('PASS strict rank1 frozen-source diagnosis, labels unchanged')
+          PY
+      - name: Commit real source gap and SHA ledger to Draft PR #2; no merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_rank1_B23_strict_source_mismatch.json docs/NL2_HU_RANK1_B23_STRICT_SOURCE_MISMATCH.md
+          git commit -m 'TASK-HYBRID B24: SHA-grounded exact B23 rank1 actor/SPR/reach/lock rejection, no invented CERT'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - name: Preserve exact gap audit on workflow failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B24-original-rank1-B23-mismatch
+          path: |
+            data/nl2_hu_rank1_B23_strict_source_mismatch.json
+            docs/NL2_HU_RANK1_B23_STRICT_SOURCE_MISMATCH.md
+          retention-days: 30

@@ -1,0 +1,163 @@
+name: TASK-HYBRID B174 rank138 2 missing original B2 exact CO-IP GTO pinned parents + 560 lock/2475 HU audit (max15m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b174-rank138-two-original-b2-parents.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  freeze-two-original-GTO-parents:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Download original B2 independent SUCCESS full GTO flop artifacts; NEVER substitute inferred board or EXP parent
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for flop in 8s8h3d Js9h4d; do
+            name="nl2-multiboard-B2-CO_BB-gto-$flop"
+            mkdir -p "downloads/$name"
+            gh run download 44666290556 --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$name"
+            test -s "downloads/$name/evidence/CO_BB-gto-$flop.json"
+            test -s "downloads/$name/solver/postflop/out/CO_BB/gto/${flop}_multiboard.json"
+            test -s "downloads/$name/solver/postflop/out/CO_BB/gto/${flop}_multiboard.job.json"
+          done
+      - name: Prove rank138 two missing exact GTO CO IP river x-x x-x x legal cases, match historical raw B2 source, freeze job/root/manifest SHA
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import sys,hashlib,gzip,json,pathlib
+          sys.path.insert(0,'tools')
+          from hu_multiboard_promote import build_source_index,candidates,hero_seat
+          d=pathlib.Path('data')
+          load=lambda p:json.loads(p.read_text())
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          v32=d/'nl2_hu_multiboard_status_v32_b168_rank80.json'
+          st=load(v32);gap=load(d/'nl2_hu_b172_v32_248_APPROX_true_sourceblind_gaps.json')
+          assert (st['CERT_MULTIBOARD'],st['APPROX'],st['EST'])==(144,248,0)
+          assert gap['parent_V32_sha256']==sha(v32)
+          g=next(z for z in gap['rows'] if z['rank']==138)
+          mid='ln-ipfr-r_model-hqu5je'
+          assert (g['model_id'],g['spot'],g['hero_actor'])==(mid,'CO_BB',1)
+          assert set(g['genuine_GTO_legal_flops'])=={'8s8h3d','As9h2d','Js9h4d'}
+          assert g['genuine_NL2_actor_paired_flops']==['As9h2d']
+          assert g['missing_actor_NL2_locks_on_GTO']==['8s8h3d','Js9h4d']
+          archive=d/'solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json.gz'
+          ix=load(archive.with_suffix('').with_suffix('.index.json'))
+          assert ix['batch']=='B2_PARTIAL' and ix['run_id']==44666290556
+          assert ix['gzip_sha256']==sha(archive)
+          assert ix['source_sha256']==hashlib.sha256(gzip.decompress(archive.read_bytes())).hexdigest()
+          sources=[pathlib.Path(x) for x in st['source_evidence']['source_files']]
+          assert archive in sources and all(x.is_file() for x in sources)
+          exact,locks,meta=build_source_index(d,sources)
+          rank=next(z for z in load(d/'nl2_hu_multiboard_prerank.json')['nodes']
+                    if z['rank_by_empirically_grounded_frequency_proxy']==138)
+          model=next(z for z in load(d/'nl2_hu_stage2_queue.json')['records'] if z['model_id']==mid)
+          rank['preflop_text']=model['preflop_text']
+          rank['abstract_action_history']=model['abstract_action_history']
+          assert hero_seat(model['preflop_text'])==1
+          cs,why=candidates(rank,exact,locks,None)
+          assert why is None
+          assert {x['flop'] for x in cs}=={'8s8h3d','As9h2d','Js9h4d'}
+          lines=['# B174 rank138 genuine B2 original CO_BB flop parent SHA-pins','','Two still-unlocked exact flops only; NOT NL2 EXP and NOT generic CERT.']
+          for flop in ('8s8h3d','Js9h4d'):
+              arr=sorted((z for z in cs if z['flop']==flop and z['source_run_id']==44666290556
+                  and z['actual_exact_action_line']=='x x/x x/x' and z['acting_seat']==1
+                  and z['strict_full_street_combo_reachable']>0 and z['genuine_gto_exploitability_pct']<=.5
+                  and z['relative_spr_error_pct']<=5),key=lambda z:(-z['strict_full_street_combo_reachable'],z['turn']))
+              print('B174_DIAGNOSTIC_TRUE_CANDIDATES',flop,[(z['source_run_id'],z['actual_exact_action_line'],z['acting_seat'],z['turn'],z['strict_full_street_combo_reachable'],z['genuine_gto_exploitability_pct'],z['relative_spr_error_pct']) for z in cs if z['flop']==flop],flush=True)
+              assert arr,('No strict original B2 GTO actor-IP source',flop)
+              sample=arr[0]
+              assert not sample['nl2_locked_variants']
+              path=pathlib.Path('downloads')/('nl2-multiboard-B2-CO_BB-gto-'+flop)
+              manifest=path/('evidence/CO_BB-gto-'+flop+'.json')
+              root=path/('solver/postflop/out/CO_BB/gto/'+flop+'_multiboard.json')
+              job=root.with_suffix('.job.json')
+              assert all(z.is_file() for z in (manifest,root,job))
+              m=load(manifest);f=load(root);j=load(job)
+              assert m['schema']=='NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1'
+              assert (m['spot'],m['version'],m['flop'])==('CO_BB','gto',flop)
+              assert m['preflop_ranges']['source']=='PINNED_POKER_SOLVER_PREFLOP_CFR'
+              assert m['no_generic_certification'] and not m['failures']
+              assert (m['root_pot_bb'],m['root_remaining_bb'])==(5.5,97.5)
+              assert (f['flop'],f['pot'],f['stack'])==(flop,550,9750)
+              assert (j['pot'],j['stack'],j['rake_rate'],j['rake_cap'])==(550,9750,.05,1000)
+              assert not j.get('locks') and j.get('hero') is None
+              assert all(v in j['flop_oop'] for v in ('33%','50%','75%','100%'))
+              assert all(v in j['flop_ip'] for v in ('33%','50%','75%','100%'))
+              assert f['info']['gto_expl_pct']<=.5
+              assert any(q['line']=='x x' and q['turn']==sample['turn'] for q in m['cases'])
+              assert any(q['line']=='x x/' and q['board'][-2:]==sample['turn'] for q in f['nodes'])
+              pin=dict(schema='NL2_HU_B174_R138_CO_BB_ORIGINAL_B2_GTO_PARENT_PIN_V1',
+                  source_run_id=44666290556,model_id=mid,rank=138,
+                  spot='CO_BB',flop=flop,turn=sample['turn'],
+                  flop_line='x x',turn_line='x x',exact_line='x x/x x/x',
+                  actor_seat=1,version='gto',
+                  original_gto_manifest_sha256=sha(manifest),
+                  original_gto_root_sha256=sha(root),
+                  original_gto_job_sha256=sha(job),
+                  old_B2_source_sha256=sha(archive),
+                  old_B2_source_index_sha256=sha(archive.with_suffix('').with_suffix('.index.json')),
+                  strict_legal_actor_IP_river_combos=sample['strict_full_street_combo_reachable'],
+                  original_full_root_GTO_not_recomputed=True,
+                  requires_fresh_true_EXP_IP_node_lock=True,
+                  no_generic_certification=True,no_private_card_observed_frequency=True,
+                  PR2_Draft_never_merge=True)
+              out=d/('nl2_hu_b174_r138_co_bb_'+flop+'_original_gto_pin.json')
+              out.write_text(json.dumps(pin,ensure_ascii=False,indent=2)+'\n')
+              lines.extend(['',flop+' / '+sample['turn']+': strictly reachable CO IP river combos '+
+                 str(sample['strict_full_street_combo_reachable'])+'; root/job/manifest SHA pinned.'])
+          pathlib.Path('docs/NL2_HU_B174_R138_B2_TWO_GENUINE_GTO_PARENTS.md').write_text('\n'.join(lines)+'\n')
+          print('PASS B174 exact B2 old GTO parents, two separate flops, all source SHA-pinned, rank138 remains APPROX')
+          PY
+      - name: Audit ALL 144 CERT/248 APPROX, 560 source-verified boards, NL2 node locks and b50, full 2475 HU paths
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v32_b168_rank80.json --out nl2-audit/b174-lock-medium.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('nl2-audit/b174-lock-medium.json'))
+          assert (s['cert_multiboard'],s['approx'],s['EST'])==(144,248,0)
+          assert s['aggregate']['named_board_proofs']==560
+          assert s['aggregate']['paired_hero_locked_source_variants']>=652
+          assert s['aggregate']['board_examples_with_b50_candidate']>=131
+          assert s['not_generalized_handclass_GTO'] and s['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS 2475/2475")'
+      - name: Only after PASS push two genuine SHA-pinned original GTO source files to PR2 Draft never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b174_r138_co_bb_8s8h3d_original_gto_pin.json data/nl2_hu_b174_r138_co_bb_Js9h4d_original_gto_pin.json docs/NL2_HU_B174_R138_B2_TWO_GENUINE_GTO_PARENTS.md
+          git commit -m 'TASK-HYBRID B174 rank138 B2 two exact full-GTO parent SHAs pinned, 560 NL2 source boards and 2475 HU PASS; no fake CERT'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B174-rank138-two-SHA-GTO-560-lock-2475
+          path: |
+            data/nl2_hu_b174_r138_co_bb_*_original_gto_pin.json
+            docs/NL2_HU_B174_R138_B2_TWO_GENUINE_GTO_PARENTS.md
+            nl2-audit/
+          retention-days: 30

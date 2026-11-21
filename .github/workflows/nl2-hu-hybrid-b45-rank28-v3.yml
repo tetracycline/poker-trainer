@@ -1,0 +1,82 @@
+name: TASK-HYBRID B45 rank28 exact 3 LMP boards V3 ledger and safe UI fallback (max10m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b45-rank28-v3.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Independently promote rank28 ONLY with authentic restricted LMP evidence
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b45_rank28_v3.py
+          python3 tools/hu_b45_rank28_v3.py
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+      - name: Certify V3 27/365 source and fallback UI JSON handling
+        run: |
+          set -euo pipefail
+          node - <<'JS'
+          const fs=require('fs'),assert=require('assert').strict;
+          const v3=JSON.parse(fs.readFileSync('data/nl2_hu_multiboard_status_v3_rank28.json'));
+          const v2=JSON.parse(fs.readFileSync('data/nl2_hu_multiboard_status_v2_tie.json'));
+          const v1=JSON.parse(fs.readFileSync('data/nl2_hu_multiboard_status.json'));
+          assert.equal(v3.CERT_MULTIBOARD,27);assert.equal(v3.APPROX,365);
+          assert.equal(v2.CERT_MULTIBOARD,26);assert.equal(v2.APPROX,366);
+          const id=v3.added_cert_model_id;
+          assert.equal(v2.records[id].label,'APPROX');
+          assert.equal(v3.records[id].label,'CERT-MULTIBOARD');
+          assert.equal(v3.records[id].certified_3_to_5_exact_flop_boards.length,3);
+          async function test(path) {
+            const s=fs.readFileSync(path,'utf8');
+            const a=s.indexOf('function fetchCertifiedRegistry(){');
+            const b=s.indexOf('\nfetchCertifiedRegistry()\n .then(d=>{',a);
+            assert(a>=0&&b>a,'must consume decoded JSON as an object');
+            const fn=new Function('fetch',s.slice(a,b)+';return fetchCertifiedRegistry();');
+            for(const [missing,expected] of [[[],v3],[['v3'],v2],[['v3','v2'],v1]]){
+              const result=await fn(async url=>{
+                const is3=url.includes('_v3_rank28'),is2=url.includes('_v2_tie');
+                const absent=(is3&&missing.includes('v3'))||(is2&&missing.includes('v2'));
+                return absent?{ok:false,status:404}:{ok:true,json:async()=>is3?v3:is2?v2:v1};
+              });
+              assert.strictEqual(result,expected);
+            }
+          }
+          (async()=>{
+            await test('nl2-multiboard.js'); await test('nl2_hu_multiboard_ui.js');
+            console.log('PASS B45 source-blind rank28 3 authentic boards, V3 27/365 + V2/V1 fallback');
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          JS
+      - name: Commit strict V3 independent evidence only to Draft PR#2, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v3_rank28.json docs/NL2_HU_B45_RANK28_CERT.md
+          git commit -m 'TASK-HYBRID B45: rank28 LMP 3 restricted real flop boards; V3 27 CERT/365 APPROX'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B45-V3-rank28
+          path: |
+            data/nl2_hu_multiboard_status_v3_rank28.json
+            docs/NL2_HU_B45_RANK28_CERT.md
+          retention-days: 30

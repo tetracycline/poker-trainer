@@ -1,0 +1,146 @@
+name: TASK-HYBRID V verify river b100 with exact GTO parent on Jh9d6s
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-v-river-jh9-b33.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 21
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Download exactly one independently verified GTO parent artifact for this flop
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p gto_parent
+          gh run download 44736420272 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B5_SBGAPS-SB_BB-gto-Jh9d6s --dir gto_parent
+          test -f gto_parent/solver/postflop/out/SB_BB/gto/Jh9d6s_multiboard.json
+          test -f gto_parent/solver/postflop/out/SB_BB/gto/Jh9d6s_multiboard.job.json
+      - name: Compile pinned genuine Rust CFR solver with source code syntax gate
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_turnonly_gto_parent.py trainer/tools/verify_hu_multiboard_100bb.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve genuine Rust downstream b33-call turn+river only, zero flop-lock claim
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          python3 trainer/tools/solve_hu_turnonly_gto_parent.py \
+            --solver-root solver --gto-artifact-root gto_parent \
+            --gto-parent-run-id 44736420272 \
+            --spot SB_BB --flop Jh9d6s --flop-line "b33 c" --version exp_oop \
+            --manifest evidence/SB_BB-exp_oop-Jh9d6s-b33c.json
+      - name: Preserve raw pinned GTO parent and authentic downstream lock proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B17_RIVER_PINNED-SB_BB-Jh9d6s-b33c
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: ${{ needs.solve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - name: Download and independently check one real locked downstream subgame
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir downloads
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d -name 'nl2-multiboard-B17_RIVER_PINNED-*' | wc -l)" -eq 1
+          mkdir -p trainer/data/solver_evidence
+          python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver \
+            --run-id "$GITHUB_RUN_ID" --out trainer/data/solver_evidence/NL2_MULTIBOARD_B17_RIVER_PINNED.json
+      - name: Freeze limited-scope downstream-only true lock source with raw SHA256
+        run: |
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B17_RIVER_PINNED.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1' and not d['errors']
+          assert len(d['artifacts'])==1 and d['artifacts'][0]['version']=='exp_oop'
+          assert d['artifacts'][0]['flop']=='Jh9d6s'
+          assert d['exact_board_gto_sources']==0 and d['imputed_pool_locked_sources']>0
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          idx=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+              run_id=d['source_run_id'],batch='B17_RIVER_PINNED',
+              actual_spot_flop_version_jobs=1,
+              verified_cases=d['new_authentic_board_cases'],gto_cases=0,
+              locked_cases=d['imputed_pool_locked_sources'],
+              source_sha256=hashlib.sha256(raw).hexdigest(),
+              gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+              generic_model_certification=0,
+              parent_note='Full GTO flop root is SHA-verified separately; opponent NL2 partially locked ONLY at turn/river; cannot count as locked flop GTO.')
+          p.with_suffix('.index.json').write_text(json.dumps(idx,indent=2,ensure_ascii=False)+'\n')
+          p.unlink()
+          print('PASS truthful GTO-parent turn-only EXP',idx)
+          PY
+      - name: Reclassify only if 3 exact GTO and paired hero turn-only lock pass strict reach
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_multiboard_consolidate.py --root data --out data/nl2_hu_multiboard_status.json --doc docs/NL2_HU_MULTIBOARD_STATUS.md
+          python3 tools/hu_highfreq_shortfalls.py data data/nl2_hu_highfreq_shortfalls.json
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status.json --out data/nl2_hu_cert_lock_medium_audit.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          g=json.load(open('data/nl2_hu_highfreq_shortfalls.json'))
+          a=json.load(open('data/nl2_hu_cert_lock_medium_audit.json'))
+          assert s['TOTAL']==392 and s['CERT_MULTIBOARD']+s['APPROX']==392
+          assert s['CERT_MULTIBOARD']>=18
+          assert s['independently_verified_completed_batches']['B17_RIVER_PINNED']['authentic_jobs']==1
+          assert g['certified_from_source']==s['CERT_MULTIBOARD'] and a['cert_multiboard']==s['CERT_MULTIBOARD']
+          print('PASS verified turn-only NL2 lock and proof-gated models',s['CERT_MULTIBOARD'],s['APPROX'])
+          PY
+      - name: Commit and push exact partial turn-only source; PR stays Draft, never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B17_RIVER_PINNED.index.json data/solver_evidence/NL2_MULTIBOARD_B17_RIVER_PINNED.json.gz data/nl2_hu_multiboard_status.json data/nl2_hu_highfreq_shortfalls.json data/nl2_hu_cert_lock_medium_audit.json docs/NL2_HU_MULTIBOARD_STATUS.md
+          git commit -m 'TASK-HYBRID V: verify exact b33-call then b100-call river partial NL2 lock from GTO parent'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - name: Preserve exact sources even if push fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-T-true-turnonly-hero-lock-audit
+          path: trainer/data/solver_evidence/NL2_MULTIBOARD_B17_RIVER_PINNED*
+          retention-days: 30

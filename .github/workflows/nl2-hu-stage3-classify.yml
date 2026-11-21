@@ -1,0 +1,67 @@
+name: NL2 stage3 publish 392 training labels with verified multiboard-only GTO proofs
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-stage3-classify.yml'
+      - 'tools/hu_multiboard_promote.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  honest-multiboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify exact game-tree board/action/actor/SPR/strict combo ancestry and EXP pairing for every high-frequency ranked MODEL
+        run: |
+          python3 tools/hu_multiboard_promote.py \
+            --rank data/nl2_hu_multiboard_prerank.json \
+            --queue data/nl2_hu_stage2_queue.json \
+            --root data \
+            --out data/nl2_hu_multiboard_status.json
+      - name: Independently refuse fake generic GTO, missing precise cards, or missing NL2 hero locked response
+        run: |
+          python3 - <<'PY'
+          import json,collections
+          d=json.load(open('data/nl2_hu_multiboard_status.json'))
+          assert d['TOTAL']==392 and d['CERT_MULTIBOARD']+d['APPROX']==392
+          assert d['top_N_rank_cutoff']==24
+          assert len(d['records'])==392
+          for n in d['records'].values():
+              if n['label']=='APPROX':assert not n['certified_3_to_5_exact_flop_boards']
+              else:
+                  assert n['high_frequency_preregistered']
+                  a=n['certified_3_to_5_exact_flop_boards']
+                  assert 3<=len(a)<=5
+                  assert len(set(z['flop'] for z in a))==len(a)
+                  assert len(set(z['flop_texture'] for z in a))>=2
+                  assert all(z['strict_full_street_combo_reachable']>0 and z['genuine_gto_exploitability_pct']<=0.5 and
+                             z['nl2_locked_variants'] and z['acting_seat'] in (0,1) for z in a)
+                  assert all(z['relative_spr_error_pct']<=5.0 for z in a)
+          print('PASS 392 statuses, high frequency 24 only, 3-5 exact cards and paired locked EXP; results:',d['CERT_MULTIBOARD'],d['APPROX'])
+          PY
+      - name: Commit current strict status to Draft PR, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'stage3: classify 392 model tables via real exact-board multi-source GTO+locked EXP, otherwise APPROX'
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+          fi
+      - name: Save independent audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-392-multiboard-classifications
+          path: data/nl2_hu_multiboard_status.json
+          retention-days: 30

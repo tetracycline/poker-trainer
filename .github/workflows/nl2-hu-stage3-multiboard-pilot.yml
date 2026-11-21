@@ -1,0 +1,56 @@
+name: NL2 stage3 authentic multiboard pilot SRP vs limped
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage3-multiboard-pilot.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - {spot: LMP_CO_BB, flop: As9h2d, version: gto}
+          - {spot: SB_BB, flop: 9s6h3d, version: gto}
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install scientific backend
+        run: python -m pip install numpy matplotlib
+      - name: Build immutable authentic Rust CFR engine
+        run: |
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve real 100bb HU postflop all major donor branches and true turn→river CFR
+        run: |
+          mkdir -p evidence
+          python trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver --spot "${{ matrix.spot }}" --version "${{ matrix.version }}" \
+            --flop "${{ matrix.flop }}" --turn-count 1 \
+            --manifest "evidence/${{ matrix.spot }}-${{ matrix.version }}-${{ matrix.flop }}.json"
+      - name: Preserve authentic raw CFR and explicit source/assumptions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-stage3-pilot-${{ matrix.spot }}-${{ matrix.flop }}
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn

@@ -1,0 +1,169 @@
+name: TASK-HYBRID B150 exact rank46 source-blind three real flop V31 143/249 + 557 locks and 2475 HU audit (max17m)
+# Preregistered ONLY: do not trigger until B147 and B149 original real
+# source Archives plus independent B148 actor/rank correction have all
+# completed. Stage without automatic push-trigger; later update to activate.
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  frozen-source-blind-v31-rank46-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Require original B3/B147 GTO+real B146/B149 NL2 actor-IP source and corrected B148 metadata BEFORE V31
+        run: |
+          set -euo pipefail
+          for item in B146_R46_LMP_9s6h3d B147_R46_AS9H2D_GTO B149_R46_AS9H2D_EXP_IP; do
+            test -s "data/solver_evidence/NL2_MULTIBOARD_${item}.json.gz"
+            test -s "data/solver_evidence/NL2_MULTIBOARD_${item}.index.json"
+          done
+          test -s data/nl2_hu_b148_rank46_as9h2d_gto_parent_pin.json
+          test -s data/solver_evidence/NL2_MULTIBOARD_B148_R46_AS9H2D_GTO_VERIFIED.index.json
+          test -s data/nl2_hu_multiboard_status_v30_b145_rank47.json
+          python3 -m py_compile tools/hu_b150_v31_rank46.py tools/hu_b148_verify_b147_actor_ip_labels.py tools/hu_multiboard_promote.py tools/hu_cert_lock_medium_coverage_matrix.py tools/hu_cert_lock_medium_audit.py
+          python3 tools/hu_b148_verify_b147_actor_ip_labels.py
+          python3 tools/hu_b150_v31_rank46.py
+      - name: Add SHA-sealed V31 to both certified viewers; preserve V30 V29 V28 V27 V26 full fallbacks
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          v31=""" const v31=d=>{
+            if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V31_B150_RANK46'||
+               d.CERT_MULTIBOARD!==143||d.APPROX!==249||d.EST!==0||d.TOTAL!==392||
+               d.original_v30_cert!==142||d.original_v30_approx!==250||
+               d.original_top24_cutoff_unchanged!==true||
+               String(d.source_blind_expansion_ranks)!=='41,46,47,69,88,236'||
+               d.supplementary_cert_count!==119||
+               d.B150_rank46_two_true_missing_flops?.rank!==46||
+               d.B150_rank46_two_true_missing_flops?.flops?.join(',')!=='8s8h3d,9s6h3d,As9h2d'||
+               d.B150_rank46_two_true_missing_flops?.limped_preflop_169class_assumed!==true||
+               d.B150_rank46_two_true_missing_flops?.exact_action_line!=='x b50 c/x'||
+               Object.keys(d.records||{}).length!==392||
+               d.records?.['ln-iso-lmp_t_model-17z0wyl']?.label!=='CERT-MULTIBOARD'||
+               d.records?.['ln-iso-lmp_t_model-1oaypnl']?.label!=='CERT-MULTIBOARD'||
+               d.records?.['ln-3bp-3b_r_model-8uwbze']?.label!=='CERT-MULTIBOARD')
+                 throw Error('B150 V31 frozen rank46 original GTO & actor-IP 3-flop source proof failed');
+            return d;
+          };
+          """
+          before=' const v30=d=>{'
+          old=" return fetch('data/nl2_hu_multiboard_status_v30_b145_rank47.json',{cache:'no-store'}).then(open).then(v30)"
+          new=" return fetch('data/nl2_hu_multiboard_status_v31_b150_rank46.json',{cache:'no-store'}).then(open).then(v31)\n   .catch(()=>fetch('data/nl2_hu_multiboard_status_v30_b145_rank47.json',{cache:'no-store'}).then(open).then(v30))"
+          for name in ('nl2-multiboard.js','nl2_hu_multiboard_ui.js'):
+              p=Path(name);s=p.read_text()
+              assert s.count(before)==1 and s.count(old)==1 and 'const v31=d=>' not in s
+              p.write_text(s.replace(before,v31+before).replace(old,new))
+          PY
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+      - name: Independently verify exactly one rank46 CERT added, 3 different GTO+NL2 actor IP flops, 557 source-backed locks
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          d=pathlib.Path('data')
+          parent=d/'nl2_hu_multiboard_status_v30_b145_rank47.json'
+          child=d/'nl2_hu_multiboard_status_v31_b150_rank46.json'
+          mat=d/'nl2_hu_cert_lock_medium_matrix_v31_b150.json'
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          a=json.loads(parent.read_text());b=json.loads(child.read_text());m=json.loads(mat.read_text())
+          assert (a['CERT_MULTIBOARD'],a['APPROX'],a['EST'])==(142,250,0)
+          assert (b['CERT_MULTIBOARD'],b['APPROX'],b['EST'])==(143,249,0)
+          assert b['parent_v30_sha256']==sha(parent)
+          assert b['B112_frozen_gap_sha256']==sha(d/'nl2_hu_b112_all_approx_frozen_frequency_gaps.json')
+          assert {k for k in a['records'] if a['records'][k]!=b['records'][k]}=={'ln-iso-lmp_t_model-17z0wyl'}
+          model=b['records']['ln-iso-lmp_t_model-17z0wyl']
+          assert model['label']=='CERT-MULTIBOARD' and model['proven_exact_board_count']==3
+          boards=model['certified_3_to_5_exact_flop_boards']
+          assert len(boards)==3 and {r['flop'] for r in boards}=={'8s8h3d','9s6h3d','As9h2d'}
+          assert len({r['flop_texture'] for r in boards})>=2
+          for row in boards:
+              assert row['acting_seat']==1 and row['actual_exact_action_line']=='x b50 c/x'
+              assert row['strict_full_street_combo_reachable']>0 and row['exact_combo_reachable']>0
+              assert row['genuine_gto_exploitability_pct']<=.5 and row['relative_spr_error_pct']<=5
+              assert row['assumed_preflop_ranges'] is True
+              assert row['nl2_locked_variants'] and all(v['version']=='exp_ip' for v in row['nl2_locked_variants'])
+          p=json.loads((d/'nl2_hu_b148_rank46_as9h2d_gto_parent_pin.json').read_text())
+          third=next(row for row in boards if row['flop']=='As9h2d')
+          ix=json.loads((d/'solver_evidence/NL2_MULTIBOARD_B149_R46_AS9H2D_EXP_IP.index.json').read_text())
+          assert third['source_run_id']==44853428350 and third['turn']==p['turn']
+          assert ix['true_actor_IP_checked_turn_nodes']>0 and ix['strict_failure_reason'] is None
+          assert any(q['run_id']==ix['run_id'] and q['version']=='exp_ip' for q in third['nl2_locked_variants'])
+          assert len(m['boards'])==557 and len(m['models'])==143
+          assert m['strict_aggregate']['named_board_proofs']==557
+          assert m['parent_v31_status_sha256']==sha(child)
+          assert all(row['hero_lock_proofs'] and row['strictly_reachable_combo_count']>0
+                     and row['no_general_bet_size_recommendation'] for row in m['boards'])
+          assert b['independently_verified_completed_batches']['B4_MICRO']['status']=='VERIFIED'
+          assert b['independently_verified_completed_batches']['B4_MICRO']['run_id']==44732810327
+          print('PASS V31 frozen rank46, 143 CERT/249 APPROX, 557 real board locked GTO+NL2 proofs')
+          PY
+      - name: Full independent 143 CERT NL2 pooled-vs-assumed lock and 50pct nonpolar provenance, 2475 navigable rivers
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v31_b150_rank46.json --out nl2-audit/cert-lock-medium-independent.json
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          python3 - <<'PY'
+          import json
+          m=json.load(open('nl2-audit/cert-lock-medium-independent.json'))
+          n=json.load(open('nl2-audit/link.json'))['counts']
+          assert (m['cert_multiboard'],m['approx'],m['EST'])==(143,249,0)
+          assert m['aggregate']['named_board_proofs']==557
+          assert m['not_generalized_handclass_GTO'] and m['not_actual_NL2_earnings']
+          assert (n['continuing'],n['reachRiver'],n['riverShare'])==(2475,2475,100)
+          print('PASS 143/249 complete board/source and 2475/2475 HU river audit')
+          PY
+      - name: Both frontends load V31 first, preserve V30 V29 V28 V27 V26 source-verified fallbacks
+        run: |
+          node - <<'JS'
+          const fs=require('fs'),assert=require('assert').strict;
+          for(const path of ['nl2-multiboard.js','nl2_hu_multiboard_ui.js']){
+            const s=fs.readFileSync(path,'utf8');
+            for(const file of [
+             'v31_b150_rank46','v30_b145_rank47','v29_b142_rank88',
+             'v28_b133_rank69','v27_b123_r41_236','v26_b111_rank215_220']){
+              assert(s.includes('data/nl2_hu_multiboard_status_'+file+'.json'));
+            }
+            assert(s.includes('const v31=d=>{')&&s.includes('const v30=d=>{'));
+            assert(s.includes('d.CERT_MULTIBOARD!==143||d.APPROX!==249'));
+          }
+          console.log('PASS V31 first, fallbacks V30/V29/V28/V27/V26 intact on both UIs');
+          JS
+      - name: Commit only source-blind genuine V31 143 CERT/249 APPROX/557 node-lock evidence plus full audit to PR2 Draft, NEVER merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v31_b150_rank46.json data/nl2_hu_cert_lock_medium_matrix_v31_b150.json docs/NL2_HU_B150_V31_RANK46_GENUINE_CERT.md docs/NL2_HU_B150_V31_PER_BOARD_NL2_LOCK_MEDIUM.md nl2-multiboard.js nl2_hu_multiboard_ui.js
+          git commit -m 'TASK-HYBRID B150: frozen rank46 true 3-flop GTO+actor-IP NL2 V31 143/249, 557 named locks/50pct and all HU 2475 rivers'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B150-V31-rank46-143-249-557-full-source-audit
+          path: |
+            data/nl2_hu_multiboard_status_v31_b150_rank46.json
+            data/nl2_hu_cert_lock_medium_matrix_v31_b150.json
+            docs/NL2_HU_B150_V31_RANK46_GENUINE_CERT.md
+            docs/NL2_HU_B150_V31_PER_BOARD_NL2_LOCK_MEDIUM.md
+            nl2-audit/
+          retention-days: 30

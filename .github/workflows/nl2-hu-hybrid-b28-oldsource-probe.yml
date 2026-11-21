@@ -1,0 +1,65 @@
+name: TASK-HYBRID B28 inspect high-frequency unknown NL2 lock sources for authentic GTO parent reuse
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b28-oldsource-probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  official-provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download exactly two original immutable 2026-11 source-artifact IDs, not synthetic NL2 data
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for version in gto exp_oop; do
+            name="nl2-stage2-SB_BB-$version-Ks7h2d"
+            mkdir -p "official_artifacts/$name"
+            gh run download 44654973894 --repo "$GITHUB_REPOSITORY" --name "$name" --dir "official_artifacts/$name"
+            test "$(find "official_artifacts/$name" -type f | wc -l)" -ge 1
+          done
+      - name: Check original solver geometry, SHA and source suitability; do not invent conditional NL2 rates
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b28_oldsource_reuse_probe.py
+          python3 tools/hu_b28_oldsource_reuse_probe.py
+          python3 - <<'PY'
+          import json
+          r=json.load(open('data/nl2_hu_b28_original_Ks7h2d_reuse_probe.json'))
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          assert r['original_run_id']==44654973894 and r['flop']=='Ks7h2d'
+          assert r['certified_status_unchanged'] and r['no_new_certification'] and r['no_merge']
+          assert s['CERT_MULTIBOARD']==24 and s['APPROX']==368
+          assert len(r['precommitted_sha_sources'])>=3
+          print('PASS B28 original GTO source forensic, no invalid frequency counts or CERT changes')
+          PY
+      - name: Commit source SHA and original tree evidence to existing Draft PR #2, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b28_original_Ks7h2d_reuse_probe.json
+          git commit -m 'TASK-HYBRID B28: audit original SB_BB Ks7h2d GTO/EXP raw source reusability and UNKNOWN NL2 frequency'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - name: Preserve source-only provenance audit if write races
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B28-Ks7h2d-original-source-probe
+          path: data/nl2_hu_b28_original_Ks7h2d_reuse_probe.json
+          retention-days: 30

@@ -17,7 +17,7 @@ function loadRenderer() {
   const ctx = { console, __LINES_QA: true, location: { hash: '#lines' }, scrollTo() {}, addEventListener() {},
     document: { querySelector: () => app, querySelectorAll: () => [], getElementById: () => null } };
   ctx.window = ctx; vm.createContext(ctx);
-  for (const n of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js', 'nl2_titles.js', 'nl2.js']) {
+  for (const n of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js', 'nl2_titles.js', 'nl2_hu_model.js', 'nl2.js']) {
     const f = path.join(root, n); if (!fs.existsSync(f)) continue;
     vm.runInContext(fs.readFileSync(f, 'utf8'), ctx, { filename: n });
   }
@@ -30,12 +30,14 @@ function stOf(nd) {
 }
 function ndPfx(nd) { return ND_PFX.find(p => String(nd).startsWith(p)) || ''; }
 function strip(t) { return String(t || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(); }
-function actOf(text) {
-  if (/棄/.test(text)) return 'fold';
-  if (/跟/.test(text)) return 'call';
-  if (/加注|全下/.test(text)) return 'raise';
-  if (/過/.test(text)) return 'check';
-  if (/下注/.test(text)) return 'bet';
+function actOf(text) { // classify PRIMARY action, never secondary navigation text
+  const t=String(text||'').trim();
+  if (/^棄/.test(t)) return 'fold';
+  if (/^全下|^加注\s*全下/.test(t)) return 'allin';
+  if (/^跟/.test(t)) return 'call';
+  if (/^加注/.test(t)) return 'raise';
+  if (/^過/.test(t)) return 'check';
+  if (/^下注/.test(t)) return 'bet';
   return '?';
 }
 function parseSecs(html) {
@@ -63,7 +65,9 @@ function parseSecs(html) {
         const href = (tm[2].match(/<a class="jmp" href="#([^"]+)"/) || [])[1] || '';
         const extras = [...tm[2].matchAll(/<a class="jmp sub" href="#([^"]+)"/g)].map(x => x[1]);
         const note = /（無後續表）/.test(tm[2]) || /（無後續表）/.test(text);
-        cells.push({ na, text, href, extras, note, act: actOf(text) });
+        const primary = strip((tm[2].match(/<a class="jmp" href="#[^"]+">([\s\S]*?)<\/a>/)||[])[1] ||
+          tm[2].split(/<a class="jmp sub"|<small\b/)[0]);
+        cells.push({ na, text, href, extras, note, primary, act: actOf(primary) });
       }
       rows.push({ lab, id: rid, bt, cells });
     }
@@ -85,7 +89,7 @@ for (const spot of L.spots) {
 }
 
 const misses = [];
-const ok = { linked: 0, noted: 0, fold: 0, na: 0, sub: 0 };
+const ok = { linked: 0, noted: 0, fold: 0, allin: 0, na: 0, sub: 0 };
 function baseId(href) { return String(href || '').replace(BT_RE, ''); }
 function addMiss(kind, s, row, cell, detail) {
   misses.push({ kind, sp: s.sp, nd: s.nd, table: s.id, row: row && (row.lab || row.id), text: cell && cell.text, href: cell && cell.href, detail });
@@ -124,6 +128,7 @@ for (const s of allSecs) {
   for (const row of s.rows) for (const c of row.cells) {
     if (c.na || c.text === '—' || !c.text) { ok.na++; continue; }
     if (c.act === 'fold') { ok.fold++; continue; }
+    if (c.act === 'allin') { ok.allin++; continue; }
     const hrefs = [];
     // parse from original? we only stored first href. Need all hrefs!
     // We'll re-parse below if needed. For now c.href is first.
@@ -196,11 +201,26 @@ function walkRiverFrom(cell, s) {
 }
 
 let cont = 0, reachR = 0, noR = 0;
+// Immutable cell-level gap evidence. Never infer reach from a texture-only match.
+const unresolvedCells = [];
+function recordRiverGap(s, row, c, ri, ci, reason, at, chain) {
+  const item = itemById.get(s.id);
+  unresolvedCells.push({
+    id: [s.id, row.id || ri, ci].join('::'), sp: s.sp, nd: s.nd,
+    stage: s.st, table: s.id, row: row.id, rowIndex: ri,
+    boardTexture: row.bt, column: ci, action: c.act, text: c.text,
+    href: c.href || null, title: s.title,
+    preflop: s.title.split('→')[0].trim(), history: item && item.key,
+    breakReason: reason, blockedAt: at && { sp: at.sp, nd: at.nd, table: at.id },
+    linkChain: chain || [s.id], evidence: 'UNSOLVED'
+  });
+}
 const noREx = new Map();
 for (const s of allSecs.filter(x => x.st < 2)) {
-  for (const row of s.rows) for (const c of row.cells) {
-    if (c.na || c.act === 'fold' || !c.text || c.text === '—') continue;
-    if (!c.href && s.st < 2) { cont++; noR++; 
+  for (const [ri, row] of s.rows.entries()) for (const [ci, c] of row.cells.entries()) {
+    if (c.na || c.act === 'fold' || c.act === 'allin' || !c.text || c.text === '—') continue;
+    if (!c.href && s.st < 2) { cont++; noR++;
+      recordRiverGap(s, row, c, ri, ci, 'NO_PRIMARY_LINK', s, [s.id]); 
       const k = s.sp + '/' + s.nd + ' ' + (itemById.get(s.id) || {}).key + ' ' + c.act;
       if (!noREx.has(k)) noREx.set(k, { title: s.title, n: 0, why: '格子沒有下一街主連結' });
       noREx.get(k).n++;
@@ -214,6 +234,9 @@ for (const s of allSecs.filter(x => x.st < 2)) {
     if (w.ok) reachR++;
     else {
       noR++;
+      recordRiverGap(s, row, c, ri, ci,
+        w.at && w.at.st === 1 ? 'NO_TURN_TO_RIVER_LINK' : 'NOT_NEXT_STREET',
+        w.at, [s.id, w.at && w.at.id].filter(Boolean));
       const item = itemById.get(s.id);
       const k = s.sp + '/' + s.nd + ' ' + JSON.stringify(item && item.key) + ' ' + c.act;
       if (!noREx.has(k)) noREx.set(k, { title: s.title, n: 0, why: w.at ? ('走到 ' + w.at.sp + '/' + w.at.nd + ' 之後沒有河牌主連結') : '中斷' });
@@ -222,12 +245,14 @@ for (const s of allSecs.filter(x => x.st < 2)) {
   }
 }
 
+if (unresolvedCells.length !== noR || noR + reachR !== cont)
+  throw new Error('Cell-level river-gap ledger not aligned with the coverage denominator');
 const counts = {
   tables: allSecs.length,
   flop: allSecs.filter(s => s.st === 0).length,
   turn: allSecs.filter(s => s.st === 1).length,
   river: allSecs.filter(s => s.st === 2).length,
-  linked: ok.linked, fold: ok.fold, na: ok.na,
+  linked: ok.linked, fold: ok.fold, allin: ok.allin, na: ok.na,
   misses: misses.length,
   continuing: cont, reachRiver: reachR, noRiver: noR,
   riverShare: cont ? Math.round(reachR / cont * 1000) / 10 : 0
@@ -456,7 +481,8 @@ const reviewText = mdReview();
 const mdPath = opt('--md'), reviewPath = opt('--review'), jsonPath = opt('--json');
 if (mdPath) fs.writeFileSync(mdPath, auditText);
 if (reviewPath) fs.writeFileSync(reviewPath, reviewText);
-if (jsonPath) fs.writeFileSync(jsonPath, JSON.stringify({ counts, byKind, misses: misses }, null, 2));
+if (jsonPath) fs.writeFileSync(jsonPath, JSON.stringify({ counts, byKind, misses: misses, missingNext: [...missingNext.values()].sort((a,b)=>b.n-a.n), noRiverExamples: [...noREx.values()].sort((a,b)=>b.n-a.n),
+  unresolvedCells }, null, 2));
 if (!QUIET) {
   console.log(JSON.stringify(counts));
   if (misses.length) console.log('misses by kind', byKind);

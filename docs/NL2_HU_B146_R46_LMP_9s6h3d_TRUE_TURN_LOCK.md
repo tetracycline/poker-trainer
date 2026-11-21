@@ -1,0 +1,3 @@
+# B146 rank46 9s6h3d independent true Rust actor-IP NL2 source
+
+Original successful B3 GTO run 44666294821, SHA-pinned full flop, not recomputed. Preflop limped 169-class ranges explicitly assumed. Flop line x b50 c, turn Ts; hero IP turn exact node x b50 c/x, legal matched NL2 locked nodes 1, strict combos 1. Observed NL2 pooled action-size/street marginals only where present; other frequencies assumed. No private-card conditional NL2 observation and NO generic texture GTO. Rank46 stays APPROX until an independent full 3-board source-blind promotion audit. V30 stays 142 CERT/250 APPROX, PR2 Draft NEVER merge.

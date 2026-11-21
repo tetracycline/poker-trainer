@@ -1,0 +1,70 @@
+name: NL2 stage2 publish GTO/locked exact-board CFR batch04 independently
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage2-publish04.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-and-pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download all source-original 24 Rust CFR job outputs and SHA manifests
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: |
+          mkdir -p evidence/run04 data/solver_evidence
+          gh run download 44653774402 --repo "$GITHUB_REPOSITORY" --dir evidence/run04
+      - name: Independently verify parent ranges, source board, pot and stack, node SPR and every combo's winning frequency
+        run: |
+          python3 tools/verify_hu_solver_bundle.py \
+            --downloads evidence/run04 --run-id 44653774402 \
+            --out data/solver_evidence/STAGE2_BATCH04.json
+      - name: Pack verified exact board GTO CERT, provisional pool locked source, per-combo action/EV and medium-size candidate
+        run: |
+          python3 tools/hu_incremental_batch.py \
+            --downloads evidence/run04 --proof data/solver_evidence/STAGE2_BATCH04.json \
+            --run-id 44653774402 \
+            --out data/nl2_hu_exact_boards_b04.json.gz
+      - name: Verify file and provenance contains no generic MODEL promotion
+        run: |
+          python3 - <<'PY'
+          import gzip,json,pathlib,hashlib
+          p=pathlib.Path('data/nl2_hu_exact_boards_b04.json.gz')
+          ix=json.load(open('data/nl2_hu_exact_boards_b04.index.json'))
+          assert hashlib.sha256(p.read_bytes()).hexdigest()==ix['gz_sha256']
+          d=json.loads(gzip.decompress(p.read_bytes()))
+          assert ix['solved_subgames']==d['exact_subgame_count']==158
+          assert ix['actual_gto_cert_exact_board']==55
+          assert ix['generic_model_certs']==d['generic_model_upgrades']==0
+          print('Verified genuine 158 exact-board cases, GTO 55, 0 fake generic CERT')
+          PY
+      - name: Commit independently verified batch04 evidence to Draft PR (never merge)
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/STAGE2_BATCH04.json data/nl2_hu_exact_boards_b04.json.gz data/nl2_hu_exact_boards_b04.index.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'evidence(stage2): 158 authentic batch04 CFR subgames with exact combo reach and medium-size proofs'
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+          fi
+      - name: Preserve independent proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-stage2-batch04-CFR-certified-evidence
+          path: |
+            data/solver_evidence/STAGE2_BATCH04.json
+            data/nl2_hu_exact_boards_b04.index.json
+            data/nl2_hu_exact_boards_b04.json.gz
+          retention-days: 30

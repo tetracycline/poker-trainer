@@ -1,0 +1,63 @@
+name: NL2 stage3 freeze high-frequency multiboard priority
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage3-rank.yml', 'tools/hu_multiboard_rank.py', 'data/nl2_hu_stage2_queue.json']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  freeze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Preregister top-24 100bb HU MODEL high-frequency ranking using real NL2 aggregate pot/position/action rates
+        run: |
+          python3 trainer/tools/hu_multiboard_rank.py \
+            --queue trainer/data/nl2_hu_stage2_queue.json \
+            --pool solver/inputs/pool_stats.json \
+            --cutoff 24 \
+            --out trainer/data/nl2_hu_multiboard_prerank.json
+      - name: Audit no outcome leakage and preserve 392 statuses
+        run: |
+          python3 - <<'PY'
+          import json
+          d=json.load(open('trainer/data/nl2_hu_multiboard_prerank.json'))
+          assert d['summary']['models']==392
+          assert d['summary']['high_frequency_priority']==24
+          assert d['summary']['low_priority_approx']==368
+          assert sum(x['high_frequency_priority'] for x in d['nodes'])==24
+          assert all(x['status']=='APPROX_PENDING_EXACT_MULTIBOARD_EVIDENCE' for x in d['nodes'])
+          assert d['cutoff']['selection_does_not_consider_solver_result_or_profit']
+          print('Ranked 392, prereg cutoff 24, no solver outcomes used')
+          PY
+      - name: Commit frozen frequency ranking to PR #2 only
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_prerank.json
+          git commit -m 'stage3: freeze NL2 frequency-based top-24 multi-board priority and 368 fallback model rankings'
+          git fetch origin fix/nl2-hu-lines-audit-20261118
+          git rebase origin/fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+      - name: Preserve ranking and source assumptions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-multiboard-preregistered-nl2-ranking
+          path: trainer/data/nl2_hu_multiboard_prerank.json
+          retention-days: 30

@@ -1,0 +1,155 @@
+name: NL2 stage3 multiboard authentic 100bb CFR B2
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage3-b2.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - { spot: CO_BB, flop: As9h2d, version: gto }
+          - { spot: CO_BB, flop: As9h2d, version: exp_ip }
+          - { spot: CO_BB, flop: As9h2d, version: exp_oop }
+          - { spot: CO_BB, flop: Js9h4d, version: gto }
+          - { spot: CO_BB, flop: Js9h4d, version: exp_ip }
+          - { spot: CO_BB, flop: Js9h4d, version: exp_oop }
+          - { spot: CO_BB, flop: 8s8h3d, version: gto }
+          - { spot: CO_BB, flop: 8s8h3d, version: exp_ip }
+          - { spot: CO_BB, flop: 8s8h3d, version: exp_oop }
+          - { spot: SB3_BTN, flop: 9s6h3d, version: gto }
+          - { spot: SB3_BTN, flop: 9s6h3d, version: exp_ip }
+          - { spot: SB3_BTN, flop: 9s6h3d, version: exp_oop }
+          - { spot: SB3_BTN, flop: KsQh4d, version: gto }
+          - { spot: SB3_BTN, flop: KsQh4d, version: exp_ip }
+          - { spot: SB3_BTN, flop: KsQh4d, version: exp_oop }
+          - { spot: SB3_BTN, flop: 8s8h3d, version: gto }
+          - { spot: SB3_BTN, flop: 8s8h3d, version: exp_ip }
+          - { spot: SB3_BTN, flop: 8s8h3d, version: exp_oop }
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - run: python3 -m pip install numpy matplotlib
+      - name: Build pinned authentic Rust CFR postflop engine
+        run: |
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve exact representative public flop, real combo ranges and real turn/river; lock NL2 observed or disclosed imputed frequencies
+        run: |
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pinned-SHA.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-engine-pin-SHA.txt
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver --spot "${{ matrix.spot }}" --version "${{ matrix.version }}" \
+            --flop "${{ matrix.flop }}" --turn-count 1 \
+            --manifest "evidence/${{ matrix.spot }}-${{ matrix.version }}-${{ matrix.flop }}.json"
+      - name: Preserve true node-size/pot/SPR/raw combo results and NL2 lock sample/defaults
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B2-${{ matrix.spot }}-${{ matrix.version }}-${{ matrix.flop }}
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-and-commit:
+    needs: solve
+    if: ${{ needs.solve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download all 18 actual solver GTO/EXP artifacts from SAME GitHub run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p downloads
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir downloads
+      - name: Independently verify genuine Rust solver source SHA, rake, exact public board/actions, node SPR, strict cross-street per-combo reach and EXP locks
+        run: |
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py \
+            --downloads downloads --solver-root solver --run-id "$GITHUB_RUN_ID" \
+            --out trainer/data/solver_evidence/NL2_MULTIBOARD_B2.json
+      - name: Validate full run count and GTO/EXP pairing, gzip archive
+        run: |
+          python3 - <<'PY'
+          import collections,gzip,hashlib,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B2.json')
+          d=json.loads(p.read_text())
+          n=18
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert len(d['artifacts'])==n and not d['errors']
+          assert d['new_authentic_board_cases']>0 and d['exact_board_gto_sources']>0
+          assert d['imputed_pool_locked_sources']>0 and d['no_generic_texture_certification'] is True
+          counts=collections.Counter(a['version'] for a in d['artifacts'])
+          assert counts['gto']==counts['exp_ip']==counts['exp_oop']==n//3
+          raw=p.read_bytes();dest=p.with_suffix('.json.gz')
+          dest.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          d2=json.loads(gzip.decompress(dest.read_bytes()))
+          assert d2['source_run_id']==d['source_run_id']
+          idx={'schema':'NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+              'run_id':d['source_run_id'],'batch':'B2',
+              'actual_spot_flop_version_jobs':n,'verified_cases':d['new_authentic_board_cases'],
+              'gto_cases':d['exact_board_gto_sources'],'locked_cases':d['imputed_pool_locked_sources'],
+              'strict_combo_nodes':d['strictly_reachable_combo_nodes'],
+              'source_sha256':hashlib.sha256(raw).hexdigest(),
+              'gzip_sha256':hashlib.sha256(dest.read_bytes()).hexdigest(),
+              'generic_model_certification':0}
+          p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
+          print(idx)
+          p.unlink()
+          PY
+      - name: Commit real source manifest to PR #2 only; never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B2.json.gz data/solver_evidence/NL2_MULTIBOARD_B2.index.json
+          git commit -m 'stage3: authentic 3-5-board B2 CFR, GTO combos and NL2 empirical/imputed node locks'
+          for retry in 1 2 3 4 5; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - name: Attach evidence even when source push fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B2-genuine-CFR-provenance
+          path: trainer/data/solver_evidence/NL2_MULTIBOARD_B2*
+          retention-days: 30

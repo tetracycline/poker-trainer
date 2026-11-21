@@ -1,0 +1,42 @@
+{
+  "schema": "OFFLINE_CFR_LOCAL_EXECUTION_V1",
+  "execution_environment": "Dot cloud isolated workspace; Windows lacked Rust/MSVC/WSL",
+  "github_actions_used": false,
+  "solver_commit": "abe310c3aad02dd4a7c77fb2831801fd490cf51b",
+  "engine_commit": "9d1509fe5077d019825f833eed04b16d342dfda1",
+  "trainer_commit": "a4e6c1dda6f80e7eeb074d0653db82f4ee0d6b17",
+  "rayon_threads": 2,
+  "files": {
+    "solver/postflop/pfdriver/target/release/pfdriver": "d78b1f478c471efb26bc7fc5c9f04f4c98bbb37bd2784562a82408dfd3154c67",
+    "solver/postflop/pfdriver/Cargo.lock": "ab97bab184f3b7e52ec3a25e6fefc885096b4fe12e9341407c4c05a287670161",
+    "trainer/tools/solve_hu_missing_branches.py": "77ab79baa479e93caceaed782ccedb50e27fad2c97c356c658a6507f3ca37e4c",
+    "solver/postflop/py/pipeline.py": "f0a173b3d9331c4ff8697359a838094f76babb35f16133e37bbd0bfb203b5253",
+    "solver/postflop/py/ranges.py": "f2a302b483c79995ed90031b62e65a202ae7a1fdc8695f8940fe3e8291fb2bba",
+    "solver/v8_build/build/pf_data.json": "787f719c752165262807f79b91daec81e1db86a83d557a4ea645ef2649f532c7",
+    "solver/preflop/gto_rake.json": "e73f1eb9fef6aabdbf565804a0e1a68610656b30cf0e3d273a432acfee110969",
+    "b12low_tools/solve_hu_missing_branches.py": "84485fc7d39d1a499539b9308b726a86b09c7a7fce2c1616c80851ca92e4d159",
+    "b12low_tools/solver_wrapper.patch": "0f0149f31f29c3876be5fafe4934d8b8337e8dabfe2b4331bc40552608a248f6",
+    "b12low_tools/audit_target.py": "09cc9902a8efb9a7c7ef6502283b930ed1f3bfcafd23343b1e051172f3ae576f",
+    "b12low_tools/hu_action_reach.py": "9bf16152801d7b3b000b33dfe27ae6eb02f0201f6e5cce6052b426642d5d27a5"
+  },
+  "status": "COMPLETED_AND_INDEPENDENTLY_VERIFIED",
+  "generic_MODEL_upgrades": 0,
+  "scope_limit": "Original equilibrium weighted path reach; displayed per-node highest/near-mixed eligibility is not a sequential path-pruned re-solve.",
+  "local_run_id": "LOCAL_20261120_B12LOW",
+  "profiles": [
+    "SB_BB-gto-8s6h3d"
+  ],
+  "created_at_utc": "2026-11-20T02:00:17.165322+00:00",
+  "outputs": {
+    "evidence/B12LOW_LOCAL_EXACT.json": "1cbcd0eae90b38e6491fde5937b488cbfdb0a0a2167880072fe5032e33c61ac2",
+    "evidence/B12LOW_LOCAL_PROOF.json": "99ae743205778bcd373dd436e779d20dfbd3f4fcbb8bea4363171d4ca7fc0d6c",
+    "evidence/B12LOW_LOCAL_RAW.tar.gz": "48269c9ecfd28e9f54fdff8f0dc764a562d1b2329117a8baa59e026055dbdbcd",
+    "evidence/PATH_REACH_SB_BB-gto-8s6h3d.json": "7bcd6ed54e7d1a47a5d2cfc1146d944a2296a406426b43279ceec430334a13f4",
+    "evidence/B12LOW_TARGET_CONTRACT.json": "f3b5ef77c64403cf0be709793550fe141a9a430ab4a9f515baeadf0f6b41e0f1",
+    "evidence/B12LOW_LOCAL_RECIPE.tar.gz": "669dab4bbce2c803c471bb000ebc0c03b5817120af766bb3fb9d3c39d8229b58"
+  },
+  "path_audit_scope": "All prior own actions and compatible opponent combo checked; navigation filtering only, not path-pruned equilibrium re-solve.",
+  "reference_base": "Worktree unchanged. Wrapper based on solve_hu_missing_branches.py at the reviewed a4e6c1d remote head.",
+  "effective_flow": "offline wrapper plus effective JSON job files captured in raw archive",
+  "offline_exact_profile": "SB_BB-gto-8s6h3d"
+}

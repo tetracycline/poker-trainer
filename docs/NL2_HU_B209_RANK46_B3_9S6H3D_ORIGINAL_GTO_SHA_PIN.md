@@ -1,0 +1,3 @@
+# B209 rank46 original B3 9s6h3d authentic GTO SHA frozen
+
+Exact actor IP line x b50 c/x on 9s6h3d/Ts from original 100bb B3 GTO source run 44666294821, manifest/root/job and B3 archive SHA verified. Rank46 is APPROX with one paired exact GTO+NL2 flop 8s8h3d and one extra GTO-only 9s6h3d, still needs true IP actor NL2 child and a third different original GTO+NL2 flop. Limp preflop 169-class ranges are assumed, not observed. No generic turn/bet size or private-hand NL2 GTO claim. Current 151 CERT/241 APPROX, 581 exact named-board NL2 lock/50% research and 2475 HU paths independently audited. Draft PR2 NEVER MERGE.

@@ -1,0 +1,70 @@
+name: TASK-HYBRID G recertify E exact boards and refresh top24 audit (under 12 min)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-g-consolidate.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  evidence-only-reclassify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Reclassify frozen top24 from independently verified exact GTO and matching hero-lock sources
+        run: |
+          set -euo pipefail
+          python3 tools/hu_multiboard_consolidate.py --root data --out data/nl2_hu_multiboard_status.json --doc docs/NL2_HU_MULTIBOARD_STATUS.md
+          python3 tools/hu_highfreq_shortfalls.py data data/nl2_hu_highfreq_shortfalls.json
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status.json --out data/nl2_hu_cert_lock_medium_audit.json
+      - name: Independent count, B4 SHA and exact-board / NL2 hero-lock / medium candidate consistency gate
+        run: |
+          python3 - <<'PY'
+          import json,pathlib
+          s=json.loads(pathlib.Path('data/nl2_hu_multiboard_status.json').read_text())
+          g=json.loads(pathlib.Path('data/nl2_hu_highfreq_shortfalls.json').read_text())
+          a=json.loads(pathlib.Path('data/nl2_hu_cert_lock_medium_audit.json').read_text())
+          b=s['independently_verified_completed_batches']['B4_MICRO']
+          assert b['status']=='VERIFIED' and b['run_id']==44732810327
+          assert b['gto_cases']==b['locked_cases']==30
+          assert s['source_evidence']['new_subgames']>=678
+          assert s['TOTAL']==392 and s['CERT_MULTIBOARD']+s['APPROX']==392
+          assert g['top24']==len(g['rows'])==24
+          assert g['certified_from_source']==s['CERT_MULTIBOARD'] and g['still_approx']==24-s['CERT_MULTIBOARD']
+          assert 'NL2_MULTIBOARD_B4_MICRO.json.gz' in g['new_source_batches']
+          assert a['cert_multiboard']==s['CERT_MULTIBOARD'] and a['approx']==s['APPROX']
+          assert all(3<=len(x['certified_3_to_5_exact_flop_boards'])<=5 for x in s['records'].values() if x['label']=='CERT-MULTIBOARD')
+          assert not any(x['certified_3_to_5_exact_flop_boards'] for x in s['records'].values() if x['label']=='APPROX')
+          print('PASS strict Batch E reclassification:',s['CERT_MULTIBOARD'],'CERT /',s['APPROX'],'APPROX; remaining top24',g['still_approx'])
+          PY
+      - name: Commit current exact-board status, gaps, and per-board lock/depolarization audit; keep PR Draft
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status.json data/nl2_hu_highfreq_shortfalls.json data/nl2_hu_cert_lock_medium_audit.json docs/NL2_HU_MULTIBOARD_STATUS.md
+          if git diff --cached --quiet; then echo 'No new truthful certification; no fake commit'; exit 0; fi
+          git commit -m 'TASK-HYBRID G: incorporate verified Batch E, refresh CERT/APPROX and lock/medium provenance'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - name: Retain reproducible reclassification and audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-G-E-and-top24-gaps
+          path: |
+            data/nl2_hu_multiboard_status.json
+            data/nl2_hu_highfreq_shortfalls.json
+            data/nl2_hu_cert_lock_medium_audit.json
+            docs/NL2_HU_MULTIBOARD_STATUS.md
+          retention-days: 30

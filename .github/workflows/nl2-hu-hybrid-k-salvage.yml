@@ -1,0 +1,106 @@
+name: TASK-HYBRID K-salvage verify one successful immutable empirical hero-lock artifact
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-k-salvage.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-one-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Fetch only successful attempt-2 artifact ID, not duplicate 426-byte failed attempt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads/nl2-multiboard-B8_LOCK-SB_BB-exp_oop-Js9h4d
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14630787578/zip" > /tmp/verified_solve.zip
+          unzip -q /tmp/verified_solve.zip -d downloads/nl2-multiboard-B8_LOCK-SB_BB-exp_oop-Js9h4d
+          test -d downloads/nl2-multiboard-B8_LOCK-SB_BB-exp_oop-Js9h4d/evidence
+      - name: Independently verify original Rust pinned CFR, actual SPR, hero lock scope and SHA
+        run: |
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py \
+            --downloads downloads --solver-root solver --run-id 44738324702 \
+            --out trainer/data/solver_evidence/NL2_MULTIBOARD_B8_LOCK.json
+      - name: Archive source-only one genuine EXP job, no fake absent As9h2d lock
+        run: |
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B8_LOCK.json')
+          d=json.loads(p.read_text())
+          assert not d['errors'] and len(d['artifacts'])==1
+          assert d['source_run_id']==44738324702 and d['artifacts'][0]['version']=='exp_oop'
+          assert d['exact_board_gto_sources']==0 and d['imputed_pool_locked_sources']>0
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          ix={'schema':'NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+              'run_id':44738324702,'batch':'B8_LOCK','actual_spot_flop_version_jobs':1,
+              'verified_cases':d['new_authentic_board_cases'],'gto_cases':0,
+              'locked_cases':d['imputed_pool_locked_sources'],
+              'source_sha256':hashlib.sha256(raw).hexdigest(),
+              'gzip_sha256':hashlib.sha256(gz.read_bytes()).hexdigest(),
+              'generic_model_certification':0,
+              'excluded_unverified_job':'SB_BB As9h2d exp_oop cancelled after 21-minute timeout',
+              'selected_immutable_artifact_id':14630787578,
+              'target_sources':['SB_BB Js9h4d hero-OOP exact source measured marginal lock proxy']}
+          p.with_suffix('.index.json').write_text(json.dumps(ix,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          print('PASS recovered exact one hero lock',ix['verified_cases'])
+          PY
+      - name: Reclassify truthful CERT and all CERT hero lock / b50 evidence
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_multiboard_consolidate.py --root data --out data/nl2_hu_multiboard_status.json --doc docs/NL2_HU_MULTIBOARD_STATUS.md
+          python3 tools/hu_highfreq_shortfalls.py data data/nl2_hu_highfreq_shortfalls.json
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status.json --out data/nl2_hu_cert_lock_medium_audit.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          g=json.load(open('data/nl2_hu_highfreq_shortfalls.json'))
+          a=json.load(open('data/nl2_hu_cert_lock_medium_audit.json'))
+          assert s['TOTAL']==392 and s['CERT_MULTIBOARD']+s['APPROX']==392
+          assert s['CERT_MULTIBOARD']>=16
+          assert s['independently_verified_completed_batches']['B8_LOCK']['authentic_jobs']==1
+          assert g['certified_from_source']==s['CERT_MULTIBOARD'] and a['cert_multiboard']==s['CERT_MULTIBOARD']
+          print('PASS K partial',s['CERT_MULTIBOARD'],'CERT',s['APPROX'],'APPROX')
+          PY
+      - name: Push certified source and accurate snapshot to PR #2 Draft only
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B8_LOCK.json.gz data/solver_evidence/NL2_MULTIBOARD_B8_LOCK.index.json data/nl2_hu_multiboard_status.json data/nl2_hu_highfreq_shortfalls.json data/nl2_hu_cert_lock_medium_audit.json docs/NL2_HU_MULTIBOARD_STATUS.md
+          git commit -m 'TASK-HYBRID K salvage: one true Js9h4d exp_oop source only, honest reclassification'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - name: Retain verified one-job source if push conflicts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-K-one-authentic-hero-lock
+          path: trainer/data/solver_evidence/NL2_MULTIBOARD_B8_LOCK*
+          retention-days: 30

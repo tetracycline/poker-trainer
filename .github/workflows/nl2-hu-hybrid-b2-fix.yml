@@ -1,0 +1,104 @@
+name: TASK-HYBRID B2 one failed GTO rerun with empty-range correction
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b2-fix.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  b2-single-repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install pinned runner dependencies
+        run: python3 -m pip install numpy matplotlib
+      - name: Build genuine pinned Rust engine
+        run: |
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Re-solve ONLY SB3 BTN 8s8h3d GTO, record any truly unreachable turns
+        run: |
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pinned-SHA.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-engine-pin-SHA.txt
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver --spot SB3_BTN --version gto \
+            --flop 8s8h3d --turn-count 1 \
+            --manifest evidence/SB3_BTN-gto-8s8h3d.json
+      - name: Independently audit SHA, 100bb pot/stack, gap, street ancestry and all reachable combos
+        run: |
+          set -euo pipefail
+          mkdir -p evidence_download/nl2-multiboard-B2-SB3_BTN-gto-8s8h3d/solver/postflop
+          cp -R evidence evidence_download/nl2-multiboard-B2-SB3_BTN-gto-8s8h3d/
+          cp -R solver/postflop/out evidence_download/nl2-multiboard-B2-SB3_BTN-gto-8s8h3d/solver/postflop/
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py \
+            --downloads evidence_download --solver-root solver \
+            --run-id "$GITHUB_RUN_ID" \
+            --out trainer/data/solver_evidence/NL2_MULTIBOARD_B2_REPAIRED_GTO.json
+      - name: Freeze compact verified source and short index, no generic CERT from one board
+        run: |
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib,os
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B2_REPAIRED_GTO.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1' and not d['errors']
+          assert len(d['artifacts'])==1 and d['artifacts'][0]['spot']=='SB3_BTN'
+          assert d['artifacts'][0]['flop']=='8s8h3d' and d['artifacts'][0]['version']=='gto'
+          assert d['exact_board_gto_sources']>0 and d['imputed_pool_locked_sources']==0
+          raw=p.read_bytes()
+          gz=p.with_suffix('.json.gz');gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          idx={'schema':'NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1','run_id':d['source_run_id'],
+               'batch':'B2_REPAIRED_GTO','actual_spot_flop_version_jobs':1,
+               'verified_cases':d['new_authentic_board_cases'],
+               'gto_cases':d['exact_board_gto_sources'],'locked_cases':0,
+               'source_sha256':hashlib.sha256(raw).hexdigest(),
+               'gzip_sha256':hashlib.sha256(gz.read_bytes()).hexdigest(),
+               'generic_model_certification':0,
+               'excluded_zero_reach':d['artifacts'][0]['excludes']}
+          p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
+          print('B2 GTO independently verified',idx)
+          p.unlink()
+          PY
+      - name: Commit verified short B2 repair to Draft PR only, never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B2_REPAIRED_GTO.json.gz \
+                  data/solver_evidence/NL2_MULTIBOARD_B2_REPAIRED_GTO.index.json
+          git commit -m 'TASK-HYBRID B2: verify repaired single SB3 8s8h3d real GTO with blocked branches excluded'
+          for i in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$i"
+          done
+          exit 1
+      - name: Retain source proof even if PR push fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hybrid-B2-repaired-GTO-provenance
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B2_REPAIRED_GTO*
+            evidence/
+          retention-days: 30

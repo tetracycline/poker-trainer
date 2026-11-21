@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""Real Rust turn/river NL2 hero lock with SHA-pinned GTO flop reach parent.
+
+We DO NOT claim to solve a locked flop: flop strategy/reach is frozen to a
+previously independently verified GTO artifact. Only the turn+river response
+is locked to pooled, partially imputed NL2 opponent marginals. Every output
+preserves exact public cards, pot, actor, SPR, source SHA, full-street
+sequential combo reach, and an explicit limited-scope tag.
+"""
+import argparse,hashlib,json,pathlib,re,shutil,sys,time,traceback
+from solve_hu_multiboard_100bb import make_fallbacks,sha,SIZES
+
+def main():
+    a=argparse.ArgumentParser()
+    a.add_argument('--solver-root',type=pathlib.Path,required=True)
+    a.add_argument('--gto-artifact-root',type=pathlib.Path,required=True)
+    a.add_argument('--gto-parent-run-id',type=int,required=True)
+    a.add_argument('--spot',choices=['SB_BB'],required=True)
+    a.add_argument('--flop',required=True)
+    a.add_argument('--flop-line',choices=['b33 c','b50 c','b75 c','x x'],required=True)
+    a.add_argument('--turn-line',choices=['b100 c','b66 c'],default='b100 c')
+    a.add_argument('--version',choices=['exp_oop'],required=True)
+    a.add_argument('--manifest',type=pathlib.Path,required=True)
+    args=a.parse_args()
+    if args.turn_line=='b66 c' and args.flop_line!='x x':
+        a.error('Pinned exact b66 turn proof requires flop checkcheck')
+    if not re.fullmatch(r'(?:[23456789TJQKA][cdhs]){3}',args.flop):
+        a.error('Explicit flop 3 cards required')
+    root=args.gto_artifact_root.resolve()
+    src=args.solver_root.resolve()
+    pf=src/'postflop'
+    manifests=list((root/'evidence').glob('*.json'))
+    if len(manifests)!=1:raise ValueError('Exactly one immutable GTO source manifest expected')
+    m=json.loads(manifests[0].read_text())
+    if m['schema']!='NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1' or m['version']!='gto' or m['spot']!=args.spot or m['flop']!=args.flop or m['failures']:
+        raise ValueError('Original flop evidence is not valid pinned GTO')
+    if m.get('no_generic_certification') is not True or m.get('root_pot_bb')!=6. or m.get('root_remaining_bb')!=97.:
+        raise ValueError('Wrong GTO root assumptions')
+    if args.turn_line=='b66 c':
+        if m.get('turn_sizing_mode')!='exact-b66-only' or m.get('selected_lines')!=['x x'] or m.get('selected_turn_lines')!=['b66 c']:
+            raise ValueError('Pinned GTO flop parent lacks the true unmerged b66 branch')
+    original_root=root/'solver/postflop'/m['file_flop']
+    original_job=original_root.with_suffix('.job.json')
+    if not original_root.is_file() or not original_job.is_file():
+        raise FileNotFoundError('Immutable GTO flop raw/job not present')
+    if sha(original_root)!=m['file_flop_sha256']:
+        raise ValueError('GTO flop parent SHA mismatch with original source manifest')
+    fr=json.loads(original_root.read_text());gto_job=json.loads(original_job.read_text())
+    if gto_job.get('hero') is not None or fr['flop']!=args.flop or fr['pot']!=600 or fr['stack']!=9700:
+        raise ValueError('GTO source has wrong actor/root')
+    if not (pf/'pfdriver/target/release/pfdriver').exists():
+        raise RuntimeError('Genuine pinned Rust CFR driver not available')
+    sys.path.insert(0,str(pf/'py'))
+    import pipeline,job
+    pool=json.loads((src/'inputs/pool_stats.json').read_text())['NL2']
+    if m['pool_source_sha256']!=sha(src/'inputs/pool_stats.json'):
+        raise ValueError('Pinned NL2 source pool changed')
+    original_locks=pipeline.lock_list
+    pipeline.lock_list=lambda spot,ver,flop:make_fallbacks(spot,ver,pool,original_locks,flop)
+    orig_make=pipeline.make_job
+    def sized(*pos,**kwargs):
+        kwargs['target']=0.5
+        kwargs['rank']=0.5
+        kwargs['iters']=1700
+        j=orig_make(*pos,**kwargs)
+        j['flop_oop']=','.join(SIZES)
+        j['flop_ip']=','.join(SIZES)
+        j['flop_raise']='3x,a'
+        return j
+    pipeline.make_job=sized
+    if args.turn_line=='b66 c':
+        pipeline.SUB.update(turn_oop='66%',turn_ip='66%')
+    pipeline.TURN_LINES=[args.turn_line]
+    turns=pipeline.turns_for(args.flop)[:1]
+    if len(turns)!=1:raise ValueError('Pinned turn selection vanished')
+    turn=turns[0]
+    if m['turns'][0]!=turn:raise ValueError('Turn card differs from GTO parent')
+    parent=next((n for n in fr['nodes'] if n['line']==args.flop_line+'/' and n['board'][-2:]==turn),None)
+    if parent is None or not parent.get('wr'):
+        raise ValueError('Pinned GTO flop has no exact parent action/turn')
+    legal=[]
+    board_cards={args.flop[i:i+2] for i in (0,2,4)}|{turn}
+    for seat in (0,1):
+        total=0.
+        for hole,w in zip(fr['hands'][seat],parent['wr'][seat]):
+            if float(w)<=1e-4 or hole[:2] in board_cards or hole[2:4] in board_cards:
+                continue
+            total+=float(w)
+        legal.append(total)
+    if min(legal)<=1e-4:
+        raise ValueError('GTO parent has illegal/empty combo weights after blockers')
+    out=pf/'out'/args.spot/args.version
+    out.mkdir(parents=True,exist_ok=True)
+    dst=out/(args.flop+'_multiboard.json')
+    dst_job=dst.with_suffix('.job.json')
+    shutil.copy2(original_root,dst)
+    shutil.copy2(original_job,dst_job)
+    locks,lock_src=pipeline.lock_list(args.spot,args.version,args.flop)
+    if not locks:raise ValueError('No frozen NL2 partial villain patterns')
+    report=dict(schema='NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1',
+        spot=args.spot,version=args.version,flop=args.flop,
+        pot_family='SRP',root_pot_bb=6.,root_remaining_bb=97.,root_spr=round(97/6,6),
+        preflop_ranges=dict(source='PINNED_POKER_SOLVER_PREFLOP_CFR',spot=args.spot,
+                            full_sha256=sha(src/'v8_build/build/pf_data.json')),
+        n_NL2_hands=pool['hands'],pool_source_sha256=sha(src/'inputs/pool_stats.json'),
+        solver_pin=sha(pf/'py/pipeline.py'),solver_ranges_sha256=sha(pf/'py/ranges.py'),
+        flop_action_sizes=SIZES,allow_OOP_flop_leads=True,
+        flop_line_policy=('checkcheck' if args.flop_line=='x x' else 'oop-'+args.flop_line.split()[0]+'only'),
+        selected_lines=[args.flop_line],
+        turn_line_policy=('b66only' if args.turn_line=='b66 c' else 'b100only'),
+        selected_turn_lines=[args.turn_line],
+        turn_sizing_mode=('exact-b66-only' if args.turn_line=='b66 c' else 'default'),
+        turn_subgame_sizing={'oop':pipeline.SUB['turn_oop'],'ip':pipeline.SUB['turn_ip']},
+        turns=turns,
+        file_flop=str(dst.relative_to(pf)),file_flop_sha256=sha(dst),
+        flop_parent_mode='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK',
+        flop_root_jobfile_sha256=sha(dst_job),gto_parent_source_sha256=sha(original_root),
+        gto_parent_source_run_id=args.gto_parent_run_id,
+        gto_parent_source_manifest_sha256=sha(manifests[0]),
+        gto_parent_source_note='GTO flop root/reach unchanged. NL2 partial villain lock ONLY on authentic turn/river subgame; never full locked flop.',
+        locks=[dict(pat=z['pat'],scope=z.get('scope','PINNED_MEASURED_NL2_SOURCE'),
+                    source=z.get('src'),n=z.get('n')) for z in lock_src],
+        unknown_action_frequency_policy='Measured NL2 aggregate frequencies when present; otherwise declared assumptions. NOT exact conditional combo behavior.',
+        no_generic_certification=True,not_observed_exact_NL2_hero_EV=True,
+        cases=[],failures=[],skipped=[],elapsed_seconds=0)
+    t0=time.monotonic()
+    try:
+        pipeline.solve_sub(args.spot,args.version,args.flop,fr,args.flop_line,turn)
+        sub=out/(args.flop+'_'+args.flop_line.replace(' ','')+'_'+turn+'.json')
+        if not sub.is_file():raise FileNotFoundError('Missing genuine Rust downstream solver subgame')
+        d=json.loads(sub.read_text())
+        if not any(len(n['board'])==10 for n in d['nodes']):
+            raise ValueError('No real river node in downstream Rust job')
+        report['cases'].append(dict(line=args.flop_line,turn=turn,
+            source_path=str(sub.relative_to(pf)),source_sha256=sha(sub),
+            real_flop_parent_spr=round((fr['stack']-max(parent['bets']))/parent['pot'],6),
+            flop_parent_pot_bb=parent['pot']/100,
+            flop_parent_effective_remaining_bb=(fr['stack']-max(parent['bets']))/100,
+            true_river_nodes=sum(len(n['board'])==10 for n in d['nodes']),
+            source_node_count=len(d['nodes']),
+            gto_gap_pct=d['info'].get('gto_expl_pct'),
+            hero_gap_pct=d['info'].get('hero_gap_pct'),
+            lock_stats=d['info'].get('lock_stats',{}),
+            status='NL2_TURN_ONLY_PARTIAL_LOCK_FROM_IMMUTABLE_GTO_FLOP_PARENT'))
+    except Exception as e:
+        report['failures'].append({'error':str(e),'traceback':traceback.format_exc()[-1800:]})
+    report['elapsed_seconds']=round(time.monotonic()-t0,2)
+    report['solved_cases']=len(report['cases'])
+    args.manifest.parent.mkdir(parents=True,exist_ok=True)
+    args.manifest.write_text(json.dumps(report,indent=2,ensure_ascii=False)+'\n')
+    print(json.dumps({k:report[k] for k in ('spot','version','flop','selected_lines','solved_cases','failures','elapsed_seconds')}),flush=True)
+    if report['failures'] or report['solved_cases']<1:raise SystemExit(1)
+if __name__=='__main__':main()

@@ -1,0 +1,114 @@
+name: TASK-HYBRID B122 independently preserve genuine B114 GTO+EXP source with rank41 strict negative gate (max8m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b122-preserve-b114-verified-negative.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-source-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Fetch both completed immutable Rust GTO and EXP_IP artifacts from B114, not new solves
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for version in gto exp_ip; do
+            name="nl2-multiboard-B114_R41_CO_XX-CO_BB-${version}-8s8h3d"
+            mkdir -p "downloads/$name"
+            gh run download 44836834970 --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$name"
+            test -s "downloads/$name/evidence/CO_BB-${version}-8s8h3d.json"
+          done
+      - name: Independently re-verify SHA source, preflop range, rake, SPR, full sequential combo reach, pool-lock source
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver --run-id 44836834970 --out trainer/data/solver_evidence/NL2_MULTIBOARD_B114_R41_CO_XX.json
+      - name: Source-blind negative promotion gate and reproducible archive
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B114_R41_CO_XX.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert d['source_run_id']==44836834970 and not d['errors']
+          assert (d['exact_board_gto_sources'],d['imputed_pool_locked_sources'])==(1,1)
+          assert len(d['artifacts'])==2
+          a={x['version']:x for x in d['artifacts']}
+          assert set(a)=={'gto','exp_ip'}
+          for x in a.values():
+              assert (x['spot'],x['flop'])==('CO_BB','8s8h3d') and not x['errors']
+              assert len(x['cases'])==1
+              assert (x['cases'][0]['flop_line'],x['cases'][0]['turn'])==('x x','5s')
+          def target(version):
+              return [n for c in a[version]['cases'] for n in c['nodes']
+                      if n['exact_node_line']=='x x/x' and n['acting_seat']==1
+                      and n['strictly_reachable_combos']>0]
+          gto=target('gto')
+          locked=target('exp_ip')
+          assert gto and not locked
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          ix=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+              batch='B114_R41_CO_XX',run_id=44836834970,
+              actual_spot_flop_version_jobs=2,
+              verified_cases=d['new_authentic_board_cases'],
+              gto_cases=1,locked_cases=1,
+              generic_model_certification=0,
+              source_sha256=hashlib.sha256(raw).hexdigest(),
+              gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+              rank41_original_GTO_hero_actor_combo_sum=sum(n['strictly_reachable_combos'] for n in gto),
+              rank41_NL2_locked_hero_actor_combo_sum=0,
+              missing_actor_IP_line='x x/x',
+              no_certification_reason='NO_STRICT_ACTOR_IP_TURN_COMBOS_AFTER_POOL_LOCK',
+              rank41_remains_APPROX=True,
+              immediate_CERT_upgrades=0)
+          idx=p.with_suffix('.index.json')
+          idx.write_text(json.dumps(ix,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          doc=pathlib.Path('trainer/docs/NL2_HU_B122_B114_EXACT_SOURCE_NEGATIVE.md')
+          doc.write_text('# B122 B114 true Rust source and strict reach audit\n\n'
+             'Original GTO and pooled-NL2 actor-IP Rust runs are independently SHA/pot/rake/range audited.\n'
+             'Exact CO_BB 8s8h3d turn 5s, flop x x, target x x/x.\n'
+             'GTO strictly reachable target combos: '+str(ix['rank41_original_GTO_hero_actor_combo_sum'])+'; '
+             'NL2 actor-IP locked strictly reachable combos: 0.\n'
+             '**No promotion: 137 CERT /255 APPROX /0 EST.**\n'
+             'No private-card NL2 conditional rates asserted. Original B114 action run 44836834970.\n'
+             'PR #2 stays Draft, no merge.\n')
+          print('PASS B122 genuine source verified and strict negative correctly recorded',ix)
+          PY
+      - name: Commit source index and immutable archive to PR #2 Draft only, never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B114_R41_CO_XX.json.gz data/solver_evidence/NL2_MULTIBOARD_B114_R41_CO_XX.index.json docs/NL2_HU_B122_B114_EXACT_SOURCE_NEGATIVE.md
+          git commit -m 'TASK-HYBRID B122: preserve SHA-verified B114 genuine GTO plus NL2 IP source; rank41 strict actor gate FAIL, remains APPROX'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B122-genuine-B114-negative-proof
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B114_R41_CO_XX.*
+            trainer/docs/NL2_HU_B122_B114_EXACT_SOURCE_NEGATIVE.md
+          retention-days: 30

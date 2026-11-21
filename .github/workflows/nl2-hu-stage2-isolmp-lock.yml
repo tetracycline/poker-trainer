@@ -1,0 +1,65 @@
+name: NL2 stage-2 authentic ISO/LMP aggregate-frequency node-lock CFR pilot
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage2-isolmp-lock.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  authentic-assumed-pot-locked:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - {spot: ISO_BTN_CO, version: exp_ip}
+          - {spot: ISO_BTN_CO, version: exp_oop}
+          - {spot: LMP_CO_BB, version: exp_ip}
+          - {spot: LMP_CO_BB, version: exp_oop}
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - run: python -m pip install numpy matplotlib
+      - name: Clone exactly pinned AGPL Rust CFR engine
+        run: |
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+      - name: Build engine
+        working-directory: solver/postflop/pfdriver
+        env:
+          RUSTFLAGS: '-A dangerous_implicit_autorefs'
+          CARGO_BUILD_JOBS: '2'
+        run: cargo build --release --locked
+      - name: Solve 100bb assumed ISO and limp from flop to river; lock actual NL2 aggregate samples only
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-commit.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/engine-commit.txt
+          python trainer/tools/solve_hu_iso_lmp_locked.py --solver-root solver \
+            --spot "${{ matrix.spot }}" --version "${{ matrix.version }}" \
+            --flop Ks7h2d --turn-count 2 \
+            --manifest "evidence/${{ matrix.spot }}-${{ matrix.version }}.json"
+      - name: Preserve raw CFR trees, actual pooled observation counts and limits
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-stage2-assumed-locked-${{ matrix.spot }}-${{ matrix.version }}
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn

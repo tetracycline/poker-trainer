@@ -1,0 +1,49 @@
+name: NL2 HU exact gap ledger and CFR reach checks
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-gap-plan.yml'
+      - 'tools/link_audit.js'
+      - 'tools/hu_gap_plan.py'
+      - 'tools/hu_action_reach.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gap-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Rebuild true HU river reach audit without counting mere hyperlinks
+        run: |
+          mkdir -p evidence
+          node tools/link_audit.js --json evidence/link.json --md evidence/link.md
+          python3 tools/hu_gap_plan.py --audit evidence/link.json --out evidence/hu-gap-plan.json
+      - name: Verify all continuing cells accounted for, never manufacture CERT or EST
+        run: |
+          python3 - <<'PY'
+          import collections, json
+          audit=json.load(open('evidence/link.json'))
+          plan=json.load(open('evidence/hu-gap-plan.json'))
+          a=audit['counts']; s=plan['summary']
+          assert s['continuing']==a['continuing']
+          assert s['river']==a['reachRiver']
+          assert s['missing']==a['noRiver']
+          assert len(plan['cells'])==a['noRiver']
+          assert sum(g['count'] for g in plan['groups'])==a['noRiver']
+          assert not any(c['certificate'] or c['estimate_source'] for c in plan['cells'])
+          assert not any(c['node_spr'] is not None for c in plan['cells'])
+          print('VERIFIED exact gap ledger:', json.dumps(s,ensure_ascii=False))
+          PY
+      - name: Upload evidence regardless of independent QA result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-exact-gap-ledger
+          path: evidence/
+          retention-days: 30

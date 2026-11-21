@@ -1,0 +1,144 @@
+name: TASK-HYBRID B100 promote only true B99 pinned LMP OOP lock for ranks77+78 V23 133/259 (max11m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['data/solver_evidence/NL2_MULTIBOARD_B99_LMP_XX_RIVER.index.json', '.github/workflows/nl2-hu-hybrid-b100-lmp-pair.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  strict-real-source-promote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Freeze source and make sure B99 index + .gz were actually committed by a successful original Rust verifier
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b100_v23_lmp_pair.py tools/hu_cert_lock_medium_audit.py
+          test -s data/solver_evidence/NL2_MULTIBOARD_B99_LMP_XX_RIVER.index.json
+          test -s data/solver_evidence/NL2_MULTIBOARD_B99_LMP_XX_RIVER.json.gz
+          python3 tools/hu_b100_v23_lmp_pair.py
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+      - name: Independently prove exactly 2 cert upgrades, 527 genuine named boards, 2475 links and B4-E provenance
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib
+          V22='data/nl2_hu_multiboard_status_v22_batch94.json'
+          V23='data/nl2_hu_multiboard_status_v23_b100_lmp_pair.json'
+          old=json.load(open(V22))
+          now=json.load(open(V23))
+          mat=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v23.json'))
+          nav=json.load(open('data/nl2_hu_b34_full_integrity.json'))['navigation']
+          b99=json.load(open('data/solver_evidence/NL2_MULTIBOARD_B99_LMP_XX_RIVER.index.json'))
+          assert old['CERT_MULTIBOARD']==131 and old['APPROX']==261
+          assert now['CERT_MULTIBOARD']==133 and now['APPROX']==259 and now['TOTAL']==392
+          assert now['parent_v22_sha256']==hashlib.sha256(open(V22,'rb').read()).hexdigest()
+          assert now['source_blind_expansion_ranks']==[77,78]
+          diff={k for k in now['records'] if old['records'][k]!=now['records'][k]}
+          assert diff=={'ln-iso-lmp_r_model-inztdd','ln-iso-lmp_r_model-m4z78r'}
+          assert len(now['b100_certificates'])==2
+          for i in diff:
+              assert now['records'][i]['label']=='CERT-MULTIBOARD'
+              boards=now['records'][i]['certified_3_to_5_exact_flop_boards']
+              assert len(boards)==3 and {x['flop'] for x in boards}=={'8s8h3d','9s6h3d','KsQh4d'}
+              assert all(x['nl2_locked_variants'] and x['acting_seat']==0 and x['strict_full_street_combo_reachable']>0 for x in boards)
+              new=next(x for x in boards if x['flop']=='8s8h3d')
+              assert new['source_run_id']==44666294821
+              assert any(v['run_id']==b99['run_id'] for v in new['nl2_locked_variants'])
+          assert now['records']['ln-ipfr-t_model-sxr0qa']['label']=='APPROX'
+          assert mat['CERT_MULTIBOARD']==133 and mat['APPROX']==259
+          assert len(mat['models'])==133 and len(mat['boards'])==mat['strict_aggregate']['named_board_proofs']==527
+          assert mat['parent_v23_status_sha256']==hashlib.sha256(open(V23,'rb').read()).hexdigest()
+          assert all(b['hero_lock_proofs'] and b['strictly_reachable_combo_count']>0 and b['no_general_bet_size_recommendation'] for b in mat['boards'])
+          assert now['independently_verified_completed_batches']['B4_MICRO']['run_id']==44732810327
+          assert now['independently_verified_completed_batches']['B99_LMP_XX_RIVER']['run_id']==b99['run_id']
+          assert nav['continuing']==nav['reach_river']==2475 and nav['share_pct']==100
+          assert nav['missing_river']==nav['link_misses']==nav['reach_violations']==nav['modeled_path_violations']==0
+          print('PASS B100 V23 133 CERT/259 APPROX, 527 authentic named boards, Batch E and 2475 links')
+          PY
+      - name: Check complete 23-level loaded JSON fallback in both pages; reject unverified V23 to V22
+        run: |
+          node - <<'JS'
+          const fs=require('fs'),assert=require('assert').strict;
+          const paths=[
+            'data/nl2_hu_multiboard_status_v23_b100_lmp_pair.json',
+            'data/nl2_hu_multiboard_status_v22_batch94.json',
+            'data/nl2_hu_multiboard_status_v21_batch92.json',
+            'data/nl2_hu_multiboard_status_v20_batch90.json',
+            'data/nl2_hu_multiboard_status_v19_batch88.json',
+            'data/nl2_hu_multiboard_status_v18_batch86.json',
+            'data/nl2_hu_multiboard_status_v17_batch84.json',
+            'data/nl2_hu_multiboard_status_v16_batch82.json',
+            'data/nl2_hu_multiboard_status_v15_batch80.json',
+            'data/nl2_hu_multiboard_status_v14_batch77.json',
+            'data/nl2_hu_multiboard_status_v13_batch75.json',
+            'data/nl2_hu_multiboard_status_v12_batch73.json',
+            'data/nl2_hu_multiboard_status_v11_batch71.json',
+            'data/nl2_hu_multiboard_status_v10_batch69.json',
+            'data/nl2_hu_multiboard_status_v9_rank40_b67.json',
+            'data/nl2_hu_multiboard_status_v8_batch61.json',
+            'data/nl2_hu_multiboard_status_v7_batch59.json',
+            'data/nl2_hu_multiboard_status_v6_rank33.json',
+            'data/nl2_hu_multiboard_status_v5_batch55.json',
+            'data/nl2_hu_multiboard_status_v4_batch50.json',
+            'data/nl2_hu_multiboard_status_v3_rank28.json',
+            'data/nl2_hu_multiboard_status_v2_tie.json',
+            'data/nl2_hu_multiboard_status.json'
+          ];
+          const data=paths.map(x=>JSON.parse(fs.readFileSync(x,'utf8')));
+          async function test(path){
+            const s=fs.readFileSync(path,'utf8');
+            const start=s.indexOf('function fetchCertifiedRegistry(){');
+            const end=s.indexOf('\nfetchCertifiedRegistry()\n .then(d=>{',start);
+            assert(start>=0&&end>start,'Decoded data registry consumer must be single parse');
+            const source=s.slice(start,end);
+            const actual=[...source.matchAll(/fetch\('([^']+)'/g)].map(x=>x[1]);
+            assert.deepEqual(actual,paths,'Wrong V23 to V1 source priority, duplicate or missing file');
+            const fetchRegistry=new Function('fetch',source+';return fetchCertifiedRegistry();');
+            for(let i=0;i<paths.length;i++){
+              const seen=[];
+              const result=await fetchRegistry(async url=>{
+                const j=paths.indexOf(url);assert(j>=0);
+                seen.push(j);
+                return j<i?{ok:false,status:404}:{ok:true,json:async()=>data[j]};
+              });
+              assert.strictEqual(result,data[i]);
+              assert.deepEqual(seen,Array.from({length:i+1},(_,k)=>k));
+            }
+          }
+          (async()=>{await test('nl2-multiboard.js');await test('nl2_hu_multiboard_ui.js');
+              console.log('PASS V23 through V1 full fallback on both NL2 pages');
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          JS
+      - name: Commit V23 true source-ledger plus all 527 locked node and nonpolarized records to Draft PR #2; NEVER merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v23_b100_lmp_pair.json data/nl2_hu_cert_lock_medium_matrix_v23.json docs/NL2_HU_B100_V23_RANK77_78_CERT.md docs/NL2_HU_B100_V23_ALL_LOCKS_MEDIUM.md
+          git commit -m 'TASK-HYBRID B100: exact B3-GTO-pinned LMP hero-OOP rank77+78 certified; V23 133 CERT/259 APPROX, 527 locked boards'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B100-V23-source-gated-two-LMP-models
+          path: |
+            data/nl2_hu_multiboard_status_v23_b100_lmp_pair.json
+            data/nl2_hu_cert_lock_medium_matrix_v23.json
+            docs/NL2_HU_B100_V23_RANK77_78_CERT.md
+            docs/NL2_HU_B100_V23_ALL_LOCKS_MEDIUM.md
+          retention-days: 30

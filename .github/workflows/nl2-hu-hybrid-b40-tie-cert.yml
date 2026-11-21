@@ -1,0 +1,75 @@
+name: TASK-HYBRID B40 verify/add 2 preregistered tied-frequency named-board CERT models
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b40-tie-cert.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  certify-tie-cohort:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Prove B39 preselection and regenerate real GTO/hero-lock three-to-five-board V2 certificates
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b40_tie_cert_overlay.py
+          python3 tools/hu_b40_tie_cert_overlay.py
+      - name: Independent base and V2 proof gate, authentic source hashes and no model overcertification
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib
+          original=json.load(open('data/nl2_hu_multiboard_status.json'))
+          new=json.load(open('data/nl2_hu_multiboard_status_v2_tie.json'))
+          prereg=json.load(open('data/nl2_hu_b39_frequency_tie_prereg.json'))
+          assert original['CERT_MULTIBOARD']==24 and original['APPROX']==368
+          assert new['CERT_MULTIBOARD']==26 and new['APPROX']==366 and new['TOTAL']==392
+          assert new['original_top24_cutoff_unchanged'] is True
+          assert new['source_blind_tie_ranks']==prereg['tie_ranks']==[25,26]
+          assert new['original_top24_status_sha256']==hashlib.sha256(open('data/nl2_hu_multiboard_status.json','rb').read()).hexdigest()
+          ids=set(prereg['tie_node_ids'])
+          assert all(new['records'][i]==x for i,x in original['records'].items() if i not in ids)
+          for i in ids:
+              c=new['records'][i]
+              assert c['label']=='CERT-MULTIBOARD' and c['b39_equal_score_tie_preregistered']
+              ex=c['certified_3_to_5_exact_flop_boards']
+              assert 3<=len(ex)<=5 and len({x['flop'] for x in ex})==len(ex)
+              assert len({x['flop_texture'] for x in ex})>=2
+              for z in ex:
+                  assert z['genuine_gto_exploitability_pct']<=0.5
+                  assert z['strict_full_street_combo_reachable']>0
+                  assert z['nl2_locked_variants'] and len(z['source_sha256'])==64
+                  assert z['relative_spr_error_pct']<=5
+          print('PASS B40 V2 26/366 named-only with immutable base 24/368')
+          PY
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+      - name: Commit versioned proof ledger/summary and publish to PR #2 without merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v2_tie.json docs/NL2_HU_B40_TIE_CERT.md
+          git commit -m 'TASK-HYBRID B40: certify 2 source-blind tied-rank models; V2 26 CERT/366 APPROX, preserve core V1'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - name: Preserve signed evidence on write errors
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B40-sourceblind-tie-2-cert
+          path: |
+            data/nl2_hu_multiboard_status_v2_tie.json
+            docs/NL2_HU_B40_TIE_CERT.md
+          retention-days: 30

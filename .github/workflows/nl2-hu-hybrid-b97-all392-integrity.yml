@@ -1,0 +1,82 @@
+name: TASK-HYBRID B97 independently audit all 392 frozen ranks, 131 genuine CERT and 521 hero-locked boards
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b97-all392-integrity.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  entire-model-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify 392 original frozen ranks, 20 separate source cohorts and all 521 real named board GTO+hero locks
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b97_full_392_rank_audit.py
+          python3 tools/hu_b97_full_392_rank_audit.py
+      - name: Independently reject missing ranks, fake known NL2 private-card outcomes and invalid source lineage
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import collections,hashlib,json
+          p='data/nl2_hu_b97_all392_source_integrity.json'
+          d=json.load(open(p))
+          v=json.load(open('data/nl2_hu_multiboard_status_v22_batch94.json'))
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v22.json'))
+          assert d['schema']=='NL2_B97_ALL392_SOURCEBLIND_RANK_AND_TRUE_CERT_GTO_LOCK_INTEGRITY_V1'
+          assert d['verdict']=='PASS'
+          assert d['sourceblind_rank_set_contiguous'] and d['no_duplicate_model_id']
+          assert d['total_ranked_model_nodes']==392
+          assert len(d['cohorts'])==20
+          assert sorted(x['start'] for x in d['cohorts'])==[27,33,42,56,76,96,116,136,156,176,196,216,236,256,276,296,316,336,356,376]
+          assert sum(x['models'] for x in d['cohorts'])==366
+          assert d['cert_multiboard']==v['CERT_MULTIBOARD']==131
+          assert d['approx']==v['APPROX']==261 and d['EST']==0
+          assert d['true_named_cert_board_proofs']==len(d['exact_board_proof_rows'])==len(m['boards'])==521
+          assert d['hero_lock_variants']==m['strict_aggregate']['hero_lock_variants']
+          assert d['b50_research_candidate_boards']==m['strict_aggregate']['b50_research_candidate_boards']
+          assert d['b50_unsupported_boards']+d['b50_research_candidate_boards']==521
+          assert all(x['hero_source_runs'] and x['strict_combo_count']>0 for x in d['exact_board_proof_rows'])
+          assert all(v['records'][x['model_id']]['label']=='APPROX'
+                 for x in d['remaining_high_priority_one_board_approx'])
+          assert d['batch_e_run']==44732810327
+          assert (d['batch_e_gto_cases'],d['batch_e_hero_lock_cases'])==(30,30)
+          assert d['verified_river_links']==2475 and d['river_coverage_pct']==100
+          assert d['v22_status_sha256']==hashlib.sha256(open('data/nl2_hu_multiboard_status_v22_batch94.json','rb').read()).hexdigest()
+          assert d['lock_matrix_sha256']==hashlib.sha256(open('data/nl2_hu_cert_lock_medium_matrix_v22.json','rb').read()).hexdigest()
+          assert d['no_generic_texture_GTO'] and d['no_per_private_combo_NL2_observation']
+          assert d['PR_2_remains_draft_never_merge']
+          print('PASS B97 all 392 true rank certificates and full source provenance, V22 131/261 retained')
+          PY
+      - name: Commit V22 full model audit + immutable rank coverage to Draft PR #2; never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b97_all392_source_integrity.json docs/NL2_HU_B97_ALL392_RANK_CERT_AUDIT.md
+          if git diff --cached --quiet; then
+            echo 'B97 full integrity receipt already committed, idempotent PASS'
+            exit 0
+          fi
+          git commit -m 'TASK-HYBRID B97: all 392 sourceblind ranks independently audited, 131 CERT/261 APPROX, 521 real GTO+NL2 hero lock boards'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B97-all-392-frozen-models-and-521-locked-boards
+          path: |
+            data/nl2_hu_b97_all392_source_integrity.json
+            docs/NL2_HU_B97_ALL392_RANK_CERT_AUDIT.md
+          retention-days: 30

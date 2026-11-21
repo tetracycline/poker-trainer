@@ -1,0 +1,54 @@
+name: TASK-HYBRID X exact source gap for highfreq river 15/18 (read-only audit)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-x-rank15-18.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Inspect exact verified source GTO/hero lock and strict combo reach, no fake source
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_rank15_18_b33_b100_source_gap.py
+          python3 tools/hu_rank15_18_b33_b100_source_gap.py
+          python3 - <<'PY'
+          import json
+          d=json.load(open('data/nl2_hu_rank15_18_b33_b100_source_gap.json'))
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          assert d['schema']=='TASK_HYBRID_RANK15_18_STRICT_B33_B100_LINEAGE_V1'
+          assert len(d['records'])==2 and sorted(x['rank'] for x in d['records'])==[15,18]
+          assert s['CERT_MULTIBOARD']==d['from_verified_cert_count']>=20
+          assert all(x['current_label']=='APPROX' for x in d['records'])
+          assert all(x['exact_target']=='b33 c/b100 c/' for x in d['records'])
+          print('PASS frozen source gap / no label promotion')
+          PY
+      - name: Commit exact source diagnostic to PR#2 Draft, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_rank15_18_b33_b100_source_gap.json
+          git commit -m 'TASK-HYBRID X: map true b33-b100 river strict reach/lock gaps for two high-frequency nodes'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - name: Keep source report if update rejected
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-X-highfreq-r15-r18-source-gap
+          path: data/nl2_hu_rank15_18_b33_b100_source_gap.json
+          retention-days: 30

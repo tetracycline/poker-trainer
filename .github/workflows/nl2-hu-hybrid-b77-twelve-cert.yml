@@ -1,0 +1,124 @@
+name: TASK-HYBRID B77 V14 twelve frozen-rank CERT 101/291 with 400 real board lock and 50pct proof
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b77-twelve-cert.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Independent twelve source-blind 3–5 named-board CFR and actor-specific NL2 lock proof gate
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b77_v14_twelve_cert.py tools/hu_cert_lock_medium_audit.py
+          python3 tools/hu_b77_v14_twelve_cert.py
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+      - name: Verify V13 immutable, exactly 12 upgrades, 400 named lock/b50 boards, Batch E and all rivers
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib
+          old='data/nl2_hu_multiboard_status_v13_batch75.json'
+          new='data/nl2_hu_multiboard_status_v14_batch77.json'
+          a=json.load(open(old));b=json.load(open(new))
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v14.json'))
+          freeze=json.load(open('data/nl2_hu_b76_next20_sourceblind_gaps.json'))
+          nav=json.load(open('data/nl2_hu_b34_full_integrity.json'))['navigation']
+          assert (a['CERT_MULTIBOARD'],a['APPROX'])==(89,303)
+          assert (b['CERT_MULTIBOARD'],b['APPROX'],b['TOTAL'])==(101,291,392)
+          assert b['source_blind_expansion_ranks']==[177,178,181,182,183,184,185,186,187,189,191,195]
+          assert freeze['source_blind_preselection_ranks']==list(range(176,196))
+          assert b['parent_v13_sha256']==hashlib.sha256(open(old,'rb').read()).hexdigest()
+          assert b['source_blind_b76_sha256']==hashlib.sha256(open('data/nl2_hu_b76_next20_sourceblind_gaps.json','rb').read()).hexdigest()
+          assert len(b['b77_certificates'])==12
+          changed={k for k in b['records'] if b['records'][k]!=a['records'][k]}
+          assert changed=={q['model_id'] for q in b['b77_certificates']} and len(changed)==12
+          assert b['records']['ln-ipfr-t_model-sxr0qa']['label']=='APPROX' # B64 rank41 rejection
+          assert m['CERT_MULTIBOARD']==101 and m['APPROX']==291
+          assert len(m['boards'])==m['strict_aggregate']['named_board_proofs']==400
+          assert m['parent_v14_status_sha256']==hashlib.sha256(open(new,'rb').read()).hexdigest()
+          assert all(x['hero_lock_proofs'] and x['strictly_reachable_combo_count']>0 and
+                     x['no_general_bet_size_recommendation'] for x in m['boards'])
+          assert b['independently_verified_completed_batches']['B4_MICRO']['run_id']==44732810327
+          assert nav['continuing']==nav['reach_river']==2475 and nav['share_pct']==100
+          assert nav['missing_river']==nav['link_misses']==nav['reach_violations']==nav['modeled_path_violations']==0
+          print('PASS B77 101 CERT / 291 APPROX; 400 named exact boards; E and river source gates')
+          PY
+          node - <<'JS'
+          const fs=require('fs'),assert=require('assert').strict;
+          const f=['data/nl2_hu_multiboard_status_v14_batch77.json',
+            'data/nl2_hu_multiboard_status_v13_batch75.json',
+            'data/nl2_hu_multiboard_status_v12_batch73.json',
+            'data/nl2_hu_multiboard_status_v11_batch71.json',
+            'data/nl2_hu_multiboard_status_v10_batch69.json',
+            'data/nl2_hu_multiboard_status_v9_rank40_b67.json',
+            'data/nl2_hu_multiboard_status_v8_batch61.json',
+            'data/nl2_hu_multiboard_status_v7_batch59.json',
+            'data/nl2_hu_multiboard_status_v6_rank33.json',
+            'data/nl2_hu_multiboard_status_v5_batch55.json',
+            'data/nl2_hu_multiboard_status_v4_batch50.json',
+            'data/nl2_hu_multiboard_status_v3_rank28.json',
+            'data/nl2_hu_multiboard_status_v2_tie.json',
+            'data/nl2_hu_multiboard_status.json'];
+          const d=f.map(x=>JSON.parse(fs.readFileSync(x,'utf8')));
+          async function test(path){
+            const s=fs.readFileSync(path,'utf8'),
+              a=s.indexOf('function fetchCertifiedRegistry(){'),
+              b=s.indexOf('\nfetchCertifiedRegistry()\n .then(d=>{',a);
+            assert(a>=0&&b>a);
+            assert(!s.includes('fetchCertifiedRegistry()\n .then(r=>'));
+            const loader=new Function('fetch',s.slice(a,b)+';return fetchCertifiedRegistry();');
+            for(let i=0;i<f.length;i++){
+              const seen=[],r=await loader(async url=>{
+                const index=f.findIndex(x=>url.includes(x));
+                assert(index>=0);
+                seen.push(index);
+                return index<i?{ok:false,status:404}:{ok:true,json:async()=>d[index]};
+              });
+              assert.strictEqual(r,d[i]);
+              assert.deepEqual(seen,Array.from({length:i+1},(_,x)=>x));
+            }
+          }
+          (async()=>{await test('nl2-multiboard.js');await test('nl2_hu_multiboard_ui.js');
+            console.log('PASS V14 through V1 fallback both certification pages');
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          JS
+      - name: Commit V14 source certificates and all 400 exact locked/medium evidence to Draft PR #2; absolutely no merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v14_batch77.json data/nl2_hu_cert_lock_medium_matrix_v14.json docs/NL2_HU_B77_V14_TWELVE_CERT.md docs/NL2_HU_B77_V14_ALL_LOCKS_MEDIUM.md
+          if git diff --cached --quiet; then
+            echo 'B77 V14 has already been SHA-verified and committed on this branch; idempotent PASS'
+            exit 0
+          fi
+          git commit -m 'TASK-HYBRID B77: twelve preregistered authentic multi-board models, V14 101 CERT/291 APPROX and 400 source-backed locks'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B77-V14-twelve-real-models
+          path: |
+            data/nl2_hu_multiboard_status_v14_batch77.json
+            data/nl2_hu_cert_lock_medium_matrix_v14.json
+            docs/NL2_HU_B77_V14_TWELVE_CERT.md
+            docs/NL2_HU_B77_V14_ALL_LOCKS_MEDIUM.md
+          retention-days: 30

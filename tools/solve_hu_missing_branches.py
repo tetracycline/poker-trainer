@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""Solve genuinely missing HU flop-to-turn-to-river histories.
+
+This is a raw CFR continuation, not an NL2 decision publisher. Do not assume
+the sample flop is the same as any displayed texture bucket, or copy across
+positions/pot histories. Preserve original board, pot, bet sizes, reach and hash.
+"""
+import argparse
+import hashlib
+import gzip
+import importlib
+import json
+import os
+import pathlib
+import sys
+import time
+import traceback
+
+BRANCHES = {
+    # Root FLOP exact action lines in a 100bb HU game. Subgame ranges are
+    # inherited from the actual weighted parent combos, not the UI MODEL.
+    "BTN_BB": ("x x", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "CO_BB":  ("x x", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "UTG_BB": ("x x", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "HJ_BB":  ("x x", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "SB_BB":  ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "SB3_BTN": ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "BB3_BTN": ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "UTG_CO": ("x x", "b33 c", "b75 c", "b33 r c", "b75 r c", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+    "CO3_BTN": ("x x", "x b33 c", "x b75 c", "x b33 r c", "x b75 r c"),
+}
+# Verified against poker-solver/preflop/pfsolve.py's exact 100bb abstract tree:
+# RFI UTG/CO 2.5; first IP 3bet 3x (7.5); dead SB+BB=1.5.
+# Both player action-chain ranges come from the actual preflop CFR output.
+EXTRA_SPOTS = {
+    "UTG_CO": dict(oop="UTG",ip="CO",
+        oopc=[("UTGrfi","open")],ipc=[("UTGopen>CO","call")],
+        pot=6.5,stack=97.5,pfr="oop",kind="SRP"),
+    "CO3_BTN": dict(oop="CO",ip="BTN",
+        oopc=[("COrfi","open"),("COopen>BTN3b","call")],
+        ipc=[("COopen>BTN","3bet")],
+        pot=16.5,stack=92.5,pfr="ip",kind="3BP"),
+}
+def digest(p):
+    h=hashlib.sha256()
+    with open(p,'rb') as f:
+        for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
+    return h.hexdigest()
+
+def main():
+    p=argparse.ArgumentParser()
+    p.add_argument('--solver-root',required=True,type=pathlib.Path)
+    p.add_argument('--spot',choices=BRANCHES,required=True)
+    p.add_argument('--start',type=int,default=0)
+    p.add_argument('--count',type=int,default=1)
+    p.add_argument('--turn-count',type=int,default=1)
+    p.add_argument('--flop',default=None,help='Exact three cards; overrides sampled start/count')
+    p.add_argument('--flop-bet-sizes',choices=['33%,75%','33%,50%,75%'],default='33%,75%')
+    p.add_argument('--strict-stage1',action='store_true',help='Require <=0.5% preliminary GTO for locked response too')
+    p.add_argument('--version',choices=['gto','exp_ip','exp_oop'],default='gto')
+    p.add_argument('--manifest',type=pathlib.Path,required=True)
+    a=p.parse_args()
+    if a.start<0 or not 1<=a.count<=2 or not 1<=a.turn_count<=3:
+        p.error('start >= 0; count 1..2; turn-count 1..3')
+    pf=a.solver_root.resolve()/'postflop'
+    if not (pf/'pfdriver/target/release/pfdriver').is_file():
+        raise SystemExit('BLOCKED: real Rust CFR engine has not been built')
+    sys.path.insert(0,str(pf/'py'))
+    pipeline=importlib.import_module('pipeline')
+    job=importlib.import_module('job')
+    ranges=importlib.import_module('ranges')
+    for profile,config in EXTRA_SPOTS.items():
+        for node,action in config['oopc']+config['ipc']:
+            if node not in ranges.ACTS or action not in ranges.ACTS[node]:
+                raise SystemExit('INVALID_PREFLOP_CFR_RANGE: '+profile+' '+node+' '+action)
+        ranges.SPOTS[profile]=config
+        pipeline.NFLOP[profile]=8
+        pipeline.OFFS[profile]=0.31 if profile=='UTG_CO' else 0.69
+    # The NL2 34-55% size bucket has actual observed fold/raise frequencies.
+    # The pinned solver only handles b33 and b75 by default; add b50
+    # when its exact measured n>=500. Never treat unobserved combos as data.
+    default_lock_list=pipeline.lock_list
+    def size_aware_locks(spot,version,board):
+        dl,meta=default_lock_list(spot,version,board)
+        if version!='gto' and a.flop_bet_sizes=='33%,50%,75%':
+            import locks as LK
+            sp=pipeline.SPOTS[spot]
+            villain_pfr=(sp['pfr']=='ip')!=(version=='exp_ip')
+            if not villain_pfr and sp['kind'] in ('SRP','3BP'):
+                P='IP' if sp['pfr']=='ip' else 'OOP'
+                src=sp['kind']+'_PFR_'+P+'.vs_cbet_by_size[34-55%]'
+                d=LK.PH[sp['kind']+'_PFR_'+P]['vs_cbet_by_size']['34-55%']
+                if int(d['n'])>=500:
+                    pat='^x b50$' if sp['pfr']=='ip' else '^b50$'
+                    dl.append({'pat':pat,'fold':d['fold']/100,'raise':d['raise']/100})
+                    meta.append({'pat':pat,'n':d['n'],'src':src,
+                                 'fold':d['fold']/100,'raise_':d['raise']/100})
+        return dl,meta
+    pipeline.lock_list=size_aware_locks
+    sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
+    reach_audit=importlib.import_module('hu_action_reach').audit
+    if a.flop is not None:
+        import re
+        cards=[a.flop[i:i+2] for i in (0,2,4)]
+        if len(a.flop)!=6 or len(set(cards))!=3 or not all(
+            re.fullmatch('[23456789TJQKA][cdhs]',c) for c in cards):
+            raise SystemExit('INVALID_EXACT_FLOP')
+        flops=[a.flop]
+    else:
+        flops=pipeline.flops_for(a.spot)[a.start:a.start+a.count]
+    if not flops:raise SystemExit('No selected flops')
+    out=pf/'out'/a.spot/a.version
+    out.mkdir(parents=True,exist_ok=True)
+    manifest={
+      'schema':'HU_MISSING_ACTION_HISTORY_CFR_V1',
+      'spot':a.spot,'version':a.version,
+      'start':a.start,'count':a.count,
+      'branches':BRANCHES[a.spot],
+      'selected_flops':flops,
+      'turn_count':a.turn_count,
+      'flop_bet_sizes':a.flop_bet_sizes,
+      'strict_preliminary_equilibrium':bool(a.strict_stage1),
+      'source':'tetracycline/poker-solver',
+      'source_pipeline_sha256':digest(pf/'py/pipeline.py'),
+      'source_ranges_sha256':digest(pf/'py/ranges.py'),
+      'source_preflop_tree_sha256':digest(a.solver_root.resolve()/'preflop/pfsolve.py'),
+      'derived_spot_profile':EXTRA_SPOTS.get(a.spot),
+      'solver_output_is_not_nl2_certification':True,
+      'cases':[],'failures':[],'skipped_unreachable':[],
+    }
+    for flop in flops:
+        t0=time.monotonic()
+        turns=pipeline.turns_for(flop)[:a.turn_count]
+        lines=list(BRANCHES[a.spot])
+        if a.flop_bet_sizes=='33%,50%,75%':
+            if pipeline.SPOTS[a.spot]['pfr']=='ip':
+                lines.extend(('x b50 c','x b50 r c'))
+            else:
+                lines.extend(('b50 c','b50 r c','x b50 c','x b50 r c'))
+        fpath=out/f'{flop}_extra_branch.json'
+        # Extract actual combo reach at each exact line; source GTO/locked ranges,
+        # not guessed class reach or blanket continuation probability.
+        extracts=[dict(prefix=[],street=True)] + [
+          dict(prefix=line.split()+[turn],street=False,raw=True)
+          for line in lines for turn in turns]
+        locks,lock_sources=pipeline.lock_list(a.spot,a.version,flop)
+        manifest.setdefault('pool_lock_evidence',{})[flop]={
+          'pattern_count':len(locks),'source_patterns':lock_sources,
+          'limitation':'Observed node frequencies only; no observed NL2 combo-specific pool strategy.'}
+        j=job.make_job(a.spot,a.version,flop,str(fpath)+'.tmp',
+          extract=extracts,locks=locks,compress=True,target=0.5,
+          rank=0.5 if a.strict_stage1 else 1.5,
+          iters=2500 if a.strict_stage1 else 1000)
+        if a.flop_bet_sizes!='33%,75%':
+            j['flop_ip']=a.flop_bet_sizes
+            if pipeline.SPOTS[a.spot]['pfr']=='oop':
+                j['flop_oop']=a.flop_bet_sizes
+        if a.strict_stage1:
+            default_maker=pipeline.make_job
+            def stricter_make(*pos,**kw):
+                kw['target']=0.5
+                kw['rank']=0.5
+                kw['iters']=2500
+                return default_maker(*pos,**kw)
+            pipeline.make_job=stricter_make
+        jpath=out/f'{flop}_extra_branch.job.json'
+        try:
+            log=job.run(j,str(jpath))
+            os.rename(str(fpath)+'.tmp',fpath)
+            fr=json.loads(fpath.read_text())
+            fr['info']['log']=log
+            fr['turns']=turns
+            fpath.write_text(json.dumps(fr,separators=(',',':')))
+            for line in lines:
+                for turn in turns:
+                    node=next((n for n in fr['nodes']
+                        if n['line']==line+'/' and n['board'][-2:]==turn),None)
+                    wr=node.get('wr') if node else None
+                    if not wr or len(wr)!=2 or any(
+                      sum(float(w) for w in side if float(w)>1e-4)<=0 for side in wr):
+                        manifest['skipped_unreachable'].append(
+                          {'flop':flop,'line':line,'turn':turn,'reason':'NO_TWO_SIDED_COMBO_REACH'})
+                        continue
+                    # solve_sub generates the turn/river tree with exact pot, stacks,
+                    # per-combo reach from this parent branch and sampled river cards.
+                    pipeline.solve_sub(a.spot,a.version,flop,fr,line,turn)
+                    key=f"{flop}_{line.replace(' ','')}_{turn}"
+                    sub=out/f'{key}.json'
+                    if not sub.is_file():
+                        raise RuntimeError('missing authentic turn/river CFR file: '+str(sub))
+                    src=json.loads(sub.read_text())
+                    mem={}
+                    for n in src.get('nodes',[]):
+                        bb=int(src['stack'])-max(n.get('bets',[0,0]))
+                        mem[n['line']+'|'+n['board']]=None if n['pot']<=0 else round(max(bb,0)/n['pot'],5)
+                    rproof=reach_audit(src,str(sub.relative_to(pf)),digest(sub),
+                        os.environ.get('GITHUB_RUN_ID'))
+                    rpath=a.manifest.parent / (
+                        f"combo-reach-{a.spot}-{a.version}-{flop}-{line.replace(' ','')}-{turn}.json.gz")
+                    rpath.parent.mkdir(parents=True,exist_ok=True)
+                    with gzip.open(rpath,'wt',encoding='utf8') as h:
+                        json.dump(rproof,h,ensure_ascii=False,separators=(',',':'))
+                    manifest['cases'].append({
+                       'flop':flop,'line':line,'turn':turn,
+                       'combo_reach_report':str(rpath),
+                       'combo_reach_report_sha256':digest(rpath),
+                       'combo_reach_summary':rproof['summary'],
+                       'combo_reach_converged_for_cert':rproof['converged_for_cert'],
+                       'root_pot_bb':fr['pot']/100,'root_stack_bb':fr['stack']/100,
+                       'turn_node_pot_bb':node['pot']/100,
+                       'turn_node_stack_bb':(fr['stack']-max(node['bets']))/100,
+                       'turn_node_spr':round((fr['stack']-max(node['bets']))/node['pot'],5),
+                       'flop_json':str(fpath.relative_to(pf)),
+                       'flop_sha256':digest(fpath),
+                       'sub_json':str(sub.relative_to(pf)),'sub_sha256':digest(sub),
+                       'sub_gto_expl_pct':src['info'].get('gto_expl_pct'),
+                       'sub_hero_gap_pct':src['info'].get('hero_gap_pct'),
+                       'node_spr_by_exact_line_and_board':mem,
+                       'status':'AUTHENTIC_CFR_NEEDS_UI_LINEAGE_PROOF'})
+        except Exception as ex:
+            manifest['failures'].append({'flop':flop,'reason':str(ex),
+                                         'trace':traceback.format_exc()[-1200:]})
+        manifest.setdefault('seconds_by_flop',{})[flop]=round(time.monotonic()-t0,2)
+    manifest['cases_solved']=len(manifest['cases'])
+    manifest['failed_flops']=len(manifest['failures'])
+    a.manifest.parent.mkdir(parents=True,exist_ok=True)
+    a.manifest.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
+    print(json.dumps({'spot':a.spot,'version':a.version,
+        'cases_solved':manifest['cases_solved'],
+        'skipped_unreachable':len(manifest['skipped_unreachable']),
+        'failed_flops':len(manifest['failures'])}))
+    if manifest['failures']:raise SystemExit(1)
+if __name__=='__main__':main()

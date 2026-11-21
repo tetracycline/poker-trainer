@@ -1,0 +1,114 @@
+name: TASK-HYBRID B65 restore verified V8 UI after B63 rejected rank41 source
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b65-restore-v8.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  regression-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: V8 56-CERT source, 219 named boards, B64 rank41 exclusion, full V8-to-V1 loader and river gate
+        run: |
+          set -euo pipefail
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+          node - <<'JS'
+          const fs=require('fs'),assert=require('assert').strict,crypto=require('crypto');
+          const paths=[
+            'data/nl2_hu_multiboard_status_v8_batch61.json',
+            'data/nl2_hu_multiboard_status_v7_batch59.json',
+            'data/nl2_hu_multiboard_status_v6_rank33.json',
+            'data/nl2_hu_multiboard_status_v5_batch55.json',
+            'data/nl2_hu_multiboard_status_v4_batch50.json',
+            'data/nl2_hu_multiboard_status_v3_rank28.json',
+            'data/nl2_hu_multiboard_status_v2_tie.json',
+            'data/nl2_hu_multiboard_status.json'
+          ];
+          const statuses=paths.map(path=>JSON.parse(fs.readFileSync(path,'utf8')));
+          const [v8,,,,,,,v1]=statuses;
+          const rejected=JSON.parse(fs.readFileSync('data/nl2_hu_b64_rank41_unmatched_hero_node.json','utf8'));
+          const nav=JSON.parse(fs.readFileSync('data/nl2_hu_b34_full_integrity.json','utf8')).navigation;
+          assert.equal(v8.schema,'NL2_HU_392_MULTIBOARD_CERT_STATUS_V8_BATCH61');
+          assert.equal(v8.CERT_MULTIBOARD,56);assert.equal(v8.APPROX,336);assert.equal(v8.TOTAL,392);
+          assert.equal(v1.CERT_MULTIBOARD,24);assert.equal(v1.APPROX,368);
+          assert.equal(Object.keys(v8.records).length,392);
+          assert.equal(v8.records['ln-ipfr-t_model-sxr0qa'].label,'APPROX');
+          const boards=Object.values(v8.records).filter(x=>x.label==='CERT-MULTIBOARD')
+            .flatMap(x=>x.certified_3_to_5_exact_flop_boards);
+          assert.equal(boards.length,219);
+          assert(boards.every(x=>x.nl2_locked_variants?.length>0 && x.strict_full_street_combo_reachable>0));
+          assert.equal(v8.independently_verified_completed_batches.B4_MICRO.run_id,44732810327);
+          assert.equal(rejected.status,'PASS_EXCLUSION');
+          assert.equal(rejected.rank,41);
+          assert.equal(rejected.new_EXP_IP_source_hero_nodes,0);
+          assert.equal(rejected.no_CERT_promotion,true);
+          assert.equal(nav.continuing,2475);assert.equal(nav.reach_river,2475);
+          assert.equal(nav.missing_river,0);assert.equal(nav.link_misses,0);
+          assert.equal(nav.reach_violations,0);assert.equal(nav.modeled_path_violations,0);
+          async function test(path){
+            const src=fs.readFileSync(path,'utf8');
+            assert(!src.includes('NL2_HU_392_MULTIBOARD_CERT_STATUS_V9_RANK41'));
+            assert(!src.includes('nl2_hu_multiboard_status_v9_rank41.json'));
+            const start=src.indexOf('function fetchCertifiedRegistry(){');
+            const end=src.indexOf('\nfetchCertifiedRegistry()\n .then(d=>{',start);
+            assert(start>=0 && end>start,'must consume decoded JSON directly');
+            assert(!src.includes('fetchCertifiedRegistry()\n .then(r=>'),'no extra JSON parse');
+            const loader=new Function('fetch',src.slice(start,end)+';return fetchCertifiedRegistry();');
+            for(let i=0;i<paths.length;i++){
+              const seen=[];
+              const output=await loader(async url=>{
+                const index=paths.findIndex(x=>url.includes(x));
+                assert(index>=0,'unknown registry URL '+url);
+                seen.push(index);
+                return index<i?{ok:false,status:404}:{ok:true,json:async()=>statuses[index]};
+              });
+              assert.strictEqual(output,statuses[i]);
+              assert.deepEqual(seen,Array.from({length:i+1},(_,k)=>k));
+            }
+          }
+          (async()=>{
+            await test('nl2-multiboard.js');await test('nl2_hu_multiboard_ui.js');
+            const report={
+              schema:'NL2_HU_B65_VERIFIED_V8_FRONTEND_RECOVERY_V1',
+              status:'PASS',count_CERT:56,count_APPROX:336,
+              exact_named_boards:219,Batch_E_run:44732810327,
+              rivers_verified:2475,rank41_rejected_by_B64:true,
+              invalid_unverified_V9_loader_removed:true,
+              v8_through_v1_all_fallbacks_passed_both_pages:true,
+              original_V1_through_V8_certification_unchanged:true,
+              no_generic_texture_GTO:true,no_private_combo_pool_frequencies:true,
+              PR2_remains_draft_never_merge:true,
+              V8_sha256:crypto.createHash('sha256').update(fs.readFileSync(paths[0])).digest('hex')
+            };
+            fs.writeFileSync('data/nl2_hu_b65_v8_ui_recovery.json',JSON.stringify(report,null,2)+'\n');
+            console.log('PASS B65 verified V8 56/336 frontend, B64 exclusion, Batch E and 2475 links');
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+          JS
+      - name: Commit verified recovery receipt to Draft PR#2, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b65_v8_ui_recovery.json
+          git commit -m 'TASK-HYBRID B65: verified restore V8 56 CERT/336 APPROX both UIs, no false rank41 promotion'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B65-V8-UI-recovery
+          path: data/nl2_hu_b65_v8_ui_recovery.json
+          retention-days: 30

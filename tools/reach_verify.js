@@ -21,7 +21,7 @@ function loadRenderer() {
   const ctx = { console, __LINES_QA: true, location: { hash: '#lines' }, scrollTo() {}, addEventListener() {},
     document: { querySelector: () => app, querySelectorAll: () => [], getElementById: () => null } };
   ctx.window = ctx; if (args.includes('--nofilter')) ctx.__NL2_NOFILTER = true; vm.createContext(ctx);
-  for (const n of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js', 'nl2_titles.js', 'nl2.js']) {
+  for (const n of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js', 'nl2_titles.js', 'nl2_hu_model.js', 'nl2.js']) {
     const f = path.join(root, n); if (!fs.existsSync(f)) continue;
     let src = fs.readFileSync(f, 'utf8');
     if (n === 'nl2.js' && !src.includes('data-node=')) // 舊版沒有節點標記：只為了讀出節點，補上屬性（不改任何邏輯）
@@ -36,6 +36,8 @@ const L = ctx.NLL, Q = ctx.__linesQA;
 // ---------- 2. 基本表 ----------
 const HCODE = { '兩對+': 'S', '頂對好': 'TPG', '頂對弱': 'TPW', '中小對': 'MID', '強聽': 'DRAW', '強聽未中': 'DRAW', '弱聽': 'WDRAW', '弱聽／高張': 'WDRAW', '空氣': 'AIR' };
 const HNAME = { S: '兩對+', TPG: '頂對好', TPW: '頂對弱', MID: '中小對', DRAW: '強聽', WDRAW: '弱聽', AIR: '空氣' };
+// 檢查可達性仍使用完整的七類做轉換，只有下列五類屬於使用者要求顯示的欄位。
+const DISPLAY_HANDS = new Set(['TPG','TPW','MID','DRAW','WDRAW']);
 const STN = ['翻牌', '轉牌', '河牌'];
 const TX = ['A_high', 'KQ_high', 'mid_high', 'low', 'paired', 'mono'];
 const TXN = { A_high: 'A 高面', KQ_high: 'K/Q 高面', mid_high: 'J/T 高面', low: '9 以下', paired: '成對面', mono: '單色面' };
@@ -105,9 +107,11 @@ function parseSections(html, sp) {
     const tm = seg.match(/<b class="ttl">([\s\S]*?)<\/b>/);
     const titleHtml = tm ? tm[1] : '';
     const face = (seg.match(/<p class="small muted">你面對（例）：([\s\S]*?)<\/p>/) || [])[1] || '';
-    const tabm = seg.match(/<table\b([^>]*)>([\s\S]*?)<\/table>/) || [];
-    const kind = /data-kind="runout"/.test(tabm[1] || '') ? 'runout' : 'class';
-    const tab = tabm[2] || '';
+    // 同一行動線可能有數個下注尺寸情境，每個情境各一張固定六列的小表。
+    // 解析全部小表，不可只讀第一張而把其他尺寸的可達格誤判成漏格。
+    const tabms = [...seg.matchAll(/<table\b([^>]*)>([\s\S]*?)<\/table>/g)];
+    const kind = /data-kind="runout"/.test((tabms[0] || [])[1] || '') ? 'runout' : 'class';
+    const tab = tabms.map(m => m[2]).join('');
     const trs = [...tab.matchAll(/<tr([^>]*)>([\s\S]*?)<\/tr>/g)].map(m => ({ attr: m[1], body: m[2] }));
     const parseCells = body => [...body.matchAll(/<td class="([^"]*)"[^>]*>([\s\S]*?)<\/td>/g)].map(m => ({ cls: m[1], ro: (m[0].match(/data-ro="([^"]+)"/) || [])[1] || null, text: strip(m[2].replace(/<small[\s\S]*?<\/small>/g, '')), basis: strip((m[2].match(/<small[^>]*>([\s\S]*?)<\/small>/) || [])[1] || '') }));
     let cols, rows, ros = null;
@@ -146,6 +150,10 @@ function parseSections(html, sp) {
       return { ro, cond: m[2], classes: m[3].split('、'), text: m[4].replace(/(沿用 ?n[\d.]*·?[\d.]*盤|池估|兩人 GTO 近似|GTO|剝削).*$/, '').trim() };
     }) : [];
     const [nsp, nd] = starts[k].node.split('/');
+    // Modeled fallback tables are independently checked, class-by-class,
+    // by hu_model_path_audit.js. This proof verifies only evidence-backed
+    // original NL2 decision trees; never calls modeled hands CERT.
+    if (nd.endsWith('_model')) continue;
     out.push({ sp: nsp || sp, nd, titleHtml, title: strip(titleHtml), kind, ro: null, ros, face: strip(face), cols, rows, exc });
   }
   return out;
@@ -501,6 +509,7 @@ for (const spot of L.spots) {
     for (const e of t.exc) for (const lab of (e.classes || [])) shownEx.add(e.cond + '|' + (Object.keys(HNAME).find(k => HNAME[k] === lab) || HCODE[lab]) + '|' + (e.ro || ''));
     const canonSt = P.streets.map(b => canon(b));
     for (const r of nodeRows) for (const h of r.hc) {
+      if (!DISPLAY_HANDS.has(h)) continue; // UI 刻意不顯示兩對+／空氣，非漏格
       const k = (r.x ? r.cl : (r.cl || '全部')) + '|' + h + '|' + (rowRo(r) || '');
       if ((r.x ? shownEx : shownBase).has(k)) continue;
       // CERT 列（無 ro）出現在每一欄，任一欄有顯示即可
@@ -533,7 +542,7 @@ for (const spot of L.spots) {
     if (shown.has(id) || seen.has(id + pfr)) continue; seen.add(id + pfr);
     const F = { ...lineFacts({ streets, pre: '' }), pfr };
     const hits = [];
-    for (const r of rowsOf(r0.sp, r0.nd)) for (const h of r.hc) if (reachable(r0.sp, r0.nd, streets, F, r, h)) hits.push(`${r.x ? '例外 ' : ''}${r.cl || '全部'}×${HNAME[h]}`);
+    for (const r of rowsOf(r0.sp, r0.nd)) for (const h of r.hc) if (DISPLAY_HANDS.has(h) && reachable(r0.sp, r0.nd, streets, F, r, h)) hits.push(`${r.x ? '例外 ' : ''}${r.cl || '全部'}×${HNAME[h]}`);
     if (hits.length) report.violations.push({ table: key.replace(/\|/g, ' → '), node: r0.sp + '/' + r0.nd, kind: '漏表', msg: `這條線（${['翻牌', '轉牌', '河牌'].slice(0, streets.length).map((x, i) => x + '：' + (streets[i].join('、') || '（無）')).join(' → ')}）有 ${hits.length} 格走得到卻沒有表：${hits.slice(0, 8).join('、')}${hits.length > 8 ? '…' : ''}` });
   }
 }

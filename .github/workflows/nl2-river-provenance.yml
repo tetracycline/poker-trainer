@@ -1,0 +1,124 @@
+name: NL2 river source provenance inventory
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-river-provenance.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compute independent HU display coverage + exact missing-path list
+        run: |
+          mkdir -p evidence
+          node tools/link_audit.js --json evidence/link.json --md evidence/link.md
+          node tools/hu_line_contract.js > evidence/contract.json
+          node tools/reach_verify.js --json evidence/reach.json --log evidence/reach.md
+      - name: Inventory genuine solver artifacts without changing strategy or links
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import collections,hashlib,io,json,os,pathlib,re,urllib.parse,urllib.request,zipfile
+          dest=pathlib.Path('evidence')
+          audit=json.loads((dest/'link.json').read_text())
+          urlbase='https://api.github.com/repos/'+os.environ['GH_REPO']
+          headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],
+                   'Accept':'application/vnd.github+json',
+                   'X-GitHub-Api-Version':'2022-11-28'}
+          class SafeArtifactRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, hdrs, newurl):
+                  r=super().redirect_request(req, fp, code, msg, hdrs, newurl)
+                  if r and urllib.parse.urlsplit(newurl).hostname!=urllib.parse.urlsplit(req.full_url).hostname:
+                      for h in list(r.headers):
+                          if h.lower() in ('authorization','x-github-api-version'):
+                              del r.headers[h]
+                  return r
+          opener=urllib.request.build_opener(SafeArtifactRedirect())
+          def fetch(url):
+              return opener.open(urllib.request.Request(url,headers=headers),timeout=180).read()
+          catalog=[]
+          artifact_errors=[]
+          listed_artifacts=[]
+          # This is a source inventory, not automatic translation of GTO across different action histories.
+          for run in (44447817452,44481771702):
+              for page in range(1,10):
+                  listing=json.loads(fetch(f'{urlbase}/actions/runs/{run}/artifacts?per_page=100&page={page}'))
+                  entries=listing.get('artifacts',[])
+                  if not entries:break
+                  for a in entries:
+                      if not a['name'].startswith('nl2-real-solver-'):continue
+                      listed_artifacts.append({'run':run,'id':a['id'],'name':a['name'],
+                          'size_bytes':a.get('size_in_bytes'),'expired':a.get('expired')})
+                      try:
+                          blob=fetch(f"{urlbase}/actions/artifacts/{a['id']}/zip")
+                          z=zipfile.ZipFile(io.BytesIO(blob))
+                          manifest=next((n for n in z.namelist() if n.endswith('solver-manifest.json')),None)
+                          if not manifest:
+                              artifact_errors.append({'run':run,'artifact':a['id'],'reason':'manifest missing'})
+                              continue
+                          m=json.loads(z.read(manifest))
+                          prefix='solver/postflop/out/'
+                          cases=[]
+                          for fn in z.namelist():
+                              if not fn.startswith(prefix) or not fn.endswith('.json') or fn.endswith('.job.json'):continue
+                              raw=z.read(fn)
+                              obj=json.loads(raw)
+                              nodes=obj.get('nodes',[])
+                              lines=sorted(set(str(n.get('line','')) for n in nodes))
+                              boards=sorted(set(str(n.get('board','')) for n in nodes))
+                              cases.append({'file':fn[len(prefix):],'sha256':hashlib.sha256(raw).hexdigest(),
+                                            'flop':obj.get('flop'),'turn':obj.get('turn'),
+                                            'line0':obj.get('line0'),
+                                            'node_count':len(nodes),'line_tokens':lines,'boards':boards,
+                                            'raw_bytes':len(raw)})
+                          catalog.append({'run':run,'artifact_id':a['id'],'name':a['name'],
+                              'spot':m.get('spot'),'version':m.get('version'),
+                              'selected_flops':m.get('selected_flops'),
+                              'solved_flops':m.get('solved_flops'),
+                              'failures':m.get('failures',[]),
+                              'unreachable_subgames':m.get('unreachable_subgames',[]),
+                              'cases':cases})
+                      except Exception as exc:
+                          artifact_errors.append({'run':run,'artifact':a['id'],'reason':str(exc)})
+                  if len(entries)<100:break
+          # Exact game-tree lineage requires position, all action sizes, ranges and cards.
+          # Flop texture alone is NOT evidence of a valid river node or permissible EST link.
+          missing=audit.get('missingNext',[])
+          byspot=collections.Counter()
+          for x in missing:byspot[x['sp']]+=x['n']
+          index={'runs':[44447817452,44481771702],
+                 'solver_artifacts_listed':len(listed_artifacts),
+                 'solver_artifact_metadata':listed_artifacts,
+                 'solver_artifacts':len(catalog),
+                 'solver_raw_case_files':sum(len(x['cases']) for x in catalog),
+                 'solver_flop_versions':len(set((c['spot'],c['version'],f) for c in catalog for f in c.get('selected_flops',[]))),
+                 'source_catalog':catalog,'artifact_errors':artifact_errors,
+                 'nl2_display_counts':audit['counts'],
+                 'missing_next_groups':len(missing),
+                 'missing_next_cell_weights_by_spot':dict(byspot),
+                 'unmatched_nl2':missing,
+                 'mapped_and_verified_new_cert':0,'mapped_and_verified_new_est':0,
+                 'coverage_changed':False,
+                 'reason':'Source files were indexed, not re-solved or matched by complete action/pot/range lineage; no new NL2 river links are certified.'}
+          (dest/'river-source-inventory.json').write_text(json.dumps(index,ensure_ascii=False,indent=2))
+          print(json.dumps({k:v for k,v in index.items() if k not in ('source_catalog','unmatched_nl2','solver_artifact_metadata')},ensure_ascii=False))
+          if artifact_errors:
+              raise RuntimeError(f'UNVERIFIED: {len(artifact_errors)} genuine source archives inaccessible; review evidence artifact')
+          PY
+      - name: Publish audit evidence even if partial or failed
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-river-source-inventory
+          path: evidence/
+          retention-days: 30

@@ -1,0 +1,67 @@
+name: TASK-HYBRID B112 SHA pin individually verified B43 UTG_CO 9s6h3d GTO for rank236 (max8m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b112-utg-parent-pin.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Fetch ONLY B43 independent verified original UTG_CO GTO, not exp-OOP as actor IP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p gto_parent
+          gh run download 44806967313 --repo "$GITHUB_REPOSITORY"             --name nl2-multiboard-B43_UTG_B75-UTG_CO-gto-9s6h3d --dir gto_parent
+          test -s gto_parent/evidence/UTG_CO-gto-9s6h3d.json
+      - name: Check original true GTO SHA/root/job and rank236 sourceblind actor-IP legal river reach
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b112_utg_b43_gto_parent_pin.py
+          python3 tools/hu_b112_utg_b43_gto_parent_pin.py --artifact-root gto_parent
+      - name: Gate pin not certification, 137/255 remains until genuine Rust NL2 IP lock
+        run: |
+          python3 - <<'PY'
+          import json
+          x=json.load(open('data/nl2_hu_b112_utg_9s6h3d_gto_parent_pin.json'))
+          assert x['result']=='PASS_INDIVIDUALLY_VERIFIED_GTO_PARENT'
+          assert x['original_GTO_source_run']==44806967313
+          assert x['frozen_rank']==236 and x['missing_one_flop']=='9s6h3d'
+          assert x['positive_reach_IP_GTO_actor_nodes']>0
+          assert x['B43_two_individual_solver_jobs_reverified']
+          assert (x['CERT'],x['APPROX'])==(137,255)
+          assert all(len(x[z])==64 for z in ('GTO_root_sha256','GTO_job_sha256','GTO_manifest_sha256'))
+          print('PASS B112 GTO SHA and rank236 one flop short, no false promotion')
+          PY
+      - name: Commit SHA-pinned original run to Draft PR #2; no merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b112_utg_9s6h3d_gto_parent_pin.json docs/NL2_HU_B112_UTG_CO_9S6H3D_GTO_PIN.md
+          git commit -m 'TASK-HYBRID B112: original B43 SHA-pinned UTG_CO 9s6h3d GTO actor IP parent for rank236'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B112-rank236-pinned-GTO
+          path: |
+            data/nl2_hu_b112_utg_9s6h3d_gto_parent_pin.json
+            docs/NL2_HU_B112_UTG_CO_9S6H3D_GTO_PIN.md
+          retention-days: 30

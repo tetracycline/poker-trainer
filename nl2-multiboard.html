@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><meta name="color-scheme" content="dark">
+<title>NL2 100bb｜真實 3–5 代表牌面 GTO/CFR 檢證</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:#101d15;color:#e1ede4;font:15px/1.55 system-ui,"Noto Sans TC",sans-serif}
+header{padding:14px max(14px,calc((100vw - 1100px)/2));background:#17281e;border-bottom:1px solid #48684f}
+main{max-width:1100px;margin:auto;padding:14px}
+h1{font-size:23px;margin:7px 0}
+a{color:#8bd8ff}
+section{padding:12px;margin:12px 0;border:1px solid #3d5a46;border-radius:10px;background:#192c20}
+.warn{padding:12px;background:#302717;border:1px solid #866b35;border-radius:9px;margin:13px 0}
+select{padding:8px;background:#21362a;color:#fff;border:1px solid #63826b;border-radius:7px;max-width:100%}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px}
+label{display:block;font-size:14px;color:#d5e6da}
+h2{font-size:18px;margin:5px 0}
+b{color:#a4f0b2}
+.muted{color:#b1c9b6}
+.candidate{display:inline-block;padding:2px 6px;border-radius:5px;background:#385a40}
+.code{font-family:ui-monospace,monospace;overflow-wrap:anywhere;font-size:12px}
+.table-wrap{max-height:68vh;overflow:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px;border:1px solid #45664b;text-align:left;vertical-align:top}
+th{background:#254631;position:sticky;top:0}
+</style>
+</head>
+<body><header><a href="nl2.html#lines">返回 NL2 訓練行動線</a>　
+<a href="nl2-cfr.html">既有精確 CFR 子局</a>　
+<a href="nl2-exploit.html">局部鎖頻與中下注研究</a>
+<h1>CERT-MULTIBOARD：具名公牌、原始動作與逐 combo 真實 CFR</h1><div class="muted">只有 3–5 組具體公牌才會得到 CERT-MULTIBOARD；相同紋理未求解的牌仍顯示 APPROX。</div></header>
+<main>
+<div class="warn"><b>限制：</b>真實 GTO 僅限選中的具名公牌、100bb 根範圍、行動歷史和 SPR。NL2 玩家池沒有每個 hole-card 真實行動，鎖定只用觀測聚合率；未觀測的行動以註明的預設代替。以下表格的 combo 可達性必須通過前街最大頻率／近混頻檢查，不能視為完整 NL2 池最優解。</div>
+<div id="summary" class="muted">載入 GitHub 來源驗證索引……</div>
+<section><div class="filters">
+<label>高頻訓練 MODEL <select id="model"></select></label>
+<label>認證的代表公牌 <select id="board"></select></label>
+<label>GTO 或 NL2 英雄頻率鎖定 <select id="version"><option value="gto">精確公牌 GTO</option><option value="exp_ip">英雄 IP / 局部鎖頻</option><option value="exp_oop">英雄 OOP / 局部鎖頻</option></select></label>
+<label>實際 CFR 決策節點 <select id="node"></select></label>
+</div></section>
+<section id="details">選擇具名公牌以顯示真實 GTO 來源。</section>
+<section><h2>組合級合法行動與 EV</h2>
+<p class="muted">每個 combo 僅走最高頻動作；另一動作必須同時 ≥40% 及 ≥70%×最高頻。前街與公牌阻擋牌均已納入。最高 EV 只代表這份精確 CFR game tree 的條件 EV，未重新求解過濾後均衡。</p>
+<label><input type="checkbox" id="all-combos"> 顯示全部可達 combos（預設前100）</label>
+<div class="table-wrap"><table><thead><tr><th>Hole cards</th><th>合法 CFR 行動</th><th>合法範圍內最高 EV 動作</th></tr></thead><tbody id="combo-rows"></tbody></table></div></section>
+</main>
+<script src="nl2-multiboard.js?v=task-hybrid-b27-20261120"></script>
+</body>
+</html>

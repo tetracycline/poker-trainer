@@ -1,0 +1,7 @@
+# Stage 2: offline SRP, 3-bet lock and exact sequential reach
+
+B05 produced 7 exact-board BTN-vs-BB SRP GTO subgames and 5 experimental BB-3bet-vs-BTN IP-hero locked subgames. Two cases lacked two-sided source reach and were skipped. B06 produced 7 additional experimental BB-3bet-vs-BTN OOP-hero locked subgames. No new GitHub Actions run was used for these results. Pinned-engine proofs and replay input/output SHA-256 values are in the accompanying solver evidence JSON files.
+
+The draft viewer now has 373 source subgames, 128 exact-board GTO, 245 experimental locked responses. These are not generic MODEL certificates. Locks apply only at matched observed opponent nodes, and coverage is shown in the viewer. Medium-size tags remain research candidates, not universal 50%-pot recommendations.
+
+B04–B06 add a path filter for 26 exact subgames (1,550 decision nodes). Highest-frequency action always survives; a second survives only if at least 40% and 70% of the maximum. All earlier actions must be eligible for the same private combo, with public-card and opponent-card conflicts excluded. Across these source subgames the filter kept 25,630 of 143,595 reached combo-node observations; 1,050 decision nodes lost both-sided reach. These are combo-node counts, not unique hands. The UI hides excluded combos and says when no combo can reach a node. Existing source-node EV and frequencies are not recomputed on the filtered ranges. Other subgames are labeled as not cross-street verified. Generic MODEL promotion remains 0/392.

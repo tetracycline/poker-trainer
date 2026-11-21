@@ -1,0 +1,3 @@
+# B153 | B147 authentic Rust GTO timeout negative, source-only
+
+Original Actions run [44853428350](https://github.com/tetracycline/poker-trainer/actions/runs/44853428350) cancelled after its 18-minute solver job limit. Only SHA-pinned input job exists; **no genuine solver root or GTO case manifest**. Flop As9h2d, chosen first turn Jd, flop x b50 c, LMP 100bb original 169-class preflop ASSUMED. Cannot certify GTO/NL2 or create an action recommendation from job configuration alone. Rank71 remains APPROX. V30 142 CERT/250 APPROX, 554 named per-board existing locks, 2475/2475 navigational reach. PR#2 remains Draft; NEVER MERGE.

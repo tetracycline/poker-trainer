@@ -1,0 +1,132 @@
+name: TASK-HYBRID B191 rank201 freeze original B3 GTO x-b33-call/x-b100-call two exact 8s8h3d+9s6h3d IP sources (max12m)
+# Staged until V34 rank199+202 independently 147 CERT /245 APPROX full
+# source and HU navigation Actions pass; no automatic fake rank201 CERT.
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b191-rank201-b3-xb33-xb100-parent-pin.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  sourceblind-rank201-two-authentic-B3-original-parent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Frozen V34 rank201 APPROX, original B188 GTO SHA 8s8h3d/9s6h3d, B175 sourceblind legal actor CO IP x-b33/x-b100
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,gzip,json,pathlib
+          d=pathlib.Path('data')
+          load=lambda p:json.loads(p.read_text())
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          old=d/'nl2_hu_multiboard_status_v34_b190_rank199_202.json'
+          a=load(old)
+          assert a['schema']=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V34_B190_RANK199_202'
+          assert (a['CERT_MULTIBOARD'],a['APPROX'],a['EST'],a['TOTAL'])==(147,245,0,392)
+          rank=201;mid='ln-iso-lmp_r_model-qsgdjf'
+          assert a['records'][mid]['label']=='APPROX' and a['records'][mid]['frequency_rank']==rank
+          b=load(d/'nl2_hu_b175_v32_248_exact_GTO_source_provenance.json')
+          row=next(z for z in b['rows'] if z['rank']==rank)
+          assert row['model_id']==mid and row['hero_seat']==1
+          assert row['distinct_GTO_plus_NL2_hero_flops']==['KsQh4d']
+          assert set(row['distinct_real_GTO_flops'])=={'8s8h3d','9s6h3d','KsQh4d'}
+          idx=d/'solver_evidence/NL2_MULTIBOARD_B3.index.json'
+          archive=d/'solver_evidence/NL2_MULTIBOARD_B3.json.gz'
+          ix=load(idx)
+          assert (ix['batch'],ix['run_id'],ix['gto_cases'],ix['locked_cases'])==('B3',44666294821,43,90)
+          assert ix['gzip_sha256']==sha(archive)
+          assert ix['source_sha256']==hashlib.sha256(gzip.decompress(archive.read_bytes())).hexdigest()
+          lines=['# B191 rank201 two original B3 true GTO parent SHA for x b33 c/x b100 c/x','',
+             'Rank201 remains APPROX until real NL2 CO IP x-b33-call/x-b100-call children from each original full-size GTO 8s8h3d and 9s6h3d.',
+             'Existing 3rd distinct exact KsQh4d is already paired to true actor-IP NL2 source.',
+             'B3 original LMP 169-class preflop ranges are ASSUMED, not observed private-card NL2 rates.',
+             'No generic GTO texture or 100% pot depolarized recommendation.','']
+          for flop,turn,expectedsha in (
+            ('8s8h3d','5s','f99572980ac551977cf2522b460800206307f0ce52229dd94c6d9270a426a122'),
+            ('9s6h3d','Ts','2c21ed46bf387e2e97138103681bd310d7654c0d1ff2c0a2c621dd9ede04976b')):
+            src=d/('nl2_hu_b188_rank199_202_'+flop+'_B3_gto_pin.json')
+            x=load(src)
+            assert x['schema']=='NL2_HU_B188_RANK199_202_B3_ORIGINAL_GTO_PARENT_PIN_V1'
+            assert (x['source_run_id'],x['flop'],x['turn'])==(44666294821,flop,turn)
+            assert x['original_GTO_case_SHA256']==expectedsha
+            assert x['original_GTO_flop_line']=='x b33 c'
+            assert x['original_B3_verified_archive_sha256']==sha(archive)
+            legal=[z for z in row['exact_authentic_gto_source_proofs'] if
+              z['flop']==flop and z['turn']==turn and z['source_run']==44666294821
+              and z['source_sha']==expectedsha and z['actor']==1
+              and z['exact_line']=='x b33 c/x b100 c/x'
+              and z['strict_legal_combos']>0 and z['GTO_gap_pct']<=.5 and z['SPR_error_pct']<=5]
+            assert legal and not any(z['true_NL2_actor_locked'] for z in legal)
+            p=dict(schema='NL2_HU_B191_RANK201_B3_ORIGINAL_XB33_XB100_GTO_PARENT_PIN_V1',
+              source_run_id=44666294821,target_rank=201,model_id=mid,
+              spot='LMP_CO_BB',flop=flop,turn=turn,
+              original_GTO_flop_line='x b33 c',target_turn_line='x b100 c',
+              exact_river_line='x b33 c/x b100 c/x',actor=1,
+              minimum_strict_original_GTO_legal_IP_combos=min(z['strict_legal_combos'] for z in legal),
+              original_GTO_case_SHA256=expectedsha,
+              original_gto_manifest_sha256=x['original_gto_manifest_sha256'],
+              original_gto_root_sha256=x['original_gto_root_sha256'],
+              original_gto_job_sha256=x['original_gto_job_sha256'],
+              original_B188_parent_pin_sha256=sha(src),
+              original_B3_verified_archive_sha256=sha(archive),
+              original_B3_index_sha256=sha(idx),
+              original_full_GTO_flop_not_recomputed=True,
+              original_assumed_preflop_169class_not_measured=True,
+              true_NL2_IP_child_not_yet_solved=True,
+              no_generic_model_certification=True,PR2_Draft_never_merge=True)
+            (d/('nl2_hu_b191_rank201_'+flop+'_B3_original_gto_pin.json')).write_text(json.dumps(p,ensure_ascii=False,indent=2)+'\n')
+            lines.append(f"- {flop}/{turn}: original {p['source_run_id']} SHA root {p['original_gto_root_sha256']}; raw GTO strict IP combos >= {p['minimum_strict_original_GTO_legal_IP_combos']}")
+          pathlib.Path('docs/NL2_HU_B191_R201_B3_ORIGINAL_TWO_GTO_SHA_PINS.md').write_text('\n'.join(lines)+'\n')
+          print('PASS B191 frozen rank201 two original B3 true 100bb GTO actor-IP proof sources; no NL2 child or model promotion')
+          PY
+      - name: Complete 147 CERT 569 named board true GTO/NL2 source, 132+ exact 50pct nonpolar studies and 2475 HU routes
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v34_b190_rank199_202.json --out nl2-audit/b191-locks.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('nl2-audit/b191-locks.json'))
+          assert (r['cert_multiboard'],r['approx'],r['EST'])==(147,245,0)
+          assert r['aggregate']['named_board_proofs']==569
+          assert r['aggregate']['paired_hero_locked_source_variants']>=661
+          assert r['aggregate']['board_examples_with_b50_candidate']>=132
+          assert r['not_generalized_handclass_GTO'] and r['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/contract.json
+          node tools/link_audit.js --md nl2-audit/link.md --json nl2-audit/links.json
+          node tools/reach_verify.js --log nl2-audit/reach.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/links.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU 2475/2475")'
+      - name: Commit only exact original rank201 B3 GTO SHA verified source and full HU audit PR2 Draft NEVER MERGE
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b191_rank201_*_B3_original_gto_pin.json docs/NL2_HU_B191_R201_B3_ORIGINAL_TWO_GTO_SHA_PINS.md
+          git commit -m 'TASK-HYBRID B191: rank201 original two B3 x-b33/x-b100 actor-IP GTO source SHA-pins plus 569 named board 2475 HU full independent audit'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B191-R201-two-B3-original-100bb-GTO-parent-SHA
+          path: |
+            data/nl2_hu_b191_rank201_*_B3_original_gto_pin.json
+            docs/NL2_HU_B191_R201_B3_ORIGINAL_TWO_GTO_SHA_PINS.md
+            nl2-audit/
+          retention-days: 30

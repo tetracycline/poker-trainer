@@ -1,0 +1,1904 @@
+{
+  "schema": "NL2_TOP24_FROZEN_MULTIBOARD_SHORTFALLS_V1",
+  "top24": 24,
+  "certified_from_source": 24,
+  "still_approx": 0,
+  "new_source_batches": [
+    "NL2_MULTIBOARD_B1.json.gz",
+    "NL2_MULTIBOARD_B2_PARTIAL.json.gz",
+    "NL2_MULTIBOARD_B2_REPAIRED_GTO.json.gz",
+    "NL2_MULTIBOARD_B3.json.gz",
+    "NL2_MULTIBOARD_B4_MICRO.json.gz",
+    "NL2_MULTIBOARD_B5_SBGAPS.json.gz",
+    "NL2_MULTIBOARD_B7_RIVER.json.gz",
+    "NL2_MULTIBOARD_B8_LOCK.json.gz",
+    "NL2_MULTIBOARD_B9_LMP_FAST.json.gz",
+    "NL2_MULTIBOARD_B11_RIVER_FAST.json.gz",
+    "NL2_MULTIBOARD_B12_LOCK_FAST.json.gz",
+    "NL2_MULTIBOARD_B13_LMP_B50.json.gz",
+    "NL2_MULTIBOARD_B15_GTO_PARENT_EXP.json.gz",
+    "NL2_MULTIBOARD_B16_GTO_PARENT_TWO.json.gz",
+    "NL2_MULTIBOARD_B17_RIVER_PINNED.json.gz",
+    "NL2_MULTIBOARD_B18_RIVERPAIR.json.gz",
+    "NL2_MULTIBOARD_B19_LMP50_RESTRICTED.json.gz",
+    "NL2_MULTIBOARD_B20_B66_GTO.json.gz",
+    "NL2_MULTIBOARD_B22_B66_EXP.json.gz",
+    "NL2_MULTIBOARD_B23_LMP_NEXT.json.gz",
+    "NL2_MULTIBOARD_B25_LMP_TEXTURES.json.gz",
+    "NL2_MULTIBOARD_B26_LMP_NONPAIRED.json.gz",
+    "NL2_MULTIBOARD_B29_OFFICIAL_RELOCK.json.gz",
+    "NL2_MULTIBOARD_B32_BTN_RELOCK.json.gz",
+    "NL2_MULTIBOARD_B33_BTN_XB50_XX.json.gz",
+    "NL2_MULTIBOARD_B36_BTN_RELOCK.json.gz",
+    "NL2_MULTIBOARD_B37_BTN_XB50_XX.json.gz",
+    "NL2_MULTIBOARD_B38_BTN_IP_XX.json.gz"
+  ],
+  "sources": {
+    "official_subgames": 644,
+    "new_subgames": 896,
+    "source_files": [
+      "data/solver_evidence/NL2_MULTIBOARD_B1.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B2_REPAIRED_GTO.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B3.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B4_MICRO.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B5_SBGAPS.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B7_RIVER.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B8_LOCK.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B9_LMP_FAST.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B11_RIVER_FAST.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B12_LOCK_FAST.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B13_LMP_B50.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B15_GTO_PARENT_EXP.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B16_GTO_PARENT_TWO.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B17_RIVER_PINNED.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B18_RIVERPAIR.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B19_LMP50_RESTRICTED.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B20_B66_GTO.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B22_B66_EXP.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B23_LMP_NEXT.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B25_LMP_TEXTURES.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B26_LMP_NONPAIRED.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B29_OFFICIAL_RELOCK.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B32_BTN_RELOCK.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B33_BTN_XB50_XX.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B36_BTN_RELOCK.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B37_BTN_XB50_XX.json.gz",
+      "data/solver_evidence/NL2_MULTIBOARD_B38_BTN_IP_XX.json.gz"
+    ]
+  },
+  "missing_by_spot": {},
+  "recommendation": "Solve a few new exact flops ONLY where action history, actual SPR, actor, sequential legal combos, and hero-side NL2 lock can be matched; never grant CERT from texture alone.",
+  "ranking_locked": true,
+  "rows": [
+    {
+      "rank": 1,
+      "id": "ln-iso-lmp_t_model-19hfq8v",
+      "family": "LMP",
+      "spot": "LMP_CO_BB",
+      "street": 1,
+      "original_model_spr": 19.55,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "2s4h6d",
+        "4s4h2d",
+        "7s5h3d",
+        "8s8h3d"
+      ],
+      "flops_with_hero_lock": [
+        "2s4h6d",
+        "4s4h2d",
+        "7s5h3d",
+        "8s8h3d"
+      ],
+      "flops_without_hero_lock": [],
+      "distinct_matching_gto_flop_count": 4,
+      "distinct_gto_plus_hero_lock_count": 4,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "LOW",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "4s4h2d",
+          "source_run_id": 44762388523,
+          "node_spr": 19.55,
+          "line": "b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44767785255,
+          "node_spr": 19.55,
+          "line": "b50 c/",
+          "lock_count": 2
+        },
+        {
+          "flop": "2s4h6d",
+          "source_run_id": 44769773770,
+          "node_spr": 19.55,
+          "line": "b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "7s5h3d",
+          "source_run_id": 44769773770,
+          "node_spr": 19.55,
+          "line": "b50 c/",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "As7h3d",
+        "Jh9d6s"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 2,
+      "id": "ln-opfr-t_model-19esov6",
+      "family": "SRP",
+      "spot": "SB_BB",
+      "street": 1,
+      "original_model_spr": 5.056,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "9s6h3d",
+        "As9h2d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "9s6h3d",
+        "As9h2d",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [],
+      "distinct_matching_gto_flop_count": 3,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "KQ_HIGH",
+        "LOW"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 5.055556,
+          "line": "b100 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 5.055556,
+          "line": "b100 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44736420272,
+          "node_spr": 5.055556,
+          "line": "b100 c/",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "As7h3d",
+        "Jh9d6s"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 3,
+      "id": "ln-opfr-t_model-1wej9w5",
+      "family": "SRP",
+      "spot": "SB_BB",
+      "street": 1,
+      "original_model_spr": 6.167,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "9s6h3d",
+        "As9h2d",
+        "AsTh4d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7h2d"
+      ],
+      "flops_with_hero_lock": [
+        "AsTh4d",
+        "Jh9d6s",
+        "Ks7h2d"
+      ],
+      "flops_without_hero_lock": [
+        "9s6h3d",
+        "As9h2d",
+        "Js9h4d"
+      ],
+      "distinct_matching_gto_flop_count": 6,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "JT_HIGH",
+        "KQ_HIGH"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "AsTh4d",
+          "source_run_id": 44522421850,
+          "node_spr": 6.166667,
+          "line": "b75 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "Ks7h2d",
+          "source_run_id": 44654973894,
+          "node_spr": 6.166667,
+          "line": "b75 c/",
+          "lock_count": 2
+        },
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 6.166667,
+          "line": "b75 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "Js9h4d",
+          "source_run_id": 44666285424,
+          "node_spr": 6.166667,
+          "line": "b75 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 6.166667,
+          "line": "b75 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "Jh9d6s",
+          "source_run_id": 44736420272,
+          "node_spr": 6.166667,
+          "line": "b75 c/",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "KsQh4d",
+        "As7h3d"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 4,
+      "id": "ln-opfr-t_model-trdt3w",
+      "family": "SRP",
+      "spot": "SB_BB",
+      "street": 1,
+      "original_model_spr": 7.833,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "As7h3d",
+        "As9h2d",
+        "Ks7h2d"
+      ],
+      "flops_with_hero_lock": [
+        "As7h3d",
+        "As9h2d",
+        "Ks7h2d"
+      ],
+      "flops_without_hero_lock": [],
+      "distinct_matching_gto_flop_count": 3,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "KQ_HIGH"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "Ks7h2d",
+          "source_run_id": 44654973894,
+          "node_spr": 7.833333,
+          "line": "b50 c/",
+          "lock_count": 2
+        },
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 7.833333,
+          "line": "b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "As7h3d",
+          "source_run_id": 44736420272,
+          "node_spr": 7.833333,
+          "line": "b50 c/",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "KsQh4d",
+        "9s6h3d",
+        "Jh9d6s"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 5,
+      "id": "ln-opfr-t_model-id38uf",
+      "family": "SRP",
+      "spot": "SB_BB",
+      "street": 1,
+      "original_model_spr": 16.167,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "8s8h3d",
+        "9s6h3d",
+        "As7h3d",
+        "As9h2d",
+        "AsTh4d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7h2d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "8s8h3d",
+        "9s6h3d",
+        "As7h3d",
+        "As9h2d",
+        "AsTh4d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7h2d",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [],
+      "distinct_matching_gto_flop_count": 9,
+      "distinct_gto_plus_hero_lock_count": 9,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "JT_HIGH",
+        "KQ_HIGH",
+        "LOW",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "AsTh4d",
+          "source_run_id": 44522421850,
+          "node_spr": 16.166667,
+          "line": "x x/",
+          "lock_count": 1
+        },
+        {
+          "flop": "Ks7h2d",
+          "source_run_id": 44654973894,
+          "node_spr": 16.166667,
+          "line": "x x/",
+          "lock_count": 2
+        },
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44666285424,
+          "node_spr": 16.166667,
+          "line": "x x/",
+          "lock_count": 2
+        },
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 16.166667,
+          "line": "x x/",
+          "lock_count": 1
+        },
+        {
+          "flop": "Js9h4d",
+          "source_run_id": 44666285424,
+          "node_spr": 16.166667,
+          "line": "x x/",
+          "lock_count": 3
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 16.166667,
+          "line": "x x/",
+          "lock_count": 3
+        }
+      ],
+      "upcoming_preregistered_board_examples": [],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 6,
+      "id": "ln-bb-t_model-1n6d5u3",
+      "family": "SRP",
+      "spot": "BTN_BB",
+      "street": 1,
+      "original_model_spr": 17.727,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "8s8h3d",
+        "9s6h3d",
+        "As9h2d",
+        "AsAh5h",
+        "AsQh8d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7s2s",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "8s8h3d",
+        "9s6h3d",
+        "As9h2d",
+        "AsAh5h",
+        "AsQh8d",
+        "Js9h4d",
+        "Ks7s2s",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [
+        "Jh9d6s"
+      ],
+      "distinct_matching_gto_flop_count": 9,
+      "distinct_gto_plus_hero_lock_count": 8,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "JT_HIGH",
+        "KQ_HIGH",
+        "LOW",
+        "MONOTONE",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "AsAh5h",
+          "source_run_id": 44521980749,
+          "node_spr": 17.727273,
+          "line": "x x/",
+          "lock_count": 1
+        },
+        {
+          "flop": "AsQh8d",
+          "source_run_id": 44521980749,
+          "node_spr": 17.727273,
+          "line": "x x/",
+          "lock_count": 1
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44525865923,
+          "node_spr": 17.727273,
+          "line": "x x/",
+          "lock_count": 2
+        },
+        {
+          "flop": "Ks7s2s",
+          "source_run_id": 44525865923,
+          "node_spr": 17.727273,
+          "line": "x x/",
+          "lock_count": 2
+        },
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44653774402,
+          "node_spr": 17.727273,
+          "line": "x x/",
+          "lock_count": 2
+        },
+        {
+          "flop": "Js9h4d",
+          "source_run_id": 44653774402,
+          "node_spr": 17.727273,
+          "line": "x x/",
+          "lock_count": 2
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "As7h3d"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 7,
+      "id": "ln-iso-lmp_t_model-1e9jvm0",
+      "family": "LMP",
+      "spot": "LMP_CO_BB",
+      "street": 1,
+      "original_model_spr": 39.6,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "8s8h3d",
+        "9s6h3d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "8s8h3d",
+        "9s6h3d",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [],
+      "distinct_matching_gto_flop_count": 3,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "KQ_HIGH",
+        "LOW",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44666294821,
+          "node_spr": 39.6,
+          "line": "x x/",
+          "lock_count": 1
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44666294821,
+          "node_spr": 39.6,
+          "line": "x x/",
+          "lock_count": 1
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44666294821,
+          "node_spr": 39.6,
+          "line": "x x/",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "As7h3d",
+        "Jh9d6s",
+        "4s4h2d"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 8,
+      "id": "ln-ipfr-t_model-qcljc6",
+      "family": "SRP",
+      "spot": "BTN_BB",
+      "street": 1,
+      "original_model_spr": 8.364,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "As9h2d",
+        "Jh9d6s",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "As9h2d",
+        "Jh9d6s",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [],
+      "distinct_matching_gto_flop_count": 3,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "JT_HIGH",
+        "KQ_HIGH"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 8.613636,
+          "line": "b50 c/x",
+          "lock_count": 1
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44666285424,
+          "node_spr": 8.613636,
+          "line": "b50 c/x",
+          "lock_count": 1
+        },
+        {
+          "flop": "Jh9d6s",
+          "source_run_id": 44732810327,
+          "node_spr": 8.613636,
+          "line": "b50 c/x",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "As7h3d",
+        "8s8h3d"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 9,
+      "id": "ln-opfr-t_model-4t8fsk",
+      "family": "SRP",
+      "spot": "SB_BB",
+      "street": 1,
+      "original_model_spr": 7.583,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "8s8h3d",
+        "9s6h3d",
+        "As7h3d",
+        "As9h2d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7h2d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "8s8h3d",
+        "9s6h3d",
+        "As9h2d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7h2d",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [
+        "As7h3d"
+      ],
+      "distinct_matching_gto_flop_count": 8,
+      "distinct_gto_plus_hero_lock_count": 7,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "JT_HIGH",
+        "KQ_HIGH",
+        "LOW",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "Ks7h2d",
+          "source_run_id": 44654973894,
+          "node_spr": 7.833333,
+          "line": "x b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44666285424,
+          "node_spr": 7.833333,
+          "line": "x b50 c/",
+          "lock_count": 2
+        },
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 7.833333,
+          "line": "x b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "Js9h4d",
+          "source_run_id": 44666285424,
+          "node_spr": 7.833333,
+          "line": "x b50 c/",
+          "lock_count": 3
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 7.833333,
+          "line": "x b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "As7h3d",
+          "source_run_id": 44736420272,
+          "node_spr": 7.833333,
+          "line": "x b50 c/",
+          "lock_count": 0
+        }
+      ],
+      "upcoming_preregistered_board_examples": [],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 10,
+      "id": "ln-iso-lmp_t_model-1nf06ka",
+      "family": "LMP",
+      "spot": "LMP_CO_BB",
+      "street": 1,
+      "original_model_spr": 19.3,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "2s4h6d",
+        "4s4h2d",
+        "7s5h3d",
+        "8s8h3d",
+        "9s6h3d",
+        "As7h3d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7s2s",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "8s8h3d",
+        "9s6h3d",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [
+        "2s4h6d",
+        "4s4h2d",
+        "7s5h3d",
+        "As7h3d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7s2s"
+      ],
+      "distinct_matching_gto_flop_count": 10,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "KQ_HIGH",
+        "LOW",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44666294821,
+          "node_spr": 19.55,
+          "line": "b50 c/x",
+          "lock_count": 1
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44666294821,
+          "node_spr": 19.55,
+          "line": "b50 c/x",
+          "lock_count": 1
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44666294821,
+          "node_spr": 19.55,
+          "line": "b50 c/x",
+          "lock_count": 1
+        },
+        {
+          "flop": "4s4h2d",
+          "source_run_id": 44762388523,
+          "node_spr": 19.55,
+          "line": "b50 c/x",
+          "lock_count": 0
+        },
+        {
+          "flop": "As7h3d",
+          "source_run_id": 44740512245,
+          "node_spr": 19.55,
+          "line": "b50 c/x",
+          "lock_count": 0
+        },
+        {
+          "flop": "Jh9d6s",
+          "source_run_id": 44762388523,
+          "node_spr": 19.55,
+          "line": "b50 c/x",
+          "lock_count": 0
+        }
+      ],
+      "upcoming_preregistered_board_examples": [],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 11,
+      "id": "ln-bb-t_model-1c7tu96",
+      "family": "SRP",
+      "spot": "BTN_BB",
+      "street": 1,
+      "original_model_spr": 8.364,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "8s8h3d",
+        "9s6h3d",
+        "As9h2d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7s2s",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "8s8h3d",
+        "9s6h3d",
+        "As9h2d",
+        "Js9h4d",
+        "Ks7s2s",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [
+        "Jh9d6s"
+      ],
+      "distinct_matching_gto_flop_count": 7,
+      "distinct_gto_plus_hero_lock_count": 6,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "JT_HIGH",
+        "KQ_HIGH",
+        "LOW",
+        "MONOTONE",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44525865923,
+          "node_spr": 8.613636,
+          "line": "x b50 c/",
+          "lock_count": 2
+        },
+        {
+          "flop": "Ks7s2s",
+          "source_run_id": 44525865923,
+          "node_spr": 8.613636,
+          "line": "x b50 c/",
+          "lock_count": 2
+        },
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44653774402,
+          "node_spr": 8.613636,
+          "line": "x b50 c/",
+          "lock_count": 2
+        },
+        {
+          "flop": "Js9h4d",
+          "source_run_id": 44653774402,
+          "node_spr": 8.613636,
+          "line": "x b50 c/",
+          "lock_count": 2
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44653774402,
+          "node_spr": 8.613636,
+          "line": "x b50 c/",
+          "lock_count": 3
+        },
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 8.613636,
+          "line": "x b50 c/",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "As7h3d"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 12,
+      "id": "ln-ipc-t_model-btptzw",
+      "family": "SRP",
+      "spot": "SB_BB",
+      "street": 1,
+      "original_model_spr": 7.583,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "8s8h3d",
+        "9s6h3d",
+        "As7h3d",
+        "As9h2d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7h2d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "8s8h3d",
+        "As9h2d",
+        "Js9h4d",
+        "Ks7h2d"
+      ],
+      "flops_without_hero_lock": [
+        "9s6h3d",
+        "As7h3d",
+        "Jh9d6s",
+        "KsQh4d"
+      ],
+      "distinct_matching_gto_flop_count": 8,
+      "distinct_gto_plus_hero_lock_count": 4,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "JT_HIGH",
+        "KQ_HIGH",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "Ks7h2d",
+          "source_run_id": 44654973894,
+          "node_spr": 7.833333,
+          "line": "b50 c/x",
+          "lock_count": 1
+        },
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44666285424,
+          "node_spr": 7.833333,
+          "line": "b50 c/x",
+          "lock_count": 1
+        },
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 7.833333,
+          "line": "b50 c/x",
+          "lock_count": 1
+        },
+        {
+          "flop": "Js9h4d",
+          "source_run_id": 44666285424,
+          "node_spr": 7.833333,
+          "line": "b50 c/x",
+          "lock_count": 1
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 7.833333,
+          "line": "b50 c/x",
+          "lock_count": 0
+        },
+        {
+          "flop": "As7h3d",
+          "source_run_id": 44736420272,
+          "node_spr": 7.833333,
+          "line": "b50 c/x",
+          "lock_count": 0
+        }
+      ],
+      "upcoming_preregistered_board_examples": [],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 13,
+      "id": "ln-iso-lmp_t_model-10v4wiz",
+      "family": "LMP",
+      "spot": "LMP_CO_BB",
+      "street": 1,
+      "original_model_spr": 19.3,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "8s8h3d",
+        "9s6h3d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "8s8h3d",
+        "9s6h3d",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [],
+      "distinct_matching_gto_flop_count": 3,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "KQ_HIGH",
+        "LOW",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44666294821,
+          "node_spr": 19.55,
+          "line": "x b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44666294821,
+          "node_spr": 19.55,
+          "line": "x b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44666294821,
+          "node_spr": 19.55,
+          "line": "x b50 c/",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "As7h3d",
+        "Jh9d6s",
+        "4s4h2d"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 14,
+      "id": "ln-bb-t_model-cge9jz",
+      "family": "SRP",
+      "spot": "CO_BB",
+      "street": 1,
+      "original_model_spr": 8.364,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "8s8h3d",
+        "As9h2d",
+        "Js9h4d"
+      ],
+      "flops_with_hero_lock": [
+        "8s8h3d",
+        "As9h2d",
+        "Js9h4d"
+      ],
+      "flops_without_hero_lock": [],
+      "distinct_matching_gto_flop_count": 3,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "JT_HIGH",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44653774402,
+          "node_spr": 8.613636,
+          "line": "x b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44666290556,
+          "node_spr": 8.613636,
+          "line": "x b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "Js9h4d",
+          "source_run_id": 44666290556,
+          "node_spr": 8.613636,
+          "line": "x b50 c/",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "As7h3d",
+        "KsQh4d",
+        "9s6h3d"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 15,
+      "id": "ln-opfr-r_model-1bv0680",
+      "family": "SRP",
+      "spot": "SB_BB",
+      "street": 2,
+      "original_model_spr": 2.833,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "9s6h3d",
+        "As7h3d",
+        "As9h2d",
+        "AsTh4d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7h2d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "As9h2d",
+        "AsTh4d",
+        "Ks7h2d"
+      ],
+      "flops_without_hero_lock": [
+        "9s6h3d",
+        "As7h3d",
+        "Jh9d6s",
+        "Js9h4d",
+        "KsQh4d"
+      ],
+      "distinct_matching_gto_flop_count": 8,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "KQ_HIGH"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44737532081,
+          "node_spr": 2.833333,
+          "line": "b50 c/b75 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "AsTh4d",
+          "source_run_id": 44522421850,
+          "node_spr": 2.84672,
+          "line": "b33 c/b100 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "Ks7h2d",
+          "source_run_id": 44654973894,
+          "node_spr": 2.84672,
+          "line": "b33 c/b100 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "As7h3d",
+          "source_run_id": 44736420272,
+          "node_spr": 2.84672,
+          "line": "b33 c/b100 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "Jh9d6s",
+          "source_run_id": 44736420272,
+          "node_spr": 2.84672,
+          "line": "b33 c/b100 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44736420272,
+          "node_spr": 2.84672,
+          "line": "b33 c/b100 c/",
+          "lock_count": 0
+        }
+      ],
+      "upcoming_preregistered_board_examples": [],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 16,
+      "id": "ln-opfr-r_model-j55znd",
+      "family": "SRP",
+      "spot": "SB_BB",
+      "street": 2,
+      "original_model_spr": 2.278,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "9s6h3d",
+        "As7h3d",
+        "As9h2d",
+        "Ks7h2d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "9s6h3d",
+        "Ks7h2d",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [
+        "As7h3d",
+        "As9h2d"
+      ],
+      "distinct_matching_gto_flop_count": 5,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "KQ_HIGH",
+        "LOW"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "Ks7h2d",
+          "source_run_id": 44654973894,
+          "node_spr": 2.277778,
+          "line": "b50 c/b100 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 2.277778,
+          "line": "b50 c/b100 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "As7h3d",
+          "source_run_id": 44736420272,
+          "node_spr": 2.277778,
+          "line": "b50 c/b100 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 2.277778,
+          "line": "b100 c/b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44736420272,
+          "node_spr": 2.277778,
+          "line": "b100 c/b50 c/",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "Jh9d6s"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 17,
+      "id": "ln-opfr-r_model-j5b75a",
+      "family": "SRP",
+      "spot": "SB_BB",
+      "street": 2,
+      "original_model_spr": 4.5,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "8s8h3d",
+        "9s6h3d",
+        "As7h3d",
+        "As9h2d",
+        "AsTh4d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7h2d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "8s8h3d",
+        "9s6h3d",
+        "As9h2d",
+        "AsTh4d",
+        "Jh9d6s",
+        "Ks7h2d"
+      ],
+      "flops_without_hero_lock": [
+        "As7h3d",
+        "Js9h4d",
+        "KsQh4d"
+      ],
+      "distinct_matching_gto_flop_count": 9,
+      "distinct_gto_plus_hero_lock_count": 6,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "JT_HIGH",
+        "KQ_HIGH",
+        "LOW",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "AsTh4d",
+          "source_run_id": 44522421850,
+          "node_spr": 4.52008,
+          "line": "b33 c/b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "Ks7h2d",
+          "source_run_id": 44654973894,
+          "node_spr": 4.52008,
+          "line": "b33 c/b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44666285424,
+          "node_spr": 4.52008,
+          "line": "b33 c/b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 4.52008,
+          "line": "b33 c/b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "Js9h4d",
+          "source_run_id": 44666285424,
+          "node_spr": 4.52008,
+          "line": "b33 c/b50 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 4.52008,
+          "line": "b33 c/b50 c/",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 18,
+      "id": "ln-opfr-r_model-ka3vbv",
+      "family": "SRP",
+      "spot": "SB_BB",
+      "street": 2,
+      "original_model_spr": 2.833,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "9s6h3d",
+        "As7h3d",
+        "As9h2d",
+        "AsTh4d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7h2d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "As9h2d",
+        "AsTh4d",
+        "Ks7h2d"
+      ],
+      "flops_without_hero_lock": [
+        "9s6h3d",
+        "As7h3d",
+        "Jh9d6s",
+        "Js9h4d",
+        "KsQh4d"
+      ],
+      "distinct_matching_gto_flop_count": 8,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "KQ_HIGH"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44737532081,
+          "node_spr": 2.833333,
+          "line": "b50 c/b75 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "AsTh4d",
+          "source_run_id": 44522421850,
+          "node_spr": 2.84672,
+          "line": "b33 c/b100 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "Ks7h2d",
+          "source_run_id": 44654973894,
+          "node_spr": 2.84672,
+          "line": "b33 c/b100 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "As7h3d",
+          "source_run_id": 44736420272,
+          "node_spr": 2.84672,
+          "line": "b33 c/b100 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "Jh9d6s",
+          "source_run_id": 44736420272,
+          "node_spr": 2.84672,
+          "line": "b33 c/b100 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44736420272,
+          "node_spr": 2.84672,
+          "line": "b33 c/b100 c/",
+          "lock_count": 0
+        }
+      ],
+      "upcoming_preregistered_board_examples": [],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 19,
+      "id": "ln-3bp-3b_t_model-1gg0bw",
+      "family": "3BP",
+      "spot": "SB3_BTN",
+      "street": 1,
+      "original_model_spr": 1.414,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "8s8h3d",
+        "9s6h3d",
+        "As7h3d",
+        "Ks7h2d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "8s8h3d",
+        "As7h3d",
+        "Ks7h2d"
+      ],
+      "flops_without_hero_lock": [
+        "9s6h3d",
+        "KsQh4d"
+      ],
+      "distinct_matching_gto_flop_count": 5,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "KQ_HIGH",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "As7h3d",
+          "source_run_id": 44522421850,
+          "node_spr": 1.414286,
+          "line": "b75 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44653774402,
+          "node_spr": 1.414286,
+          "line": "b75 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "Ks7h2d",
+          "source_run_id": 44654973894,
+          "node_spr": 1.414286,
+          "line": "b75 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44666290556,
+          "node_spr": 1.414286,
+          "line": "b75 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44666290556,
+          "node_spr": 1.414286,
+          "line": "b75 c/",
+          "lock_count": 0
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "Jh9d6s"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 20,
+      "id": "ln-ipfr-t_model-xbvh6",
+      "family": "SRP",
+      "spot": "BTN_BB",
+      "street": 1,
+      "original_model_spr": 17.727,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "8s8h3d",
+        "9s6h3d",
+        "As9h2d",
+        "AsAh5h",
+        "AsQh8d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7s2s",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "8s8h3d",
+        "9s6h3d",
+        "As9h2d",
+        "AsAh5h",
+        "AsQh8d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7s2s",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [],
+      "distinct_matching_gto_flop_count": 9,
+      "distinct_gto_plus_hero_lock_count": 9,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "JT_HIGH",
+        "KQ_HIGH",
+        "LOW",
+        "MONOTONE",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "AsAh5h",
+          "source_run_id": 44521980749,
+          "node_spr": 17.727273,
+          "line": "x x/x",
+          "lock_count": 1
+        },
+        {
+          "flop": "AsQh8d",
+          "source_run_id": 44521980749,
+          "node_spr": 17.727273,
+          "line": "x x/x",
+          "lock_count": 1
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44525865923,
+          "node_spr": 17.727273,
+          "line": "x x/x",
+          "lock_count": 2
+        },
+        {
+          "flop": "Ks7s2s",
+          "source_run_id": 44525865923,
+          "node_spr": 17.727273,
+          "line": "x x/x",
+          "lock_count": 2
+        },
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44653774402,
+          "node_spr": 17.727273,
+          "line": "x x/x",
+          "lock_count": 1
+        },
+        {
+          "flop": "Js9h4d",
+          "source_run_id": 44653774402,
+          "node_spr": 17.727273,
+          "line": "x x/x",
+          "lock_count": 2
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "As7h3d"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 21,
+      "id": "ln-opfr-r_model-1eyhxd9",
+      "family": "SRP",
+      "spot": "SB_BB",
+      "street": 2,
+      "original_model_spr": 7.833,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "8s8h3d",
+        "9s6h3d",
+        "As7h3d",
+        "As9h2d",
+        "AsTh4d",
+        "Jh9d6s",
+        "Js9h4d",
+        "Ks7h2d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "9s6h3d",
+        "As9h2d",
+        "AsTh4d",
+        "Jh9d6s",
+        "Ks7h2d",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [
+        "8s8h3d",
+        "As7h3d",
+        "Js9h4d"
+      ],
+      "distinct_matching_gto_flop_count": 9,
+      "distinct_gto_plus_hero_lock_count": 6,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "JT_HIGH",
+        "KQ_HIGH",
+        "LOW"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "AsTh4d",
+          "source_run_id": 44522421850,
+          "node_spr": 7.833333,
+          "line": "x x/b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "Ks7h2d",
+          "source_run_id": 44654973894,
+          "node_spr": 7.833333,
+          "line": "x x/b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44666285424,
+          "node_spr": 7.833333,
+          "line": "x x/b50 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44666285424,
+          "node_spr": 7.833333,
+          "line": "x x/b50 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "Js9h4d",
+          "source_run_id": 44666285424,
+          "node_spr": 7.833333,
+          "line": "x x/b50 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44732810327,
+          "node_spr": 7.833333,
+          "line": "x x/b50 c/",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 22,
+      "id": "ln-opfr-r_model-bkt7sm",
+      "family": "SRP",
+      "spot": "SB_BB",
+      "street": 2,
+      "original_model_spr": 6.167,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "8s8h3d",
+        "9s6h3d",
+        "As9h2d",
+        "Js9h4d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "8s8h3d",
+        "9s6h3d",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [
+        "As9h2d",
+        "Js9h4d"
+      ],
+      "distinct_matching_gto_flop_count": 5,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "KQ_HIGH",
+        "LOW",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44737532081,
+          "node_spr": 6.166667,
+          "line": "x x/b75 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44737532081,
+          "node_spr": 6.166667,
+          "line": "x x/b75 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "Js9h4d",
+          "source_run_id": 44737532081,
+          "node_spr": 6.166667,
+          "line": "x x/b75 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44741462253,
+          "node_spr": 6.166667,
+          "line": "x x/b75 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44741462253,
+          "node_spr": 6.166667,
+          "line": "x x/b75 c/",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "As7h3d",
+        "Jh9d6s"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 23,
+      "id": "ln-opfr-r_model-f6iab7",
+      "family": "SRP",
+      "spot": "SB_BB",
+      "street": 2,
+      "original_model_spr": 9.5,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "8s8h3d",
+        "9s6h3d",
+        "As9h2d",
+        "Js9h4d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "8s8h3d",
+        "9s6h3d",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [
+        "As9h2d",
+        "Js9h4d"
+      ],
+      "distinct_matching_gto_flop_count": 5,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "KQ_HIGH",
+        "LOW",
+        "PAIRED"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "8s8h3d",
+          "source_run_id": 44737532081,
+          "node_spr": 9.540161,
+          "line": "x x/b33 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "As9h2d",
+          "source_run_id": 44737532081,
+          "node_spr": 9.540161,
+          "line": "x x/b33 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "Js9h4d",
+          "source_run_id": 44737532081,
+          "node_spr": 9.540161,
+          "line": "x x/b33 c/",
+          "lock_count": 0
+        },
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44741462253,
+          "node_spr": 9.540161,
+          "line": "x x/b33 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44741462253,
+          "node_spr": 9.540161,
+          "line": "x x/b33 c/",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "As7h3d",
+        "Jh9d6s"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    },
+    {
+      "rank": 24,
+      "id": "ln-opfr-r_model-iry60z",
+      "family": "SRP",
+      "spot": "SB_BB",
+      "street": 2,
+      "original_model_spr": 6.643,
+      "current_label": "CERT-MULTIBOARD",
+      "exact_matching_flops": [
+        "9s6h3d",
+        "As7h3d",
+        "KsQh4d"
+      ],
+      "flops_with_hero_lock": [
+        "9s6h3d",
+        "As7h3d",
+        "KsQh4d"
+      ],
+      "flops_without_hero_lock": [],
+      "distinct_matching_gto_flop_count": 3,
+      "distinct_gto_plus_hero_lock_count": 3,
+      "missing_required_flops": 0,
+      "texture_labels_seen": [
+        "ACE_HIGH",
+        "KQ_HIGH",
+        "LOW"
+      ],
+      "recorded_line_examples": [
+        {
+          "flop": "9s6h3d",
+          "source_run_id": 44763159052,
+          "node_spr": 6.683908,
+          "line": "x x/b66 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "As7h3d",
+          "source_run_id": 44763159052,
+          "node_spr": 6.683908,
+          "line": "x x/b66 c/",
+          "lock_count": 1
+        },
+        {
+          "flop": "KsQh4d",
+          "source_run_id": 44763159052,
+          "node_spr": 6.683908,
+          "line": "x x/b66 c/",
+          "lock_count": 1
+        }
+      ],
+      "upcoming_preregistered_board_examples": [
+        "Jh9d6s"
+      ],
+      "unproven_until_gto_and_hero_lock_solved": true,
+      "no_source_match_reason": null
+    }
+  ]
+}

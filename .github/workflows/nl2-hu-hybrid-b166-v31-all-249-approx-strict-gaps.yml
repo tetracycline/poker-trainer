@@ -1,0 +1,120 @@
+name: TASK-HYBRID B166 re-audit all 249 V31 APPROX with B156/B158 GTO and B164 true NL2 IP source + 2475 HU (max11m)
+# Strict source-index schema: original GTO has no_generic_model_certification=true,
+# while verified EXP partial indexes carry generic_model_certification=0. Both must be explicitly certified non-generic.
+# Original B164 Rust EXP index used inverted no_generic_model_certification=0; accept ONLY authenticated original B164 run44861858112, actual exp_ip spot/flop, zero GTO and no CERT upgrade.
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b166-v31-all-249-approx-strict-gaps.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  V31-full-249-approx-source-and-HU-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Recompute every one of 249 frozen/current APPROX candidates with ONLY independently SHA-proven genuine new sources
+        run: |
+          set -euo pipefail
+          for item in B156_R71_KS7H2D_GTO B158_R313_KS7H2D_GTO B164_R80_B9_ORIGINAL_EXP_IP; do
+            test -s "data/solver_evidence/NL2_MULTIBOARD_${item}.json.gz"
+            test -s "data/solver_evidence/NL2_MULTIBOARD_${item}.index.json"
+          done
+          test -s data/nl2_hu_multiboard_status_v31_b161_rank150.json
+          python3 -m py_compile tools/hu_b166_v31_249_approx_strict_source_gap.py tools/hu_multiboard_promote.py tools/hu_cert_lock_medium_audit.py
+          python3 tools/hu_b166_v31_249_approx_strict_source_gap.py
+      - name: Independent immutable V31/B112 source SHA, all 249 current APPROX, six original promotions, no fake legal GTO
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          d=pathlib.Path('data')
+          p=d/'nl2_hu_b166_v31_249_APPROX_true_sourceblind_gaps.json'
+          a=json.loads(p.read_text())
+          status=d/'nl2_hu_multiboard_status_v31_b161_rank150.json'
+          frozen=d/'nl2_hu_b112_all_approx_frozen_frequency_gaps.json'
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          assert a['schema']=='NL2_HU_B166_V31_249_APPROX_SOURCE_BLIND_GTO_NL2_GAP_AUDIT_V1'
+          assert a['parent_V31_sha256']==sha(status)
+          assert a['B112_frozen_sha256']==sha(frozen)
+          assert (a['CERT_MULTIBOARD'],a['APPROX'],a['EST'],a['TOTAL'])==(143,249,0,392)
+          assert a['rows'] and len(a['rows'])==a['row_count']==249
+          assert len({x['model_id'] for x in a['rows']})==249
+          assert len({x['rank'] for x in a['rows']})==249
+          assert (a['existing_named_exact_boards'],a['existing_hero_lock_source_variants'],
+                  a['exactly_supported_b50_nonpolar_candidate_boards'])==(557,649,131)
+          assert a['frequency_gap_counts']['current_APPROX']==249
+          assert a['frequency_gap_counts']['original_B112_APPROX_ALREADY_PROMOTED']==6
+          assert a['original_B156_rank71_strict_OOP_GTO_RIVER_ZERO']
+          assert a['original_B154_rank46_strict_IP_GTO_TURN_ZERO']
+          assert a['no_automatic_MODEL_CERT_upgrade'] and a['no_generic_TEXTURE_GTO']
+          assert a['no_false_observed_private_card_NL2_conditional_rate'] and a['PR2_remains_draft_never_merge']
+          assert all(x['GTO_exploitability_max_pct']==.5 and x['SPR_relative_error_max_pct']==5
+                     and x['no_empirical_NL2_private_card_conditional_action_rates']
+                     and x['no_generic_texture_or_bucket_CERT'] for x in a['rows'])
+          for item in ('B156_R71_KS7H2D_GTO','B158_R313_KS7H2D_GTO',
+                       'B164_R80_B9_ORIGINAL_EXP_IP'):
+            z=d/('solver_evidence/NL2_MULTIBOARD_'+item+'.json.gz')
+            ix=z.with_suffix('').with_suffix('.index.json')
+            i=json.loads(ix.read_text())
+            assert i['source_sha256']==hashlib.sha256(gzip.decompress(z.read_bytes())).hexdigest()
+            assert i['gzip_sha256']==sha(z)
+            assert a['added_original_source_indexes_sha256'][item]==sha(ix)
+          assert [x for x in a['rows'] if x['rank']==71][0]['remaining_distinct_matched_flops_to_3']>=1
+          assert '4s4h2d' in [x for x in a['rows'] if x['rank']==80][0]['actually_paired_genuine_NL2_hero_locked_flops']
+          print('PASS independently source-blind all 249 APPROX with exact B156, B158 original GTO and B164 genuine actor IP Rust lock, no fictitious CERT')
+          PY
+      - name: Reaudit all 143 V31 CERT hero-lock sources on 557 named boards and 131 true 50pct research flags, measured/assumed/unknown
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v31_b161_rank150.json --out nl2-audit/cert-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/cert-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(143,249,0)
+          assert a['aggregate']['named_board_proofs']==557
+          assert a['aggregate']['paired_hero_locked_source_variants']==649
+          assert a['aggregate']['board_examples_with_b50_candidate']==131
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          print('PASS 557/649 genuine per-board/lock source proofs, b50 131 research-only')
+          PY
+      - name: Full independent HU contract, model path and sequential route checks; all 2475 of 2475 continuing lines reach river
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU 2475/2475")'
+      - name: Commit all-249 frozen source gap audit plus original GTO negative/real NL2 positive distinctions to Draft PR #2, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b166_v31_249_APPROX_true_sourceblind_gaps.json docs/NL2_HU_B166_ALL_249_APPROX_V31_STRICT_SOURCE_GAPS.md
+          git commit -m 'TASK-HYBRID B166: genuine V31 249 APPROX exact source-blind B156/B158 strict GTO and B164 true NL2-IP gap audit, 557 board 649 locks and 2475 HU PASS'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B166-all-249-APPROX-3-true-source-recheck-2475-HU
+          path: |
+            data/nl2_hu_b166_v31_249_APPROX_true_sourceblind_gaps.json
+            docs/NL2_HU_B166_ALL_249_APPROX_V31_STRICT_SOURCE_GAPS.md
+            nl2-audit/
+          retention-days: 30

@@ -1,0 +1,124 @@
+name: TASK-HYBRID B152 frozen rank46/71 GTO source preflight, complete 554 NL2 locks and 2475 HU audit (max10m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b152-preflight-staged-gto-gates.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  preflight-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Compile all strict prereg scripts, inspect real B146 source, B151 timeout negative and V30 frozen 142/250 registry
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b148_verify_b147_actor_ip_labels.py tools/solve_hu_b149_lmp_rank46_turnonly.py tools/hu_b150_v31_rank46.py tools/solve_hu_multiboard_100bb.py tools/verify_hu_multiboard_100bb.py tools/hu_multiboard_promote.py tools/hu_cert_lock_medium_coverage_matrix.py tools/hu_cert_lock_medium_audit.py
+          python3 - <<'PY'
+          import json,pathlib
+          d=pathlib.Path('data')
+          v=json.loads((d/'nl2_hu_multiboard_status_v30_b145_rank47.json').read_text())
+          m=json.loads((d/'nl2_hu_cert_lock_medium_matrix_v30_b145.json').read_text())
+          frozen=json.loads((d/'nl2_hu_b112_all_approx_frozen_frequency_gaps.json').read_text())
+          b146=json.loads((d/'solver_evidence/NL2_MULTIBOARD_B146_R46_LMP_9s6h3d.index.json').read_text())
+          neg=json.loads((d/'solver_evidence/NL2_MULTIBOARD_B151_R71_B143_CANCELLED.index.json').read_text())
+          assert (v['CERT_MULTIBOARD'],v['APPROX'],v['EST'],v['TOTAL'])==(142,250,0,392)
+          assert len(m['models'])==142 and len(m['boards'])==554
+          assert m['strict_aggregate']['named_board_proofs']==554
+          assert v['records']['ln-iso-lmp_t_model-17z0wyl']['label']=='APPROX'
+          assert v['records']['ln-iso-lmp_r_model-vlgh2t']['label']=='APPROX'
+          assert b146['original_gto_parent_run']==44666294821 and b146['target_rank']==46
+          assert b146['exact_actor_IP_checked_turn_nodes']>0 and b146['strict_failure_reason'] is None
+          assert b146['actual_exact_action_line']=='x b50 c/x' and b146['flop']=='9s6h3d'
+          assert (neg['original_run_id'],neg['original_conclusion'])==(44852327309,'cancelled')
+          assert neg['original_gto_cases']==0 and neg['original_nl2_lock_cases']==0
+          assert neg['rank71_remains_APPROX']
+          x=next(r for r in frozen['rows'] if r['rank']==46)
+          assert x['model_id']=='ln-iso-lmp_t_model-17z0wyl'
+          assert x['missing_real_hero_flops_to_3']==2 and x['hero_locked_flops']==['8s8h3d']
+          for fn in ('nl2-hu-hybrid-b149-rank46-as9h2d-true-ip-child.yml',
+                     'nl2-hu-hybrid-b150-v31-rank46-cert.yml'):
+              s=(pathlib.Path('.github/workflows')/fn).read_text()
+              assert '  workflow_dispatch:' in s and '    paths: [' not in s
+              assert 'timeout-minutes:' in s
+          print('PASS genuine rank46 GTO+NL2 source gating, no premature V31 upgrade')
+          PY
+      - name: Independently audit all V30 554 board locks, source actual-vs-assumed NL2 marginals and 50pct nonpolar eligibility
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v30_b145_rank47.json --out nl2-audit/cert-lock-medium-independent.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/cert-lock-medium-independent.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(142,250,0)
+          assert a['aggregate']['named_board_proofs']==554
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          print('PASS 554 real named board lock/50pct evidence with measured/assumed scopes')
+          PY
+      - name: Complete all four HU navigation/model audits and assert 2475/2475 continuous river links
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS 2475/2475")'
+      - name: Commit honest GTO/EXP source status handoff into Draft PR2 after complete audit, NEVER merge
+        run: |
+          set -euo pipefail
+          mkdir -p docs
+          cat > docs/NL2_HU_B152_FROZEN_R46_R71_SOURCE_PREFLIGHT.md <<'EOF'
+          # B152 | Poker NL2 PR #2 Draft, NEVER MERGE
+
+          **Official V30: 142 CERT-MULTIBOARD /250 APPROX /0 EST, 392 total.**
+          Exactly **554 named board proofs**, distinct NL2 pooled marginal measurements
+          versus explicitly assumed defaults and per-board 50% pot research flags.
+          Four HU audits PASS, **2475/2475** links reach river. Batch E VERIFIED.
+
+          Rank71: original B143 6s4h2d full GTO solver timed out after 18min.
+          B151 independently SHA-archived only its Rust *job configuration*;
+          **zero genuine GTO and EXP sources**, keep APPROX.
+
+          Rank46: B146 genuine B3 GTO SHA-pinned 9s6h3d actor-IP x b50 c/x
+          Rust NL2 turn-only lock was independently audited with real
+          strictly reachable combo(s). It is only a second matched flop.
+
+          Rank46 third flop A-high As9h2d requires B147 full authentic GTO
+          and exact actor-IP turn reach, then independent B148 source-label
+          correction (original B147 workflow inherited stale rank71/OOP labels),
+          then B149 genuine actor-IP NL2 locked Rust child, then separate B150
+          source-blind V31 three-distinct-flop promotion gate.
+          **B149 and B150 workflows are staged and disabled until sources pass**.
+          No claim of 143 CERT or true NL2 conditional private-card frequencies yet.
+
+          LMP 169-class preflop weights are ASSUMED, not observed.
+          Real NL2 size/street marginals and fallback assumptions stay separate.
+          No generic GTO texture/bucket advice. PR#2 must remain Draft, never merge.
+          EOF
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/NL2_HU_B152_FROZEN_R46_R71_SOURCE_PREFLIGHT.md
+          git commit -m 'TASK-HYBRID B152: V30 142/250, all 554 named NL2 locks/50pct scope and 2475 HU audit, frozen rank46/71 negative/positive source handoff'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B152-142-250-554-source-lock-and-2475-audit
+          path: |
+            docs/NL2_HU_B152_FROZEN_R46_R71_SOURCE_PREFLIGHT.md
+            nl2-audit/
+          retention-days: 30

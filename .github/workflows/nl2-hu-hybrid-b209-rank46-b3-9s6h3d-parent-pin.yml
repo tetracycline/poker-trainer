@@ -1,0 +1,156 @@
+name: TASK-HYBRID B209 rank46 original B3 9s6h3d x-b50-call/x GTO parent SHA + 581 real source+2475 HU (max13m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b209-rank46-b3-9s6h3d-parent-pin.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  freeze-rank46-original-gto-parent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Download only original B3 successful authentic GTO mother tree 9s6h3d, not EXP or imputed child
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p original
+          gh run download 44666294821 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-multiboard-B3-LMP_CO_BB-gto-9s6h3d' --dir original
+          for f in evidence/LMP_CO_BB-gto-9s6h3d.json \
+            solver/postflop/out/LMP_CO_BB/gto/9s6h3d_multiboard.json \
+            solver/postflop/out/LMP_CO_BB/gto/9s6h3d_multiboard.job.json; do
+            test -s "original/$f"
+          done
+      - name: Independently verify source-blind rank46 exact x-b50 c/x actor-IP original 100bb GTO source SHA+pot/rake/SPR, fixed B3 original
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,gzip,json,pathlib
+          d=pathlib.Path('data')
+          load=lambda p:json.loads(p.read_text())
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          v=d/'nl2_hu_multiboard_status_v38_b206_rank190.json'
+          s=load(v)
+          assert s['schema']=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V38_B206_RANK190'
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(151,241,0,392)
+          mid='ln-iso-lmp_t_model-17z0wyl'
+          assert s['records'][mid]['label']=='APPROX'
+          b=load(d/'nl2_hu_b175_v32_248_exact_GTO_source_provenance.json')
+          assert b['schema']=='NL2_HU_B175_V32_ALL_248_GENUINE_GTO_RUN_ACTOR_TURN_SHA_PROVENANCE_V1'
+          row=next(z for z in b['rows'] if z['rank']==46)
+          assert row['model_id']==mid and row['hero_seat']==1
+          assert row['distinct_GTO_plus_NL2_hero_flops']==['8s8h3d']
+          assert set(row['distinct_real_GTO_flops'])=={'8s8h3d','9s6h3d'}
+          ixfile=d/'solver_evidence/NL2_MULTIBOARD_B3.index.json'
+          archive=d/'solver_evidence/NL2_MULTIBOARD_B3.json.gz'
+          ix=load(ixfile)
+          assert (ix['batch'],ix['run_id'],ix['gto_cases'],ix['locked_cases'])==('B3',44666294821,43,90)
+          assert ix['gzip_sha256']==sha(archive)
+          assert ix['source_sha256']==hashlib.sha256(gzip.decompress(archive.read_bytes())).hexdigest()
+          base=pathlib.Path('original')
+          mf=base/'evidence/LMP_CO_BB-gto-9s6h3d.json'
+          root=base/'solver/postflop/out/LMP_CO_BB/gto/9s6h3d_multiboard.json'
+          job=root.with_suffix('.job.json')
+          assert all(f.is_file() for f in (mf,root,job))
+          m,f,j=load(mf),load(root),load(job)
+          assert m['schema']=='NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1'
+          assert (m['spot'],m['version'],m['flop'])==('LMP_CO_BB','gto','9s6h3d')
+          assert m['preflop_ranges']['source']=='ASSUMED_EXPLICIT_169CLASS'
+          assert m['no_generic_certification'] is True and not m['failures']
+          assert (m['root_pot_bb'],m['root_remaining_bb'])==(2.5,99.0)
+          assert (f['flop'],f['pot'],f['stack'])==('9s6h3d',250,9900)
+          assert (j['pot'],j['stack'],j['rake_rate'],j['rake_cap'])==(250,9900,.05,1000)
+          assert j.get('hero') is None and not j.get('locks')
+          assert all(x in j['flop_oop'] and x in j['flop_ip'] for x in ['33%','50%','75%','100%'])
+          assert f['info']['gto_expl_pct']<=.5
+          assert any(x['line']=='x b50 c' and x['turn']=='Ts' and x['gto_gap_pct']<=.5 for x in m['cases'])
+          assert any(x['line']=='x b50 c/' and x['board'][-2:]=='Ts' for x in f['nodes'])
+          case_sha='f83b57d8b8207a7ce4598bcad188a3ba8ecfa8eb4ef52691249519b37db3dfae'
+          source=[z for z in row['exact_authentic_gto_source_proofs']
+            if z['flop']=='9s6h3d' and z['turn']=='Ts' and z['source_run']==44666294821
+            and z['source_sha']==case_sha and z['exact_line']=='x b50 c/x'
+            and z['actor']==1 and z['strict_legal_combos']>0
+            and z['GTO_gap_pct']<=.5 and z['SPR_error_pct']<=5
+            and not z['true_NL2_actor_locked']]
+          assert source
+          pin=dict(schema='NL2_HU_B209_RANK46_ORIGINAL_B3_9S6H3D_GTO_PARENT_PIN_V1',
+            source_run_id=44666294821,target_rank=46,model_id=mid,actor=1,
+            spot='LMP_CO_BB',flop='9s6h3d',turn='Ts',
+            original_GTO_flop_line='x b50 c',exact_turn_line='x b50 c/x',
+            third_original_GTO_flop_not_yet_found=True,
+            true_NL2_actor_IP_child_not_yet_solved=True,
+            original_GTO_case_SHA256=case_sha,
+            strict_original_GTO_actor_IP_combos=min(x['strict_legal_combos'] for x in source),
+            original_gto_manifest_sha256=sha(mf),original_gto_root_sha256=sha(root),
+            original_gto_job_sha256=sha(job),
+            original_B3_archive_sha256=sha(archive),original_B3_index_sha256=sha(ixfile),
+            original_full_GTO_flop_not_recomputed=True,assumed_preflop_169class_not_observed=True,
+            no_generic_model_CERT=True,PR2_Draft_never_merge=True)
+          assert pin['strict_original_GTO_actor_IP_combos']>0
+          out=d/'nl2_hu_b209_rank46_lmp_9s6h3d_original_b3_gto_pin.json'
+          out.write_text(json.dumps(pin,ensure_ascii=False,indent=2)+'\n')
+          pathlib.Path('docs/NL2_HU_B209_RANK46_B3_9S6H3D_ORIGINAL_GTO_SHA_PIN.md').write_text(
+            '# B209 rank46 original B3 9s6h3d authentic GTO SHA frozen\n\n'
+            'Exact actor IP line x b50 c/x on 9s6h3d/Ts from original 100bb '
+            'B3 GTO source run 44666294821, manifest/root/job and B3 archive SHA verified. '
+            'Rank46 is APPROX with one paired exact GTO+NL2 flop 8s8h3d and '
+            'one extra GTO-only 9s6h3d, still needs true IP actor NL2 child '
+            'and a third different original GTO+NL2 flop. '
+            'Limp preflop 169-class ranges are assumed, not observed. '
+            'No generic turn/bet size or private-hand NL2 GTO claim. '
+            'Current 151 CERT/241 APPROX, 581 exact named-board NL2 lock/50% research '
+            'and 2475 HU paths independently audited. Draft PR2 NEVER MERGE.\n')
+          print('PASS authentic original rank46 B3 source SHA actor-IP 9s6h3d; no premature CERT')
+          PY
+      - name: Full V38 all 151 CERT 581 exact GTO+NL2 named board source locks/50-percent research and 2475 HU navigation
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v38_b206_rank190.json --out nl2-audit/b209-lock.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('nl2-audit/b209-lock.json'))
+          assert (x['cert_multiboard'],x['approx'],x['EST'])==(151,241,0)
+          assert x['aggregate']['named_board_proofs']==581
+          assert x['aggregate']['paired_hero_locked_source_variants']>=670
+          assert x['aggregate']['board_examples_with_b50_candidate']>=132
+          assert x['not_generalized_handclass_GTO'] and x['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/contract.json
+          node tools/link_audit.js --md nl2-audit/links.md --json nl2-audit/links.json
+          node tools/reach_verify.js --log nl2-audit/reach.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/links.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS 2475/2475")'
+      - name: Commit only authenticated original B3 rank46 source SHA parent after all V38 581 plus HU2475 Actions PASS, PR2 Draft NEVER MERGE
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b209_rank46_lmp_9s6h3d_original_b3_gto_pin.json docs/NL2_HU_B209_RANK46_B3_9S6H3D_ORIGINAL_GTO_SHA_PIN.md
+          git commit -m 'TASK-HYBRID B209: rank46 original B3 9s6h3d x-b50 c/x true 100bb GTO source SHA, actor IP strict combos and 581 named NL2 locks/2475 HU audits PASS, keep APPROX'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B209-rank46-original-B3-9s6h3d-authentic-GTO-HU2475
+          path: |
+            data/nl2_hu_b209_rank46_lmp_9s6h3d_original_b3_gto_pin.json
+            docs/NL2_HU_B209_RANK46_B3_9S6H3D_ORIGINAL_GTO_SHA_PIN.md
+            nl2-audit/
+          retention-days: 30

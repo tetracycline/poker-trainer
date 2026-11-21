@@ -1,0 +1,60 @@
+name: NL2 assumed ISO and limp 100bb authentic CFR pilot
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-assumed-iso-lmp.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  solve-assumed-HU-spots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        spot: [ISO_BTN_CO, LMP_CO_BB]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: main
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: dtolnay/rust-toolchain@stable
+      - run: python -m pip install numpy matplotlib
+      - name: Clone pinned real postflop CFR engine
+        run: |
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+      - name: Build Rust driver
+        working-directory: solver/postflop/pfdriver
+        env:
+          RUSTFLAGS: '-A dangerous_implicit_autorefs'
+          CARGO_BUILD_JOBS: '2'
+        run: cargo build --release --locked
+      - name: Solve representative flop and turn/river with explicitly assumed 100bb preflop ranges
+        run: |
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-sha.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/upstream-engine-sha.txt
+          python trainer/tools/solve_hu_assumed_pots.py --solver-root solver \
+            --spot "${{ matrix.spot }}" --flop-start 0 --turn-count 1 \
+            --manifest "evidence/${{ matrix.spot }}.json"
+      - name: Keep raw CFR and assumptions, never auto-create CERT or EST UI cells
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-assumed-${{ matrix.spot }}
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn

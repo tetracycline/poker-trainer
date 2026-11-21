@@ -1,0 +1,66 @@
+name: TASK-HYBRID F certify node-lock and b50 scope of all named GTO boards
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-f-proof.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  board-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Independently audit every certified named flop board hero-side node lock and honest medium-size recommendation
+        run: |
+          python3 tools/hu_cert_lock_medium_audit.py \
+            --source data/nl2_hu_multiboard_status.json \
+            --out data/nl2_hu_cert_lock_medium_audit.json
+      - name: Fail closed on invented empirical private-card frequencies or absent hero lock
+        run: |
+          python3 - <<'PY'
+          import json
+          d=json.load(open('data/nl2_hu_cert_lock_medium_audit.json'))
+          reg=json.load(open('data/nl2_hu_multiboard_status.json'))
+          assert d['schema']=='NL2_HYBRID_CERT_NL2_LOCK_AND_MEDIUM_PROOF_V1'
+          assert d['cert_multiboard']==reg['CERT_MULTIBOARD']
+          assert d['approx']==reg['APPROX'] and d['EST']==0
+          assert d['cert_multiboard']+d['approx']==392
+          assert d['aggregate']['models_with_3_to_5_gto_and_hero_lock_source']==d['cert_multiboard']
+          assert d['aggregate']['named_board_proofs']>=3*d['cert_multiboard']
+          for x in d['models'].values():
+            assert 3<=len(x['boards'])<=5
+            for y in x['boards']:
+              assert y['paired_NL2_hero_lock'] and y['strictly_reachable_combo_rows']>0
+              assert y['medium_nonpolarized_status'] in ('EXACT_BOARD_RESEARCH_CANDIDATE',
+                                                        'NOT_SUPPORTED_BY_CURRENT_CFR_EVIDENCE')
+          print('Verified node-lock and b50 qualified/nonqualified board labels; generic CERT unrelated')
+          PY
+      - name: Commit verified hero-lock and b50 coverage to Draft PR only
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_cert_lock_medium_audit.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'TASK-HYBRID F audit all certified named board node-lock and 50pct medium bet evidence'
+            for retry in 1 2 3; do
+              git fetch origin fix/nl2-hu-lines-audit-20261118
+              git rebase origin/fix/nl2-hu-lines-audit-20261118
+              if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+              sleep "$retry"
+            done
+            exit 1
+          fi
+      - name: Preserve source proof on push collision
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hybrid-F-certified-board-lock-b50
+          path: data/nl2_hu_cert_lock_medium_audit.json
+          retention-days: 30

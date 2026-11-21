@@ -1,0 +1,166 @@
+name: TASK-HYBRID B134 rank71 LMP_CO_BB 9s6h3d exact b50-call/x-b50-call GTO plus actor-OOP NL2 lock (max29m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b134-rank71-lmp-9s6h3d.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 21
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - {spot: LMP_CO_BB, flop: 9s6h3d, version: gto}
+          - {spot: LMP_CO_BB, flop: 9s6h3d, version: exp_oop}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install pinned scientific backend
+        run: python3 -m pip install numpy matplotlib
+      - name: Compile pinned authentic postflop Rust CFR engine
+        run: |
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve one exact flop across turn and river, record source SHA and NL2 size-marginal locks
+        run: |
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pinned-SHA.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-engine-pin-SHA.txt
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver \
+            --spot "${{ matrix.spot }}" --version "${{ matrix.version }}" \
+            --flop "${{ matrix.flop }}" --turn-count 1 --flop-line-policy oop-b50only \
+            --manifest "evidence/${{ matrix.spot }}-${{ matrix.version }}-${{ matrix.flop }}.json"
+      - name: Preserve authenticated raw CFR for source verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B134_R71_LMP_9S6H3D-${{ matrix.spot }}-${{ matrix.version }}-${{ matrix.flop }}
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: ${{ needs.solve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - name: Download exactly two immutable Rust CFR job artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p downloads
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir downloads
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d -name 'nl2-multiboard-B134_R71_LMP_9S6H3D-*' | wc -l)" -eq 2
+      - name: Independently inspect source hashes, node pot/SPR/rake, all combo reach and real/imputed pool-lock provenance
+        run: |
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py \
+            --downloads downloads --solver-root solver --run-id "$GITHUB_RUN_ID" \
+            --out trainer/data/solver_evidence/NL2_MULTIBOARD_B134_R71_LMP_9S6H3D.json
+      - name: Validate exactly two successful independent solves, hash-compress them, no generic model CERT
+        run: |
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B134_R71_LMP_9S6H3D.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert not d['errors'] and len(d['artifacts'])==2
+          assert sum(x['version']=='gto' for x in d['artifacts'])==1
+          assert sum(x['version']=='exp_oop' for x in d['artifacts'])==1
+          assert d['exact_board_gto_sources']>0 and d['imputed_pool_locked_sources']>0
+          assert d['source_run_id']>0
+          assert {(x['spot'],x['flop'],x['version']) for x in d['artifacts']}=={
+             ('LMP_CO_BB','9s6h3d','gto'),('LMP_CO_BB','9s6h3d','exp_oop')}
+          assert all(x['cases'] and not x['errors'] for x in d['artifacts'])
+          assert all(c['flop_line']=='b50 c' and c['turn']=='5s'
+                     for x in d['artifacts'] for c in x['cases'])
+          ip=next(x for x in d['artifacts'] if x['version']=='exp_oop')
+          # Frozen rank71 requires OOP(BB) to act on river after
+          # flop BB b50 and CO calls; turn BB checks/CO b50/BB calls.
+          # Do not borrow opponent actor-IP sources for hero OOP.
+          hero=[n for c in ip['cases'] for n in c['nodes']
+                if n['exact_node_line']=='b50 c/x b50 c/'
+                and n['acting_seat']==0 and n['strictly_reachable_combos']>0]
+          gt=next(x for x in d['artifacts'] if x['version']=='gto')
+          gt_hero=[n for c in gt['cases'] for n in c['nodes']
+                if n['exact_node_line']=='b50 c/x b50 c/'
+                and n['acting_seat']==0 and n['strictly_reachable_combos']>0]
+          exact_both_policy_hero=bool(gt_hero and hero)
+          blocker=None if exact_both_policy_hero else 'GTO_OR_EXP_OOP_ZERO_STRICT_REACH_ON_EXACT_RIVER'
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          idx={'schema':'NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+               'run_id':d['source_run_id'],'batch':'B134_R71_LMP_9S6H3D',
+               'actual_spot_flop_version_jobs':2,
+               'verified_cases':d['new_authentic_board_cases'],
+               'gto_cases':d['exact_board_gto_sources'],
+               'locked_cases':d['imputed_pool_locked_sources'],
+               'source_sha256':hashlib.sha256(raw).hexdigest(),
+               'gzip_sha256':hashlib.sha256(gz.read_bytes()).hexdigest(),
+               'generic_model_certification':0,
+               'rank71_GTO_legal_OOP_river_nodes':len(gt_hero),
+               'rank71_NL2_EXP_OOP_legal_river_nodes':len(hero),
+               'rank71_third_flop_dual_policy_eligible':exact_both_policy_hero,
+               'strict_failure_reason':blocker,
+               'immediate_CERT_upgrades':0,
+               'assumed_limp_preflop_169class_disclosed':True,
+               'target_sources':['LMP_CO_BB 9s6h3d authentic GTO + EXP_OOP',
+                    'rank71 exact b50 c/x b50 c/ OOP river requires strict both-policy reach']}
+          p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          print('PASS B134 genuine LMP source verified; conditional rank71 dual-policy reach',idx)
+          PY
+      - name: Push a finished <=28-minute true CFR batch to PR #2 Draft, never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B134_R71_LMP_9S6H3D.json.gz data/solver_evidence/NL2_MULTIBOARD_B134_R71_LMP_9S6H3D.index.json
+          git commit -m 'TASK-HYBRID B134: solve rank71 third distinct LMP_CO_BB x x flop with pinned GTO+actor-correct NL2 hero lock'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - name: Retain raw source evidence on push rejection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-E-exact-GTO-and-NL2-EXP-proof
+          path: trainer/data/solver_evidence/NL2_MULTIBOARD_B134_R71_LMP_9S6H3D*
+          retention-days: 30

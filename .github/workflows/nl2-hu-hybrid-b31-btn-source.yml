@@ -1,0 +1,70 @@
+name: TASK-HYBRID B31 immutable BTN_BB original GTO/lock source audit (max10m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b31-btn-source.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Fetch six exact authentic original artifacts for two high-frequency BTN_BB flops
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for flop in Ks7s2s 9s6h3d; do
+            for version in gto exp_oop exp_ip; do
+              name="nl2-stage2-BTN_BB-$version-$flop"
+              mkdir -p "originals/$name"
+              gh run download 44525865923 --repo "$GITHUB_REPOSITORY" \
+                --name "$name" --dir "originals/$name"
+              test "$(find "originals/$name" -type f | wc -l)" -ge 1
+            done
+          done
+      - name: Audit original Rust SHA/weighted hero roots and legacy UNKNOWN pool locks, no new CERT
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b31_original_btn_parent_probe.py
+          python3 tools/hu_b31_original_btn_parent_probe.py
+          python3 - <<'PY'
+          import json
+          r=json.load(open('data/nl2_hu_b31_BTN_BB_original_GTO_parent_probe.json'))
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          assert r['schema']=='TASK_HYBRID_B31_IMMUTABLE_BTN_BB_GTO_PARENT_SOURCE_PROBE_V1'
+          assert r['original_run']==44525865923 and len(r['per_artifact'])==6
+          assert r['frozen_cert']==24 and r['other_approx']==368
+          assert s['CERT_MULTIBOARD']==24 and s['APPROX']==368
+          assert r['no_certification_change'] and r['no_claim_of_per_combo_NL2_behavior']
+          print('PASS B31 original BTN_BB weighted GTO source and UNKNOWN lock provenance')
+          PY
+      - name: Commit precise original-source audit to Draft PR #2; NEVER merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b31_BTN_BB_original_GTO_parent_probe.json
+          git commit -m 'TASK-HYBRID B31: pin original BTN_BB GTO roots/lock source SHA for measured NL2 ressolve'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - name: Retain SHA and source proof on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B31-BTN-BB-official-source
+          path: data/nl2_hu_b31_BTN_BB_original_GTO_parent_probe.json
+          retention-days: 30

@@ -1,0 +1,215 @@
+name: TASK-HYBRID B210 rank46 original B3 9s6h3d x-b50-call/x genuine NL2 CO-IP Rust turn lock (max29m)
+# Stage-only. Activate after independently successful B209 original SHA pin
+# and complete V38 581 named source/50% research, HU2475 Actions PASS.
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b210-rank46-b3-9s6h3d-true-ip-lock.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  true-rank46-original-B3-actor-IP-child:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Require success of B209 independently authentic pinned original B3 GTO 9s6h3d/Ts actor CO-IP strict source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,gzip
+          d=pathlib.Path('trainer/data')
+          p=d/'nl2_hu_b209_rank46_lmp_9s6h3d_original_b3_gto_pin.json'
+          pin=json.loads(p.read_text())
+          assert pin['schema']=='NL2_HU_B209_RANK46_ORIGINAL_B3_9S6H3D_GTO_PARENT_PIN_V1'
+          assert (pin['target_rank'],pin['source_run_id'],pin['model_id'],pin['actor'])==(
+            46,44666294821,'ln-iso-lmp_t_model-17z0wyl',1)
+          assert (pin['flop'],pin['turn'],pin['original_GTO_flop_line'],pin['exact_turn_line'])==(
+            '9s6h3d','Ts','x b50 c','x b50 c/x')
+          assert pin['strict_original_GTO_actor_IP_combos']>0
+          assert pin['original_full_GTO_flop_not_recomputed'] is True
+          assert pin['assumed_preflop_169class_not_observed'] is True
+          arc=d/'solver_evidence/NL2_MULTIBOARD_B3.json.gz'
+          idx=d/'solver_evidence/NL2_MULTIBOARD_B3.index.json'
+          ix=json.loads(idx.read_text())
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          assert pin['original_B3_archive_sha256']==ix['gzip_sha256']==sha(arc)
+          assert pin['original_B3_index_sha256']==sha(idx)
+          assert ix['source_sha256']==hashlib.sha256(gzip.decompress(arc.read_bytes())).hexdigest()
+          current=json.loads((d/'nl2_hu_multiboard_status_v38_b206_rank190.json').read_text())
+          assert (current['CERT_MULTIBOARD'],current['APPROX'])==(151,241)
+          assert current['records']['ln-iso-lmp_t_model-17z0wyl']['label']=='APPROX'
+          print('PASS B209 original B3 source SHA, actor CO IP exact turn legal, current 151/241 no auto CERT')
+          PY
+          mkdir -p original
+          gh run download 44666294821 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-multiboard-B3-LMP_CO_BB-gto-9s6h3d' --dir original
+          test -s original/evidence/LMP_CO_BB-gto-9s6h3d.json
+          test -s original/solver/postflop/out/LMP_CO_BB/gto/9s6h3d_multiboard.json
+          test -s original/solver/postflop/out/LMP_CO_BB/gto/9s6h3d_multiboard.job.json
+      - name: Compile pinned genuine Rust CFR and keep original B3 flop byte-identical; 100bb GTO preflop 169class explicitly assumed
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_b210_lmp_rank46_B3_turnonly.py trainer/tools/verify_hu_multiboard_100bb.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve only original B3 9s6h3d/Ts NL2 CO-IP locked turn-river Rust child x-b50 c/x, not full GTO flop recomputation
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-SHA.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-engine-SHA.txt
+          python3 trainer/tools/solve_hu_b210_lmp_rank46_B3_turnonly.py \
+            --solver-root solver --gto-artifact-root original \
+            --flop 9s6h3d --manifest evidence/LMP_CO_BB-exp_ip-9s6h3d.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B210_R46_B3-LMP_CO_BB-exp_ip-9s6h3d
+          path: |
+            evidence/
+            solver/postflop/out/
+          retention-days: 30
+  independent-source-verify-and-commit:
+    needs: true-rank46-original-B3-actor-IP-child
+    if: ${{ needs.true-rank46-original-B3-actor-IP-child.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Download only fresh B210 original SHA-pinned genuine Rust NL2 IP child source artifact, never substitute existing EXP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-multiboard-B210_R46_B3-LMP_CO_BB-exp_ip-9s6h3d' --dir downloads/nl2-multiboard-B210_R46_B3-LMP_CO_BB-exp_ip-9s6h3d
+          test -s downloads/nl2-multiboard-B210_R46_B3-LMP_CO_BB-exp_ip-9s6h3d/evidence/LMP_CO_BB-exp_ip-9s6h3d.json
+          test -s downloads/nl2-multiboard-B210_R46_B3-LMP_CO_BB-exp_ip-9s6h3d/solver/postflop/out/LMP_CO_BB/exp_ip/9s6h3d_multiboard.json
+      - name: Independently verify Rust CFR SHA, correct CO-IP actor/turn/full-street reach, pot SPR, true GTO parent byte SHA, observed vs assumed NL2 frequencies
+        run: |
+          set -euo pipefail
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py \
+            --downloads downloads --solver-root solver --run-id "$GITHUB_RUN_ID" \
+            --out trainer/data/solver_evidence/NL2_MULTIBOARD_B210_R46_B3_EXP_IP.json
+      - name: Archive genuine B210 turn actor-IP NL2 strict combo evidence with original B209 GTO run/manifest/root SHA; zero stays APPROX
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,os,pathlib
+          d=pathlib.Path('trainer/data');load=lambda p:json.loads(p.read_text())
+          pin=load(d/'nl2_hu_b209_rank46_lmp_9s6h3d_original_b3_gto_pin.json')
+          p=d/'solver_evidence/NL2_MULTIBOARD_B210_R46_B3_EXP_IP.json'
+          a=load(p)
+          assert a['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert a['source_run_id']==int(os.environ['GITHUB_RUN_ID']) and not a['errors']
+          assert (a['exact_board_gto_sources'],a['imputed_pool_locked_sources'],a['new_authentic_board_cases'])==(0,1,1)
+          assert len(a['artifacts'])==1
+          art=a['artifacts'][0]
+          assert (art['spot'],art['version'],art['flop'])==('LMP_CO_BB','exp_ip','9s6h3d')
+          assert not art['errors'] and len(art['cases'])==1
+          c=art['cases'][0]
+          assert (c['flop_line'],c['turn'])==('x b50 c','Ts')
+          hero=[n for n in c['nodes'] if n['exact_node_line']=='x b50 c/x' and
+            n['acting_seat']==1 and n['strictly_reachable_combos']>0]
+          strict=sum(n['strictly_reachable_combos'] for n in hero)
+          raw=p.read_bytes();compressed=p.with_suffix('.json.gz')
+          compressed.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          sha=lambda b:hashlib.sha256(b).hexdigest()
+          index=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+            batch='B210_R46_B3_EXP_IP',run_id=a['source_run_id'],
+            actual_spot_flop_version_jobs=1,verified_cases=1,gto_cases=0,locked_cases=1,
+            source_sha256=sha(raw),gzip_sha256=sha(compressed.read_bytes()),
+            rank=46,model_id='ln-iso-lmp_t_model-17z0wyl',
+            original_GTO_B3_run_id=44666294821,
+            original_B209_GTO_pin_sha256=sha((d/'nl2_hu_b209_rank46_lmp_9s6h3d_original_b3_gto_pin.json').read_bytes()),
+            original_B3_root_SHA256=pin['original_gto_root_sha256'],
+            original_B3_manifest_SHA256=pin['original_gto_manifest_sha256'],
+            original_B3_job_SHA256=pin['original_gto_job_sha256'],
+            exact_actor_IP_turn_line='x b50 c/x',acting_seat=1,
+            genuine_NL2_actor_IP_turn_nodes=len(hero),strict_actor_IP_combos=strict,
+            NL2_rates_pooled_marginals_and_assumed_defaults_only=True,
+            original_preflop_169_class_ASSUMED=True,
+            no_generic_MODEL_certification=True,immediate_CERT_upgrades=0,
+            reason_if_zero=None if strict>0 else 'TRUE_NL2_ACTOR_IP_TURN_X_B50C_X_ZERO_KEEP_APPROX')
+          p.with_suffix('.index.json').write_text(json.dumps(index,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          pathlib.Path('trainer/docs/NL2_HU_B210_R46_B3_TRUE_IP_TURN_SOURCE.md').write_text(
+            '# B210 rank46 original B3 9s6h3d/Ts true actor CO-IP NL2 source\n\n'
+            'Full original B3 100bb source from run 44666294821; exact turn CO-IP '
+            'line x b50 c/x and positive eligible combos only if verified: '+
+            str(strict)+'. Genuine fresh Rust child SHA and 169-class assumed limped '
+            'preflop weights pinned. Villain private-card conditional NL2 behavior '
+            'is NOT directly measured: NL2 street/size marginal data vs explicit '
+            'defaults must remain separately labeled. No 3-flop CERT yet: rank46 '
+            'still missing a third distinct exact GTO+NL2 named flop. '
+            '151 CERT /241 APPROX, 581 authentic board sources; full HU2475 audit. '
+            'PR2 Draft NEVER MERGE.\n')
+          print('PASS B210 authentic CO-IP x b50 c/x actor source and SHA, strict node summary',index)
+          PY
+      - name: Full independent V38 151 CERT 581 exact named board source locks/50pot nonpolar research and 2475 HU links
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v38_b206_rank190.json --out nl2-audit/b210-lock.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b210-lock.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(151,241,0)
+          assert a['aggregate']['named_board_proofs']==581
+          assert a['aggregate']['paired_hero_locked_source_variants']>=670
+          assert a['aggregate']['board_examples_with_b50_candidate']>=132
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/contract.json
+          node tools/link_audit.js --md nl2-audit/link.md --json nl2-audit/links.json
+          node tools/reach_verify.js --log nl2-audit/reach.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/links.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS 2475/2475")'
+      - name: Commit only authentic fresh B210 rank46 original B3 locked NL2 CO-IP source SHA and full V38+2475 Actions audit to PR2 Draft NEVER MERGE
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B210_R46_B3_EXP_IP.json.gz data/solver_evidence/NL2_MULTIBOARD_B210_R46_B3_EXP_IP.index.json docs/NL2_HU_B210_R46_B3_TRUE_IP_TURN_SOURCE.md
+          git commit -m 'TASK-HYBRID B210: rank46 original B3 true NL2 CO-IP x-b50 c/x Rust turn child SHA, 581 GTO/NL2 locks and 2475 HU full Actions PASS; rank46 APPROX until third flop'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B210-rank46-original-B3-true-COIP-source-581-2475
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B210_R46_B3_EXP_IP.*
+            trainer/docs/NL2_HU_B210_R46_B3_TRUE_IP_TURN_SOURCE.md
+            trainer/nl2-audit/
+          retention-days: 30

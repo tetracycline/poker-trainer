@@ -1,0 +1,163 @@
+name: TASK-HYBRID H solve three SB-BB high-frequency gap flops (max 29 min)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-h-sbb-gaps.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 21
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include:
+          - {spot: SB_BB, flop: KsQh4d, version: gto}
+          - {spot: SB_BB, flop: KsQh4d, version: exp_oop}
+          - {spot: SB_BB, flop: As7h3d, version: gto}
+          - {spot: SB_BB, flop: As7h3d, version: exp_oop}
+          - {spot: SB_BB, flop: Jh9d6s, version: gto}
+          - {spot: SB_BB, flop: Jh9d6s, version: exp_oop}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install pinned scientific backend
+        run: python3 -m pip install numpy matplotlib
+      - name: Compile pinned authentic postflop Rust CFR engine
+        run: |
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve one exact flop across turn and river, record source SHA and NL2 size-marginal locks
+        run: |
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pinned-SHA.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-engine-pin-SHA.txt
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver \
+            --spot "${{ matrix.spot }}" --version "${{ matrix.version }}" \
+            --flop "${{ matrix.flop }}" --turn-count 1 \
+            --manifest "evidence/${{ matrix.spot }}-${{ matrix.version }}-${{ matrix.flop }}.json"
+      - name: Preserve authenticated raw CFR for source verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B5_SBGAPS-${{ matrix.spot }}-${{ matrix.version }}-${{ matrix.flop }}
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: ${{ needs.solve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - name: Download exactly six immutable Rust CFR job artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p downloads
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir downloads
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d -name 'nl2-multiboard-B5_SBGAPS-*' | wc -l)" -eq 6
+      - name: Independently inspect source hashes, node pot/SPR/rake, all combo reach and real/imputed pool-lock provenance
+        run: |
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py \
+            --downloads downloads --solver-root solver --run-id "$GITHUB_RUN_ID" \
+            --out trainer/data/solver_evidence/NL2_MULTIBOARD_B5_SBGAPS.json
+      - name: Validate exactly six successful independent solves, hash-compress them, no generic model CERT
+        run: |
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B5_SBGAPS.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert not d['errors'] and len(d['artifacts'])==6
+          assert sum(x['version']=='gto' for x in d['artifacts'])==3
+          assert sum(x['version'].startswith('exp_') for x in d['artifacts'])==3
+          assert d['exact_board_gto_sources']>0 and d['imputed_pool_locked_sources']>0
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          idx={'schema':'NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+               'run_id':d['source_run_id'],'batch':'B5_SBGAPS',
+               'actual_spot_flop_version_jobs':4,
+               'verified_cases':d['new_authentic_board_cases'],
+               'gto_cases':d['exact_board_gto_sources'],
+               'locked_cases':d['imputed_pool_locked_sources'],
+               'source_sha256':hashlib.sha256(raw).hexdigest(),
+               'gzip_sha256':hashlib.sha256(gz.read_bytes()).hexdigest(),
+               'generic_model_certification':0,
+               'target_sources':['SB_BB KsQh4d GTO+EXP_OOP','SB_BB As7h3d GTO+EXP_OOP','SB_BB Jh9d6s GTO+EXP_OOP']}
+          p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          print('PASS hybrid batch E source evidence',idx)
+          PY
+      - name: Reclassify only genuine matching exact board, history, actor, SPR and paired NL2 lock
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_multiboard_consolidate.py --root data --out data/nl2_hu_multiboard_status.json --doc docs/NL2_HU_MULTIBOARD_STATUS.md
+          python3 tools/hu_highfreq_shortfalls.py data data/nl2_hu_highfreq_shortfalls.json
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status.json --out data/nl2_hu_cert_lock_medium_audit.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          g=json.load(open('data/nl2_hu_highfreq_shortfalls.json'))
+          a=json.load(open('data/nl2_hu_cert_lock_medium_audit.json'))
+          assert s['TOTAL']==392 and s['CERT_MULTIBOARD']+s['APPROX']==392
+          assert s['CERT_MULTIBOARD']>=14 and g['certified_from_source']==s['CERT_MULTIBOARD']
+          assert a['cert_multiboard']==s['CERT_MULTIBOARD'] and a['approx']==s['APPROX']
+          assert s['independently_verified_completed_batches']['B5_SBGAPS']['status']=='VERIFIED'
+          assert any(x.endswith('NL2_MULTIBOARD_B5_SBGAPS.json.gz') for x in g['new_source_batches'])
+          print('PASS frozen top24 proof-only recertification',s['CERT_MULTIBOARD'],'CERT',s['APPROX'],'APPROX')
+          PY
+      - name: Push a finished <=28-minute true CFR batch to PR #2 Draft, never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B5_SBGAPS.json.gz data/solver_evidence/NL2_MULTIBOARD_B5_SBGAPS.index.json data/nl2_hu_multiboard_status.json data/nl2_hu_highfreq_shortfalls.json data/nl2_hu_cert_lock_medium_audit.json docs/NL2_HU_MULTIBOARD_STATUS.md
+          git commit -m 'TASK-HYBRID H: verify SB_BB 3 fresh exact flops with hero-lock and refresh CERT status'
+          for retry in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$retry"
+          done
+          exit 1
+      - name: Retain raw source evidence on push rejection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-E-exact-GTO-and-NL2-EXP-proof
+          path: trainer/data/solver_evidence/NL2_MULTIBOARD_B5_SBGAPS*
+          retention-days: 30

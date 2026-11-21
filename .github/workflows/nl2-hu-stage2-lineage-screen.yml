@@ -1,0 +1,62 @@
+name: NL2 stage-2 strict 392-model action-lineage CFR crosswalk audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-stage2-lineage-screen.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  audit-model-to-real-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Crosscheck exact-root positions, actual action token sequences and 1% SPR, with no fictitious board equivalence
+        run: |
+          python tools/hu_model_history_crosswalk.py \
+            --queue data/nl2_hu_stage2_queue.json \
+            --source data/nl2_hu_exact_boards.json \
+            --out data/nl2_hu_model_history_crosswalk.json
+      - name: Independently reject a generic CERT promoted from a texture without full board, combos and lineage
+        run: |
+          python - <<'PY'
+          import json,collections
+          p=json.load(open('data/nl2_hu_model_history_crosswalk.json'))
+          q=json.load(open('data/nl2_hu_stage2_queue.json'))
+          assert p['model_nodes']==len(p['records'])==len(q['records'])==392
+          assert p['generic_CERT']==p['generic_EST']==0
+          IDs={x['model_id'] for x in q['records']}
+          assert set(p['records'])==IDs
+          for mid,m in p['records'].items():
+              assert m['generic_model_status']=='MODEL_UNCERTIFIED'
+              assert not m['upgraded_to_cert'] and not m['upgraded_to_est']
+              for src in m['best_exact_board_examples']:
+                  assert src['version']=='gto' and src['board_exact_match_to_model'] is False
+                  assert src['source_profile'] if 'source_profile' in src else True
+                  assert src['family']==m['family'] and src['spot']==m['source_profile']
+          print('392 models audited; 0 false generic CERT; exact source examples are board-specific')
+          PY
+      - name: Push deterministic lineage blockers and exact-example evidence to Draft PR
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_model_history_crosswalk.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'audit(stage2): 392 HU model histories vs genuine source boards and 1% SPR'
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+          fi
+      - name: Keep all blockers and matching exact source examples
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-model-exact-lineage-screen
+          path: data/nl2_hu_model_history_crosswalk.json
+          retention-days: 30

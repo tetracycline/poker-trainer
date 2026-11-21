@@ -1,0 +1,135 @@
+name: TASK-HYBRID B32 salvage 4 valid BTN_BB turn locks, exclude 2 no-river jobs (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b32-salvage.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  salvage-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download exactly four genuine successful BTN_BB x-x turn-lock artifacts, excluding 2 failed x-b50 branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for flop in Ks7s2s 9s6h3d; do
+            for version in exp_oop exp_ip; do
+              name="nl2-multiboard-B32_BTN_RELOCK-$flop-xx-$version"
+              mkdir -p "downloads/$name"
+              gh run download 44779505990 --name "$name" --repo "$GITHUB_REPOSITORY" \
+                 --dir "downloads/$name"
+              test -d "downloads/$name/evidence"
+            done
+          done
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 4
+      - name: Revalidate full original GTO SHA, 100bb pot/SPR, rake, correct actor, downstream Rust reach and source locks
+        run: |
+          set -euo pipefail
+          mkdir -p trainer/data/solver_evidence
+          python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
+          python3 trainer/tools/verify_hu_multiboard_100bb.py \
+             --downloads downloads --solver-root solver --run-id 44779505990 \
+             --out trainer/data/solver_evidence/NL2_MULTIBOARD_B32_BTN_RELOCK.json
+      - name: Freeze SHA verified source subgames and exactly excluded failed history branches
+        run: |
+          python3 - <<'PY'
+          import json,gzip,hashlib,pathlib
+          root=pathlib.Path('trainer/data')
+          p=root/'solver_evidence/NL2_MULTIBOARD_B32_BTN_RELOCK.json'
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert d['source_run_id']==44779505990 and not d['errors']
+          assert len(d['artifacts'])==4
+          assert sum(x['version']=='exp_oop' for x in d['artifacts'])==2
+          assert sum(x['version']=='exp_ip' for x in d['artifacts'])==2
+          assert d['exact_board_gto_sources']==0
+          assert d['new_authentic_board_cases']==d['imputed_pool_locked_sources']>=1
+          assert {(x['flop'],x['version']) for x in d['artifacts']}=={
+             ('Ks7s2s','exp_oop'),('Ks7s2s','exp_ip'),
+             ('9s6h3d','exp_oop'),('9s6h3d','exp_ip')}
+          assert all(x['cases'] or x['excludes'] for x in d['artifacts'])
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          exclusions=[
+             dict(flop='Ks7s2s',line='x b50 c',version='exp_oop',
+                  github_job_id=136438110952,error='NO_REAL_RIVER_NODE_IN_TRUE_RUST_LOCK_JOB'),
+             dict(flop='9s6h3d',line='x b50 c',version='exp_oop',
+                  github_job_id=136438110357,error='NO_REAL_RIVER_NODE_IN_TRUE_RUST_LOCK_JOB')]
+          idx=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+             run_id=44779505990,batch='B32_BTN_RELOCK',
+             actual_spot_flop_version_jobs=4,verified_cases=d['new_authentic_board_cases'],
+             gto_cases=0,locked_cases=d['imputed_pool_locked_sources'],
+             source_sha256=hashlib.sha256(raw).hexdigest(),
+             gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+             generic_model_certification=0,original_GTO_run_id=44525865923,
+             source_policy='True B31-pinned old flop GTO parent with NEW OOP/IP turn/river locks only. Old missing rate denominators remain UNKNOWN.',
+             excluded_unverified_jobs=exclusions)
+          p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          report=dict(schema='TASK_HYBRID_B32_TRUTHFUL_PARTIAL_SOLVER_SOURCE_REPORT_V1',
+             verified_original_jobs=4,verified_locked_cases=idx['locked_cases'],
+             no_fake_GTO_cases=True,original_source_run=44525865923,
+             successful_run=44779505990,
+             excluded_failed_original_jobs=exclusions,
+             historical_source_unknowns_unchanged=True,never_merge=True)
+          (root/'nl2_hu_b32_partial_locked_source_report.json').write_text(
+              json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+          print('PASS B32 authentic 4 successful jobs, cases',idx['locked_cases'],'excluded',len(exclusions))
+          PY
+      - name: Strict immutable model source reclassify and full CERT provenance/middle-size audits
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_multiboard_consolidate.py --root data --out data/nl2_hu_multiboard_status.json --doc docs/NL2_HU_MULTIBOARD_STATUS.md
+          python3 tools/hu_highfreq_shortfalls.py data data/nl2_hu_highfreq_shortfalls.json
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status.json --out data/nl2_hu_cert_lock_medium_audit.json
+          python3 tools/hu_cert_lock_medium_coverage_matrix.py
+          python3 tools/hu_cert_ui_completeness_gate.py
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status.json'))
+          g=json.load(open('data/nl2_hu_cert_ui_completeness_gate.json'))
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix.json'))
+          assert s['TOTAL']==392 and s['CERT_MULTIBOARD']==24 and s['APPROX']==368
+          assert s['independently_verified_completed_batches']['B32_BTN_RELOCK']['authentic_jobs']==4
+          assert g['cert_models']==24 and g['approx_models']==368
+          assert g['all_cert_boards_have_exact_source_and_hero_lock']
+          assert m['CERT_MULTIBOARD']==24 and m['strict_aggregate']['hero_lock_variants']>=99
+          assert len(g['low_reach_under10_combo_examples'])>=10
+          print('PASS B32 source-only actor-safe partial lock audit',m['strict_aggregate'])
+          PY
+      - name: Commit actual verified source and excluded invalid branches, push Draft PR #2 (never merge)
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B32_BTN_RELOCK.index.json data/solver_evidence/NL2_MULTIBOARD_B32_BTN_RELOCK.json.gz data/nl2_hu_b32_partial_locked_source_report.json data/nl2_hu_multiboard_status.json data/nl2_hu_highfreq_shortfalls.json data/nl2_hu_cert_lock_medium_audit.json data/nl2_hu_cert_lock_medium_matrix.json data/nl2_hu_cert_ui_completeness_gate.json docs/NL2_HU_MULTIBOARD_STATUS.md docs/NL2_HU_CERT_LOCK_MEDIUM_MATRIX.md
+          git commit -m 'TASK-HYBRID B32 salvage: 4 verified BTN_BB OOP/IP turn locks, exclude 2 unreachable x-b50 paths'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - name: Keep immutable source/index if push conflicts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B32-four-real-BTN-locks-two-rejected
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B32_BTN_RELOCK*
+            trainer/data/nl2_hu_b32_partial_locked_source_report.json
+          retention-days: 30
