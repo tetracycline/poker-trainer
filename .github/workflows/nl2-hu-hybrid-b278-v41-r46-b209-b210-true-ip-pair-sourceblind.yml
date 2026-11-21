@@ -1,0 +1,104 @@
+name: TASK-HYBRID B278 V41 rank46 verified B209 original GTO B210 COIP NL2 lock one-flop-short; 590 source HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b278-v41-r46-b209-b210-true-ip-pair-sourceblind.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  rank46-new-authentic-B3-GTO-B210-NL2-actor-pair-sourceblind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify B209 original 100bb B3 GTO full SHA, and independently actual B210 real Rust COIP NL2 lock SHA and strict actor combo
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b278_v41_rank46_new_actor_lock_pair_sourceblind_addendum.py
+          python3 tools/hu_b278_v41_rank46_new_actor_lock_pair_sourceblind_addendum.py
+      - name: Independently assert rank46 truly has two different same-actor real GTO/NL2 flops, rank71 also two, no false CERT
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json,hashlib,csv
+          d=pathlib.Path('data')
+          p=d/'nl2_hu_b278_v41_238_approx_rank46_and_71_oneflop_true_sourceblind.json'
+          o=d/'nl2_hu_b277_v41_238_approx_true_sourceblind_queue.json'
+          v=d/'nl2_hu_multiboard_status_v41_b271_rank61.json'
+          q=json.loads(p.read_text())
+          assert q['schema']=='NL2_HU_B278_V41_238_APPROX_NEW_B210_R46_AUTHENTIC_ACTOR_PAIR_SOURCEBLIND_V1'
+          assert (q['cert'],q['approx'],q['est'],q['total'])==(154,238,0,392)
+          assert q['current_V41_status_sha256']==hashlib.sha256(v.read_bytes()).hexdigest()
+          assert q['original_B277_sourceblind_sha256']==hashlib.sha256(o.read_bytes()).hexdigest()
+          assert [a['rank'] for a in q['one_flop_short_sourceblind_priorities']]==[46,71]
+          assert (q['cohort_counts']['ONE_DISTINCT_AUTHENTIC_FLOP_PLUS_ACTOR_LOCK_SHORT'],
+            q['cohort_counts']['TWO_MORE_DISTINCT_TRUE_GTO_AND_ACTOR_LOCK_PAIRS'],
+            q['cohort_counts']['ZERO_GENUINE_PAIRED_FLOPS_NEED_THREE'])==(2,29,207)
+          a=q['newly_verified_B210_rank46_true_GTO_plus_NL2_actor_IP']
+          assert (a['rank'],a['spot'],a['flop'],a['turn'],a['line'],a['actor'])==(
+            46,'LMP_CO_BB','9s6h3d','Ts','x b50 c/x',1)
+          assert (a['original_GTO_run'],a['real_NL2_child_run'])==(44666294821,44882669727)
+          assert (a['GTO_legal_actor_combos'],a['NL2_legal_actor_combos'])==(1,1)
+          assert all(len(a[z])==64 for z in ('original_GTO_case_SHA256',
+            'original_B3_archive_SHA256','original_B209_GTO_parent_pin_SHA256',
+            'authentic_B210_NL2_child_SHA256'))
+          assert a['no_measured_NL2_private_card_conditional_rates'] and a['no_new_generic_model_CERT']
+          assert q['no_new_GTO_only_counted_as_hero_actor_locked']
+          assert q['original_historic_B175_snapshot_not_rewritten']
+          assert q['no_unknown_NL2_rate_imputed_as_empirical']
+          assert q['frozen_source_frequency_ranking_unchanged'] and q['existing_590_cert_boards_unmodified']
+          assert q['PR2_Draft_NEVER_MERGE'] and len(q['remaining_238_APPROX_gap_rows'])==238
+          with (d/'nl2_hu_b278_v41_238_approx_rank46_and_71_oneflop_true_sourceblind.csv').open(
+                encoding='utf8',newline='') as f:
+            assert len(list(csv.DictReader(f)))==238
+          print('PASS V41 rank46 B209 true original GTO plus B210 actor IP NL2 source, both one-flop-short, 238 APPROX')
+          PY
+      - name: Full 154 CERT 590 true named GTO/real NL2 actor locks, 134 exact b50 and complete 2475 HU paths and links
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v41_b271_rank61.json --out nl2-audit/b278-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b278-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(154,238,0)
+          assert (a['aggregate']['named_board_proofs'],
+            a['aggregate']['paired_hero_locked_source_variants'],
+            a['aggregate']['board_examples_with_b50_candidate'])==(590,682,134)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B278 HU2475/2475")'
+      - name: Commit verified original B209/B210 evidence and frozen source-blind 238 APPROX priority only after full Actions PASS, no merge/force push
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b278_v41_238_approx_rank46_and_71_oneflop_true_sourceblind.json              data/nl2_hu_b278_v41_238_approx_rank46_and_71_oneflop_true_sourceblind.csv              docs/NL2_HU_B278_V41_R46_B209_B210_REAL_GTO_NL2_PAIR_SOURCEBLIND_PRIORITY.md
+          git commit -m 'TASK-HYBRID B278 V41: verify B209 GTO plus real B210 NL2 IP SHA, rank46 and 71 only one real flop short; full 590 source/2475 HU PASS, 154 CERT 238 APPROX'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B278-V41-rank46-real-B3-GTO-B210-NL2-HU2475
+          path: |
+            data/nl2_hu_b278_v41_238_approx_rank46_and_71_oneflop_true_sourceblind.json
+            data/nl2_hu_b278_v41_238_approx_rank46_and_71_oneflop_true_sourceblind.csv
+            docs/NL2_HU_B278_V41_R46_B209_B210_REAL_GTO_NL2_PAIR_SOURCEBLIND_PRIORITY.md
+            nl2-audit/
+          retention-days: 30
