@@ -2,6 +2,9 @@ name: TASK-HYBRID B191 rank201 freeze original B3 GTO x-b33-call/x-b100-call two
 # Staged until V34 rank199+202 independently 147 CERT /245 APPROX full
 # source and HU navigation Actions pass; no automatic fake rank201 CERT.
 on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b191-rank201-b3-xb33-xb100-parent-pin.yml']
   workflow_dispatch:
 permissions:
   contents: write
