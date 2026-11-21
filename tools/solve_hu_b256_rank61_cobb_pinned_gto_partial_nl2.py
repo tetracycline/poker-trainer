@@ -95,7 +95,7 @@ def main():
     actual_locks,locks_meta=pipeline.lock_list(SPOT,'exp_ip',flop)
     assert actual_locks and locks_meta
     report=dict(schema='NL2_HU_B256_TRUE_PINNED_CO_BB_GTO_FLOP_PARTIAL_NL2_IP_V1',
-        target_rank=60,model_id=MID,spot=SPOT,flop=flop,turn=pin['turn'],
+        target_rank=61,model_id=MID,spot=SPOT,flop=flop,turn=pin['turn'],
         flop_line=LINE,exact_target_line=LINE+'/x',version='exp_ip',
         original_GTO_source_batch=batch,original_GTO_source_run_id=original_run,
         original_GTO_flop_root_sha256=pin['original_gto_root_sha256'],
