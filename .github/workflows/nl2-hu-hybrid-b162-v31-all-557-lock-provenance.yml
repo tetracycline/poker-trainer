@@ -1,0 +1,136 @@
+name: TASK-HYBRID B162 all 557 V31 CERT named boards, every NL2 hero lock source and 2475 HU audit (max12m)
+# Staged until verified B161 V31 is fully committed.
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  full-v31-source-provenance-export-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Export all 557 actual named V31 CERT GTO and every actor NL2 lock variant, do not guess total or 50pct count
+        run: |
+          set -euo pipefail
+          test -s data/nl2_hu_multiboard_status_v31_b161_rank150.json
+          test -s data/nl2_hu_cert_lock_medium_matrix_v31_b161.json
+          python3 -m py_compile tools/hu_b162_v31_all_cert_lock_source_export.py
+          python3 tools/hu_b162_v31_all_cert_lock_source_export.py
+      - name: Independent CSV/index GTO SHA and pooled NL2 observed/assumed/unknown per variant, 557 board and all 143 genuine CERT sources
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import collections,csv,hashlib,json,pathlib
+          d=pathlib.Path('data')
+          source=d/'nl2_hu_multiboard_status_v31_b161_rank150.json'
+          mat=d/'nl2_hu_cert_lock_medium_matrix_v31_b161.json'
+          csvfile=d/'nl2_hu_b162_v31_all_557_named_board_hero_lock_sources.csv'
+          idxfile=d/'nl2_hu_b162_v31_all_557_named_board_hero_lock_sources.index.json'
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          i=json.loads(idxfile.read_text());matrix=json.loads(mat.read_text())
+          assert i['schema']=='NL2_HU_B162_V31_ALL_557_GENUINE_CERT_BOARD_LOCK_SOURCES_V1'
+          assert (i['CERT'],i['APPROX'],i['EST'],i['TOTAL'])==(143,249,0,392)
+          assert i['parent_V31_status_sha256']==sha(source)
+          assert i['parent_V31_matrix_sha256']==sha(mat)
+          assert i['output_csv_sha256']==sha(csvfile)
+          assert i['named_source_board_proofs']==557
+          assert i['source_hero_lock_variants']==matrix['strict_aggregate']['hero_lock_variants']
+          assert i['exact_b50_research_candidate_boards']==matrix['strict_aggregate']['b50_research_candidate_boards']
+          assert i['b50_unproven_named_boards']==557-i['exact_b50_research_candidate_boards']
+          assert i['all_143_CERT_models_have_3_to_5_flops']
+          assert i['PR2_draft_never_merge'] and i['not_a_new_certification']
+          assert i['no_real_NL2_private_card_conditional_rates_claim']
+          with csvfile.open(newline='',encoding='utf-8') as f:
+              data=list(csv.DictReader(f))
+          assert len(data)==i['source_hero_lock_variants']
+          boards=collections.defaultdict(list)
+          for x in data:
+              assert x['no_generic_texture_GTO']=='True'
+              assert x['no_private_card_conditional_NL2_rate']=='True'
+              assert x['not_a_bet_size_recommendation']=='True'
+              assert len(x['original_GTO_sha256'])==64
+              assert len(x['NL2_lock_sha256'])==64
+              assert int(x['strict_full_sequence_legal_combo_count'])>0
+              assert x['NL2_lock_version'] in ('exp_ip','exp_oop')
+              assert x['historical_source_denominators_unknown'] in ('True','False')
+              key=(x['model_id'],x['flop'])
+              boards[key].append(x)
+              if x['historical_source_denominators_unknown']=='True':
+                  assert all(x[k]=='' for k in (
+                    'observed_NL2_pool_marginal_nodes','assumed_default_nodes',
+                    'unmatched_unlocked_villain_nodes'))
+              else:
+                  assert all(int(x[k])>=0 for k in (
+                    'observed_NL2_pool_marginal_nodes','assumed_default_nodes',
+                    'unmatched_unlocked_villain_nodes'))
+              if x['b50_exact_board_nonpolar_research_flag']=='True':
+                  assert int(x['b50_eligible_strict_legal_combo_count'])>0
+          assert len(boards)==557
+          assert len({x[0] for x in boards})==143
+          for entries in boards.values():
+              assert sorted(int(x['NL2_lock_variant_ordinal']) for x in entries)==list(range(1,len(entries)+1))
+              assert all(int(x['NL2_lock_total_variants_for_board'])==len(entries) for x in entries)
+          flagged=sum(any(x['b50_exact_board_nonpolar_research_flag']=='True' for x in rows)
+                      for rows in boards.values())
+          assert flagged==i['exact_b50_research_candidate_boards']
+          print('PASS all 557 true named board/real NL2 lock sources and exact nonpolar 50pct scope with no fabricated NL2 private-hand data')
+          PY
+      - name: Independent measured-vs-assumed NL2 node lock and b50 source coverage matches every exported V31 source
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v31_b161_rank150.json --out nl2-audit/v31-lock-medium-independent.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/v31-lock-medium-independent.json'))
+          i=json.load(open('data/nl2_hu_b162_v31_all_557_named_board_hero_lock_sources.index.json'))
+          agg=a['aggregate'];c=i['source_measured_default_unknown_counts']
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(143,249,0)
+          assert agg['named_board_proofs']==c['named_board_proofs']==557
+          assert agg['paired_hero_locked_source_variants']==c['hero_lock_variants']
+          assert agg['board_examples_with_b50_candidate']==c['b50_research_candidate_boards']
+          assert agg['source_nodes_from_measured_NL2_marginals']==c['source_nodes_observed_pool_marginal']
+          assert agg['source_nodes_from_assumed_defaults']==c['source_nodes_assumed_default']
+          assert agg['source_villain_nodes_unmatched_unlocked']==c['source_nodes_unmatched_unlocked']
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          print('PASS V31 all 143 CERT GTO/NL2 actor locked sources, 557 boards, exact 50pct flags')
+          PY
+      - name: Full four independent HU line contract, link, reach and model path audits with 2475 of 2475 continuing lines to river
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU 2475/2475")'
+      - name: Commit verified V31 complete named board/lock source CSV index and docs to PR2 Draft, do not merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b162_v31_all_557_named_board_hero_lock_sources.csv data/nl2_hu_b162_v31_all_557_named_board_hero_lock_sources.index.json docs/NL2_HU_B162_V31_ALL_557_NAMED_BOARD_LOCK_SOURCE_PROVENANCE.md
+          git commit -m 'TASK-HYBRID B162: SHA trace all V31 557 named CERT board GTO and true NL2 lock sources, measured/assumed/unknown 50pct provenance, full 2475 HU audit'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B162-V31-all-557-genuine-CERT-board-NL2-locks-and-2475
+          path: |
+            data/nl2_hu_b162_v31_all_557_named_board_hero_lock_sources.csv
+            data/nl2_hu_b162_v31_all_557_named_board_hero_lock_sources.index.json
+            docs/NL2_HU_B162_V31_ALL_557_NAMED_BOARD_LOCK_SOURCE_PROVENANCE.md
+            nl2-audit/
+          retention-days: 30
