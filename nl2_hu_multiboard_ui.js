@@ -105,6 +105,24 @@ function schedule(){if(!pending){pending=true;queueMicrotask(render)}}
 new MutationObserver(schedule).observe(app,{childList:true,subtree:true});
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v29=d=>{
+   if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V29_B142_RANK88'||
+      d.CERT_MULTIBOARD!==141||d.APPROX!==251||d.EST!==0||
+      d.TOTAL!==392||d.original_v28_cert!==140||
+      d.original_v28_approx!==252||
+      d.original_top24_cutoff_unchanged!==true||
+      String(d.source_blind_expansion_ranks)!=='41,69,88,236'||
+      d.supplementary_cert_count!==117||
+      d.B142_rank88_true_third_flop?.rank!==88||
+      d.B142_rank88_true_third_flop?.flops?.join(',')!=='As7h3d,Jh9d6s,Ks7h2d'||
+      Object.keys(d.records||{}).length!==392||
+      d.records?.['ln-3bp-3b_r_model-8uwbze']?.label!=='CERT-MULTIBOARD'||
+      d.records?.['ln-ipfr-r_model-159a6z6']?.label!=='CERT-MULTIBOARD'||
+      d.records?.['ln-ipfr-t_model-sxr0qa']?.label!=='CERT-MULTIBOARD'||
+      d.records?.['ln-ipc-r_model-1nz4lt1']?.label!=='CERT-MULTIBOARD')
+      throw Error('B142 V29 original B117 GTO and true NL2 hero-OOP source-blind certificate invalid');
+   return d;
+ };
  const v28=d=>{
    if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V28_B133_RANK69'||
       d.CERT_MULTIBOARD!==140||d.APPROX!==252||d.EST!==0||
@@ -401,7 +419,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v28_b133_rank69.json',{cache:'no-store'}).then(open).then(v28)
+ return fetch('data/nl2_hu_multiboard_status_v29_b142_rank88.json',{cache:'no-store'}).then(open).then(v29)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v28_b133_rank69.json',{cache:'no-store'}).then(open).then(v28))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v27_b123_r41_236.json',{cache:'no-store'}).then(open).then(v27))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v26_b111_rank215_220.json',{cache:'no-store'}).then(open).then(v26))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v25_b106_rank135.json',{cache:'no-store'}).then(open).then(v25))
