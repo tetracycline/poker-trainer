@@ -884,6 +884,87 @@ def authorized_b210_rank46_original_B3_LMP_CO_IP_xb50_x(m):
         return False
 
 
+def authorized_b294_rank71_new_exact_GTO_OOP_child(m):
+    """Only a fully SHA-pinned, positive legal BB-OOP actor RIVER original
+    100bb GTO on B290/B293 exact FLOP/TURN can authorize a genuine NL2
+    downstream-only Rust partial OOP lock, never a generic model CERT.
+    """
+    specs={'As7h3d':('B290',44948738190),'QsJh4d':('B293',44949223231)}
+    flop=m.get('flop')
+    if flop not in specs:return False
+    batch,run=specs[flop]
+    if not (m.get('spot')=='LMP_CO_BB' and m.get('version')=='exp_oop'
+      and m.get('selected_lines')==['b50 c'] and
+      m.get('selected_turn_lines')==['x b50 c'] and
+      m.get('flop_line_policy')=='oop-b50only' and
+      m.get('turn_line_policy')=='xb50only' and
+      m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK' and
+      m.get('NL2_hero_lock_scope')=='TURN_RIVER_ONLY_FROM_SHA_PINNED_B294_RANK71_GTO' and
+      m.get('gto_parent_source_run_id')==run and
+      m.get('original_full_GTO_flop_byte_identical_not_recomputed') is True and
+      m.get('preflop_ranges',{}).get('source')=='ASSUMED_EXPLICIT_169CLASS' and
+      m.get('restricted_tree_assumption') is False and
+      m.get('flop_size_profile')=='full'):
+        return False
+    d=pathlib.Path(__file__).resolve().parents[1]/'data'
+    pinpath=d/f'nl2_hu_{batch.lower()}_rank71_lmp_{flop}_gto_parent_pin.json'
+    idxpath=d/f'solver_evidence/NL2_MULTIBOARD_{batch}_R71_{flop.upper()}_GTO.index.json'
+    srcgz=d/f'solver_evidence/NL2_MULTIBOARD_{batch}_R71_{flop.upper()}_GTO.json.gz'
+    try:
+        import gzip
+        p=json.loads(pinpath.read_text());idx=json.loads(idxpath.read_text())
+        raw=gzip.decompress(srcgz.read_bytes());g=json.loads(raw)
+        assert p['schema']==f'NL2_HU_{batch}_RANK71_LMP_{flop.upper()}_GTO_PARENT_PIN_V1'
+        assert (p['source_run_id'],idx['run_id'],g['source_run_id'])==(run,run,run)
+        assert (p['spot'],p['flop'],p['flop_line'],p['turn_line'])==(
+          'LMP_CO_BB',flop,'b50 c','x b50 c')
+        assert (p['target_rank'],p['model_id'])==(71,'ln-iso-lmp_r_model-vlgh2t')
+        assert p['observed_preflop_ranges'] is False and p['assumed_limped_169class'] is True
+        assert p['original_full_100bb_lmp_gto_not_recomputed'] is True
+        assert p['direct_nl2_lock_source_present'] is False
+        assert p['target_exact_actor_OOP_river_nodes']>0
+        assert p['target_exact_actor_OOP_strict_combos']>0
+        assert idx['schema']=='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1'
+        assert idx['batch']==f'{batch}_R71_{flop.upper()}_GTO'
+        assert (idx['gto_cases'],idx['locked_cases'],idx['verified_cases'])==(1,0,1)
+        assert idx['no_generic_model_certification'] and idx['immediate_CERT_upgrades']==0
+        assert idx['target_line']=='b50 c/x b50 c/'
+        assert idx['turn']==p['turn']
+        assert idx['exact_target_actor_OOP_strict_combos']==p['target_exact_actor_OOP_strict_combos']
+        assert idx['exact_target_actor_OOP_river_nodes']==p['target_exact_actor_OOP_river_nodes']
+        assert idx['source_sha256']==hashlib.sha256(raw).hexdigest()
+        assert idx['gzip_sha256']==sha(srcgz)
+        assert (idx['original_parent_GTO_root_SHA256'],
+          idx['original_parent_GTO_job_SHA256'],
+          idx['original_parent_GTO_manifest_SHA256'])==(
+          p['original_gto_root_sha256'],p['original_gto_job_sha256'],
+          p['original_gto_manifest_sha256'])
+        assert g['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+        assert not g['errors'] and g['exact_board_gto_sources']==1
+        assert g['imputed_pool_locked_sources']==0 and len(g['artifacts'])==1
+        a=g['artifacts'][0]
+        assert a['spot']=='LMP_CO_BB' and a['flop']==flop and a['version']=='gto'
+        assert len(a['cases'])==1
+        case=a['cases'][0]
+        assert (case['flop_line'],case['turn'])==('b50 c',p['turn'])
+        assert case['gto_exploitability_pct'] is not None and case['gto_exploitability_pct']<=.5
+        assert case['empirical_scope'].startswith('ASSUMED')
+        positive=[n for n in case['nodes'] if n['exact_node_line']=='b50 c/x b50 c/'
+             and n['acting_seat']==0 and len(n['public_board'])==10
+             and n['strictly_reachable_combos']>0
+             and abs(n['node_spr']-9.916)/9.916<=.05]
+        assert positive and sum(n['strictly_reachable_combos'] for n in positive)==p['target_exact_actor_OOP_strict_combos']
+        assert m.get('turns')==[p['turn']]
+        assert m.get('original_B294_parent_pin_sha256')==sha(pinpath)
+        assert (m.get('gto_parent_source_sha256'),m.get('flop_root_jobfile_sha256'),
+          m.get('gto_parent_source_manifest_sha256'))==(
+          p['original_gto_root_sha256'],p['original_gto_job_sha256'],
+          p['original_gto_manifest_sha256'])
+        return True
+    except (OSError,KeyError,TypeError,ValueError,EOFError,AssertionError,StopIteration):
+        return False
+
+
 def authorized_b212_rank71_exact_B207_gto_parent(m):
     """Only original individually successful B207 full GTO and its independently
     SHA-audited source/index can authorize true downstream exp_oop NL2.
@@ -1623,6 +1704,10 @@ def verify(root,source_pin,run_id):
                         # B212 only original positive B207 GTO 6s4h2d
                         # SHA, rank71, exact actor and source line.
                         authorized_b212_rank71_exact_B207_gto_parent(m)
+                        or
+                        # B294 only if independent original B290 or B293 100bb
+                        # LMP GTO SHA + BB OOP river 40/70 combos strictly positive.
+                        authorized_b294_rank71_new_exact_GTO_OOP_child(m)
                         or
                         # B189: exact B188 SHA-pinned B3 original LMP CO-IP
                         # x b33 c / x b50 c, only on two original true GTO flops.
