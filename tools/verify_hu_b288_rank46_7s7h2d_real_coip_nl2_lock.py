@@ -30,7 +30,7 @@ def main():
  assert (p['target_rank'],p['model_id'])==(46,'ln-iso-lmp_t_model-17z0wyl')
  assert (p['spot'],p['flop'],p['turn'],p['flop_line'],p['turn_line'])==(
   SPOT,FLOP,TURN,'x b50 c','x x')
- assert p['target_exact_actor_IP_turn_strict_combos']==i['exact_target_actor_IP_strict_combos']==12
+ assert p['target_exact_actor_IP_strict_combos']==i['exact_target_actor_IP_strict_combos']==12
  assert p['target_exact_actor_IP_turn_nodes']==1
  assert p['original_full_100bb_lmp_gto_not_recomputed'] and p['assumed_limped_169class']
  assert p['observed_preflop_ranges'] is False and p['direct_nl2_lock_source_present'] is False
