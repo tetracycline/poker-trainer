@@ -1,0 +1,102 @@
+name: TASK-HYBRID B131 rank313 exact B119 original GTO source SHA audit and archive, no shortcut (max9m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b131-rank313-gto-source.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-source-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Fetch immutable finished B119 LMP full-size genuine GTO flop As7h3d only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          name='nl2-multiboard-B119_R313_LMP_B75R_B50-LMP_CO_BB-gto-As7h3d'
+          mkdir -p "downloads/$name"
+          gh run download 44837834984 --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$name"
+          test -s "downloads/$name/evidence/LMP_CO_BB-gto-As7h3d.json"
+          test -s "downloads/$name/solver/postflop/out/LMP_CO_BB/gto/As7h3d_multiboard.json"
+          test -s "downloads/$name/solver/postflop/out/LMP_CO_BB/gto/As7h3d_multiboard.job.json"
+      - name: Independent solver GTO root, GTO gap, strict sequential hero IP reach and expected LMP 169 assumed ranges
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver --run-id 44837834984 --out trainer/data/solver_evidence/NL2_MULTIBOARD_B131_R313_GTO_B119.json
+      - name: Source blind freeze original GTO and SHA alongside independently archived B128 actor IP Rust lock
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          D=pathlib.Path('trainer/data')
+          p=D/'solver_evidence/NL2_MULTIBOARD_B131_R313_GTO_B119.json'
+          j=json.loads(p.read_text())
+          assert j['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert j['source_run_id']==44837834984 and not j['errors']
+          assert j['exact_board_gto_sources']==j['new_authentic_board_cases']==1
+          assert j['imputed_pool_locked_sources']==0 and len(j['artifacts'])==1
+          a=j['artifacts'][0]
+          assert (a['spot'],a['flop'],a['version'])==('LMP_CO_BB','As7h3d','gto')
+          assert not a['errors'] and a['cases']
+          assert all((c['flop_line'],c['turn'])==('b75 r c','Kd') for c in a['cases'])
+          hero=[n for c in a['cases'] for n in c['nodes']
+              if n['exact_node_line']=='b75 r c/x b50 c/x' and
+              n['acting_seat']==1 and n['strictly_reachable_combos']>0]
+          assert hero,'GTO original target hero IP river not actually strict reachable'
+          assert all(c['gto_exploitability_pct']<=0.5 for c in a['cases'])
+          pin=json.loads((D/'nl2_hu_b128_rank313_b119_gto_parent_pin.json').read_text())
+          assert pin['run_id']==44837834984 and pin['original_Rust_GTO_root_sha256']=='3531438b93c5185182fa7bb0ab4d95dd1025e7e1fe5da3d18b58cee4eec87573'
+          b128=json.loads((D/'solver_evidence/NL2_MULTIBOARD_B128_R313_LMP_B75R_B50.index.json').read_text())
+          assert b128['original_gto_parent_run']==pin['run_id']
+          assert b128['original_parent_GTO_root_SHA256']==pin['original_Rust_GTO_root_sha256']
+          assert b128['exact_actor_IP_river_nodes']>0 and b128['strict_failure_reason'] is None
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          index=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+            batch='B131_R313_GTO_B119',run_id=j['source_run_id'],
+            actual_spot_flop_version_jobs=1,verified_cases=1,
+            gto_cases=1,locked_cases=0,
+            source_sha256=hashlib.sha256(raw).hexdigest(),
+            gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+            original_gto_parent_SHA256=pin['original_Rust_GTO_root_sha256'],
+            rank313_original_GTO_actor_IP_legal_nodes=len(hero),
+            matched_authentic_B128_actor_IP_source_run=b128['run_id'],
+            preflop_limped_169class_ranges_assumed=True,
+            generic_model_certification=0,immediate_CERT_upgrades=0)
+          p.with_suffix('.index.json').write_text(json.dumps(index,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          print('PASS B131 original GTO and B128 true actor-IP strict matched source, no generic CERT',index)
+          PY
+      - name: Commit independent full GTO source to PR #2 Draft, not model promotion until third board source-blind audit
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B131_R313_GTO_B119.json.gz data/solver_evidence/NL2_MULTIBOARD_B131_R313_GTO_B119.index.json
+          git commit -m 'TASK-HYBRID B131: independent source SHA audit genuine B119 rank313 original GTO + B128 NL2 IP reach, ready for prereg source-blind certification'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B131-real-rank313-GTO-source-evidence
+          path: trainer/data/solver_evidence/NL2_MULTIBOARD_B131_R313_GTO_B119.*
+          retention-days: 30
