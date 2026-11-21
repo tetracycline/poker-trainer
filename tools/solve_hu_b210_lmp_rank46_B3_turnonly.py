@@ -31,7 +31,7 @@ def main():
     assert pin['target_rank']==46 and pin['model_id']=='ln-iso-lmp_t_model-17z0wyl' and pin['actor']==1
     assert pin['exact_turn_line']=='x b50 c/x'
     assert pin['original_full_GTO_flop_not_recomputed'] is True
-    assert pin['assumed_limped_preflop_169class_not_observed'] is True
+    assert pin['assumed_preflop_169class_not_observed'] is True
     artifact=args.gto_artifact_root.resolve()
     mfile=artifact/f'evidence/LMP_CO_BB-gto-{FLOP}.json'
     root=artifact/f'solver/postflop/out/LMP_CO_BB/gto/{FLOP}_multiboard.json'
