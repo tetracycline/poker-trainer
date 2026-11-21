@@ -739,6 +739,92 @@ def authorized_b198_rank159_original_SB_BB_BB_IP_xb100_xx(m):
         return False
 
 
+def authorized_b282_rank46_new_GTO_IP_turn(m):
+    """B282: ONLY new B279/B280 original 100bb LMP GTO with SHA pinned and
+    strictly legal CO-IP x b50 c/x TURN combos can authorize a real Rust
+    downstream NL2 partially locked child. No GTO-only or actor-zero source
+    may authorize conditional private-hand NL2 rates or generic CERT.
+    """
+    specs={'KsJh4d':('B279',44937413659),'QsJh4d':('B280',44937484979)}
+    flop=m.get('flop')
+    if flop not in specs:return False
+    batch,run=specs[flop]
+    if not (m.get('spot')=='LMP_CO_BB' and m.get('version')=='exp_ip'
+        and m.get('selected_lines')==['x b50 c'] and
+        m.get('selected_turn_lines')==['x x'] and
+        m.get('flop_line_policy')=='checked-b50only' and
+        m.get('turn_line_policy')=='xxonly' and
+        m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK' and
+        m.get('NL2_hero_lock_scope')=='TURN_RIVER_ONLY_FROM_SHA_PINNED_B282_RANK46_GTO' and
+        m.get('gto_parent_source_run_id')==run and
+        m.get('original_full_GTO_flop_byte_identical_not_recomputed') is True and
+        m.get('preflop_ranges',{}).get('source')=='ASSUMED_EXPLICIT_169CLASS' and
+        m.get('restricted_tree_assumption') is False and
+        m.get('flop_size_profile')=='full'):
+        return False
+    d=pathlib.Path(__file__).resolve().parents[1]/'data'
+    pinpath=d/f'nl2_hu_{batch.lower()}_rank46_lmp_{flop}_gto_parent_pin.json'
+    idxpath=d/f'solver_evidence/NL2_MULTIBOARD_{batch}_R46_{flop.upper()}_GTO.index.json'
+    gz=d/f'solver_evidence/NL2_MULTIBOARD_{batch}_R46_{flop.upper()}_GTO.json.gz'
+    try:
+        import gzip
+        p=json.loads(pinpath.read_text());ix=json.loads(idxpath.read_text())
+        data=json.loads(gzip.decompress(gz.read_bytes()))
+        assert p['schema']==f'NL2_HU_{batch}_RANK46_LMP_{flop.upper()}_GTO_PARENT_PIN_V1'
+        assert (p['source_run_id'],ix['run_id'],data['source_run_id'])==(run,run,run)
+        assert (p['spot'],p['flop'],p['flop_line'],p['turn_line'])==(
+            'LMP_CO_BB',flop,'x b50 c','x x')
+        assert (p['target_rank'],p['model_id'])==(46,'ln-iso-lmp_t_model-17z0wyl')
+        assert p['assumed_limped_169class'] is True and p['observed_preflop_ranges'] is False
+        assert p['original_full_100bb_lmp_gto_not_recomputed'] is True
+        assert p['direct_nl2_lock_source_present'] is False
+        assert p['no_generic_model_certification'] is True
+        assert p['target_exact_actor_IP_turn_nodes']>0
+        assert p['target_exact_actor_IP_strict_combos']>0
+        assert (ix['schema'],ix['batch'])==(
+            'NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+            f'{batch}_R46_{flop.upper()}_GTO')
+        assert (ix['gto_cases'],ix['locked_cases'],ix['verified_cases'])==(1,0,1)
+        assert ix['target_line']=='x b50 c/x' and ix['turn']==p['turn']
+        assert ix['frozen_high_frequency_rank']==46
+        assert ix['exact_target_actor_IP_strict_combos']==p['target_exact_actor_IP_strict_combos']
+        assert ix['no_generic_model_certification'] is True and ix['immediate_CERT_upgrades']==0
+        assert ix['gzip_sha256']==sha(gz)
+        assert ix['source_sha256']==hashlib.sha256(gzip.decompress(gz.read_bytes())).hexdigest()
+        assert (ix['original_parent_GTO_root_SHA256'],
+             ix['original_parent_GTO_job_SHA256'],
+             ix['original_parent_GTO_manifest_SHA256'])==(
+             p['original_gto_root_sha256'],
+             p['original_gto_job_sha256'],
+             p['original_gto_manifest_sha256'])
+        assert data['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+        assert not data['errors'] and data['exact_board_gto_sources']==1
+        assert data['imputed_pool_locked_sources']==0 and len(data['artifacts'])==1
+        a=data['artifacts'][0]
+        assert a['version']=='gto' and a['spot']=='LMP_CO_BB' and a['flop']==flop
+        assert len(a['cases'])==1
+        case=a['cases'][0]
+        assert (case['flop_line'],case['turn'])==('x b50 c',p['turn'])
+        assert case['gto_exploitability_pct'] is not None and case['gto_exploitability_pct']<=.5
+        actual=[n for n in case['nodes'] if n['acting_seat']==1 and
+            n['exact_node_line']=='x b50 c/x' and len(n['public_board'])==8 and
+            n['strictly_reachable_combos']>0 and
+            abs(n['node_spr']-19.55)/19.55<=.05]
+        assert len(actual)>0
+        assert sum(n['strictly_reachable_combos'] for n in actual)==p['target_exact_actor_IP_strict_combos']
+        assert m.get('turns')==[p['turn']]
+        assert m.get('original_B282_parent_pin_sha256')==sha(pinpath)
+        assert (m.get('gto_parent_source_sha256'),
+          m.get('flop_root_jobfile_sha256'),
+          m.get('gto_parent_source_manifest_sha256'))==(
+            p['original_gto_root_sha256'],
+            p['original_gto_job_sha256'],
+            p['original_gto_manifest_sha256'])
+        return True
+    except (OSError,KeyError,TypeError,ValueError,EOFError,AssertionError,StopIteration):
+        return False
+
+
 def authorized_b210_rank46_original_B3_LMP_CO_IP_xb50_x(m):
     """Rank46 only, exact 9s6h3d/Ts source-blind original B3 GTO SHA.
 
@@ -1391,6 +1477,10 @@ def verify(root,source_pin,run_id):
                         # B210 rank46: only original B209 B3 authentic 9s6h3d
                         # x b50 c/x turn actor-IP positive source 100bb GTO.
                         authorized_b210_rank46_original_B3_LMP_CO_IP_xb50_x(m)
+                        or
+                        # B282 only if new individually pinned positive actor-IP
+                        # original B279/B280 100bb GTO SHA and legal 40/70 combos.
+                        authorized_b282_rank46_new_GTO_IP_turn(m)
                         or
                         # B198: only original B197 SB_BB As9h2d/KsQh4d
                         # exact BB IP x b100 c / x x / x from frozen B1/B5.
