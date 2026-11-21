@@ -740,12 +740,13 @@ def authorized_b198_rank159_original_SB_BB_BB_IP_xb100_xx(m):
 
 
 def authorized_b282_rank46_new_GTO_IP_turn(m):
-    """B282: ONLY new B279/B280 original 100bb LMP GTO with SHA pinned and
+    """B282: ONLY prereg B279/B280/B284/B286 original 100bb LMP GTO with SHA pinned and
     strictly legal CO-IP x b50 c/x TURN combos can authorize a real Rust
     downstream NL2 partially locked child. No GTO-only or actor-zero source
     may authorize conditional private-hand NL2 rates or generic CERT.
     """
-    specs={'KsJh4d':('B279',44937413659),'QsJh4d':('B280',44937484979)}
+    specs={'KsJh4d':('B279',44937413659),'QsJh4d':('B280',44937484979),
+           '7s5h3d':('B284',44938881037),'7s7h2d':('B286',44939456600)}
     flop=m.get('flop')
     if flop not in specs:return False
     batch,run=specs[flop]
