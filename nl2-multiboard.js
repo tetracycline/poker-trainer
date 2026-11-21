@@ -224,6 +224,24 @@ el('node').addEventListener('change',selectNode);
 el('all-combos').addEventListener('change',fillCombos);
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v31=d=>{
+   if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V31_B161_RANK150'||
+      d.CERT_MULTIBOARD!==143||d.APPROX!==249||d.EST!==0||d.TOTAL!==392||
+      d.original_v30_cert!==142||d.original_v30_approx!==250||
+      d.original_top24_cutoff_unchanged!==true||
+      String(d.source_blind_expansion_ranks)!=='41,47,69,88,150,236'||
+      d.supplementary_cert_count!==119||
+      d.B161_rank150_original_two_gaps_now_true_locked?.rank!==150||
+      d.B161_rank150_original_two_gaps_now_true_locked?.flops?.join(',')!=='8s8h3d,9s6h3d,KsQh4d'||
+      d.B161_rank150_original_two_gaps_now_true_locked?.exact_action_line!=='x b33 c/x x/x'||
+      d.B161_rank150_original_two_gaps_now_true_locked?.limped_preflop_169class_assumed!==true||
+      Object.keys(d.records||{}).length!==392||
+      d.records?.['ln-iso-lmp_r_model-4ys53a']?.label!=='CERT-MULTIBOARD'||
+      d.records?.['ln-iso-lmp_t_model-1oaypnl']?.label!=='CERT-MULTIBOARD'||
+      d.records?.['ln-3bp-3b_r_model-8uwbze']?.label!=='CERT-MULTIBOARD')
+      throw Error('B161 V31 frozen rank150 three named original GTO/true NL2 actor IP sources invalid');
+   return d;
+};
  const v30=d=>{
    if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V30_B145_RANK47'||
       d.CERT_MULTIBOARD!==142||d.APPROX!==250||d.EST!==0||d.TOTAL!==392||
@@ -555,7 +573,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v30_b145_rank47.json',{cache:'no-store'}).then(open).then(v30)
+ return fetch('data/nl2_hu_multiboard_status_v31_b161_rank150.json',{cache:'no-store'}).then(open).then(v31)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v30_b145_rank47.json',{cache:'no-store'}).then(open).then(v30))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v29_b142_rank88.json',{cache:'no-store'}).then(open).then(v29))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v28_b133_rank69.json',{cache:'no-store'}).then(open).then(v28))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v27_b123_r41_236.json',{cache:'no-store'}).then(open).then(v27))
