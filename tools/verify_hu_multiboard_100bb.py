@@ -19,6 +19,60 @@ def sha(path):
     with path.open('rb') as f:
         for z in iter(lambda:f.read(1024*1024),b''):h.update(z)
     return h.hexdigest()
+def authorized_b149_rank46_exact_gto_parent(m):
+    """Only one SHA-fixed B147 original GTO plus independently corrected B148
+    pin/index can authorize a fresh B149 actor-IP turn-only Rust child.
+
+    The original B147 source gz/manifest/root/job never changes. A stale
+    producer rank71 or OOP river label must NOT authorize private-card NL2
+    evidence, GTO texture extrapolation, or a model CERT by itself.
+    """
+    if not (m.get('spot')=='LMP_CO_BB' and m.get('version')=='exp_ip' and
+            m.get('flop')=='As9h2d' and
+            m.get('selected_lines')==['x b50 c'] and
+            m.get('selected_turn_lines')==['x x'] and
+            m.get('gto_parent_source_run_id')==44853428350):
+        return False
+    d=pathlib.Path(__file__).resolve().parents[1]/'data'
+    pinfile=d/'nl2_hu_b148_rank46_as9h2d_gto_parent_pin.json'
+    indexfile=d/'solver_evidence/NL2_MULTIBOARD_B148_R46_AS9H2D_GTO_VERIFIED.index.json'
+    source_gz=d/'solver_evidence/NL2_MULTIBOARD_B147_R46_AS9H2D_GTO.json.gz'
+    oldindex=d/'solver_evidence/NL2_MULTIBOARD_B147_R46_AS9H2D_GTO.index.json'
+    try:
+        p=json.loads(pinfile.read_text())
+        i=json.loads(indexfile.read_text())
+        return (p['schema']=='NL2_HU_B148_RANK46_LMP_AS9H2D_CORRECTED_GTO_PARENT_PIN_V1' and
+            i['schema']=='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1' and
+            i['batch']=='B148_R46_AS9H2D_GTO_VERIFIED' and
+            (p['source_run_id'],i['run_id'])==(44853428350,44853428350) and
+            (p['spot'],p['flop'],p['flop_line'],p['turn_line'])==(
+                'LMP_CO_BB','As9h2d','x b50 c','x x') and
+            p['target_rank']==46 and p['model_id']=='ln-iso-lmp_t_model-17z0wyl' and
+            p['acting_seat']==1 and p['acting_position']=='CO_IP' and
+            p['target_exact_actor_IP_turn_nodes']>0 and
+            p['target_exact_actor_IP_turn_strict_combos']>0 and
+            p['original_full_100bb_lmp_gto_not_recomputed'] is True and
+            p['observed_preflop_ranges'] is False and
+            p['assumed_limped_169class'] is True and
+            p['no_generic_model_certification'] is True and
+            p['source_gto_job_id'] is None and
+            p['original_gto_root_sha256']==m.get('gto_parent_source_sha256') and
+            p['original_gto_job_sha256']==m.get('flop_root_jobfile_sha256') and
+            p['original_gto_manifest_sha256']==m.get('gto_parent_source_manifest_sha256') and
+            p['original_gto_evidence_sha256']==i['source_sha256'] and
+            p['original_gto_gzip_sha256']==i['gzip_sha256'] and
+            i['corrected_pin_sha256']==sha(pinfile) and
+            i['original_upstream_index_sha256']==sha(oldindex) and
+            p['original_upstream_pin_sha256']==sha(d/'nl2_hu_b147_rank46_lmp_low64_gto_parent_pin.json') and
+            i['frozen_high_frequency_rank']==46 and
+            i['acting_seat']==1 and
+            i['exact_actor_IP_checked_turn_nodes']>0 and
+            i['exact_actor_IP_checked_turn_strict_combos']>0 and
+            i['original_upstream_rank_label']==71 and
+            sha(source_gz)==i['gzip_sha256'])
+    except (OSError,KeyError,TypeError,ValueError):
+        return False
+
 def strict_medium_evidence(n,raw,seq_mask):
     """Re-evaluate b50 relative-equity distribution ONLY after every past
     hero action was legal under max/near-mix and blockers.
@@ -363,6 +417,11 @@ def verify(root,source_pin,run_id):
                         m.get('gto_parent_source_manifest_sha256')=='ab08f31291ed6feb19bdca412c56f8adc9ee5bc06ff43fe6ae6303b0660c2b3f'):
                         raise ValueError('Focused b50-call turn allowed ONLY from byte-identical B117 SB3 Jh9d6s actor OOP GTO parent')
                     if turn_policy=='xxonly' and not (
+                        # B149: original independently SHA-audited B147 A-high
+                        # 100bb GTO, corrected actor-IP rank46 metadata only.
+                        # A true new Rust NL2 partial source is still required.
+                        authorized_b149_rank46_exact_gto_parent(m)
+                        or
                         # B146 frozen rank46: only genuine B3 9s6h3d GTO
                         # root and exact CO-IP 50%-stab/call flop -> BB check
                         # turn; true Rust NL2 actor-IP turn-only source.
