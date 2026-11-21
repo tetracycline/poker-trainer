@@ -519,6 +519,18 @@ def verify(root,source_pin,run_id):
                         m.get('gto_parent_source_manifest_sha256')=='ab08f31291ed6feb19bdca412c56f8adc9ee5bc06ff43fe6ae6303b0660c2b3f'):
                         raise ValueError('Focused b50-call turn allowed ONLY from byte-identical B117 SB3 Jh9d6s actor OOP GTO parent')
                     if turn_policy=='xxonly' and not (
+                        # B164: individually SUCCESS original B9 genuine
+                        # 100bb LMP full-sized GTO flop 4s4h2d, BB OOP
+                        # bet33-call, turn 8s OOP check, CO hero IP x-x
+                        # locked ONLY from original SHA-pinned flop.
+                        (m['spot']=='LMP_CO_BB' and m['version']=='exp_ip' and
+                         m['flop']=='4s4h2d' and m.get('selected_lines')==['b33 c'] and
+                         m.get('selected_turn_lines')==['x x'] and
+                         m.get('gto_parent_source_run_id')==44740512245 and
+                         m.get('gto_parent_source_sha256')=='227b4fd8d6ff2aa4f5ba394398a98d2b4d29f050191bbfd3d4fb43ebdbecaa54' and
+                         m.get('flop_root_jobfile_sha256')=='5293fffecddfe2b86310c5b3a634441ac3b51c4a5d61edabb69693d024f3fcd0' and
+                         m.get('gto_parent_source_manifest_sha256')=='bc1a559e0e635d58ef5a44d96a5474f403d784605e2e01c507b86e5b44b1b7d1')
+                        or
                         # B149: original independently SHA-audited B147 A-high
                         # 100bb GTO, corrected actor-IP rank46 metadata only.
                         # A true new Rust NL2 partial source is still required.
