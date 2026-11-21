@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""B140: true actor-IP SB3_BTN Jh9d6s turn/river pool lock using
+"""B140: true actor-OOP SB3_BTN Jh9d6s turn/river pooled NL2 marginal lock using
 byte-identical successful B117 GTO parent. The GTO flop is NOT recomputed.
 No generic bucket CERT and no unobserved per-hole-card NL2 frequencies.
 """
