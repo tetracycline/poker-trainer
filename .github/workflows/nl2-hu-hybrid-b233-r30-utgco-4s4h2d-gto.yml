@@ -124,7 +124,7 @@ jobs:
               source_run_id=x['source_run_id'],
               source_gto_job_id=None,
               spot='UTG_CO',flop='4s4h2d',turn=turn,flop_line='b50 c',turn_line='',
-              target_rank=30,model_id='ln-iso-utgco_r_model-1aov4pd',
+              target_rank=30,model_id='ln-opfr-t_model-1hmsxaw',
               original_gto_manifest_sha256=sha(manifest.read_bytes()),
               original_gto_root_sha256=sha(root.read_bytes()),
               original_gto_job_sha256=sha(job.read_bytes()),
@@ -191,7 +191,7 @@ jobs:
           m=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v38_b206.json'))
           assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(151,241,0,392)
           assert len(m['boards'])==581 and len(m['models'])==151
-          assert s['records']['ln-iso-utgco_r_model-1aov4pd']['label']=='APPROX'
+          assert s['records']['ln-opfr-t_model-1hmsxaw']['label']=='APPROX'
           assert s['records']['ln-iso-utgco_r_model-wpg493']['label']=='APPROX'
           assert s['independently_verified_completed_batches']['B4_MICRO']['status']=='VERIFIED'
           PY
