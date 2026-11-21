@@ -1,0 +1,116 @@
+name: TASK-HYBRID B316 V43 rank60 source-promotion negative/positive gate prereg + V42 all593 NL2 2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b316-v43-rank60-source-promotion-preflight.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  source-gated-preflight-no-premature-cert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Compile V43 rank60 source/texture actor SHA candidate gate and V43 UI only-after-audit failclosed fallbacks
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b319_v43_rank60_three_real_gto_nl2_cert.py tools/hu_b319_v43_ui_primary_failclosed.py tools/hu_cert_lock_medium_audit.py tools/hu_cert_lock_medium_coverage_matrix.py
+          python3 - <<'PY'
+          import pathlib,json,hashlib
+          d=pathlib.Path('data')
+          source=pathlib.Path('tools/hu_b319_v43_rank60_three_real_gto_nl2_cert.py').read_text()
+          ui=pathlib.Path('tools/hu_b319_v43_ui_primary_failclosed.py').read_text()
+          audit=pathlib.Path('tools/hu_cert_lock_medium_audit.py').read_text()
+          status=json.loads((d/'nl2_hu_multiboard_status_v42_b289_rank46.json').read_text())
+          assert (status['CERT_MULTIBOARD'],status['APPROX'],status['EST'])==(155,237,0)
+          assert status['records']['ln-ipfr-t_model-hxdit']['label']=='APPROX'
+          assert status['records']['ln-iso-lmp_t_model-17z0wyl']['label']=='CERT-MULTIBOARD'
+          assert 'NL2_HU_392_MULTIBOARD_CERT_STATUS_V43_B319_RANK60' in audit
+          assert 'def historic_first():' in source and 'def newer_pair(batch,flop,run):' in source
+          assert "len({z['flop_texture'] for z in boards})>=2" in source
+          assert "len({z['flop'] for z in boards})==3" in source
+          assert "relative_spr_error_pct" in source and "nl2_locked_variants" in source
+          assert "B314" in source and "B315" in source and "source_blind_expansion_ranks" in source
+          assert "d.CERT_MULTIBOARD!==156||d.APPROX!==236" in ui
+          assert "status_v42_b289_rank46" in ui and "status_v43_b319_rank60" in ui
+          h=json.loads((d/'nl2_hu_b311_rank60_historic_B2_real_coip_actor_source.json').read_text())
+          g=json.loads((d/'solver_evidence/NL2_MULTIBOARD_B255_R60_JS9H5D_EXP_IP.index.json').read_text())
+          assert h['paired_original_exact_flop_actor_SPR_source'] and h['original_gto_strict_actor_IP_combos']==20
+          assert h['actual_NL2_actor_matched_SPR_40_70_combos']>0
+          assert g['genuine_actor_matched_GTO_NL2_board'] and (g['original_GTO_actor_strict_combos'],g['NL2_actor_strict_combos'],g['NL2_actor_model_SPR_eligible_combos'])==(6,6,6)
+          assert not g['no_generic_CERT_upgrade'] is False
+          print('PASS B316 frozen B2/B261 B304 two true COIP proofs; third different TEXTURE AND positive exact original GTO + real NL2 needed to promote V43')
+          PY
+      - name: Full unchanged V42 155 CERT / 237 APPROX source-verified 593 boards 685 NL2 actor lock 134 b50 research-only and HU2475
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v42_b289_rank46.json --out nl2-audit/b316-lock-medium.json
+          python3 - <<'PY'
+          import json
+          v=json.load(open('nl2-audit/b316-lock-medium.json'))
+          assert (v['cert_multiboard'],v['approx'],v['EST'])==(155,237,0)
+          assert (v['aggregate']['named_board_proofs'],v['aggregate']['paired_hero_locked_source_variants'],v['aggregate']['board_examples_with_b50_candidate'])==(593,685,134)
+          assert v['not_generalized_handclass_GTO'] and v['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B316 full HU2475/2475")'
+      - name: Commit frozen V43 code SHA and 2-source readiness only AFTER all V42 source and 2475 HU gates PASS, never false CERT
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json,hashlib
+          d=pathlib.Path('data')
+          sh=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          out=dict(schema='NL2_HU_B316_RANK60_TRUE_CROSS_TEXTURE_V43_PROMOTION_SOURCE_GATE_PREFLIGHT_V1',
+             frozen_V42_status_sha256=sh(d/'nl2_hu_multiboard_status_v42_b289_rank46.json'),
+             original_legacy_B2_rank60_true_actor_proof_sha256=sh(d/'nl2_hu_b311_rank60_historic_B2_real_coip_actor_source.json'),
+             B304_genuine_rust_NL2_source_index_sha256=sh(d/'solver_evidence/NL2_MULTIBOARD_B255_R60_JS9H5D_EXP_IP.index.json'),
+             V43_source_promotion_code_SHA256=sh(pathlib.Path('tools/hu_b319_v43_rank60_three_real_gto_nl2_cert.py')),
+             V43_UI_only_after_source_gate_code_SHA256=sh(pathlib.Path('tools/hu_b319_v43_ui_primary_failclosed.py')),
+             two_authenticated_existing_flops=['Js9h4d','Js9h5d'],
+             rank60_3rd_genuine_board_missing=True,
+             require_at_least_two_distinct_flop_texture_classes=True,
+             candidate_source_B314='8s7h4d',candidate_source_B315='KsJh4d',
+             candidate_must_have_original_GTO_actor_IP_40_70_combos_positive=True,
+             candidate_must_have_separate_real_Rust_NL2_actor_ip_40_70_source=True,
+             no_source_or_model_certification_by_code_preparation=True,
+             CERT_MULTIBOARD=155,APPROX=237,EST=0,TOTAL=392,
+             current_authentic_named_board_proofs=593,current_actor_locked_variants=685,
+             current_exact_board_nonpolar50_research_only=134,
+             last_full_HU_audit='2475/2475',PR2_Draft_NEVER_MERGE=True)
+          (d/'nl2_hu_b316_rank60_v43_cross_texture_source_preflight.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+          pathlib.Path('docs/NL2_HU_B316_R60_V43_SOURCE_GATE_PREFLIGHT.md').write_text(
+            '# B316 rank60 V43 source and two-texture failclosed preflight\n\n'
+            'The original B2 Js9h4d/Ts and B261 GTO+B304 real NL2 Js9h5d/Ah actor CO-IP sources have independently authenticated exact SHA/40-70/SPR evidence. A THIRD exact public flop **of different texture** from these JT-high sources and independent fully original 100bb GTO plus genuine partial NL2 Rust actor lock is strictly required before promoting rank60. B314 8s7h4d LOW and B315 KsJh4d KQ_HIGH were preregistered; no ongoing or GTO-only run counts as CERT.\n\n'
+            'V43 promotion code and two-front-end failclosed V42 fallback are prepared but NOT activated. Full unchanged V42 155 CERT /237 APPROX, 593 original GTO+actor NL2 board sources, 685 real partial locks, 134 b50 research candidates, and 2475/2475 routes passed before commit. No measured NL2 private-hand conditional rates claimed. PR2 Draft never merge.\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b316_rank60_v43_cross_texture_source_preflight.json docs/NL2_HU_B316_R60_V43_SOURCE_GATE_PREFLIGHT.md
+          git commit -m 'TASK-HYBRID B316: V43 rank60 promotion code SHA failclosed on real third texture/actor lock, existing B2/B304 proof and V42 HU2475 PASS'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B316-v43-rank60-two-texture-source-preflight-and-HU2475
+          path: |
+            data/nl2_hu_b316_rank60_v43_cross_texture_source_preflight.json
+            docs/NL2_HU_B316_R60_V43_SOURCE_GATE_PREFLIGHT.md
+            nl2-audit/
+          retention-days: 30
