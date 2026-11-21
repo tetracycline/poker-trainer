@@ -199,6 +199,15 @@ def main():
           B210=sha(B210),B278=sha(B278),B286=sha(B286_GTO),B288=sha(B288_NL2)),
        no_generic_texture_GTO=True,no_observed_private_card_NL2_rates=True,
        PR2_remains_draft_never_merge=True)
+    for z in boards:
+        q=z['nl2_locked_variants'][0]
+        print('B289_BOARD_DIAGNOSTIC',json.dumps(dict(
+            flop=z['flop'],turn=z['turn'],history=z['actual_exact_action_line'],
+            seat=z['acting_seat'],assumed=z['assumed_preflop_ranges'],
+            spr_error=z['relative_spr_error_pct'],gto_gap=z['genuine_gto_exploitability_pct'],
+            source_kind=z['source_kind'],gto_sha_length=len(z['source_sha256']),
+            num_locks=len(z['nl2_locked_variants']),lock_version=q['version'],
+            lock_sha_length=len(q['sha256'])),ensure_ascii=False),flush=True)
     STATUS.write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     matrix=create(result)
     assert (matrix['CERT_MULTIBOARD'],matrix['APPROX'],matrix['EST'])==(155,237,0)
