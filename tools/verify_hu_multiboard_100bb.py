@@ -627,6 +627,62 @@ def authorized_b200_rank188_original_SB_BB_BB_IP_xb100_xx(m):
         return False
 
 
+def authorized_b204_rank190_original_SB_BB_BB_IP_xb75_xb100(m):
+    """Only original positive SB_BB BB-IP GTO parent 8s8h3d or 9s6h3d.
+
+    Preserve B1/B5 original independently verified source SHA, original CFR
+    preflop ranges, exact actor BB IP / river action, and positive strict
+    combo reach. NL2 hero lock child is separately genuine Rust turn-river.
+    """
+    if not (m.get('spot')=='SB_BB' and m.get('version')=='exp_ip' and
+       m.get('flop') in ('8s8h3d','Js9h4d') and
+       m.get('selected_lines')==['x b75 c'] and
+       m.get('selected_turn_lines')==['x b100 c'] and
+       m.get('flop_line_policy')=='checked-b75only' and
+       m.get('turn_line_policy')=='xb100only' and
+       m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK' and
+       m.get('NL2_hero_lock_scope')=='TURN_RIVER_ONLY_FROM_SHA_PINNED_B203_RANK190_SB_BB_GTO' and
+       m.get('preflop_ranges',{}).get('source')=='PINNED_POKER_SOLVER_PREFLOP_CFR' and
+       m.get('original_full_GTO_flop_byte_identical_not_recomputed') is True):
+        return False
+    d=pathlib.Path(__file__).resolve().parents[1]/'data'
+    pinfile=d/('nl2_hu_b203_rank190_'+m['flop']+'_original_SB_BB_gto_pin.json')
+    b175=d/'nl2_hu_b175_v32_248_exact_GTO_source_provenance.json'
+    try:
+        import gzip
+        pin=json.loads(pinfile.read_text())
+        prov=json.loads(b175.read_text())
+        idx=d/('solver_evidence/NL2_MULTIBOARD_'+pin['source_batch']+'.index.json')
+        arc=d/('solver_evidence/NL2_MULTIBOARD_'+pin['source_batch']+'.json.gz')
+        ix=json.loads(idx.read_text())
+        row=next(z for z in prov['rows'] if z['rank']==190)
+        legal=[z for z in row['exact_authentic_gto_source_proofs'] if
+          z['flop']==pin['flop'] and z['turn']==pin['turn'] and
+          z['source_run']==pin['source_run_id'] and z['source_sha']==pin['original_case_sha256'] and
+          z['exact_line']=='x b75 c/x b100 c/x' and z['actor']==1 and
+          z['strict_legal_combos']>0 and z['GTO_gap_pct']<=.5 and z['SPR_error_pct']<=5 and
+          not z['true_NL2_actor_locked']]
+        return (
+          pin['schema']=='NL2_HU_B203_RANK190_ORIGINAL_SB_BB_GTO_SOURCE_PIN_V1' and
+          (pin['target_rank'],pin['model_id'])==(190,'ln-ipc-r_model-dfikbd') and
+          (pin['spot'],pin['acting_seat'],pin['acting_position'])==('SB_BB',1,'BB_IP') and
+          pin['exact_river_line']=='x b75 c/x b100 c/x' and
+          pin['original_parent_GTO_not_recomputed'] is True and
+          pin['minimum_strict_original_actor_IP_combos']>0 and
+          pin['preflop_source']=='PINNED_POKER_SOLVER_PREFLOP_CFR' and
+          bool(legal) and m.get('turns')==[pin['turn']] and
+          m.get('gto_parent_source_run_id')==pin['source_run_id']==ix['run_id'] and
+          m.get('gto_parent_source_sha256')==pin['original_gto_root_sha256'] and
+          m.get('flop_root_jobfile_sha256')==pin['original_gto_job_sha256'] and
+          m.get('gto_parent_source_manifest_sha256')==pin['original_gto_manifest_sha256'] and
+          m.get('original_B203_rank190_parent_pin_sha256')==sha(pinfile) and
+          pin['original_archive_sha256']==ix['gzip_sha256']==sha(arc) and
+          pin['original_index_sha256']==sha(idx) and
+          ix['source_sha256']==hashlib.sha256(gzip.decompress(arc.read_bytes())).hexdigest())
+    except (OSError,ValueError,KeyError,TypeError,EOFError,StopIteration,AssertionError):
+        return False
+
+
 def authorized_b198_rank159_original_SB_BB_BB_IP_xb100_xx(m):
     """Only original positive SB_BB BB-IP GTO parent As9h2d or KsQh4d.
 
@@ -850,6 +906,7 @@ def verify(root,source_pin,run_id):
             permitted_flop_lines={'oop-b33only':'b33 c','oop-b50only':'b50 c',
                 'checked-b33only':'x b33 c',
                 'oop-b75only':'b75 c','oop-b75raisecall':'b75 r c','checked-b50only':'x b50 c',
+                'checked-b75only':'x b75 c',
                 'checked-b100only':'x b100 c','checkcheck':'x x'}
             policy=m.get('flop_line_policy','all')
             if policy in permitted_flop_lines:
@@ -1151,6 +1208,10 @@ def verify(root,source_pin,run_id):
                          m.get('gto_parent_source_manifest_sha256')=='009a322dc392543e9675a3c03582fa9cd2bda5e7ef48aafcc8bff8f1450945f0')):
                         raise ValueError('x-x extraction outside individually SHA-pinned B98/B101/B104/B129/B164/B167 actor parents')
                     if turn_policy=='xb100only' and not (
+                        # B204 original B203 rank190 B1 true GTO BB-IP exactly
+                        # 8s8h3d/Js9h4d x b75 c / x b100 c / x only.
+                        authorized_b204_rank190_original_SB_BB_BB_IP_xb75_xb100(m)
+                        or
                         # B200: exact original B199 B1/B4 SB_BB true GTO
                         # 8s8h3d/9s6h3d BB IP x b50 c / x b100 c / x only.
                         authorized_b200_rank188_original_SB_BB_BB_IP_xb100_xx(m)
