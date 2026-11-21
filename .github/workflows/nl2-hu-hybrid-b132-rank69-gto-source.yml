@@ -1,0 +1,104 @@
+name: TASK-HYBRID B132 verify authentic B124 rank69 BTN original GTO plus B129 actor IP source (max9m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b132-rank69-gto-source.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-and-archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download immutable B124 BTN_BB As7h3d real completed Rust GTO, no new solver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          name='nl2-multiboard-B124_R69_BTN_ACE_B33XX-BTN_BB-gto-As7h3d'
+          mkdir -p "downloads/$name"
+          gh run download 44839543260 --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$name"
+          test -s "downloads/$name/evidence/BTN_BB-gto-As7h3d.json"
+          test -s "downloads/$name/solver/postflop/out/BTN_BB/gto/As7h3d_multiboard.json"
+      - name: Independent authentic original-GTO 100bb BTN_BB source SHA, rake, actor and full path reach
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver --run-id 44839543260 --out trainer/data/solver_evidence/NL2_MULTIBOARD_B132_R69_GTO_B124.json
+      - name: Freeze exact two independent sources only if GTO and NL2 IP both reach rank69 true river node
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          D=pathlib.Path('trainer/data')
+          p=D/'solver_evidence/NL2_MULTIBOARD_B132_R69_GTO_B124.json'
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert d['source_run_id']==44839543260 and not d['errors']
+          assert (d['exact_board_gto_sources'],d['imputed_pool_locked_sources'])==(1,0)
+          assert len(d['artifacts'])==1 and d['new_authentic_board_cases']==1
+          a=d['artifacts'][0]
+          assert (a['version'],a['spot'],a['flop'])==('gto','BTN_BB','As7h3d')
+          assert not a['errors'] and len(a['cases'])==1
+          c=a['cases'][0]
+          assert (c['flop_line'],c['turn'])==('b33 c','Kd')
+          assert c['gto_exploitability_pct']<=0.5
+          gto=[n for n in c['nodes'] if n['exact_node_line']=='b33 c/x x/x'
+            and n['acting_seat']==1 and n['strictly_reachable_combos']>0]
+          assert gto,'B124 GTO has no strict legal BTN IP river; never promote rank69 if so'
+          b129=json.loads((D/'solver_evidence/NL2_MULTIBOARD_B129_R69_BTN_B33XX.index.json').read_text())
+          assert b129['schema']=='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1'
+          assert b129['run_id']==44840873316 and b129['locked_cases']==1 and b129['gto_cases']==0
+          assert b129['exact_actor_IP_river_nodes']>0 and b129['strict_failure_reason'] is None
+          assert b129['original_gto_parent_run']==44839543260
+          pin=json.loads((D/'nl2_hu_b129_rank69_b124_gto_parent_pin.json').read_text())
+          assert pin['original_Rust_GTO_root_sha256']==b129['original_parent_GTO_root_SHA256']
+          assert pin['original_Rust_GTO_root_job_sha256']==b129['original_parent_GTO_job_SHA256']
+          assert pin['original_GTO_manifest_sha256']==b129['original_parent_GTO_manifest_SHA256']
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          idx=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+            batch='B132_R69_GTO_B124',run_id=44839543260,
+            actual_spot_flop_version_jobs=1,verified_cases=1,gto_cases=1,locked_cases=0,
+            source_sha256=hashlib.sha256(raw).hexdigest(),
+            gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+            original_GTO_root_SHA256=pin['original_Rust_GTO_root_sha256'],
+            exact_GTO_hero_IP_river_nodes=len(gto),
+            matched_real_EXP_IP_B129_run=44840873316,
+            strict_dual_policy_hero_IP_river_confirmed=True,
+            verified_preregistered_target_rank=69,
+            no_generic_model_certification=True,immediate_CERT_upgrades=0)
+          p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          print('PASS B132 rank69 GTO/IP two true independent original sources aligned; classification held for full 3-flop gate',idx)
+          PY
+      - name: Commit source SHA archive to PR 2 Draft, no upgrade until independent 3-flop V28 and full 2475 audit
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B132_R69_GTO_B124.json.gz data/solver_evidence/NL2_MULTIBOARD_B132_R69_GTO_B124.index.json
+          git commit -m 'TASK-HYBRID B132: independently certify genuine B124 GTO strict rank69 river source plus B129 true NL2 actor IP, before 3-flop status gate'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B132-independent-original-rank69-GTO-source
+          path: trainer/data/solver_evidence/NL2_MULTIBOARD_B132_R69_GTO_B124.*
+          retention-days: 30
