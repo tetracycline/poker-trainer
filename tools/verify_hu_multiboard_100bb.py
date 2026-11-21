@@ -446,8 +446,21 @@ def verify(root,source_pin,run_id):
                          m.get('gto_parent_source_run_id')==44837834984 and
                          m.get('gto_parent_source_sha256')=='3531438b93c5185182fa7bb0ab4d95dd1025e7e1fe5da3d18b58cee4eec87573' and
                          m.get('flop_root_jobfile_sha256')=='b6cc92f2dd7d5995b8e26f959420a0a5677769b9f1918208a2ea4e4f99d6653e' and
-                         m.get('gto_parent_source_manifest_sha256')=='e7a2817f866609cafd48d3dc20f34372b87fb77522d45facda8c5088f67a49ca')):
-                        raise ValueError('Focused x-b50-call turn requires exact immutable B113/B121/B126/B128 GTO parent')
+                         m.get('gto_parent_source_manifest_sha256')=='e7a2817f866609cafd48d3dc20f34372b87fb77522d45facda8c5088f67a49ca')
+                        or
+                        # B138: individually successful B134 LMP_CO_BB
+                        # 9s6h3d genuine GTO source (original B134 run overall
+                        # cancelled due EXP_OOP). A fresh Rust EXP_OOP turn
+                        # child reuses ONLY the byte-identical GTO parent.
+                        # All 169 limped ranges remain explicitly ASSUMED.
+                        (m['spot']=='LMP_CO_BB' and m['version']=='exp_oop' and
+                         m['flop']=='9s6h3d' and m.get('selected_lines')==['b50 c'] and
+                         m.get('selected_turn_lines')==['x b50 c'] and
+                         m.get('gto_parent_source_run_id')==44841724661 and
+                         m.get('gto_parent_source_sha256')=='cab2bcdadebdaafc1dcacd0a9b1eb9c656b8864f486f2542b1abe39ebe6c2eb6' and
+                         m.get('flop_root_jobfile_sha256')=='3f7c036d8aac871a2cabc5ddffc94c42ce51d43520d9cdee620add8dbe6072bf' and
+                         m.get('gto_parent_source_manifest_sha256')=='2ec67f19079a7946bb0b771d5a865372cc90a645c350663bda352ad8e5bb569c')):
+                        raise ValueError('Focused x-b50-call turn requires exact SHA-pinned B113/B121/B126/B128/B138 parent')
                     if m.get('selected_turn_lines')!=[' '.join(token)]:
                         raise ValueError('Focused turn extraction differs from predeclared line')
                     subjobfile=rawfile.with_suffix('.job.json')
