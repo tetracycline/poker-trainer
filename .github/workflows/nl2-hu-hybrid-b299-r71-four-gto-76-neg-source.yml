@@ -36,7 +36,7 @@ jobs:
           assert a['source_authorizer_sha256']==hashlib.sha256(pathlib.Path('tools/verify_hu_multiboard_100bb.py').read_bytes()).hexdigest()
           assert a['downstream_NL2_source_solver_sha256']==hashlib.sha256(pathlib.Path('tools/solve_hu_b294_rank71_new_original_gto_nl2_oop.py').read_bytes()).hexdigest()
           assert a['exact_future_source_flops_and_runs']=={
-            'As7h3d':['B290',44948738190],'QsJh4d':['B293',44949223231],'Js8h3d':['B296',44949515514],'5s5h3d':['B298',44950943882]}
+            'As7h3d':['B290',44948738190],'QsJh4d':['B293',44951459377],'Js8h3d':['B296',44951459385],'5s5h3d':['B298',44950943882]}
           assert a['adversarial_original_GTO_metadata_cases']==76
           assert a['all_adversarial_source_cases_failclosed']
           assert len(a['negative_test_results'])==76

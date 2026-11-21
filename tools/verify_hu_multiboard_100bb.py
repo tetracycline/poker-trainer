@@ -889,7 +889,7 @@ def authorized_b294_rank71_new_exact_GTO_OOP_child(m):
     100bb GTO on B290/B293/B296/B298 exact FLOP/TURN can authorize a genuine NL2
     downstream-only Rust partial OOP lock, never a generic model CERT.
     """
-    specs={'As7h3d':('B290',44948738190),'QsJh4d':('B293',44949223231),'Js8h3d':('B296',44949515514),'5s5h3d':('B298',44950943882)}
+    specs={'As7h3d':('B290',44948738190),'QsJh4d':('B293',44951459377),'Js8h3d':('B296',44951459385),'5s5h3d':('B298',44950943882)}
     flop=m.get('flop')
     if flop not in specs:return False
     batch,run=specs[flop]

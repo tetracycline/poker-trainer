@@ -14,7 +14,7 @@ SOLVER=pathlib.Path('tools/solve_hu_b294_rank71_new_original_gto_nl2_oop.py')
 VERIFIER=pathlib.Path('tools/verify_hu_multiboard_100bb.py')
 OUT=D/'nl2_hu_b299_v42_rank71_B294_four_GTO_SHA_negative_gate.json'
 MD=DOC/'NL2_HU_B299_R71_FOUR_GTO_SHA_OOP_FAILCLOSED.md'
-SPECS={'As7h3d':('B290',44948738190),'QsJh4d':('B293',44949223231),'Js8h3d':('B296',44949515514),'5s5h3d':('B298',44950943882)}
+SPECS={'As7h3d':('B290',44948738190),'QsJh4d':('B293',44951459377),'Js8h3d':('B296',44951459385),'5s5h3d':('B298',44950943882)}
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def main():
     verifier=inspect.getsource(authorized_b294_rank71_new_exact_GTO_OOP_child)
