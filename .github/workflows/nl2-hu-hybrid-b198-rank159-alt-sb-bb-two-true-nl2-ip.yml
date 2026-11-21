@@ -1,0 +1,215 @@
+name: TASK-HYBRID B198 rank159 SB_BB BB-IP original GTO 2 flop true x-b100-call/x-x NL2 Rust children (max29m)
+# STAGED until independently verified B197 two original GTO As9h2d/KsQh4d pin SHA source and 572 HU audit pass.
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  genuine-two-original-SB-BB-GTO-to-NL2-BB-IP:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - {flop: As9h2d, original_run: 44666285424, batch: B1}
+          - {flop: KsQh4d, original_run: 44736420272, batch: B5_SBGAPS}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Download only original verified B197 SB_BB GTO BB IP flop, never GTO relabeled as EXP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p original
+          gh run download "${{ matrix.original_run }}" --repo "$GITHUB_REPOSITORY" \
+            --name "nl2-multiboard-${{ matrix.batch }}-SB_BB-gto-${{ matrix.flop }}" --dir original
+          FLOP="${{ matrix.flop }}" ORIGINAL_RUN="${{ matrix.original_run }}" python3 - <<'PY'
+          import hashlib,json,pathlib,os
+          flop=os.environ['FLOP'];run=int(os.environ['ORIGINAL_RUN'])
+          d=pathlib.Path('trainer/data')
+          pin=json.loads((d/('nl2_hu_b197_rank159_'+flop+'_original_SB_BB_gto_pin.json')).read_text())
+          assert pin['schema']=='NL2_HU_B197_RANK159_ORIGINAL_SB_BB_GTO_SOURCE_PIN_V1'
+          assert pin['source_run_id']==run and pin['target_rank']==159
+          assert pin['acting_position']=='BB_IP' and pin['minimum_strict_original_actor_IP_combos']>0
+          assert pin['original_parent_GTO_not_recomputed'] is True
+          for file,key in (
+            ('evidence/SB_BB-gto-'+flop+'.json','original_gto_manifest_sha256'),
+            ('solver/postflop/out/SB_BB/gto/'+flop+'_multiboard.json','original_gto_root_sha256'),
+            ('solver/postflop/out/SB_BB/gto/'+flop+'_multiboard.job.json','original_gto_job_sha256')):
+            f=pathlib.Path('original')/file
+            assert f.is_file() and hashlib.sha256(f.read_bytes()).hexdigest()==pin[key]
+          assert pin['original_root_flop_menu']==dict(oop='33%,50%,75%,100%',ip='33%,50%,75%,100%',raises='3x,a')
+          print('PASS B197 original SB_BB exact SHA root/job/manifest, BB IP true GTO combos',flop)
+          PY
+      - name: Compile pinned genuine Rust CFR engine, never recompute full GTO flop parent
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_b198_sb_bb_rank159_alt_turnonly.py trainer/tools/verify_hu_multiboard_100bb.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve actual BB-IP turn-river NL2 villain pooled-marginal partial lock from original B1 or B5 GTO flop
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-SHA.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-engine-SHA.txt
+          python3 trainer/tools/solve_hu_b198_sb_bb_rank159_alt_turnonly.py \
+            --solver-root solver --gto-artifact-root original \
+            --flop "${{ matrix.flop }}" \
+            --manifest "evidence/SB_BB-exp_ip-${{ matrix.flop }}.json"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B198_R159_SBBB-SB_BB-exp_ip-${{ matrix.flop }}
+          path: |
+            evidence/
+            solver/postflop/out/
+          retention-days: 30
+  verify-and-commit:
+    needs: genuine-two-original-SB-BB-GTO-to-NL2-BB-IP
+    if: ${{ needs.genuine-two-original-SB-BB-GTO-to-NL2-BB-IP.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Download exactly two fresh genuine BB-IP Rust partial source jobs, neither old B1/B5 EXP nor GTO
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir downloads
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d -name 'nl2-multiboard-B198_R159_SBBB-*'|wc -l)" -eq 2
+          for flop in As9h2d KsQh4d; do
+            test -s "downloads/nl2-multiboard-B198_R159_SBBB-SB_BB-exp_ip-$flop/evidence/SB_BB-exp_ip-$flop.json"
+          done
+      - name: Strict independent B197 GTO parent SHA, SB BB correct BB-IP actor, full sequential legal combo, pot SPR rake, measured/assumed NL2 source
+        run: |
+          set -euo pipefail
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py \
+            --downloads downloads --solver-root solver --run-id "$GITHUB_RUN_ID" \
+            --out trainer/data/solver_evidence/NL2_MULTIBOARD_B198_R159_SBBB_2FLOP_EXP_IP.json
+      - name: Seal both real SB BB IP source SHAs with positive or explicit negative actor river, no auto CERT
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,os,pathlib
+          d=pathlib.Path('trainer/data')
+          p=d/'solver_evidence/NL2_MULTIBOARD_B198_R159_SBBB_2FLOP_EXP_IP.json'
+          x=json.loads(p.read_text())
+          assert x['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert x['source_run_id']==int(os.environ['GITHUB_RUN_ID']) and not x['errors']
+          assert (x['exact_board_gto_sources'],x['imputed_pool_locked_sources'],x['new_authentic_board_cases'])==(0,2,2)
+          assert len(x['artifacts'])==2
+          positives={}
+          for a in x['artifacts']:
+            assert a['spot']=='SB_BB' and a['version']=='exp_ip' and not a['errors']
+            assert a['flop'] in ('As9h2d','KsQh4d') and len(a['cases'])==1
+            c=a['cases'][0];f=a['flop']
+            pin=json.loads((d/('nl2_hu_b197_rank159_'+f+'_original_SB_BB_gto_pin.json')).read_text())
+            assert (c['flop_line'],c['turn'])==('x b100 c',pin['turn'])
+            bb=[n for n in c['nodes'] if n['exact_node_line']=='x b100 c/x x/x' and
+                n['acting_seat']==1 and n['strictly_reachable_combos']>0]
+            positives[f]=dict(nodes=len(bb),
+              strict_combos=sum(n['strictly_reachable_combos'] for n in bb),
+              original_GTO_run=pin['source_run_id'],
+              original_GTO_root_sha256=pin['original_gto_root_sha256'],
+              original_GTO_job_sha256=pin['original_gto_job_sha256'],
+              original_GTO_manifest_sha256=pin['original_gto_manifest_sha256'],
+              original_SBBB_preflop_CFR_pinned_not_observed_NL2_private_hand=True)
+          assert set(positives)=={'As9h2d','KsQh4d'}
+          raw=p.read_bytes()
+          compressed=p.with_suffix('.json.gz')
+          compressed.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          sha=lambda b:hashlib.sha256(b).hexdigest()
+          good=all(v['strict_combos']>0 for v in positives.values())
+          idx=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+            batch='B198_R159_SBBB_2FLOP_EXP_IP',
+            run_id=x['source_run_id'],actual_spot_flop_version_jobs=2,
+            verified_cases=2,gto_cases=0,locked_cases=2,
+            source_sha256=sha(raw),gzip_sha256=sha(compressed.read_bytes()),
+            exact_SB_BB_BB_IP_line='x b100 c/x x/x',actor_seat=1,
+            real_B1_B5_GTO_pinned_flop_sources=positives,
+            both_new_flops_positive_strict_BB_IP_combos=good,
+            source_NL2_aggregate_rate_not_private_hand_observed=True,
+            generic_model_certification=0,immediate_CERT_upgrades=0,
+            strict_failure_reason=None if good else 'ONE_OR_MORE_NEW_TRUE_SBBB_BBIP_CHILD_ZERO_KEEP_R159_APPROX')
+          p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          pathlib.Path('trainer/docs/NL2_HU_B198_RANK159_TWO_TRUE_SB_BB_BB_IP_PARTIAL_LOCKS.md').write_text(
+            '# B198 rank159 original B1/B5 GTO with fresh real SB_BB BB-IP partial locks\n\n'
+            'As9h2d/Kd and KsQh4d/Tc genuine exact 100bb GTO parents, '
+            'BB IP actor after x b100 c/x x/x, true Rust partial NL2 source: '+
+            json.dumps(positives,ensure_ascii=False)+'. '
+            'NL2 measured pooled street/size marginals and explicitly assumed defaults are '
+            'not observed villain conditional private-hand decisions. '
+            'Only exact named flops and action lines are covered. '
+            'No false generic CERT, rank159 remains APPROX pending independent three-board gate; '
+            'existing 148 CERT /244 APPROX / 572 named boards, HU 2475. '
+            'PR2 Draft, NEVER MERGE.\n')
+          print('PASS B198 verified genuine SB BB IP Rust partial, preserve exact positivity',idx)
+          PY
+      - name: Complete all original 148 CERT 572 real named-board GTO/NL2 lock and b50 provenance plus 2475 HU path audits
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v35_b193_rank201.json --out nl2-audit/b198-lock.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('nl2-audit/b198-lock.json'))
+          assert (d['cert_multiboard'],d['approx'],d['EST'])==(148,244,0)
+          assert d['aggregate']['named_board_proofs']==572
+          assert d['aggregate']['paired_hero_locked_source_variants']>=664
+          assert d['aggregate']['board_examples_with_b50_candidate']>=132
+          assert d['not_generalized_handclass_GTO'] and d['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/contract.json
+          node tools/link_audit.js --md nl2-audit/link.md --json nl2-audit/links.json
+          node tools/reach_verify.js --log nl2-audit/reach.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/links.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS 2475/2475")'
+      - name: Commit only after original B1/B5 SHA plus 2 genuine BB IP NL2 Rust children and full 572/2475 audit PASS, never merge PR2 Draft
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B198_R159_SBBB_2FLOP_EXP_IP.json.gz data/solver_evidence/NL2_MULTIBOARD_B198_R159_SBBB_2FLOP_EXP_IP.index.json docs/NL2_HU_B198_RANK159_TWO_TRUE_SB_BB_BB_IP_PARTIAL_LOCKS.md
+          git commit -m 'TASK-HYBRID B198: rank159 two genuine original SB_BB GTO BB-IP true NL2 Rust turn children and full 572 boards/2475 HU audit, keep APPROX until 3-board cert'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B198-original-B1B5-true-BBIP-two-Rust-572-2475
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B198_R159_SBBB_2FLOP_EXP_IP.*
+            trainer/docs/NL2_HU_B198_RANK159_TWO_TRUE_SB_BB_BB_IP_PARTIAL_LOCKS.md
+            trainer/nl2-audit/
+          retention-days: 30
