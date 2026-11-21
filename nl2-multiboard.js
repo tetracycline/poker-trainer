@@ -224,6 +224,23 @@ el('node').addEventListener('change',selectNode);
 el('all-combos').addEventListener('change',fillCombos);
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v28=d=>{
+   if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V28_B133_RANK69'||
+      d.CERT_MULTIBOARD!==140||d.APPROX!==252||d.EST!==0||
+      d.TOTAL!==392||d.original_v27_cert!==139||
+      d.original_v27_approx!==253||
+      d.original_top24_cutoff_unchanged!==true||
+      String(d.source_blind_expansion_ranks)!=='41,69,236'||
+      d.supplementary_cert_count!==116||
+      d.B133_rank69_true_third_flop?.rank!==69||
+      d.B133_rank69_true_third_flop?.flops?.join(',')!=='As7h3d,Jh9d6s,KsQh4d'||
+      Object.keys(d.records||{}).length!==392||
+      d.records?.['ln-ipfr-r_model-159a6z6']?.label!=='CERT-MULTIBOARD'||
+      d.records?.['ln-ipfr-t_model-sxr0qa']?.label!=='CERT-MULTIBOARD'||
+      d.records?.['ln-ipc-r_model-1nz4lt1']?.label!=='CERT-MULTIBOARD')
+      throw Error('B133 V28 genuine original GTO+actor-IP and immutable B112 cohort gate failed');
+   return d;
+ };
  const v27=d=>{
    if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V27_B123_R41_236'||
       d.CERT_MULTIBOARD!==139||d.APPROX!==253||d.EST!==0||
@@ -503,7 +520,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v27_b123_r41_236.json',{cache:'no-store'}).then(open).then(v27)
+ return fetch('data/nl2_hu_multiboard_status_v28_b133_rank69.json',{cache:'no-store'}).then(open).then(v28)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v27_b123_r41_236.json',{cache:'no-store'}).then(open).then(v27))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v26_b111_rank215_220.json',{cache:'no-store'}).then(open).then(v26))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v25_b106_rank135.json',{cache:'no-store'}).then(open).then(v25))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v24_b103_rank43.json',{cache:'no-store'}).then(open).then(v24))
