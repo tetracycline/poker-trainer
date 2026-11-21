@@ -1,0 +1,165 @@
+name: TASK-HYBRID B271 V41 rank61 3 real 100bb GTO+NL2 CO-IP named boards 154 CERT/238 APPROX 590 locks HU2475 (max16m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b271-v41-rank61-three-real-gto-nl2-cert.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  authentic-three-original-GTO-vs-three-Rust-partial-NL2-COIP-rank61:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Preflight all six independent SHA-pinned GTO/actual Rust NL2 CO-IP sources with strict previous-street 40/70 combo reach
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b271_v41_rank61_three_original_gto_nl2_cert.py tools/hu_b271_v41_ui_primary_failclosed.py
+          python3 - <<'PY'
+          import pathlib,json,hashlib,gzip
+          d=pathlib.Path('data')
+          s=json.loads((d/'nl2_hu_multiboard_status_v40_b265_rank313.json').read_text())
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'])==(153,239,0)
+          assert s['records']['ln-ipfr-t_model-qpx6tn']['label']=='APPROX'
+          for flop,gto,lock,run,combo in [
+             ('KsQh4d','B253','B256',44902146101,65),
+             ('Js9h5d','B262','B264',44902831383,110),
+             ('QsJh4d','B266','B269',44934430727,80)]:
+            pin=json.loads((d/f'nl2_hu_{gto.lower()}_rank61_cobb_{flop}_gto_parent_pin.json').read_text())
+            idx=json.loads((d/f'solver_evidence/NL2_MULTIBOARD_{lock}_R61_{flop.upper()}_EXP_IP.index.json').read_text())
+            gr=d/f'solver_evidence/NL2_MULTIBOARD_{gto}_R61_{flop.upper()}_GTO.json.gz'
+            lr=d/f'solver_evidence/NL2_MULTIBOARD_{lock}_R61_{flop.upper()}_EXP_IP.json.gz'
+            assert pin['source_run_id']==run and pin['target_exact_actor_IP_turn_strict_combos']==combo
+            assert idx['original_GTO_actor_strict_combos']==combo
+            assert idx['NL2_actor_model_SPR_eligible_combos']>0
+            assert idx['genuine_actor_matched_GTO_NL2_board'] is True
+            assert idx['original_GTO_root_sha256']==pin['original_gto_root_sha256']
+            assert idx['authentic_NL2_Rust_gzip_sha256']==hashlib.sha256(lr.read_bytes()).hexdigest()
+            assert idx['authentic_NL2_Rust_source_sha256']==hashlib.sha256(gzip.decompress(lr.read_bytes())).hexdigest()
+            assert idx['gto_archive_sha256']==hashlib.sha256(gr.read_bytes()).hexdigest()
+          print('PASS 3 distinct 100bb GTO roots, pinned preflop-CFR and truly actor-matched NL2 Rust partial-lock SHA archives')
+          PY
+          python3 tools/hu_b271_v41_rank61_three_original_gto_nl2_cert.py
+      - name: Source-guarded V41 primary in both frontends with exact GTO vs partial Rust NL2 separate source links and V40-V26 fallbacks
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b271_v41_ui_primary_failclosed.py
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+      - name: Independently assert EXACT rank61-only V40 to V41 change, 3 different original true GTO boards and 3 authenticated Rust actor CO-IP locks
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib,hashlib
+          d=pathlib.Path('data')
+          oldfile=d/'nl2_hu_multiboard_status_v40_b265_rank313.json'
+          newfile=d/'nl2_hu_multiboard_status_v41_b271_rank61.json'
+          old=json.loads(oldfile.read_text());new=json.loads(newfile.read_text())
+          assert new['schema']=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V41_B271_RANK61'
+          assert (new['CERT_MULTIBOARD'],new['APPROX'],new['EST'],new['TOTAL'])==(154,238,0,392)
+          assert new['parent_v40_sha256']==hashlib.sha256(oldfile.read_bytes()).hexdigest()
+          mid='ln-ipfr-t_model-qpx6tn'
+          assert {k for k in old['records'] if old['records'][k]!=new['records'][k]}=={mid}
+          rec=new['records'][mid]
+          assert rec['label']=='CERT-MULTIBOARD' and rec['proven_exact_board_count']==3
+          cases=rec['certified_3_to_5_exact_flop_boards']
+          assert {z['flop'] for z in cases}=={'KsQh4d','Js9h5d','QsJh4d'}
+          assert len(cases)==3 and len({z['flop_texture'] for z in cases})>=2
+          assert sorted(z['strict_full_street_combo_reachable'] for z in cases)==[65,80,110]
+          assert all(z['actual_exact_action_line']=='x b100 c/x' and z['acting_seat']==1 and
+            z['relative_spr_error_pct']<=5 and z['genuine_gto_exploitability_pct']<=.5 and
+            z['source_kind']=='PINNED_PREFLOP_CFR' and not z['assumed_preflop_ranges'] and
+            len(z['nl2_locked_variants'])==1 and z['nl2_locked_variants'][0]['version']=='exp_ip'
+            and len(z['source_sha256'])==64 and
+            z['nl2_locked_variants'][0]['observed_marginal_source_nodes'] is None and
+            z['nl2_locked_variants'][0]['assumed_default_source_nodes'] is None
+            for z in cases)
+          assert new['records']['ln-iso-lmp_r_model-wpg493']['label']=='CERT-MULTIBOARD'
+          assert new['records']['ln-opfr-t_model-1hmsxaw']['label']=='CERT-MULTIBOARD'
+          assert new['records']['ln-iso-lmp_r_model-vlgh2t']['label']=='APPROX'
+          assert new['no_generic_texture_GTO'] and new['no_observed_private_card_NL2_rates']
+          assert new['PR2_remains_draft_never_merge']
+          print('PASS only rank61 changed, 3 real original GTO and independently actor IP Rust NL2 locks, no extrapolation')
+          PY
+      - name: Full independent 154 CERT 590 genuine GTO+real NL2 locked named public boards, medium50 research and unknown-default rate audits
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v41_b271_rank61.json --out nl2-audit/b271-lock-medium.json
+          python3 - <<'PY'
+          import json,hashlib,pathlib
+          d=pathlib.Path('data')
+          new=d/'nl2_hu_multiboard_status_v41_b271_rank61.json'
+          s=json.loads(new.read_text())
+          m=json.loads((d/'nl2_hu_cert_lock_medium_matrix_v41_b271.json').read_text())
+          a=json.load(open('nl2-audit/b271-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(154,238,0)
+          assert a['aggregate']['named_board_proofs']==590
+          assert a['aggregate']['paired_hero_locked_source_variants']==682
+          assert a['aggregate']['board_examples_with_b50_candidate']>=133
+          assert (m['CERT_MULTIBOARD'],m['APPROX'],m['EST'])==(154,238,0)
+          assert (len(m['models']),len(m['boards']))==(154,590)
+          assert m['parent_v41_status_sha256']==hashlib.sha256(new.read_bytes()).hexdigest()
+          assert all(z['hero_lock_proofs'] and z['strictly_reachable_combo_count']>0 and
+            z['no_general_bet_size_recommendation'] and
+            not z['generic_handclass_texture_policy_is_not_GTO'] is False for z in m['boards'])
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          print('PASS 590 exact board GTO/actor NL2 locks and 50% pot only raw board research')
+          PY
+      - name: Independent complete 2475 HU navigations and strict source guarded frontends V41 primary with immutable V40-V26 fallbacks
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node - <<'JS'
+          const fs=require('fs'),assert=require('assert').strict;
+          const c=require('./nl2-audit/link.json').counts;
+          assert.equal(c.continuing,2475);assert.equal(c.reachRiver,2475);assert.equal(c.riverShare,100);
+          for(const f of ['nl2-multiboard.js','nl2_hu_multiboard_ui.js']){
+            const s=fs.readFileSync(f,'utf8');
+            assert(s.includes('const v41=d=>{')&&s.includes('const v40=d=>{')&&s.includes('const v39=d=>{'));
+            assert(s.includes("d.CERT_MULTIBOARD!==154||d.APPROX!==238"));
+            assert(s.includes("d.records?.['ln-ipfr-t_model-qpx6tn']?.label!=='CERT-MULTIBOARD'"));
+            for(const v of ['v41_b271_rank61','v40_b265_rank313','v39_b247_rank30','v38_b206_rank190',
+              'v37_b205_rank188','v36_b201_rank159','v35_b193_rank201','v34_b190_rank199_202',
+              'v33_b179_rank138','v32_b168_rank80','v31_b161_rank150','v30_b145_rank47',
+              'v29_b142_rank88','v28_b133_rank69','v27_b123_r41_236','v26_b111_rank215_220'])
+              assert(s.includes('data/nl2_hu_multiboard_status_'+v+'.json'),v);
+          }
+          assert(fs.readFileSync('nl2-multiboard.js','utf8').includes("chosenBoard?.actual_exact_action_line==='x b100 c/x'"));
+          console.log('PASS all 2475 links, V41 154/238 exact GTO vs true NL2 partial and V40-V26 guarded fallbacks');
+          JS
+      - name: Commit V41 only after 3 original GTO SHA and separately actual CO-IP NL2 Rust lock, all 590 source and 2475 HU PASS; PR2 Draft NEVER MERGE
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v41_b271_rank61.json             data/nl2_hu_cert_lock_medium_matrix_v41_b271.json             docs/NL2_HU_B271_V41_R61_THREE_ORIGINAL_GTO_TRUE_COIP_NL2_CERT.md             docs/NL2_HU_B271_V41_ALL_590_NAMED_BOARD_LOCK_MEDIUM.md             nl2-multiboard.js nl2_hu_multiboard_ui.js
+          git commit -m 'TASK-HYBRID B271 V41: rank61 3 real GTO/CO-IP NL2 true SHA boards 154 CERT/238 APPROX, 590 GTO actor-lock/50pct source HU2475 PASS'
+          for n in 1 2 3 4 5; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B271-V41-rank61-authentic-GTO-NL2-154CERT-590board-HU2475
+          path: |
+            data/nl2_hu_multiboard_status_v41_b271_rank61.json
+            data/nl2_hu_cert_lock_medium_matrix_v41_b271.json
+            docs/NL2_HU_B271_V41_R61_THREE_ORIGINAL_GTO_TRUE_COIP_NL2_CERT.md
+            docs/NL2_HU_B271_V41_ALL_590_NAMED_BOARD_LOCK_MEDIUM.md
+            nl2-audit/
+          retention-days: 30
