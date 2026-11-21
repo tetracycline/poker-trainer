@@ -1,0 +1,165 @@
+name: TASK-HYBRID B246 rank30 B243 QsJh4d/7s SHA-pinned UTG_CO GTO + genuine Rust NL2 OOP turn lock HU2475 (max29m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b246-rank30-qsjh4d-authentic-exp-oop.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  real-Rust-downstream-NL2-hero-lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Require original B243 revalidated GTO pin SHA, exact actor UTG OOP turn combo and pinned preflop-CFR ranges
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_b246_rank30_qsjh4d_pinned_gto_partial_nl2.py
+          python3 - <<'PY'
+          import pathlib,json,hashlib,gzip
+          d=pathlib.Path('trainer/data')
+          p=json.loads((d/'nl2_hu_b243_rank30_utgco_QsJh4d_gto_parent_pin.json').read_text())
+          i=json.loads((d/'solver_evidence/NL2_MULTIBOARD_B243_R30_QSJH4D_GTO.index.json').read_text())
+          arc=d/'solver_evidence/NL2_MULTIBOARD_B243_R30_QSJH4D_GTO.json.gz'
+          assert p['source_run_id']==i['run_id']==44900567417
+          assert p['target_rank']==30 and p['model_id']=='ln-opfr-t_model-1hmsxaw'
+          assert p['spot']=='UTG_CO' and p['flop']=='QsJh4d' and p['turn']=='7s'
+          assert p['flop_line']=='b50 c' and p['turn_line']==''
+          assert p['preflop_CFR_pinned_not_observed_NL2_private_card'] is True
+          assert p['target_exact_actor_OOP_turn_strict_combos']==1
+          assert i['exact_target_actor_OOP_turn_strict_combos']==1
+          assert i['source_sha256']==hashlib.sha256(gzip.decompress(arc.read_bytes())).hexdigest()
+          assert i['gzip_sha256']==hashlib.sha256(arc.read_bytes()).hexdigest()
+          assert p['original_gto_root_sha256']==i['original_parent_GTO_root_SHA256']
+          print('PASS B246 true frozen original B243 GTO+UTG OOP strict combo')
+          PY
+          mkdir -p gto_parent
+          gh run download 44900567417 --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B243_R30_UTGCO_QSJH4D-UTG_CO-gto-QsJh4d'             --dir gto_parent
+          test -s gto_parent/evidence/UTG_CO-gto-QsJh4d.json
+          test -s gto_parent/solver/postflop/out/UTG_CO/gto/QsJh4d_multiboard.json
+          test -s gto_parent/solver/postflop/out/UTG_CO/gto/QsJh4d_multiboard.job.json
+      - name: Compile unchanged pinned original Rust backend; preserve B243 full-GTO flop root byte-for-byte
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Real Rust NL2 observed marginal plus explicit default partially locked OOP TURN and river from pinned B243 original GTO
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-engine-pin.txt
+          python3 trainer/tools/solve_hu_b246_rank30_qsjh4d_pinned_gto_partial_nl2.py             --flop QsJh4d --solver-root solver --gto-artifact-root gto_parent             --manifest evidence/UTG_CO-exp_oop-QsJh4d.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B246_R30_QSJH4D-UTG_CO-exp_oop-QsJh4d
+          path: |
+            evidence/
+            solver/postflop/out/UTG_CO/exp_oop/QsJh4d_b50c_7s.json
+            solver/postflop/out/UTG_CO/exp_oop/QsJh4d_b50c_7s.job.json
+          retention-days: 30
+          if-no-files-found: warn
+  independent-exact-actor-lock-and-HU-audit-commit:
+    needs: real-Rust-downstream-NL2-hero-lock
+    if: ${{ needs.real-Rust-downstream-NL2-hero-lock.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Obtain original B243 100bb true GTO and new genuine separate NL2 partially locked Rust source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads/original downloads/new
+          gh run download 44900567417 --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B243_R30_UTGCO_QSJH4D-UTG_CO-gto-QsJh4d'             --dir downloads/original
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B246_R30_QSJH4D-UTG_CO-exp_oop-QsJh4d'             --dir downloads/new
+          test -s downloads/original/solver/postflop/out/UTG_CO/gto/QsJh4d_multiboard.json
+          test -s downloads/new/evidence/UTG_CO-exp_oop-QsJh4d.json
+          test -s downloads/new/solver/postflop/out/UTG_CO/exp_oop/QsJh4d_b50c_7s.json
+          python3 -m py_compile trainer/tools/verify_hu_b246_rank30_qsjh4d_exact_lock.py
+      - name: Independently authenticate original parent SHA, actual Rust NL2 locked source, exact OOP actor turn, prior-action combos, SPR and scope
+        run: |
+          set -euo pipefail
+          python3 trainer/tools/verify_hu_b246_rank30_qsjh4d_exact_lock.py             --parent downloads/original --fresh downloads/new
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          d=pathlib.Path('trainer/data/solver_evidence')
+          p=d/'NL2_MULTIBOARD_B246_R30_QSJH4D_EXP_OOP.index.json'
+          i=json.loads(p.read_text())
+          a=d/'NL2_MULTIBOARD_B246_R30_QSJH4D_EXP_OOP.json.gz'
+          assert i['schema']=='NL2_HU_B246_RANK30_EXACT_B243_GTO_PLUS_REAL_NL2_PARTIAL_LOCK_V1'
+          assert i['original_B243_GTO_source_run_id']==44900567417
+          assert i['immediate_CERT_upgrades']==0
+          assert (i['V38_CERT_MULTIBOARD'],i['V38_APPROX'],i['V38_EST'])==(151,241,0)
+          assert i['new_real_NL2_partial_Rust_source_sha256']==hashlib.sha256(gzip.decompress(a.read_bytes())).hexdigest()
+          assert i['new_Rust_NL2_partial_source_gzip_sha256']==hashlib.sha256(a.read_bytes()).hexdigest()
+          assert i['no_observed_per_hole_card_conditionals'] and i['only_downstream_turn_river_NL2_locked']
+          print('PASS authentic B246 GTO+NL2 source',i['authentic_same_hero_board_paired_source'],
+                'strict combos',i['new_actor_OOP_turn_exact_SPR_eligible_combos'])
+          PY
+      - name: Full V38 151 CERT/241 APPROX 581 exact named GTO-NL2 board locks 133 b50 research + 2475 HU paths
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v38_b206_rank190.json --out nl2-audit/b246-lock-medium.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status_v38_b206_rank190.json'))
+          a=json.load(open('nl2-audit/b246-lock-medium.json'))
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(151,241,0,392)
+          assert s['records']['ln-opfr-t_model-1hmsxaw']['label']=='APPROX'
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(151,241,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],
+             a['aggregate']['board_examples_with_b50_candidate'])==(581,673,133)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU2475/2475")'
+      - name: After full source and independent navigation PASS commit genuine actor-locked subgame only to Draft PR #2
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B246_R30_QSJH4D_EXP_OOP.json.gz                   data/solver_evidence/NL2_MULTIBOARD_B246_R30_QSJH4D_EXP_OOP.index.json                   docs/NL2_HU_B246_RANK30_QSJH4D_TRUE_PARTIAL_NL2_LOCK.md
+          git commit -m 'TASK-HYBRID B246: original B243 GTO SHA, real Rust UTGCO actor-OOP partial NL2 turn lock and 581 source/2475 HU PASS; CERT frozen'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B246-true-original-GTO-NL2-OOP-turn-lock-HU2475
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B246_R30_QSJH4D_EXP_OOP.*
+            trainer/docs/NL2_HU_B246_RANK30_QSJH4D_TRUE_PARTIAL_NL2_LOCK.md
+            trainer/nl2-audit/
+          retention-days: 30
