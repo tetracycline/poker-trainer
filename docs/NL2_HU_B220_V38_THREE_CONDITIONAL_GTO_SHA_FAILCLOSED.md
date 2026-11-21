@@ -1,0 +1,3 @@
+# B220 V38 B212/B213/B214 fail-closed original GTO source and actor gate regression
+
+**151 CERT/241 APPROX/0 EST**. 18 independent incorrect-parent/actor/flop/line/preflop metadata cases rejected before child source certification. No positive GTO source is inferred; B207, B208 and B211 exact named-flop original solve outcomes control whether the child is ever launched. Child scripts compile. Limped preflop 169-class source remains an assumption. NL2 frequencies only pooled street/size marginals versus explicit defaults/unknown. Full 581 named board GTO+NL2 source and 2475/2475 HU audit required before commit. PR2 Draft NEVER MERGE.
