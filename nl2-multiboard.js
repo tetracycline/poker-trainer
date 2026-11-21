@@ -144,6 +144,23 @@ async function selectVersion(){
      el('details').appendChild(link);el('combo-rows').replaceChildren();return;
    }
  }
+  if(chosenModel?.model_id==='ln-iso-lmp_t_model-17z0wyl'&&
+    chosenBoard?.actual_exact_action_line==='x b50 c/x'&&
+    sourceSha(source)?.length===64){
+    const v=status?.B289_rank46_three_true_GTO_NL2_CO_IP_flops?.
+       GTO_and_NL2_source_shas?.find(x=>
+         x.flop===chosenBoard?.flop&&x.turn===chosenBoard?.turn);
+    if(v&&((version==='gto'&&run===v.GTO_run)||
+          (version!=='gto'&&run===v.NL2_run))){
+      setMessage(version==='gto'
+        ?'此精確公牌為原生 100bb Rust GTO，CO-IP 座位與 x b50 c/x 前街完整可達性經 SHA 驗證；LMP 169 類翻前範圍是假設，非實際逐私牌 NL2 觀測。'
+        :'此公牌為真正 Rust NL2 部分轉河牌鎖頻證據，玩家池實測只限街別與下注尺寸邊際；未知來源分母不等於零或逐私牌實測。');
+      const l=document.createElement('a');
+      l.href=sourceUrl(run);l.rel='noopener';l.target='_blank';
+      l.textContent='檢視精確公牌的 GTO 或 NL2 原生 Rust Actions Run '+run;
+      el('details').appendChild(l);el('combo-rows').replaceChildren();return;
+    }
+ }
   if(chosenBoard.source_kind?.includes('OFFICIAL')&&!hasVerifiedBatch){
    const link=document.createElement('a');
    link.href='nl2-cfr.html?spot='+encodeURIComponent(chosenModel.solver_profile)
@@ -265,6 +282,39 @@ el('node').addEventListener('change',selectNode);
 el('all-combos').addEventListener('change',fillCombos);
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v42=d=>{
+ const z=d.B289_rank46_three_true_GTO_NL2_CO_IP_flops;
+ if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V42_B289_RANK46'||
+    d.CERT_MULTIBOARD!==155||d.APPROX!==237||d.EST!==0||d.TOTAL!==392||
+    d.parent_v41_sha256?.length!==64||
+    z?.rank!==46||z?.model_id!=='ln-iso-lmp_t_model-17z0wyl'||
+    z?.flops?.join(',')!=='7s7h2d,8s8h3d,9s6h3d'||
+    z?.exact_line!=='x b50 c/x'||z?.actor!=='CO_IP'||
+    z?.assumed_limped_169class_preflop_not_observed_NL2_private_cards!==true||
+    z?.third_B286_original_GTO_strict_combos!==12||
+    z?.third_B288_actual_NL2_actor_SPR_strict_combos!==12||
+    z?.genuine_GTO_runs?.['7s7h2d']!==44939456600||
+    z?.genuine_GTO_runs?.['8s8h3d']!==44666294821||
+    z?.genuine_GTO_runs?.['9s6h3d']!==44666294821||
+    z?.real_NL2_actor_lock_runs?.['9s6h3d']!==44882669727||
+    z?.real_NL2_actor_lock_runs?.['8s8h3d']!==44666294821||
+    z?.real_NL2_actor_lock_runs?.['7s7h2d']!==44947726457||
+    z?.GTO_and_NL2_source_shas?.length!==3||
+    z?.GTO_and_NL2_source_shas?.some(p=>
+       !['7s7h2d','8s8h3d','9s6h3d'].includes(p.flop)||
+       p.GTO_case_sha?.length!==64||p.NL2_raw_case_sha?.length!==64||
+       p.strict_GTO_actor_combos<=0)!==false||
+    d.records?.['ln-iso-lmp_t_model-17z0wyl']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_t_model-17z0wyl']?.proven_exact_board_count!==3||
+    d.records?.['ln-ipfr-t_model-qpx6tn']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-wpg493']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-vlgh2t']?.label!=='APPROX'||
+    d.no_generic_texture_GTO!==true||d.no_observed_private_card_NL2_rates!==true||
+    d.PR2_remains_draft_never_merge!==true||
+    Object.keys(d.records||{}).length!==392)
+     throw Error('V42 rank46 exact original 3 GTO plus actual CO-IP NL2 Rust SHA evidence gate failed');
+ return d;
+};
  const v41=d=>{
  const z=d.B271_rank61_three_authentic_GTO_NL2_CO_IP_flops;
  if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V41_B271_RANK61'||
@@ -863,7 +913,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v41_b271_rank61.json',{cache:'no-store'}).then(open).then(v41)
+ return fetch('data/nl2_hu_multiboard_status_v42_b289_rank46.json',{cache:'no-store'}).then(open).then(v42)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v41_b271_rank61.json',{cache:'no-store'}).then(open).then(v41))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v40_b265_rank313.json',{cache:'no-store'}).then(open).then(v40))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v39_b247_rank30.json',{cache:'no-store'}).then(open).then(v39))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v38_b206_rank190.json',{cache:'no-store'}).then(open).then(v38))
