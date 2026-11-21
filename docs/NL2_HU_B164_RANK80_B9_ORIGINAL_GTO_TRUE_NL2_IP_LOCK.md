@@ -1,0 +1,3 @@
+# B164 | genuine rank80 actor-IP NL2 partial Rust from B9 SHA-pinned original GTO
+
+Root 100bb, limped CO-BB 169-class preflop distribution ASSUMED, flop 4s4h2d, turn 8s. Actual complete river line b33 c/x x/x, CO hero IP. Original GTO SHA parent run 44740512245, individual job SUCCESS, not re-solved. Fresh Rust actor-IP NL2 partial source run 44861858112; strict legal hero-IP river nodes 2; strict combos 44. Measured pooled NL2 sizing/street marginals and default assumptions are distinguished; no observed per-private-hand frequencies. Rank80 remains APPROX until 3 distinct exact matching GTO+NL2 flops. Official V31 remains 143 CERT/249 APPROX and 557 named CERT board locks. Full navigation 2475/2475, Draft PR#2 NEVER MERGE.
