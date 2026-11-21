@@ -17,6 +17,8 @@ PINS={
  'Js9h6d':('B305',44958564785), # source must be completed and SHA-pinned, strict actor >0 before execution
  'Js9h3d':('B308',44959135103), # pending true GTO; strict source gate before use
  'Js9h2d':('B310',44959162296), # pending true GTO; strict source gate before use
+ '8s7h4d':('B314',44959459086), # LOW texture, source gated after true GTO
+ 'KsJh4d':('B315',44959462500), # KQ_HIGH texture, source gated after true GTO
 }
 def main():
     ap=argparse.ArgumentParser()
