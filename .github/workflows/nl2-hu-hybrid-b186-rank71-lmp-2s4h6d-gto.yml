@@ -2,6 +2,9 @@ name: TASK-HYBRID B186 rank71 LMP genuine low-connected 2s4h6d original full-siz
 # Staged until prior V33 B179 all source and HU Actions PASS.
 # Stage only; activate if the currently running rank71 exact GTO candidate has zero legal OOP river combos.
 on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b186-rank71-lmp-2s4h6d-gto.yml']
   workflow_dispatch:
 permissions:
   contents: write
