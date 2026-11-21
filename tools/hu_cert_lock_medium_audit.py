@@ -48,7 +48,8 @@ def audit(data):
                               'NL2_HU_392_MULTIBOARD_CERT_STATUS_V37_B205_RANK188',
                               'NL2_HU_392_MULTIBOARD_CERT_STATUS_V38_B206_RANK190',
                               'NL2_HU_392_MULTIBOARD_CERT_STATUS_V39_B247_RANK30',
-                              'NL2_HU_392_MULTIBOARD_CERT_STATUS_V40_B265_RANK313')
+                              'NL2_HU_392_MULTIBOARD_CERT_STATUS_V40_B265_RANK313',
+                              'NL2_HU_392_MULTIBOARD_CERT_STATUS_V41_B271_RANK61')
     assert data['CERT_MULTIBOARD']+data['APPROX']==data['TOTAL']==392
     models={};tot=collections.Counter();source_set=set()
     for model_id,m in data['records'].items():
