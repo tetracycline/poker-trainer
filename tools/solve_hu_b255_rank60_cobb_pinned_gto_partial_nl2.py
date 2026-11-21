@@ -14,6 +14,7 @@ PINS={
  '8s8h3d':('B252',44902088039),
  'As9h2d':('B259',44902738797),
  'Js9h5d':('B261',44902827510),
+ 'Js9h6d':('B305',44958564785), # source must be completed and SHA-pinned, strict actor >0 before execution
 }
 def main():
     ap=argparse.ArgumentParser()
