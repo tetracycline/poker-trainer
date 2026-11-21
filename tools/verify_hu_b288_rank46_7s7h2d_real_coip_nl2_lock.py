@@ -52,7 +52,11 @@ def main():
  m=load(manifest);fr=load(root);origjob=load(jobfile)
  assert m['schema']=='NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1'
  assert (m['spot'],m['flop'],m['version'])==(SPOT,FLOP,'gto')
- assert m['selected_lines']==['x b50 c'] and m['selected_turn_lines']==['x x']
+ assert m['selected_lines']==['x b50 c'] and TURN in m['turns']
+ assert any(c['line']=='x b50 c' and c['turn']==TURN and c['gto_gap_pct']<=.5 for c in m['cases'])
+ # Original full-flop GTO may solve multiple distinct turn histories. The
+ # B288 downstream lock is explicitly x x; verify its true actor/history on
+ # the SHA-identical GTO root instead of falsely requiring singleton turns.
  assert m['turns']==[TURN]
  assert m['preflop_ranges']['source']=='ASSUMED_EXPLICIT_169CLASS'
  assert (m['root_pot_bb'],m['root_remaining_bb'])==(2.5,99.)
