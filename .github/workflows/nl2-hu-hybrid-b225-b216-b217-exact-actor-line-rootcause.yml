@@ -1,0 +1,144 @@
+name: TASK-HYBRID B225 diagnose B216/B217 real GTO actor river-line reach, full V38 HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b225-b216-b217-exact-actor-line-rootcause.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  independent-original-node-diagnostics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Inspect only unmodified SHA-verified B216 B217 GTO nodes, not infer missing NL2 locks or add CERT
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import collections,gzip,hashlib,json,pathlib
+          d=pathlib.Path('data')
+          sha=lambda b:hashlib.sha256(b).hexdigest()
+          cases=[]
+          for tag,rank,flop,actor,line,runid in [
+            ('B216',71,'9s8h4d',0,'b50 c/x b50 c/',44884042851),
+            ('B217',313,'As9h4d',1,'b75 r c/x b50 c/x',44884054924)]:
+            p=next(d.glob(f'nl2_hu_{tag.lower()}_rank{rank}_lmp_*_gto_parent_pin.json'))
+            i=next((d/'solver_evidence').glob(f'NL2_MULTIBOARD_{tag}_*.index.json'))
+            z=i.with_name(i.name[:-len('.index.json')]+'.json.gz')
+            pin=json.loads(p.read_text());idx=json.loads(i.read_text())
+            packed=z.read_bytes();raw=gzip.decompress(packed)
+            assert sha(packed)==idx['gzip_sha256'] and sha(raw)==idx['source_sha256']
+            assert (pin['source_run_id'],idx['run_id'])==(runid,runid)
+            assert (pin['target_rank'],pin['flop'])==(rank,flop)
+            assert idx['gto_cases']==1 and idx['locked_cases']==0 and idx['verified_cases']==1
+            src=json.loads(raw)
+            assert src['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+            assert src['source_run_id']==runid and not src['errors']
+            assert len(src['artifacts'])==1 and len(src['artifacts'][0]['cases'])==1
+            original=src['artifacts'][0]['cases'][0]
+            assert original['nodes']
+            nodes=original['nodes']
+            groups=collections.defaultdict(lambda:collections.Counter())
+            for n in nodes:
+              name=str(n.get('exact_node_line'))
+              seat=str(n.get('acting_seat'))
+              groups[name][seat]+=1
+            strict=lambda n:int(n.get('strictly_reachable_combos') or 0)
+            matches=[n for n in nodes if n.get('exact_node_line')==line]
+            target=[n for n in matches if n.get('acting_seat')==actor]
+            strict_targets=[n for n in target if strict(n)>0]
+            assert len(strict_targets)==0, 'B216/B217 had positive matching actor node; full rerun evidence must be reconciled before CERT'
+            assert sum(strict(n) for n in strict_targets)==0
+            assert idx[f'exact_target_actor_{"OOP" if actor==0 else "IP"}_strict_combos']==0
+            candidates=[n for n in nodes if line.split('/')[0] in str(n.get('exact_node_line'))]
+            candidate_sorted=sorted(candidates,key=strict,reverse=True)
+            previews=[dict(line=n.get('exact_node_line'),acting_seat=n.get('acting_seat'),
+              strict_combos=strict(n),board=n.get('board'),node_keys=sorted(n.keys())[:24])
+              for n in candidate_sorted[:20]]
+            report=dict(batch=tag,rank=rank,flop=flop,target_line=line,target_actor=actor,
+              real_original_GTO_source_run=runid,source_sha256=idx['source_sha256'],
+              genuine_rust_cases=idx['gto_cases'],
+              total_case_nodes=len(nodes),
+              total_exact_matching_line_nodes=len(matches),
+              matching_actor_nodes=len(target),strict_eligible_actor_nodes=len(strict_targets),
+              positive_combos=0,hero_lock_sources=idx['locked_cases'],
+              canonical_exact_line_counts={k:dict(v) for k,v in sorted(groups.items())},
+              target_history_prefix_previews=previews,
+              pin_index_unmodified=True,
+              certified_model=False,observed_hole_card_NL2_conditional=False)
+            cases.append(report)
+          status=d/'nl2_hu_multiboard_status_v38_b206_rank190.json'
+          s=json.loads(status.read_text())
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(151,241,0,392)
+          obj=dict(schema='NL2_HU_B225_B216_B217_TRUE_RUST_GTO_NODE_REACH_DIAG_V1',
+            V38_status_sha256=sha(status.read_bytes()),
+            checked_cases=cases,cert_multiboard=151,approx=241,est=0,
+            no_false_board_certifications=True,PR2_Draft_NEVER_MERGE=True)
+          q=d/'nl2_hu_b225_b216_b217_original_GTO_node_diagnostic.json'
+          q.write_text(json.dumps(obj,ensure_ascii=False,indent=2)+'\n')
+          note=['# B225 B216/B217 authentic GTO root-cause node-line diagnostics','',
+            'Only original immutable SHA-checked Rust GTO evidence is examined. '
+            'This does not solve an NL2 locked child or certify any additional model.',
+            '']
+          for r in cases:
+            note += [f"## {r['batch']}: rank {r['rank']} flop {r['flop']}",
+              f"Target line: `{r['target_line']}`, acting seat: {r['target_actor']}.",
+              f"Total nodes: {r['total_case_nodes']}; exact line nodes: {r['total_exact_matching_line_nodes']}; "
+              f"correct actor nodes: {r['matching_actor_nodes']}; strictly eligible actor nodes: {r['strict_eligible_actor_nodes']}.",
+              'No paired NL2 hero lock. No CERT promotion. See JSON for full exact-line/actor node counts.','']
+          note += ['V38 remains 151 CERT /241 APPROX/0 EST; 581 true boards, 673 partial locks, 133 exact-board b50 research candidates.',
+            'The assumed LMP 169-class preflop source and no observed hole-card conditional rates remain explicit.',
+            'Complete 2475 HU navigation and all existing source audits must pass before commit.',
+            'PR2 must remain Draft. NEVER MERGE.']
+          pathlib.Path('docs/NL2_HU_B225_B216_B217_RUST_GTO_ACTOR_LINE_DIAG.md').write_text('\n'.join(note)+'\n')
+          print('PASS B225 original immutable GTO diagnostic',json.dumps([{k:r[k] for k in
+            ('batch','rank','total_case_nodes','total_exact_matching_line_nodes','matching_actor_nodes','strict_eligible_actor_nodes')}
+            for r in cases]))
+          PY
+      - name: Full source provenance for all 581 real CERT boards and all 2475 river paths
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v38_b206_rank190.json --out nl2-audit/b225-lock-medium.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('nl2-audit/b225-lock-medium.json'))
+          assert (x['cert_multiboard'],x['approx'],x['EST'])==(151,241,0)
+          assert (x['aggregate']['named_board_proofs'],x['aggregate']['paired_hero_locked_source_variants'],
+             x['aggregate']['board_examples_with_b50_candidate'])==(581,673,133)
+          assert x['not_generalized_handclass_GTO'] and x['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU2475")'
+      - name: Commit ONLY SHA verified actor-line diagnostic after complete source and HU audit PASS; draft no merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b225_b216_b217_original_GTO_node_diagnostic.json docs/NL2_HU_B225_B216_B217_RUST_GTO_ACTOR_LINE_DIAG.md
+          git commit -m 'TASK-HYBRID B225: SHA-checked B216/B217 original Rust actor/line reach diagnostics, 581 lock and HU2475 PASS'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-B225-SHA-checked-real-GTO-node-actor-line-HU2475
+          path: |
+            data/nl2_hu_b225_b216_b217_original_GTO_node_diagnostic.json
+            docs/NL2_HU_B225_B216_B217_RUST_GTO_ACTOR_LINE_DIAG.md
+            nl2-audit/
+          retention-days: 30
