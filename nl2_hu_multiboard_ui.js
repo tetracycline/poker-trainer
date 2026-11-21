@@ -105,6 +105,33 @@ function schedule(){if(!pending){pending=true;queueMicrotask(render)}}
 new MutationObserver(schedule).observe(app,{childList:true,subtree:true});
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v39=d=>{
+ if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V39_B247_RANK30'||
+    d.CERT_MULTIBOARD!==152||d.APPROX!==240||d.EST!==0||d.TOTAL!==392||
+    d.parent_v38_sha256?.length!==64||
+    d.B247_rank30_three_genuine_GTO_NL2_UTG_OOP_flops?.rank!==30||
+    d.B247_rank30_three_genuine_GTO_NL2_UTG_OOP_flops?.model_id!=='ln-opfr-t_model-1hmsxaw'||
+    d.B247_rank30_three_genuine_GTO_NL2_UTG_OOP_flops?.flops?.join(',')!=='Js9h4d,KsQh4d,QsJh4d'||
+    d.B247_rank30_three_genuine_GTO_NL2_UTG_OOP_flops?.exact_line!=='b50 c/'||
+    d.B247_rank30_three_genuine_GTO_NL2_UTG_OOP_flops?.actor!=='UTG_OOP'||
+    d.B247_rank30_three_genuine_GTO_NL2_UTG_OOP_flops?.original_GTO_runs?.KsQh4d!==44894369547||
+    d.B247_rank30_three_genuine_GTO_NL2_UTG_OOP_flops?.original_GTO_runs?.Js9h4d!==44895186652||
+    d.B247_rank30_three_genuine_GTO_NL2_UTG_OOP_flops?.original_GTO_runs?.QsJh4d!==44900567417||
+    d.B247_rank30_three_genuine_GTO_NL2_UTG_OOP_flops?.real_NL2_actor_OOP_lock_runs?.KsQh4d!==44895095589||
+    d.B247_rank30_three_genuine_GTO_NL2_UTG_OOP_flops?.real_NL2_actor_OOP_lock_runs?.Js9h4d!==44900532333||
+    d.B247_rank30_three_genuine_GTO_NL2_UTG_OOP_flops?.real_NL2_actor_OOP_lock_runs?.QsJh4d!==44900938891||
+    d.B247_rank30_three_genuine_GTO_NL2_UTG_OOP_flops?.preflop_CFR_pinned_not_observed_NL2_private_hand!==true||
+    d.records?.['ln-opfr-t_model-1hmsxaw']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-opfr-t_model-1hmsxaw']?.proven_exact_board_count!==3||
+    d.records?.['ln-ipc-r_model-dfikbd']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-vlgh2t']?.label!=='APPROX'||
+    d.records?.['ln-iso-lmp_r_model-wpg493']?.label!=='APPROX'||
+    d.no_generic_texture_GTO!==true||d.no_observed_private_card_NL2_rates!==true||
+    d.PR2_remains_draft_never_merge!==true||
+    Object.keys(d.records||{}).length!==392)
+    throw Error('V39 rank30 exact three original GTO and real actor-OOP NL2 source gate failed');
+ return d;
+};
  const v38=d=>{
  if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V38_B206_RANK190'||
     d.CERT_MULTIBOARD!==151||d.APPROX!==241||d.EST!==0||d.TOTAL!==392||
@@ -621,7 +648,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v38_b206_rank190.json',{cache:'no-store'}).then(open).then(v38)
+ return fetch('data/nl2_hu_multiboard_status_v39_b247_rank30.json',{cache:'no-store'}).then(open).then(v39)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v38_b206_rank190.json',{cache:'no-store'}).then(open).then(v38))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v37_b205_rank188.json',{cache:'no-store'}).then(open).then(v37))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v36_b201_rank159.json',{cache:'no-store'}).then(open).then(v36))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v35_b193_rank201.json',{cache:'no-store'}).then(open).then(v35))
