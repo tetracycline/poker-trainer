@@ -30,13 +30,13 @@ jobs:
           d=pathlib.Path('data')
           file=d/'nl2_hu_b297_v42_rank71_B294_original_GTO_SHA_negative_gate.json'
           a=json.loads(file.read_text())
-          assert a['schema']=='NL2_HU_B297_RANK71_B290_B293_GTO_OOP_SHA_RIVER_ACTOR_57_NEGATIVES_V1'
+          assert a['schema']=='NL2_HU_B297_RANK71_B290_B293_B296_GTO_OOP_SHA_RIVER_ACTOR_57_NEGATIVES_V1'
           assert (a['CERT_MULTIBOARD'],a['APPROX'],a['EST'],a['TOTAL'])==(155,237,0,392)
           assert a['V42_status_sha256']==hashlib.sha256((d/'nl2_hu_multiboard_status_v42_b289_rank46.json').read_bytes()).hexdigest()
           assert a['source_authorizer_sha256']==hashlib.sha256(pathlib.Path('tools/verify_hu_multiboard_100bb.py').read_bytes()).hexdigest()
           assert a['downstream_NL2_source_solver_sha256']==hashlib.sha256(pathlib.Path('tools/solve_hu_b294_rank71_new_original_gto_nl2_oop.py').read_bytes()).hexdigest()
           assert a['exact_future_source_flops_and_runs']=={
-            'As7h3d':['B290',44948757190],'QsJh4d':['B293',44949223231],'Js8h3d':['B296',44949515514]}
+            'As7h3d':['B290',44948738190],'QsJh4d':['B293',44949223231],'Js8h3d':['B296',44949515514]}
           assert a['adversarial_original_GTO_metadata_cases']==57
           assert a['all_adversarial_source_cases_failclosed']
           assert len(a['negative_test_results'])==57

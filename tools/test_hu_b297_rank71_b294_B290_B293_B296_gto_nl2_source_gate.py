@@ -14,7 +14,7 @@ SOLVER=pathlib.Path('tools/solve_hu_b294_rank71_new_original_gto_nl2_oop.py')
 VERIFIER=pathlib.Path('tools/verify_hu_multiboard_100bb.py')
 OUT=D/'nl2_hu_b297_v42_rank71_B294_three_GTO_SHA_negative_gate.json'
 MD=DOC/'NL2_HU_B297_R71_B290_B293_B296_GTO_SHA_OOP_FAILCLOSED.md'
-SPECS={'As7h3d':('B290',44948757190),'QsJh4d':('B293',44949223231)}
+SPECS={'As7h3d':('B290',44948738190),'QsJh4d':('B293',44949223231),'Js8h3d':('B296',44949515514)}
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def main():
     verifier=inspect.getsource(authorized_b294_rank71_new_exact_GTO_OOP_child)
@@ -114,7 +114,7 @@ def main():
         readiness[flop]=('AUTHENTIC_POSITIVE_GTO_PARENT_READY_FOR_SEPARATE_REAL_NL2_OOP_LOCK'
             if authorized_b294_rank71_new_exact_GTO_OOP_child(legit)
             else 'NOT_AUTHORIZED_SHA_ACTOR_LINE_OR_SPR_MISMATCH')
-    result=dict(schema='NL2_HU_B297_RANK71_B290_B293_GTO_OOP_SHA_RIVER_ACTOR_57_NEGATIVES_V1',
+    result=dict(schema='NL2_HU_B297_RANK71_B290_B293_B296_GTO_OOP_SHA_RIVER_ACTOR_57_NEGATIVES_V1',
         V42_status_sha256=sha(STATUS),
         source_authorizer_sha256=sha(VERIFIER),
         downstream_NL2_source_solver_sha256=sha(SOLVER),
