@@ -911,6 +911,63 @@ def authorized_b213_rank313_exact_B208_gto_parent(m):
     except (OSError,KeyError,TypeError,ValueError,EOFError):
         return False
 
+def authorized_b263_rank313_exact_B250_gto_parent(m):
+    """Only original independently successful B250 full GTO and its independently
+    SHA-audited source/index can authorize true downstream exp_ip NL2.
+    The original LMP 169-class preflop is ASSUMED. Zero legal GTO
+    actor-IP river combos fails closed; never manufacture a texture CERT.
+    """
+    if not (m.get('spot')=='LMP_CO_BB' and m.get('version')=='exp_ip' and
+            m.get('flop')=='6s5h3d' and
+            m.get('selected_lines')==['b75 r c'] and
+            m.get('selected_turn_lines')==['x b50 c'] and
+            m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK' and
+            m.get('flop_line_policy')=='oop-b75raisecall' and
+            m.get('turn_line_policy')=='xb50only' and
+            m.get('original_full_GTO_flop_byte_identical_not_recomputed') is True and
+            m.get('preflop_ranges',{}).get('source')=='ASSUMED_EXPLICIT_169CLASS' and
+            m.get('gto_parent_source_run_id')==44901784001):
+        return False
+    d=pathlib.Path(__file__).resolve().parents[1]/'data'
+    pinfile=d/'nl2_hu_b250_rank313_lmp_6s5h3d_gto_parent_pin.json'
+    indexfile=d/'solver_evidence/NL2_MULTIBOARD_B250_R313_6S5H3D_GTO.index.json'
+    sourcegz=d/'solver_evidence/NL2_MULTIBOARD_B250_R313_6S5H3D_GTO.json.gz'
+    try:
+        p=json.loads(pinfile.read_text());i=json.loads(indexfile.read_text())
+        import gzip
+        raw=gzip.decompress(sourcegz.read_bytes())
+        return (
+          p['schema']=='NL2_HU_B250_RANK313_LMP_6S5H3D_GTO_PARENT_PIN_V1' and
+          p['source_run_id']==44901784001 and
+          p['source_gto_job_id'] is None and
+          (p['spot'],p['flop'],p['flop_line'],p['turn_line'])==(
+             'LMP_CO_BB','6s5h3d','b75 r c','x b50 c') and
+          p['target_rank']==313 and p['model_id']=='ln-iso-lmp_r_model-wpg493' and
+          p['original_full_100bb_lmp_gto_not_recomputed'] is True and
+          p['observed_preflop_ranges'] is False and
+          p['assumed_limped_169class'] is True and
+          p['target_exact_actor_IP_river_nodes']>0 and
+          p['target_exact_actor_IP_strict_combos']>0 and
+          p['no_generic_model_certification'] is True and
+          i['schema']=='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1' and
+          i['batch']=='B250_R313_6S5H3D_GTO' and
+          (i['run_id'],i['gto_cases'],i['locked_cases'],i['verified_cases'])==(
+             44901784001,1,0,1) and
+          i['exact_target_actor_IP_river_nodes']>0 and
+          i['exact_target_actor_IP_strict_combos']>0 and
+          i['no_generic_model_certification'] is True and
+          i['source_sha256']==hashlib.sha256(raw).hexdigest() and
+          i['gzip_sha256']==sha(sourcegz) and
+          p['original_gto_root_sha256']==m.get('gto_parent_source_sha256') and
+          p['original_gto_job_sha256']==m.get('flop_root_jobfile_sha256') and
+          p['original_gto_manifest_sha256']==m.get('gto_parent_source_manifest_sha256') and
+          i['original_parent_GTO_root_SHA256']==p['original_gto_root_sha256'] and
+          i['original_parent_GTO_job_SHA256']==p['original_gto_job_sha256'] and
+          i['original_parent_GTO_manifest_SHA256']==p['original_gto_manifest_sha256'] and
+          m.get('original_B263_parent_pin_sha256')==sha(pinfile))
+    except (OSError,KeyError,TypeError,ValueError,EOFError):
+        return False
+
 def authorized_b214_rank46_exact_B211_gto_parent(m):
     """Only original individually successful B211 full GTO and its independently
     SHA-audited source/index can authorize true downstream exp_oop NL2.
@@ -1468,6 +1525,8 @@ def verify(root,source_pin,run_id):
                     if turn_policy=='xb50only' and not (
                         # B213 only original positive B208 GTO 8s7h4d
                         # SHA, rank313, exact actor and source line.
+                        authorized_b263_rank313_exact_B250_gto_parent(m)
+                        or
                         authorized_b213_rank313_exact_B208_gto_parent(m)
                         or
                         # B212 only original positive B207 GTO 6s4h2d
