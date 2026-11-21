@@ -1,0 +1,151 @@
+name: TASK-HYBRID B311 rank60 Js9h4d/Ts historical B2 true GTO+NL2 actor IP source SHA + full V42/HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b311-r60-original-b2-historic-source-proof.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  historic-source-verify-before-third-board:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Independently SHA audit authentic original B2 partial source and EXACT rank60 GTO plus actual CO-IP NL2 actor 40/70 reach, never reuse failed unrelated SB3 GTO
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json,gzip,hashlib
+          d=pathlib.Path('data')
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          ld=lambda p:json.loads(p.read_text())
+          oldpath=d/'solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json.gz'
+          ix=ld(d/'solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.index.json')
+          assert (ix['run_id'],ix['actual_spot_flop_version_jobs'],ix['verified_cases'],ix['gto_cases'],ix['locked_cases'])==(44666290556,17,231,65,166)
+          assert ix['gzip_sha256']==sha(oldpath)
+          raw=gzip.decompress(oldpath.read_bytes())
+          assert ix['source_sha256']==hashlib.sha256(raw).hexdigest()
+          assert ix['failed_source_job']=='SB3_BTN/8s8h3d/GTO excluded; not counted'
+          src=json.loads(raw)
+          assert src['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert src['source_run_id']==44666290556 and not src['errors']
+          hist=ld(d/'nl2_hu_b175_v32_248_exact_GTO_source_provenance.json')
+          assert hist['schema']=='NL2_HU_B175_V32_ALL_248_GENUINE_GTO_RUN_ACTOR_TURN_SHA_PROVENANCE_V1'
+          ranks=[x for x in hist['rows'] if x['rank']==60]
+          assert len(ranks)==1
+          h=ranks[0]
+          assert (h['model_id'],h['hero_seat'],h['model_SPR'])==('ln-ipfr-t_model-hxdit',1,8.614)
+          assert h['distinct_GTO_plus_NL2_hero_flops']==['Js9h4d']
+          proof=[x for x in h['exact_authentic_gto_source_proofs'] if x['flop']=='Js9h4d' and x['turn']=='Ts' and x['exact_line']=='x b50 c/x']
+          assert len(proof)==1
+          pp=proof[0]
+          assert (pp['source_run'],pp['strict_legal_combos'],pp['actor'],pp['true_NL2_actor_locked'])==(44666290556,20,1,True)
+          assert pp['paired_lock_runs']==[44666290556]
+          def find(version):
+              cands=[]
+              for art in src['artifacts']:
+                  if (art['spot'],art['flop'],art['version'])!=('CO_BB','Js9h4d',version):continue
+                  assert not art.get('errors')
+                  for case in art['cases']:
+                      if case['flop_line']=='x b50 c' and case['turn']=='Ts':
+                          cands.append(case)
+              assert len(cands)==1,('source case ambiguous or missing',version,len(cands))
+              return cands[0]
+          gto=find('gto');nl2=find('exp_ip')
+          assert gto['run_id']==nl2['run_id']==44666290556
+          assert gto['source_sha256']==pp['source_sha']
+          assert 0<=gto['gto_exploitability_pct']<=.5
+          assert gto['source_sha256']!=nl2['source_sha256']
+          def legal(c):
+              return [n for n in c['nodes'] if n['exact_node_line']=='x b50 c/x'
+                and n['acting_seat']==1 and len(n['public_board'])==8
+                and n['strictly_reachable_combos']>0
+                and abs(n['node_spr']-8.614)/8.614<=.05]
+          gnodes,lnodes=legal(gto),legal(nl2)
+          assert len(gnodes)==1 and sum(n['strictly_reachable_combos'] for n in gnodes)==20
+          assert lnodes and sum(n['strictly_reachable_combos'] for n in lnodes)>0
+          assert gnodes[0]['public_board'].endswith('Ts') and lnodes[0]['public_board'].endswith('Ts')
+          assert gto['flop_root_pot_bb']==5.5
+          assert gto['flop_root_stack_bb']==97.5
+          snap=dict(schema='NL2_HU_B311_RANK60_HISTORIC_B2_TRUE_GTO_PLUS_ACTOR_NL2_V1',
+             rank=60,spot='CO_BB',model_id='ln-ipfr-t_model-hxdit',flop='Js9h4d',turn='Ts',
+             exact_line='x b50 c/x',acting_seat=1,model_SPR=8.614,
+             original_run=44666290556,original_gto_case_sha256=gto['source_sha256'],
+             original_gto_exploitability_pct=gto['gto_exploitability_pct'],
+             original_gto_strict_actor_IP_combos=20,
+             historical_authentic_EXP_actor_run=44666290556,
+             actual_original_NL2_partial_actor_case_sha256=nl2['source_sha256'],
+             actual_NL2_actor_matched_SPR_40_70_combos=sum(n['strictly_reachable_combos'] for n in lnodes),
+             paired_original_exact_flop_actor_SPR_source=True,
+             original_B2_partial_archive_sha256=sha(oldpath),
+             original_B2_partial_raw_sha256=ix['source_sha256'],
+             historical_B175_provenance_sha256=sha(d/'nl2_hu_b175_v32_248_exact_GTO_source_provenance.json'),
+             failed_unrelated_SB3_source_not_used=True,
+             frozen_preflop_poker_solver_CFR_not_NL2_private_combo_empirical_data=True,
+             NL2_pool_lock_is_partial_not_full_flop_locked=True,
+             current_CERT_MULTIBOARD=155,current_APPROX=237,EST=0,TOTAL=392,
+             new_certification_from_this_provenance_audit=0,
+             two_other_distinct_flops_requires_independent_positive_GTO_and_real_lock=True,
+             PR2_Draft_NEVER_MERGE=True)
+          (d/'nl2_hu_b311_rank60_historic_B2_real_coip_actor_source.json').write_text(json.dumps(snap,indent=2,ensure_ascii=False)+'\n')
+          print('PASS historic B2 original authentic GTO vs real actor IP partial NL2, GTO strict 20, real NL2 matched',snap['actual_NL2_actor_matched_SPR_40_70_combos'])
+          PY
+      - name: Independently audit existing V42 593 authentic source + 685 NL2 actor locks +134 b50 research-only and all HU2475
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v42_b289_rank46.json --out nl2-audit/b311-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b311-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(155,237,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],a['aggregate']['board_examples_with_b50_candidate'])==(593,685,134)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach.json.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B311 HU2475")'
+      - name: Commit only actually authenticated B2 original rank60 GTO and NL2 exact actor SHA after full V42/HU2475 PASS, NEVER MERGE
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json
+          p=pathlib.Path('data/nl2_hu_b311_rank60_historic_B2_real_coip_actor_source.json')
+          z=json.loads(p.read_text())
+          assert z['paired_original_exact_flop_actor_SPR_source'] and z['actual_NL2_actor_matched_SPR_40_70_combos']>0
+          z['V42_593_and_HU2475_Independent_audit_PASS']=True
+          p.write_text(json.dumps(z,indent=2,ensure_ascii=False)+'\n')
+          pathlib.Path('docs/NL2_HU_B311_R60_B2_HISTORIC_ACTOR_SHA_PROOF.md').write_text(
+              '# B311 rank60 Js9h4d/Ts original authentic B2 GTO plus real NL2 IP partial-lock source\n\n'
+              'B2 partial genuine Rust Actions 44666290556 original CO_BB GTO and separate NL2 IP partially locked subgame are both independently archived and SHA verified; failed unrelated SB3_BTN source excluded. GTO strict CO-IP combos 20, real NL2 strict actor SPR matched '+str(z['actual_NL2_actor_matched_SPR_40_70_combos'])+
+              '. Correct x b50 c/x action, board/turn, 100bb 5.5bb root, SPR8.614 within 5%; GTO convergence <=0.5%. No observed private-card conditional NL2 actions inferred from pooled marginals.\n\n'
+              'No automatic texture or model CERT promotion. V42 still 155 CERT /237 APPROX, 593 authentic board/685 actor lock and 134 b50 research-only, full HU2475/2475 audit. PR2 DRAFT never merge.\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b311_rank60_historic_B2_real_coip_actor_source.json docs/NL2_HU_B311_R60_B2_HISTORIC_ACTOR_SHA_PROOF.md
+          git commit -m 'TASK-HYBRID B311: original B2 rank60 Js9h4d GTO strict20 and real NL2 actor SHA/SPR authenticated, full593/HU2475 PASS, no false CERT'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B311-rank60-historic-B2-original-GTO-NL2-actor-SHA-HU2475
+          path: |
+            data/nl2_hu_b311_rank60_historic_B2_real_coip_actor_source.json
+            docs/NL2_HU_B311_R60_B2_HISTORIC_ACTOR_SHA_PROOF.md
+            nl2-audit/
+          retention-days: 30
