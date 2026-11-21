@@ -1,0 +1,3 @@
+# B210 rank46 original B3 9s6h3d/Ts true actor CO-IP NL2 source
+
+Full original B3 100bb source from run 44666294821; exact turn CO-IP line x b50 c/x and positive eligible combos only if verified: 1. Genuine fresh Rust child SHA and 169-class assumed limped preflop weights pinned. Villain private-card conditional NL2 behavior is NOT directly measured: NL2 street/size marginal data vs explicit defaults must remain separately labeled. No 3-flop CERT yet: rank46 still missing a third distinct exact GTO+NL2 named flop. 151 CERT /241 APPROX, 581 authentic board sources; full HU2475 audit. PR2 Draft NEVER MERGE.
