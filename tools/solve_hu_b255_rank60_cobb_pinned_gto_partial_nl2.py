@@ -15,6 +15,8 @@ PINS={
  'As9h2d':('B259',44902738797),
  'Js9h5d':('B261',44902827510),
  'Js9h6d':('B305',44958564785), # source must be completed and SHA-pinned, strict actor >0 before execution
+ 'Js9h3d':('B308',44959135103), # pending true GTO; strict source gate before use
+ 'Js9h2d':('B310',44959162296), # pending true GTO; strict source gate before use
 }
 def main():
     ap=argparse.ArgumentParser()
