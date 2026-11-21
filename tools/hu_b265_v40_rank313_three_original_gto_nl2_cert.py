@@ -130,10 +130,14 @@ def main():
     any(v['version']=='exp_ip' for v in b['nl2_locked_variants']) for b in boards)
  third=next(b for b in boards if b['flop']=='6s5h3d')
  assert third['turn']=='Qs'
+ garchive=json.loads(gzip.decompress(GTO.read_bytes()))
+ gto_case=garchive['artifacts'][0]['cases'][0]
  assert (third['source_run_id'],third['source_sha256'])==(
-     gi['run_id'],gi['source_sha256']) or third['source_run_id']==gi['run_id']
+     gi['run_id'],gto_case['source_sha256'])
  assert third['assumed_preflop_ranges'] is True
- assert any(l['run_id']==li['run_id'] and l['sha256']==li['source_sha256']
+ lockarchive=json.loads(gzip.decompress(LOCK.read_bytes()))
+ locked_case=lockarchive['artifacts'][0]['cases'][0]
+ assert any(l['run_id']==li['run_id'] and l['sha256']==locked_case['source_sha256']
    for l in third['nl2_locked_variants'])
  assert third['strict_full_street_combo_reachable']>0
  for b in boards:
