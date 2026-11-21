@@ -1,0 +1,169 @@
+name: TASK-HYBRID B288 rank46 B286 GTO 12 strict combos true Rust NL2 CO-IP 7s7h2d/3s, 590 source HU2475 (max29m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b288-r46-7s7h2d-authentic-nl2-coip.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  genuine-B286-GTO-parent-and-B288-Rust-NL2-COIP-child:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Confirm original B286 full Rust GTO source successful, 12 COIP strict combos, byte-pinned parent, LMP assumed 169 class
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_b282_rank46_new_original_gto_partial_nl2_ip.py trainer/tools/verify_hu_b288_rank46_7s7h2d_real_coip_nl2_lock.py
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/44939456600" --jq .conclusion)" = success
+          python3 - <<'PY'
+          import json,gzip,hashlib,pathlib
+          d=pathlib.Path('trainer/data')
+          p=json.loads((d/'nl2_hu_b286_rank46_lmp_7s7h2d_gto_parent_pin.json').read_text())
+          i=json.loads((d/'solver_evidence/NL2_MULTIBOARD_B286_R46_7S7H2D_GTO.index.json').read_text())
+          a=d/'solver_evidence/NL2_MULTIBOARD_B286_R46_7S7H2D_GTO.json.gz'
+          assert (p['source_run_id'],i['run_id'])==(44939456600,44939456600)
+          assert (p['target_rank'],p['model_id'])==(46,'ln-iso-lmp_t_model-17z0wyl')
+          assert (p['spot'],p['flop'],p['turn'],p['flop_line'],p['turn_line'])==('LMP_CO_BB','7s7h2d','3s','x b50 c','x x')
+          assert p['target_exact_actor_IP_turn_nodes']==1 and p['target_exact_actor_IP_strict_combos']==12
+          assert i['exact_target_actor_IP_strict_combos']==12
+          assert p['assumed_limped_169class'] is True and not p['observed_preflop_ranges']
+          assert i['source_sha256']==hashlib.sha256(gzip.decompress(a.read_bytes())).hexdigest()
+          assert i['gzip_sha256']==hashlib.sha256(a.read_bytes()).hexdigest()
+          assert (i['original_parent_GTO_root_SHA256'],i['original_parent_GTO_job_SHA256'],i['original_parent_GTO_manifest_SHA256'])==(
+            p['original_gto_root_sha256'],p['original_gto_job_sha256'],p['original_gto_manifest_sha256'])
+          print('PASS B288 original source GTO 12 actor-IP x b50 c/x combos SHA frozen')
+          PY
+          mkdir -p gto_parent
+          gh run download 44939456600 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B286_R46_LMP_7S7H2D-LMP_CO_BB-gto-7s7h2d' --dir gto_parent
+          test -s gto_parent/evidence/LMP_CO_BB-gto-7s7h2d.json
+          test -s gto_parent/solver/postflop/out/LMP_CO_BB/gto/7s7h2d_multiboard.json
+          test -s gto_parent/solver/postflop/out/LMP_CO_BB/gto/7s7h2d_multiboard.job.json
+      - name: Compile exact pinned original Rust backend and explicit NL2 pool marginal / assumed fallback source locks
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Genuine original Rust NL2 partial COIP lock x b50 c/x using byte-identical B286 100bb GTO flop root
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-engine-pin.txt
+          python3 trainer/tools/solve_hu_b282_rank46_new_original_gto_partial_nl2_ip.py             --flop 7s7h2d --solver-root solver --gto-artifact-root gto_parent             --manifest evidence/LMP_CO_BB-exp_ip-7s7h2d.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B288_R46_7S7H2D-LMP_CO_BB-exp_ip-7s7h2d
+          path: |
+            evidence/
+            solver/postflop/out/LMP_CO_BB/exp_ip/7s7h2d_xb50c_3s.json
+            solver/postflop/out/LMP_CO_BB/exp_ip/7s7h2d_xb50c_3s.job.json
+          retention-days: 30
+          if-no-files-found: warn
+  independent-original-GTO-and-actual-NL2-strict-HU-source-commit:
+    needs: genuine-B286-GTO-parent-and-B288-Rust-NL2-COIP-child
+    if: ${{ needs.genuine-B286-GTO-parent-and-B288-Rust-NL2-COIP-child.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Fetch independently complete original B286 Rust GTO + actual fresh B288 Rust NL2 COIP source (never substitute older EXP)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads/parent downloads/fresh
+          gh run download 44939456600 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B286_R46_LMP_7S7H2D-LMP_CO_BB-gto-7s7h2d' --dir downloads/parent
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B288_R46_7S7H2D-LMP_CO_BB-exp_ip-7s7h2d' --dir downloads/fresh
+          test -s downloads/parent/solver/postflop/out/LMP_CO_BB/gto/7s7h2d_multiboard.json
+          test -s downloads/fresh/evidence/LMP_CO_BB-exp_ip-7s7h2d.json
+          test -s downloads/fresh/solver/postflop/out/LMP_CO_BB/exp_ip/7s7h2d_xb50c_3s.json
+          test -s downloads/fresh/solver/postflop/out/LMP_CO_BB/exp_ip/7s7h2d_xb50c_3s.job.json
+      - name: Recompute original 100bb GTO parent SHA and fresh true Rust NL2 IP partial lock strict legal combo 40pct/70pct, actor, SPR and provenance independently
+        run: |
+          set -euo pipefail
+          python3 trainer/tools/verify_hu_b288_rank46_7s7h2d_real_coip_nl2_lock.py --parent downloads/parent --fresh downloads/fresh
+          python3 - <<'PY'
+          import json,pathlib,gzip,hashlib
+          d=pathlib.Path('trainer/data/solver_evidence')
+          p=d/'NL2_MULTIBOARD_B288_R46_7S7H2D_EXP_IP.index.json'
+          x=json.loads(p.read_text())
+          a=d/'NL2_MULTIBOARD_B288_R46_7S7H2D_EXP_IP.json.gz'
+          assert x['schema']=='NL2_HU_B288_R46_AUTHENTIC_ORIGINAL_B286_GTO_PLUS_RUST_NL2_COIP_V1'
+          assert (x['original_GTO_source_run'],x['original_100bb_GTO_strict_actor_IP_combos'])==(44939456600,12)
+          assert (x['spot'],x['flop'],x['turn'],x['exact_line'],x['actor'])==(
+            'LMP_CO_BB','7s7h2d','3s','x b50 c/x','CO_IP')
+          assert x['NL2_strict_actor_IP_combos']>=0 and x['NL2_actor_IP_model_SPR_eligible_combos']>=0
+          assert x['NL2_actual_Rust_source_sha256']==hashlib.sha256(gzip.decompress(a.read_bytes())).hexdigest()
+          assert x['NL2_actual_Rust_gzip_sha256']==hashlib.sha256(a.read_bytes()).hexdigest()
+          assert x['true_original_GTO_root_unchanged'] and x['only_downstream_turn_river_locked']
+          assert x['observed_NL2_per_private_card_frequencies'] is False
+          assert x['assumed_limped_preflop_169class']
+          assert x['no_generic_texture_CERT'] and x['no_automatic_CERT_upgrade']
+          assert (x['V41_CERT'],x['V41_APPROX'],x['V41_EST'])==(154,238,0)
+          assert x['PR2_Draft_NEVER_MERGE']
+          print('PASS B288 fresh authentic Rust source COIP paired?',x['genuine_same_exact_board_actor_line_SPR_paired'],
+            'strict',x['NL2_strict_actor_IP_combos'],'SPR eligible',x['NL2_actor_IP_model_SPR_eligible_combos'])
+          PY
+      - name: Full unchanged 590 authenticated V41 named GTO plus real NL2 actor locks, 134 b50 candidate-only, HU all 2475 paths
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v41_b271_rank61.json --out nl2-audit/b288-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b288-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(154,238,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],
+             a['aggregate']['board_examples_with_b50_candidate'])==(590,682,134)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B288 HU2475/2475")'
+      - name: Commit original independently SHA-pinned actual B288 Rust NL2 COIP source only after full V41 actor+HU Actions PASS; Draft PR2 NEVER MERGE
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B288_R46_7S7H2D_EXP_IP.json.gz              data/solver_evidence/NL2_MULTIBOARD_B288_R46_7S7H2D_EXP_IP.index.json              docs/NL2_HU_B288_R46_7S7H2D_ACTUAL_RUST_NL2_PARTIAL_LOCK.md
+          git commit -m 'TASK-HYBRID B288: real B286 rank46 GTO 12 legal CO-IP combos plus authentic Rust NL2 partial lock exact actor SPR, V41 590 source HU2475 PASS; no automatic CERT'
+          for n in 1 2 3 4 5; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B288-R46-GTO-NL2-original-Rust-source-HU2475
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B288_R46_7S7H2D_EXP_IP.*
+            trainer/docs/NL2_HU_B288_R46_7S7H2D_ACTUAL_RUST_NL2_PARTIAL_LOCK.md
+            trainer/nl2-audit/
+          retention-days: 30
