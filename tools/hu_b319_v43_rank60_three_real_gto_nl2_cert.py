@@ -24,6 +24,8 @@ PROOF=D/'nl2_hu_b319_rank60_three_true_GTO_NL2_source_gate.json'
 THIRDS={
  'B314':dict(flop='8s7h4d',run=44959459086),
  'B315':dict(flop='KsJh4d',run=44959462500),
+ 'B322':dict(flop='Js9s4s',run=44960098050),
+ 'B323':dict(flop='9s7h4d',run=44960100932),
 }
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def ld(p):return json.loads(p.read_text())
