@@ -1,0 +1,129 @@
+name: TASK-HYBRID B237 rank30 original B233/B234/B235 Rust GTO SHA salvage actor-turn + 581 locks HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b237-rank30-3-original-gto-source-revalidation.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  independent-pinned-CFR-source-salvage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Compile independently verified pinned-GTO source auditor, never recompute Rust solve
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/hu_b237_rank30_original_gto_salvage.py trainer/tools/verify_hu_multiboard_100bb.py trainer/tools/hu_sequential_cfr_reach.py
+      - name: Fetch original B233 B234 B235 REAL Rust artifact only when its original solve job succeeded
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for spec in             B233:44894288118:4s4h2d:4S4H2D             B234:44894366667:7s5h3d:7S5H3D             B235:44894369547:KsQh4d:KSQH4D; do
+            IFS=: read -r batch run flop upper <<< "$spec"
+            source_conclusion="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/jobs" --jq '.jobs[] | select(.name=="original-gto-solve") | .conclusion')"
+            echo "$batch upstream $run original Rust job: $source_conclusion"
+            if [ "$source_conclusion" = success ]; then
+              name="nl2-multiboard-${batch}_R30_UTGCO_${upper}-UTG_CO-gto-${flop}"
+              mkdir -p "downloads/$batch/$name"
+              gh run download "$run" --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$batch/$name"
+              test -s "downloads/$batch/$name/evidence/UTG_CO-gto-${flop}.json"
+              test -s "downloads/$batch/$name/solver/postflop/out/UTG_CO/gto/${flop}_multiboard.json"
+              test -s "downloads/$batch/$name/solver/postflop/out/UTG_CO/gto/${flop}_multiboard.job.json"
+            else
+              echo "$batch has no completed original Rust job, fail closed; not counted"
+            fi
+          done
+          test -s downloads/B233/nl2-multiboard-B233_R30_UTGCO_4S4H2D-UTG_CO-gto-4s4h2d/evidence/UTG_CO-gto-4s4h2d.json
+      - name: Independently run original Rust GTO convergence, SHA, true UTG OOP TURN actor, pot, SPR and source reach verification
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b237_rank30_original_gto_salvage.py             --downloads ../downloads --solver-root ../solver
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          d=pathlib.Path('data')
+          x=json.loads((d/'nl2_hu_b237_rank30_original_GTO_source_salvage.json').read_text())
+          assert x['schema']=='NL2_HU_B237_RANK30_3_ORIGINAL_GTO_INDEPENDENT_SALVAGE_V1'
+          assert x['real_Rust_verified_count']>=1
+          assert (x['CERT_MULTIBOARD'],x['APPROX'],x['EST'],x['TOTAL'])==(151,241,0,392)
+          assert x['no_gto_run_recomputed'] and x['no_false_CERT'] and x['new_NL2_hero_locked_sources']==0
+          for z in x['checked_sources']:
+            if z['status']!='SOURCE_SHA_VERIFIED':
+              assert z['verified_gto_cases']==0 and z['CERT_upgrades']==0
+              continue
+            name,flop=z['batch'],z['flop'];prefix=f'NL2_MULTIBOARD_{name}_R30_{flop.upper()}_GTO'
+            arc=d/'solver_evidence'/(prefix+'.json.gz')
+            ix=json.loads((d/'solver_evidence'/(prefix+'.index.json')).read_text())
+            pin=json.loads((d/f'nl2_hu_{name.lower()}_rank30_utgco_{flop}_gto_parent_pin.json').read_text())
+            assert ix['run_id']==pin['source_run_id']==z['run_id']
+            assert ix['source_sha256']==hashlib.sha256(gzip.decompress(arc.read_bytes())).hexdigest()
+            assert ix['gzip_sha256']==hashlib.sha256(arc.read_bytes()).hexdigest()
+            assert pin['target_rank']==30 and pin['model_id']=='ln-opfr-t_model-1hmsxaw'
+            assert pin['target_exact_actor_OOP_turn_strict_combos']>=0
+            assert ix['exact_target_actor_OOP_turn_strict_combos']==pin['target_exact_actor_OOP_turn_strict_combos']
+            assert pin['preflop_CFR_pinned_not_observed_NL2_private_card'] is True
+            assert pin['direct_nl2_lock_source_present'] is False and ix['immediate_CERT_upgrades']==0
+          print('PASS B237 revalidated ',x['real_Rust_verified_count'],'original SHA-pinned GTO sources only')
+          PY
+      - name: Full V38 existing 581 genuinely paired CERT boards and NL2 pool/default/UNKNOWN nonpolar50 + independent HU2475 regression
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v38_b206_rank190.json --out nl2-audit/b237-lock-medium.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status_v38_b206_rank190.json'))
+          x=json.load(open('nl2-audit/b237-lock-medium.json'))
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(151,241,0,392)
+          assert s['records']['ln-opfr-t_model-1hmsxaw']['label']=='APPROX'
+          assert (x['cert_multiboard'],x['approx'],x['EST'])==(151,241,0)
+          assert (x['aggregate']['named_board_proofs'],x['aggregate']['paired_hero_locked_source_variants'],
+             x['aggregate']['board_examples_with_b50_candidate'])==(581,673,133)
+          assert x['not_generalized_handclass_GTO'] and x['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU 2475/2475")'
+      - name: Commit source-only genuine GTO archive and explanation after all full audited Actions PASS, never merge PR2
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b237_rank30_original_GTO_source_salvage.json docs/NL2_HU_B237_RANK30_ACTUAL_GTO_SOURCE_REVALIDATION.md
+          for f in data/solver_evidence/NL2_MULTIBOARD_B23[345]_R30_*_GTO.json.gz                    data/solver_evidence/NL2_MULTIBOARD_B23[345]_R30_*_GTO.index.json                    data/nl2_hu_b23[345]_rank30_utgco_*_gto_parent_pin.json; do
+            if [ -f "$f" ]; then git add "$f"; fi
+          done
+          git commit -m 'TASK-HYBRID B237: independent original B233-235 UTGCO rank30 authentic preflop-CFR GTO SHA revalidation, 581 locks HU2475 PASS, no false CERT'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B237-rank30-real-Rust-GTO-preflop-source-and-581-lock-HU2475
+          path: |
+            trainer/data/nl2_hu_b237_rank30_original_GTO_source_salvage.json
+            trainer/data/nl2_hu_b23*_rank30_utgco_*_gto_parent_pin.json
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B23*_R30_*_GTO.*
+            trainer/docs/NL2_HU_B237_RANK30_ACTUAL_GTO_SOURCE_REVALIDATION.md
+            trainer/nl2-audit/
+          retention-days: 30
