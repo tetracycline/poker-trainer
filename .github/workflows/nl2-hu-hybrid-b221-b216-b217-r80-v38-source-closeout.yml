@@ -1,0 +1,163 @@
+name: TASK-HYBRID B221 B216/B217 zero-actor closeout rank80 exact three-flop V38 HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b221-b216-b217-r80-v38-source-closeout.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  source-checked-audit-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Close B216 B217 against original SHA-pinned GTO and verify rank80 three true boards, no invented CERT
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          d=pathlib.Path('data')
+          def load(p): return json.loads(p.read_text())
+          def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+          status=d/'nl2_hu_multiboard_status_v38_b206_rank190.json'
+          s=load(status)
+          assert s['schema']=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V38_B206_RANK190'
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(151,241,0,392)
+          assert sha(status)=='6feb0b1a98b9d81846a05b686b2932d15e6805e22f8088fe101c4f5791366e7f'
+          proof=load(d/'nl2_hu_b215_v38_581_exact_lock_provenance.json')
+          assert proof['V38_sha256']==sha(status)
+          assert (proof['CERT_MULTIBOARD'],proof['APPROX'],proof['EST'])==(151,241,0)
+          assert (proof['exact_named_GTO_NL2_board_proofs'],
+                  proof['hero_lock_variants'],proof['named_50pct_nonpolarized_research_cases'])==(581,673,133)
+          rows=proof['all_exact_board_proofs']
+          assert len(rows)==581
+          assert all(z['strict_reachable_combos']>0 and z['NL2_lock_run_ids'] and len(z['GTO_sha256'])==64 for z in rows)
+          assert sum(bool(z['nonpolar50_exact_board_research']) for z in rows)==133
+          assert all(z['no_observed_private_card_conditional_NL2_rate'] is True for z in rows)
+          for model in ('ln-iso-lmp_r_model-vlgh2t','ln-iso-lmp_r_model-wpg493'):
+              assert s['records'][model]['label']=='APPROX',model
+          rank80model='ln-iso-lmp_r_model-17pklmg'
+          assert s['records'][rank80model]['label']=='CERT-MULTIBOARD'
+          r80=[z for z in rows if z['rank']==80]
+          assert len(r80)==3 and set(z['flop'] for z in r80)=={'4s4h2d','7s5h3d','KsQh4d'}
+          assert all(z['model_id']==rank80model and z['actor_seat']==1 and
+              z['exact_line']=='b33 c/x x/x' and z['strict_reachable_combos']>0 for z in r80)
+          assert all(z['nonpolar50_exact_board_research'] is False for z in r80)
+          closed=[]
+          for b,rank,flop,actor,runid in [
+              ('B216',71,'9s8h4d','OOP',44884042851),
+              ('B217',313,'As9h4d','IP',44884054924)]:
+              bnum=b[1:]
+              pin=load(d/('nl2_hu_b'+bnum+'_rank'+str(rank)+'_lmp_'+flop+'_gto_parent_pin.json'))
+              idx_path=next((d/'solver_evidence').glob('NL2_MULTIBOARD_'+b+'_*.index.json'))
+              idx=load(idx_path)
+              gz=idx_path.with_name(idx_path.name[:-len('.index.json')]+'.json.gz')
+              assert sha(gz)==idx['gzip_sha256']
+              assert hashlib.sha256(gzip.decompress(gz.read_bytes())).hexdigest()==idx['source_sha256']
+              assert (pin['source_run_id'],idx['run_id'])==(runid,runid)
+              assert pin['target_rank']==rank and pin['flop']==flop and pin['spot']=='LMP_CO_BB'
+              assert (idx['verified_cases'],idx['gto_cases'],idx['locked_cases'])==(1,1,0)
+              assert (idx['original_parent_GTO_root_SHA256'],idx['original_parent_GTO_job_SHA256'],
+                      idx['original_parent_GTO_manifest_SHA256'])==(
+                  pin['original_gto_root_sha256'],pin['original_gto_job_sha256'],pin['original_gto_manifest_sha256'])
+              assert pin['original_full_100bb_lmp_gto_not_recomputed'] is True
+              assert pin['observed_preflop_ranges'] is False and pin['assumed_limped_169class'] is True
+              assert pin['direct_nl2_lock_source_present'] is False
+              assert idx['no_generic_model_certification'] is True and idx['immediate_CERT_upgrades']==0
+              assert (pin['target_exact_actor_'+actor+'_river_nodes'],
+                      pin['target_exact_actor_'+actor+'_strict_combos'])==(0,0)
+              assert (idx['exact_target_actor_'+actor+'_river_nodes'],
+                      idx['exact_target_actor_'+actor+'_strict_combos'])==(0,0)
+              closed.append(dict(batch=b,rank=rank,flop=flop,actor=actor,
+                  actual_Rust_GTO_cases=1,strict_actor_nodes=0,strict_actor_combos=0,
+                  NL2_hero_lock_cases=0,cert_upgrade=False,
+                  source_run_id=runid,source_gzip_sha256=idx['gzip_sha256'],
+                  SHA_pinned_full_root=pin['original_gto_root_sha256'],
+                  status='APPROX'))
+          counts=proof['source_coverage_counts']
+          assert (counts['measured_source_nodes'],counts['assumed_default_nodes'],
+                  counts['unmatched_villain_nodes'],counts['historical_unknown_source_variants'])==(4510,2139,3850,315)
+          obj=dict(schema='NL2_HU_B221_V38_B216_B217_FAIL_CLOSED_RANK80_ALREADY_CERT_V1',
+              status_sha256=sha(status),prior_provenance_sha256=sha(d/'nl2_hu_b215_v38_581_exact_lock_provenance.json'),
+              CERT_MULTIBOARD=151,APPROX=241,EST=0,TOTAL=392,
+              B216_B217_source_checked=closed,rank80_already_CERT=True,
+              rank80_3_actor_verified_named_flops=[z['flop'] for z in r80],
+              genuine_GTO_NL2_boards=581,hero_lock_variants=673,
+              exact_board_50pct_nonpolar_research_only=133,
+              measured_NL2_pool_marginal_nodes=4510,assumed_default_nodes=2139,
+              unmatched_villain_nodes=3850,historical_unknown_lock_variants=315,
+              unknown_never_promoted_to_measured=True,
+              new_ACTOR_verified_CERT=0,original_LMP_preflop_169class_only_assumed=True,
+              no_observed_hole_card_conditional_rates=True,PR2_Draft_NEVER_MERGE=True)
+          out=d/'nl2_hu_b221_b216_b217_r80_v38_closeout.json'
+          out.write_text(json.dumps(obj,ensure_ascii=False,indent=2)+'\n')
+          doc=pathlib.Path('docs/NL2_HU_B221_B216_B217_R80_SOURCE_CLOSEOUT.md')
+          doc.write_text(
+              '# B221 B216/B217 true-source closeout and already-CERT rank80\n\n'
+              'B216 (rank71, 9s8h4d, OOP) and B217 (rank313, As9h4d, IP) each have one '
+              'original SHA-verified Rust GTO subgame, but **zero matching strictly '
+              'reachable hero-actor river nodes and combos**. There is no direct '
+              'NL2 actor-locked child. Both remain APPROX; zero new CERT.\n\n'
+              'Rank80 is **already CERT-MULTIBOARD** on 4s4h2d, 7s5h3d and KsQh4d '
+              'with exact GTO, hero-IP NL2 lock and legal combos; do not count it twice. '
+              'These three boards do not support an exact-board b50 nonpolarized claim.\n\n'
+              'V38 remains **151 CERT / 241 APPROX / 0 EST**, 581 exact named board '
+              'proofs, 673 hero locks, 133 exact-board 50% pot research candidates. '
+              'Original LMP 169-class preflop ranges are assumed, not observed. '
+              'Observed NL2 pool action frequencies are marginals, not measured '
+              'hole-card conditional probabilities. B215 recorded 4,510 observed '
+              'marginal source nodes, 2,139 assumed/default nodes, 3,850 unmatched '
+              'villain nodes and 315 historical-UNKNOWN lock variants. None may be '
+              'silently converted to measured values.\n\n'
+              'The full HU 2,475/2,475 river path, 581-board lock provenance, '
+              'line contract and reachability Actions audit must succeed before '
+              'this source closeout is committed. PR #2 must remain Draft; NEVER MERGE.\n')
+          print('B221 source gate PASS',json.dumps(obj))
+          PY
+      - name: Audit ALL existing 581 exact CERT boards and full NL2 HU 2475 river reachability
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v38_b206_rank190.json --out nl2-audit/b221-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b221-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(151,241,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],
+                  a['aggregate']['board_examples_with_b50_candidate'])==(581,673,133)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU2475/2475")'
+      - name: Commit verified B221 only AFTER strict source, all named board locks and full HU Actions PASS; Draft NEVER MERGE
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b221_b216_b217_r80_v38_closeout.json docs/NL2_HU_B221_B216_B217_R80_SOURCE_CLOSEOUT.md
+          git commit -m 'TASK-HYBRID B221: B216 B217 strict zero-actor source closeout, rank80 already CERT, all 581 locks and HU2475 verified'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-B221-actor-source-closeout-HU2475
+          path: |
+            data/nl2_hu_b221_b216_b217_r80_v38_closeout.json
+            docs/NL2_HU_B221_B216_B217_R80_SOURCE_CLOSEOUT.md
+            nl2-audit/
+          retention-days: 30
