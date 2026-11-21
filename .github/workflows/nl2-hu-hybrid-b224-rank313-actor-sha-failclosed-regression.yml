@@ -1,0 +1,102 @@
+name: TASK-HYBRID B224 rank313 B163 typo fix + synthetic actor SHA failclosed + 581 locks HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b224-rank313-actor-sha-failclosed-regression.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  tested-actor-sha-fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Explicit rank313 predicate plus 1 fixture positive/11 source wrong-actor wrong-rank wrong-SHA negative cases
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/verify_hu_multiboard_100bb.py tools/test_hu_b224_rank313_actor_sha_predicate.py
+          python3 tools/test_hu_b224_rank313_actor_sha_predicate.py
+      - name: Regression of all 581 previously certified exact boards, 673 locks, 133 medium50 research and HU2475 paths
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v38_b206_rank190.json --out nl2-audit/b224-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b224-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(151,241,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],a['aggregate']['board_examples_with_b50_candidate'])==(581,673,133)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B224 2475/2475")'
+      - name: Freeze proven fix SHA and exact no-new-CERT source provenance only after full Actions tests PASS
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib,pathlib
+          sha=lambda p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
+          src=pathlib.Path('tools/verify_hu_multiboard_100bb.py').read_text()
+          a=src.split('def authorized_b163_rank313_exact_true_gto_parent(',1)[1].split('\ndef authorized_',1)[0]
+          assert "p['target_rank']==313 and p['model_id']=='ln-iso-lmp_r_model-wpg493'" in a
+          assert "p['target_rank']==71" not in a
+          p=pathlib.Path('data/nl2_hu_multiboard_status_v38_b206_rank190.json')
+          s=json.loads(p.read_text())
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'])==(151,241,0)
+          output=dict(schema='NL2_HU_B224_R313_B163_ACTOR_SHA_FAILCLOSED_REGRESSION_V1',
+              correct_original_rank313_source_policy=True,wrong_rank71_no_longer_accepted=True,
+              synthetic_metadata_positive_cases=1,synthetic_failclosed_negative_cases=11,
+              real_B158_actor_legal_zero_remains_rejected=True,
+              source_verifier_sha256=sha('tools/verify_hu_multiboard_100bb.py'),
+              regression_test_sha256=sha('tools/test_hu_b224_rank313_actor_sha_predicate.py'),
+              V38_status_sha256=sha(p),
+              CERT_MULTIBOARD=151,APPROX=241,EST=0,
+              named_authentic_boards=581,NL2_hero_lock_variants=673,exact_50pct_candidates=133,
+              new_certifications=0,full_HU_river_paths=2475,PR2_Draft_NEVER_MERGE=True)
+          pathlib.Path('data/nl2_hu_b224_rank313_actor_sha_failclosed_fix.json').write_text(json.dumps(output,indent=2)+'\n')
+          pathlib.Path('docs/NL2_HU_B224_RANK313_GTO_AUTH_ACTOR_SHA_FIX.md').write_text(
+              '# B224 rank313 exact actor/SHA verifier correction\n\n'
+              'Fixed B163 original B158 rank313 parent verification: its target_rank '
+              'must equal **313**, not 71. A realistic metadata-only synthetic '
+              'fixture now passes; 11 rank/actor/SHA/zero-combo corruptions fail '
+              'closed. No synthetic solve is considered actual GTO evidence.\n\n'
+              'The real historical B158 original source still has zero matching '
+              'strict IP actor combos, so it remains ineligible for generic '
+              'CERT upgrade. V38 remains **151 CERT /241 APPROX /0 EST**, '
+              '581 exact named board proofs, 673 true NL2 lock variants, '
+              '133 exact-board 50% pot research candidates; full 2475/2475 '
+              'HU navigation and source audit PASS required.\n\n'
+              'No change to assumed 169-class preflop policy or measured '
+              'pool-marginal versus default/UNKNOWN evidence distinctions. '
+              'PR #2 must stay Draft, NEVER MERGE.\n')
+          print('PASS B224 frozen verifier and regression SHA')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b224_rank313_actor_sha_failclosed_fix.json docs/NL2_HU_B224_RANK313_GTO_AUTH_ACTOR_SHA_FIX.md
+          git commit -m 'TASK-HYBRID B224: rank313 B163 actual actor/SHA failclosed test 11 negative cases; 581 board locks and HU2475 PASS'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-hu-B224-r313-source-predicate-actor-SHA-HU2475
+          path: |
+            data/nl2_hu_b224_rank313_actor_sha_failclosed_fix.json
+            docs/NL2_HU_B224_RANK313_GTO_AUTH_ACTOR_SHA_FIX.md
+            nl2-audit/
+          retention-days: 30
