@@ -105,6 +105,32 @@ function schedule(){if(!pending){pending=true;queueMicrotask(render)}}
 new MutationObserver(schedule).observe(app,{childList:true,subtree:true});
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v40=d=>{
+ if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V40_B265_RANK313'||
+    d.CERT_MULTIBOARD!==153||d.APPROX!==239||d.EST!==0||d.TOTAL!==392||
+    d.parent_v39_sha256?.length!==64||
+    d.B265_rank313_three_true_GTO_NL2_IP_flops?.rank!==313||
+    d.B265_rank313_three_true_GTO_NL2_IP_flops?.model_id!=='ln-iso-lmp_r_model-wpg493'||
+    d.B265_rank313_three_true_GTO_NL2_IP_flops?.flops?.join(',')!=='6s5h3d,9s6h3d,KsQh4d'||
+    d.B265_rank313_three_true_GTO_NL2_IP_flops?.exact_line!=='b75 r c/x b50 c/x'||
+    d.B265_rank313_three_true_GTO_NL2_IP_flops?.actor!=='CO_IP'||
+    d.B265_rank313_three_true_GTO_NL2_IP_flops?.original_GTO_runs?.['9s6h3d']!==44666294821||
+    d.B265_rank313_three_true_GTO_NL2_IP_flops?.original_GTO_runs?.KsQh4d!==44666294821||
+    d.B265_rank313_three_true_GTO_NL2_IP_flops?.original_GTO_runs?.['6s5h3d']!==44901784001||
+    d.B265_rank313_three_true_GTO_NL2_IP_flops?.genuine_B263_real_NL2_IP_lock_run!==44903333583||
+    d.B265_rank313_three_true_GTO_NL2_IP_flops?.B263_strict_CO_IP_river_combos!==73||
+    d.B265_rank313_three_true_GTO_NL2_IP_flops?.LMP_explicit_169class_preflop_ASSUMED_not_observed_NL2_hand!==true||
+    d.B265_rank313_three_true_GTO_NL2_IP_flops?.no_observed_NL2_private_card_conditionals!==true||
+    d.records?.['ln-iso-lmp_r_model-wpg493']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-wpg493']?.proven_exact_board_count!==3||
+    d.records?.['ln-opfr-t_model-1hmsxaw']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-vlgh2t']?.label!=='APPROX'||
+    d.no_generic_texture_GTO!==true||d.no_observed_private_card_NL2_rates!==true||
+    d.PR2_remains_draft_never_merge!==true||
+    Object.keys(d.records||{}).length!==392)
+    throw Error('V40 exact original three named GTO and true CO-IP NL2 Rust SHA gate failed');
+ return d;
+};
  const v39=d=>{
  if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V39_B247_RANK30'||
     d.CERT_MULTIBOARD!==152||d.APPROX!==240||d.EST!==0||d.TOTAL!==392||
@@ -648,7 +674,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v39_b247_rank30.json',{cache:'no-store'}).then(open).then(v39)
+ return fetch('data/nl2_hu_multiboard_status_v40_b265_rank313.json',{cache:'no-store'}).then(open).then(v40)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v39_b247_rank30.json',{cache:'no-store'}).then(open).then(v39))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v38_b206_rank190.json',{cache:'no-store'}).then(open).then(v38))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v37_b205_rank188.json',{cache:'no-store'}).then(open).then(v37))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v36_b201_rank159.json',{cache:'no-store'}).then(open).then(v36))
