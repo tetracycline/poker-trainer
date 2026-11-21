@@ -33,7 +33,13 @@ def main():
     assert pin['preflop_CFR_pinned_not_observed_NL2_private_card'] is True
     assert pin['original_full_100bb_utgco_gto_source_pinned'] is True
     assert pin['target_exact_actor_OOP_turn_nodes']>0 and pin['target_exact_actor_OOP_turn_strict_combos']>0
-    assert idx['exact_target_actor_OOP_turn_nodes']>0 and idx['exact_target_actor_OOP_turn_strict_combos']>0
+    # B233-B235 original index uses a legacy field named "river_nodes" for
+    # the independently proven TURN source. The actual pin + source actor/board
+    # must be checked, never rely on this metadata name to certify a river.
+    assert idx.get('exact_target_actor_OOP_turn_nodes',
+        idx.get('exact_target_actor_OOP_river_nodes',0))>0
+    assert idx.get('exact_target_actor_OOP_turn_strict_combos',
+        idx.get('exact_target_actor_OOP_strict_combos',0))>0
     assert (idx['verified_cases'],idx['gto_cases'],idx['locked_cases'])==(1,1,0)
     assert idx['original_parent_GTO_root_SHA256']==pin['original_gto_root_sha256']
     assert idx['original_parent_GTO_job_SHA256']==pin['original_gto_job_sha256']
