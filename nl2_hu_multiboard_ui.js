@@ -105,7 +105,31 @@ function schedule(){if(!pending){pending=true;queueMicrotask(render)}}
 new MutationObserver(schedule).observe(app,{childList:true,subtree:true});
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
- const v43=d=>{
+ const v44=d=>{
+ const q=d.B331_rank60_four_true_GTO_NL2_actor_lock_boards;
+ const f=q?.fourth_original_GTO_and_NL2_source;
+ if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V44_B331_RANK60_FOUR'||
+    d.CERT_MULTIBOARD!==156||d.APPROX!==236||d.EST!==0||d.TOTAL!==392||
+    d.parent_v43_sha256?.length!==64||
+    q?.model_id!=='ln-ipfr-t_model-hxdit'||q?.rank!==60||
+    q?.actor!=='CO_IP'||q?.exact_line!=='x b50 c/x'||q?.model_SPR!==8.614||
+    q?.board_count!==4||q.flops?.length!==4||new Set(q.flops).size!==4||
+    !['9s7h4d','Js9h4d','Js9h5d','Js9s4s'].every(p=>q.flops.includes(p))||
+    q.textures?.length<3||!['LOW','JT_HIGH','MONOTONE'].every(p=>q.textures.includes(p))||
+    f?.flop!=='9s7h4d'||f?.turn!=='Ad'||
+    f?.original_GTO_run!==44960100932||f?.true_partial_Rust_NL2_run!==44960924477||
+    f?.strict_GTO_actor_combos!==6||f?.strict_real_NL2_actor_combos!==6||
+    f?.NL2_actor_matching_SPR_combos!==6||
+    f?.original_GTO_case_sha256?.length!==64||f?.authentic_real_NL2_source_sha256?.length!==64||
+    d.records?.['ln-ipfr-t_model-hxdit']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-ipfr-t_model-hxdit']?.proven_exact_board_count!==4||
+    d.records?.['ln-iso-lmp_r_model-vlgh2t']?.label!=='APPROX'||
+    d.no_generic_texture_GTO!==true||d.no_observed_private_card_NL2_rates!==true||
+    d.PR2_remains_draft_never_merge!==true||Object.keys(d.records||{}).length!==392)
+      throw Error('V44 rank60 fourth LOW exact original GTO and true NL2 actor IP SHA source failclosed');
+ return d;
+};
+const v43=d=>{
  const q=d.B319_rank60_three_true_GTO_NL2_CO_IP_flops;
  if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V43_B319_RANK60'||
     d.CERT_MULTIBOARD!==156||d.APPROX!==236||d.EST!==0||d.TOTAL!==392||
@@ -762,7 +786,8 @@ const v42=d=>{
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v43_b319_rank60.json',{cache:'no-store'}).then(open).then(v43)
+ return fetch('data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json',{cache:'no-store'}).then(open).then(v44)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v43_b319_rank60.json',{cache:'no-store'}).then(open).then(v43))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v42_b289_rank46.json',{cache:'no-store'}).then(open).then(v42))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v41_b271_rank61.json',{cache:'no-store'}).then(open).then(v41))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v40_b265_rank313.json',{cache:'no-store'}).then(open).then(v40))
