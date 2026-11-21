@@ -151,7 +151,7 @@ def main():
         distinct_certified_models=151,aggregate=dict(tot),
         exact_named_board_count=581,
         all_581_board_source_rows=rows,highest_frequency_rate_source_upgrade_queue=ranked[:60],
-        50pct_nonpolarized_only_true_exact_board_research_candidates=133,
+        exact_board_nonpolarized_50pct_research_candidates_only=133,
         all_581_have_real_actor_matched_NL2_lock_source=True,
         observed_rate_is_pool_marginal_not_hole_card_conditional=True,
         UNKNOWN_and_ASSUMED_not_reclassified_as_observed=True,
