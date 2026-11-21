@@ -92,7 +92,7 @@ def validate_pair(s):
     assert (c['flop_line'],c['turn'],c['pot_family'])==('x b100 c',t,'SRP')
     assert (c['flop_root_pot_bb'],c['flop_root_stack_bb'])==(5.5,97.5)
     assert c['gto_exploitability_pct'] is not None and c['gto_exploitability_pct']<=.5
-    assert c['empirical_scope']=='PINNED_POKER_SOLVER_PREFLOP_CFR'
+    assert c['empirical_scope']=='PINNED_PREFLOP_CFR'
     candidates=[n for n in c['nodes'] if n['exact_node_line']==LINE and n['acting_seat']==1
       and len(n['public_board'])==8 and n['strictly_reachable_combos']>0]
     assert len(candidates)==1
@@ -129,7 +129,7 @@ def validate_pair(s):
         flop_texture=texture(f),
         nl2_locked_variants=[dict(version='exp_ip',run_id=s['NL2_run'],
             sha256=li['authentic_NL2_Rust_source_sha256'],
-            source_scope='TURN_RIVER_ONLY_GENUINE_NL2_POOL_MARGINAL_PARTIAL_RUST_LOCK',
+            source_scope='TURN_ONLY_GENUINE_NL2_POOL_MARGINAL_PARTIAL_RUST_LOCK',
             villain_observed_pattern_node_share_pct=None,
             source_not_real_per_combo_observation=True,
             unknown_history_frequency_filled_with_default=True,
@@ -209,7 +209,7 @@ def main():
     matrix.update(schema='NL2_CERT_PER_NAMED_BOARD_LOCK_AND_MEDIUM_PROVENANCE_V41_B271',
         parent_v41_status_sha256=sha(STATUS),
         unknown_source_denominators_are_not_zero_or_empirical=True,
-        50pct_pot_only_exact_board_research=True,
+        only_exact_board_50pct_research=True,
         PR2_Draft_NEVER_MERGE=True)
     MATRIX.write_text(json.dumps(matrix,ensure_ascii=False,indent=2)+'\n')
     REPORT.write_text('# B271 V41 | rank61 three real GTO + NL2 actor CO-IP locked turns\n\n'
