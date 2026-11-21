@@ -1,0 +1,218 @@
+name: TASK-HYBRID B324 MONOTONE Js9s4s/8c B322 original 100bb GTO strict6 -> genuine Rust NL2 COIP partial lock HU2475 (max29m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b324-rank60-b322-js9s4s-expip.yml', 'data/solver_evidence/NL2_MULTIBOARD_B322_R60_JS9S4S_GTO.index.json']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  immutable-source-exact-actor-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      eligible: ${{ steps.check.outputs.eligible }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authorize new solve ONLY if actual B322 Rust full flop original GTO SHA and strict CO-IP source >0
+        id: check
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib,gzip,pathlib,os
+          d=pathlib.Path('data')
+          pin=d/'nl2_hu_b322_rank60_cobb_Js9s4s_gto_parent_pin.json'
+          idx=d/'solver_evidence/NL2_MULTIBOARD_B322_R60_JS9S4S_GTO.index.json'
+          gz=d/'solver_evidence/NL2_MULTIBOARD_B322_R60_JS9S4S_GTO.json.gz'
+          eligible=False
+          if pin.exists() and idx.exists() and gz.exists():
+              p=json.loads(pin.read_text()); i=json.loads(idx.read_text())
+              assert (p['source_run_id'],i['run_id'])==(44960098050,44960098050)
+              assert (p['target_rank'],p['model_id'],p['flop'],p['flop_line'],p['turn_line'])==(
+                  60,'ln-ipfr-t_model-hxdit','Js9s4s','x b50 c','x')
+              assert (i['gto_cases'],i['locked_cases'],i['verified_cases'])==(1,0,1)
+              assert i['gzip_sha256']==hashlib.sha256(gz.read_bytes()).hexdigest()
+              assert i['source_sha256']==hashlib.sha256(gzip.decompress(gz.read_bytes())).hexdigest()
+              assert (i['original_parent_GTO_root_SHA256'],i['original_parent_GTO_job_SHA256'],i['original_parent_GTO_manifest_SHA256'])==(
+                  p['original_gto_root_sha256'],p['original_gto_job_sha256'],p['original_gto_manifest_sha256'])
+              assert p['original_full_100bb_cobb_gto_source_pinned'] and p['preflop_CFR_pinned_not_observed_NL2_private_card']
+              assert not p['direct_nl2_lock_source_present']
+              eligible=(p['target_exact_actor_IP_turn_strict_combos']>0 and
+                  p['target_exact_actor_IP_turn_nodes']>0 and
+                  i['exact_target_actor_IP_turn_strict_combos']>0)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              f.write('eligible='+str(eligible).lower()+'\n')
+          print('PASS B324 immutable B322 original source GTO eligible for genuine NL2 turn-only solve:',eligible)
+          PY
+  true-nl2-coip-turn-only-child:
+    needs: immutable-source-exact-actor-preflight
+    if: ${{ needs.immutable-source-exact-actor-preflight.outputs.eligible == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Require genuine positive B322 actor IP original SHA source and download exact unmodified flop root
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/44960098050" --jq .conclusion)" = success
+          python3 -m py_compile trainer/tools/solve_hu_b255_rank60_cobb_pinned_gto_partial_nl2.py trainer/tools/verify_hu_b257_cobb_rank60_rank61_true_ip_lock.py
+          mkdir -p gto_parent
+          gh run download 44960098050 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B322_R60_COBB_JS9S4S-CO_BB-gto-Js9s4s' --dir gto_parent
+          test -s gto_parent/evidence/CO_BB-gto-Js9s4s.json
+          test -s gto_parent/solver/postflop/out/CO_BB/gto/Js9s4s_multiboard.json
+          test -s gto_parent/solver/postflop/out/CO_BB/gto/Js9s4s_multiboard.job.json
+      - name: Compile original SHA pinned Rust GTO backend for true NL2 actor IP partial turn/river lock
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Only genuine Rust NL2 downstream actor IP lock x b50 c/x from SHA identical B322 original GTO flop parent
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-engine-pin.txt
+          python3 trainer/tools/solve_hu_b255_rank60_cobb_pinned_gto_partial_nl2.py \
+            --flop Js9s4s --solver-root solver --gto-artifact-root gto_parent \
+            --manifest evidence/CO_BB-exp_ip-Js9s4s.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B324_R60_JS9S4S-CO_BB-exp_ip-Js9s4s
+          path: |
+            evidence/
+            solver/postflop/out/CO_BB/exp_ip/Js9s4s_*.json
+          retention-days: 30
+          if-no-files-found: warn
+  independently-verify-actual-nl2-and-commit-after-v42-HU:
+    needs: true-nl2-coip-turn-only-child
+    if: ${{ needs.true-nl2-coip-turn-only-child.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Independently download B322 original unchanged GTO and fresh true B324 Rust NL2 actor IP result
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads/parent downloads/fresh
+          gh run download 44960098050 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B322_R60_COBB_JS9S4S-CO_BB-gto-Js9s4s' --dir downloads/parent
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B324_R60_JS9S4S-CO_BB-exp_ip-Js9s4s' --dir downloads/fresh
+          test -s downloads/fresh/evidence/CO_BB-exp_ip-Js9s4s.json
+          test -s downloads/parent/solver/postflop/out/CO_BB/gto/Js9s4s_multiboard.json
+      - name: Source-independent original GTO SHA, true actor IP NL2 partial Rust lock, genuine 40/70 combo reach and SPR evidence
+        run: |
+          set -euo pipefail
+          python3 trainer/tools/verify_hu_b257_cobb_rank60_rank61_true_ip_lock.py \
+            --rank 60 --flop Js9s4s --parent downloads/parent --fresh downloads/fresh
+          python3 - <<'PY'
+          import json,pathlib,hashlib,gzip
+          d=pathlib.Path('trainer/data/solver_evidence')
+          ix=json.loads((d/'NL2_MULTIBOARD_B255_R60_JS9S4S_EXP_IP.index.json').read_text())
+          a=d/'NL2_MULTIBOARD_B255_R60_JS9S4S_EXP_IP.json.gz'
+          assert ix['schema']=='NL2_HU_B257_CO_BB_EXACT_ORIGINAL_GTO_PLUS_REAL_NL2_IP_PARTIAL_LOCK_V1'
+          assert (ix['rank'],ix['spot'],ix['flop'],ix['exact_line'],ix['actor'])==(60,'CO_BB','Js9s4s','x b50 c/x','CO_IP')
+          assert ix['original_GTO_source_run']==44960098050 and ix['original_GTO_actor_strict_combos']>0
+          assert ix['authentic_NL2_Rust_source_sha256']==hashlib.sha256(gzip.decompress(a.read_bytes())).hexdigest()
+          assert ix['authentic_NL2_Rust_gzip_sha256']==hashlib.sha256(a.read_bytes()).hexdigest()
+          assert ix['no_observed_per_private_hand_NL2_conditionals'] and ix['partial_downstream_only_not_whole_flop_lock']
+          assert ix['no_generic_CERT_upgrade'] and ix['PR2_Draft_NEVER_MERGE']
+          assert ix['genuine_actor_matched_GTO_NL2_board']==bool(ix['NL2_actor_strict_combos']>0 and ix['NL2_actor_model_SPR_eligible_combos']>0)
+          print('PASS B324 genuine NL2 source same exact GTO flop/turn actor SPR:',ix['genuine_actor_matched_GTO_NL2_board'])
+          PY
+      - name: Full V42 155 CERT/237 APPROX all 593 GTO+NL2 actor boards, 134 b50 research-only, 2475 independent HU paths
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v42_b289_rank46.json --out nl2-audit/b324-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b324-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(155,237,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],a['aggregate']['board_examples_with_b50_candidate'])==(593,685,134)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B324 2475/2475")'
+      - name: Commit actual source 3rd flop GTO plus true actor-IP NL2 Rust ONLY after source and HU2475 PASS; never false CERT
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib,hashlib
+          d=pathlib.Path('data')
+          p=d/'solver_evidence/NL2_MULTIBOARD_B255_R60_JS9S4S_EXP_IP.index.json'
+          ix=json.loads(p.read_text())
+          pin=json.loads((d/'nl2_hu_b322_rank60_cobb_Js9s4s_gto_parent_pin.json').read_text())
+          result=dict(schema='NL2_HU_B324_RANK60_THIRD_REAL_GTO_NL2_ACTOR_IP_V1',
+              target_rank=60,flop='Js9s4s',turn=pin['turn'],exact_line='x b50 c/x',
+              original_B322_GTO_run=44960098050,new_true_NL2_Rust_run=ix['source_run_id'],
+              GTO_original_strict_IP_combos=ix['original_GTO_actor_strict_combos'],
+              NL2_actor_strict_combos=ix['NL2_actor_strict_combos'],
+              NL2_actor_matching_SPR_combos=ix['NL2_actor_model_SPR_eligible_combos'],
+              third_exact_board_truly_source_paired=ix['genuine_actor_matched_GTO_NL2_board'],
+              NL2_paired_source_index_sha256=hashlib.sha256(p.read_bytes()).hexdigest(),
+              historic_existing_paired_flops=['Js9h4d','Js9h5d'],
+              certification_requires_separately_audited_V43_and_three_distinct_positive_source_flops=True,
+              certification_requires_min_two_distinct_flop_texture_classes=True,
+              current_CERT_MULTIBOARD=155,current_APPROX=237,EST=0,TOTAL=392,
+              existing_cert_exact_named_GTO_NL2_boards=593,
+              existing_exact_50pct_research_only=134,
+              full_HU_routes='2475/2475',not_observed_per_private_card_NL2_rates=True,
+              no_automatic_CERT_or_texture_recommendation=True,PR2_Draft_NEVER_MERGE=True)
+          (d/'nl2_hu_b324_rank60_Js9s4s_true_actor_NL2_status.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+          pathlib.Path('docs/NL2_HU_B324_R60_JS9S4S_TRUE_NL2_RUST_ACTOR.md').write_text(
+             '# B324 real Rust NL2 actor-locked rank60 third flop\n\n'
+             'Original SHA pinned GTO from B322 on Js9s4s/'+pin['turn']+
+             ' with '+str(ix['original_GTO_actor_strict_combos'])+' legal CO-IP combos. Genuine independent NL2 partial Rust has '+str(ix['NL2_actor_strict_combos'])+
+             ' strict actor combos and '+str(ix['NL2_actor_model_SPR_eligible_combos'])+' model-SPR eligible; paired='+str(ix['genuine_actor_matched_GTO_NL2_board'])+
+             '. No invented per-private-card data. All V42 593 source proof, 134 b50 exact-board research only and HU 2475/2475 audited. No automatic model CERT until separately audited V43; B322 Js9s4s MONOTONE gives a different genuine texture from two JT_HIGH boards. PR2 Draft, never merge.\n')
+          print('PASS B324 source audited',result['third_exact_board_truly_source_paired'])
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B255_R60_JS9S4S_EXP_IP.index.json data/solver_evidence/NL2_MULTIBOARD_B255_R60_JS9S4S_EXP_IP.json.gz docs/NL2_HU_B257_R60_JS9S4S_REAL_COIP_NL2_LOCK.md data/nl2_hu_b324_rank60_Js9s4s_true_actor_NL2_status.json docs/NL2_HU_B324_R60_JS9S4S_TRUE_NL2_RUST_ACTOR.md
+          git commit -m 'TASK-HYBRID B324: SHA-pinned B322 rank60 third Js9s4s GTO and actual Rust NL2 actor COIP partial lock with V42 593/HU2475 PASS; no auto CERT'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B324-rank60-third-Js9s4s-real-NL2-actor-HU2475
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B255_R60_JS9S4S_EXP_IP.*
+            trainer/data/nl2_hu_b324_rank60_Js9s4s_true_actor_NL2_status.json
+            trainer/docs/NL2_HU_B257_R60_JS9S4S_REAL_COIP_NL2_LOCK.md
+            trainer/docs/NL2_HU_B324_R60_JS9S4S_TRUE_NL2_RUST_ACTOR.md
+            trainer/nl2-audit/
+          retention-days: 30
