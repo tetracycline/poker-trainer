@@ -74,6 +74,15 @@ jobs:
           assert len(c)==3 and {z['flop'] for z in c}=={'8s8h3d','9s6h3d','7s7h2d'}
           assert len({z['flop_texture'] for z in c})>=2
           assert sorted(z['strict_full_street_combo_reachable'] for z in c)==[1,10,12]
+          for z in c:
+            checks=dict(line=z['actual_exact_action_line']=='x b50 c/x',seat=z['acting_seat']==1,
+              assumed=bool(z['assumed_preflop_ranges']),spr=z['relative_spr_error_pct']<=5,
+              gto=z['genuine_gto_exploitability_pct']<=.5,scope=str(z['source_kind']).startswith('ASSUMED'),
+              one_lock=len(z['nl2_locked_variants'])==1,
+              lock_side=bool(z['nl2_locked_variants']) and z['nl2_locked_variants'][0]['version']=='exp_ip',
+              gto_sha_len=len(z['source_sha256'])==64,
+              lock_sha_len=bool(z['nl2_locked_variants']) and len(z['nl2_locked_variants'][0]['sha256'])==64)
+            print('B289 exact source check:',z['flop'],checks,flush=True)
           assert all(z['actual_exact_action_line']=='x b50 c/x' and z['acting_seat']==1 and
             z['assumed_preflop_ranges'] and z['relative_spr_error_pct']<=5 and
             z['genuine_gto_exploitability_pct']<=.5 and
