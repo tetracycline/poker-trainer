@@ -1,0 +1,132 @@
+name: TASK-HYBRID B306 original rank71 three GTO flop roots BB b50 40/70 failclosed gate, all593 source and HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b306-r71-three-gto-flop-root-b50-gate.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  independently-source-verified-root-action-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Download THREE distinct original SHA pinned genuine Rust GTO flop source artifacts with no NL2 EXP substitution
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_rank71_gto_root_40_70_preflight.py tools/hu_sequential_cfr_reach.py
+          for run in 44950943882 44956029074 44956683250; do
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq .conclusion)" = success
+          done
+          mkdir -p sources/B298 sources/B300 sources/B302
+          gh run download 44950943882 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B298_R71_LMP_5S5H3D-LMP_CO_BB-gto-5s5h3d' --dir sources/B298
+          gh run download 44956029074 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B300_R71_LMP_4S4H3D-LMP_CO_BB-gto-4s4h3d' --dir sources/B300
+          gh run download 44956683250 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B302_R71_LMP_7S5H4D-LMP_CO_BB-gto-7s5h4d' --dir sources/B302
+          test -s sources/B298/solver/postflop/out/LMP_CO_BB/gto/5s5h3d_multiboard.json
+          test -s sources/B300/solver/postflop/out/LMP_CO_BB/gto/4s4h3d_multiboard.json
+          test -s sources/B302/solver/postflop/out/LMP_CO_BB/gto/7s5h4d_multiboard.json
+      - name: Exact per-combo previous street BB b50 full-game GTO 40/70 root SHA plus canonical sequential actor mask; reject false CERT from each 0-flop source
+        run: |
+          set -euo pipefail
+          python3 tools/hu_rank71_gto_root_40_70_preflight.py \
+            --case B298 5s5h3d 44950943882 sources/B298 \
+            --case B300 4s4h3d 44956029074 sources/B300 \
+            --case B302 7s5h4d 44956683250 sources/B302 \
+            --out data/nl2_hu_b306_rank71_three_GTO_flop_root_b50_40_70.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('data/nl2_hu_b306_rank71_three_GTO_flop_root_b50_40_70.json'))
+          assert a['schema']=='NL2_HU_RANK71_SHA_PINNED_GTO_FLOP_B50_ROOT_40_70_PREFLIGHT_V1'
+          rows=a['exact_original_board_results']
+          assert [(z['batch'],z['flop'],z['source_run_id']) for z in rows]==[
+             ('B298','5s5h3d',44950943882),('B300','4s4h3d',44956029074),
+             ('B302','7s5h4d',44956683250)]
+          assert all(z['strict_40_70_b50_flop_combo_count']==0 and
+              z['max_frequency_b50_combo_count']==0 and z['original_root_flop_active_combo_count']>0 and
+              0<=z['observed_original_root_max_b50_frequency_pct']<40 and
+              z['descendant_b50c_xb50c_river_cannot_have_strict_combos'] and
+              z['original_target_actor_OOP_strict_combos']==0 and
+              not z['not_new_GTO_solve'] is False and
+              z['not_observed_NL2_per_private_hand_action_rates'] for z in rows)
+          assert a['no_generic_CERT_from_preflight'] and a['PR2_Draft_NEVER_MERGE']
+          print('PASS B306 all 3 original SHA verified GTO BB flop b50 strict actor 40/70 zero, no downstream cert')
+          PY
+      - name: Independent V42 all 593 authentic GTO actor NL2 board locks /134 depolarized research candidates and 2475 full HU routes
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v42_b289_rank46.json --out nl2-audit/b306-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b306-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(155,237,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],a['aggregate']['board_examples_with_b50_candidate'])==(593,685,134)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B306 2475/2475")'
+      - name: Commit only immutable root-cause diagnostics after all GTO and actor/medium/river audit PASS; no false rank71 promotion
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          p=pathlib.Path('data/nl2_hu_b306_rank71_three_GTO_flop_root_b50_40_70.json')
+          a=json.loads(p.read_text())
+          a['full_V42_source_and_HU_audit_passed']=True
+          a['CERT_MULTIBOARD']=155
+          a['APPROX']=237
+          a['EST']=0
+          a['TOTAL']=392
+          a['original_true_NL2_actor_matched_CERT_board_count']=593
+          a['exact_board_b50_nonpolarized_research_flags_only']=134
+          a['HU_river_navigation']='2475/2475'
+          a['rank71_existing_separate_authentic_GTO_plus_NL2_pairs']=['4s4h2d','7s5h3d']
+          a['new_rank71_CERT_upgrades']=0
+          p.write_text(json.dumps(a,ensure_ascii=False,indent=2)+'\n')
+          rows=a['exact_original_board_results']
+          desc=['# B306 rank71 SHA-pinned original GTO flop root 40/70 negative diagnosis',
+            '',
+            'B298, B300 and B302 ORIGINAL 100bb full-flop Rust GTO source roots were individually SHA checked against authentic GitHub Actions and the canonical every-combo 40%/70% high-frequency action gate.',
+            '']
+          for z in rows:
+            desc.append('- '+z['batch']+' '+z['flop']+'/'+z['turn']+
+                ': eligible BB-OOP flop b50 combos '+str(z['strict_40_70_b50_flop_combo_count'])+
+                ', maximum original b50 combo frequency '+str(z['observed_original_root_max_b50_frequency_pct'])+
+                '%; original GTO run '+str(z['source_run_id']))
+          desc+=['', 'In each source the prior flop b50 path already has ZERO legal hero combos, so no alternative river/turn continuation from that identical GTO root can satisfy the frozen b50 c/x b50 c/ rank71 path. Do NOT generalize to other flops, flop betting sizes, or new games.',
+                 '', 'Unchanged: 155 CERT / 237 APPROX / 0 EST. All 593 certified named boards and 685 actor locks remain separately source-gated; 134 b50 research-only candidates. Full HU 2475/2475 audit passed. PR #2 remains Draft; never merge or force push.']
+          pathlib.Path('docs/NL2_HU_B306_R71_ORIGINAL_FLOP_B50_ZERO_ROOTCAUSE.md').write_text('\n'.join(desc)+'\n')
+          print('PASS B306 original root source result frozen after V42+HU2475 independent audits')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b306_rank71_three_GTO_flop_root_b50_40_70.json docs/NL2_HU_B306_R71_ORIGINAL_FLOP_B50_ZERO_ROOTCAUSE.md
+          git commit -m 'TASK-HYBRID B306: original B298/B300/B302 GTO root BB-b50 40/70=0 SHA verified; 593 lock and HU2475 PASS, CERT155'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B306-three-original-GTO-root-BB-b50-40-70-zero-HU2475
+          path: |
+            data/nl2_hu_b306_rank71_three_GTO_flop_root_b50_40_70.json
+            docs/NL2_HU_B306_R71_ORIGINAL_FLOP_B50_ZERO_ROOTCAUSE.md
+            nl2-audit/
+          retention-days: 30
