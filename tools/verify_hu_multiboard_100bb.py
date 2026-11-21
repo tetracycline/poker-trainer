@@ -363,6 +363,26 @@ def verify(root,source_pin,run_id):
                         m.get('gto_parent_source_manifest_sha256')=='ab08f31291ed6feb19bdca412c56f8adc9ee5bc06ff43fe6ae6303b0660c2b3f'):
                         raise ValueError('Focused b50-call turn allowed ONLY from byte-identical B117 SB3 Jh9d6s actor OOP GTO parent')
                     if turn_policy=='xxonly' and not (
+                        # B144 frozen rank47: original B3 individually-successful
+                        # *full* 100bb limped GTO parent, actor IP CO at turn
+                        # after flop BB check/CO b33/BB call; turn BB check.
+                        # Only these two exact original roots and fixed SHA/jobs.
+                        (m['spot']=='LMP_CO_BB' and m['version']=='exp_ip' and
+                         m['flop']=='8s8h3d' and m.get('selected_lines')==['x b33 c'] and
+                         m.get('selected_turn_lines')==['x x'] and
+                         m.get('gto_parent_source_run_id')==44666294821 and
+                         m.get('gto_parent_source_sha256')=='c5861d2bbcc0361f095b13a8ed3e393785c48ec2a517cee1cafb7c52567ed61c' and
+                         m.get('flop_root_jobfile_sha256')=='bbed120f68c2e295febc4715fc2a8f987bf46d2d2802a7e410809fea66ca7907' and
+                         m.get('gto_parent_source_manifest_sha256')=='f6922cc27956249d6d69e1c4a184956dc356f67ba8b577194a88a2eccebd3bb7')
+                        or
+                        (m['spot']=='LMP_CO_BB' and m['version']=='exp_ip' and
+                         m['flop']=='9s6h3d' and m.get('selected_lines')==['x b33 c'] and
+                         m.get('selected_turn_lines')==['x x'] and
+                         m.get('gto_parent_source_run_id')==44666294821 and
+                         m.get('gto_parent_source_sha256')=='2856dcd71a0d8b4f2f2597ffb5e62cc8b31aeefa3017cbf6f263bcc733716909' and
+                         m.get('flop_root_jobfile_sha256')=='5e0dd09079d0e7c63cb92206c705a37686abecfbc65870a37894c91d7e681246' and
+                         m.get('gto_parent_source_manifest_sha256')=='e1928c60767bd27371029f56f3d53f0f3471f74d955108cf808ff3090bc85d13')
+                        or
                         (m['spot']=='BTN_BB' and m['version']=='exp_oop' and
                          m.get('selected_lines')==['x b50 c'] and
                          m.get('pinned_official_legacy_source_id') in (44525865923,44653774402))
