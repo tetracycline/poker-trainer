@@ -20,7 +20,7 @@ def main():
     q=s['B319_rank60_three_true_GTO_NL2_CO_IP_flops']
     assert (q['rank'],q['model_id'],q['actor'],q['exact_line'],q['model_SPR'])==(
        60,MID,'CO_IP','x b50 c/x',8.614)
-    assert q['prereg_third_batch'] in ('B314','B315')
+    assert q['prereg_third_batch'] in ('B314','B315','B322','B323')
     assert len(q['flops'])==3 and len(set(q['flops']))==3
     assert 'Js9h4d' in q['flops'] and 'Js9h5d' in q['flops']
     assert len(set(q['textures']))>=2
@@ -42,7 +42,7 @@ def main():
     d.parent_v42_sha256?.length!==64||
     q?.rank!==60||q?.model_id!=='ln-ipfr-t_model-hxdit'||
     q?.actor!=='CO_IP'||q?.exact_line!=='x b50 c/x'||q?.model_SPR!==8.614||
-    !['B314','B315'].includes(q?.prereg_third_batch)||
+    !['B314','B315','B322','B323'].includes(q?.prereg_third_batch)||
     q?.flops?.length!==3||new Set(q.flops).size!==3||
     !q.flops.includes('Js9h4d')||!q.flops.includes('Js9h5d')||
     q?.textures?.length<2||new Set(q.textures).size<2||
