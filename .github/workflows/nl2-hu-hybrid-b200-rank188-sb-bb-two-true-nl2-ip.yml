@@ -40,7 +40,7 @@ jobs:
           d=pathlib.Path('trainer/data')
           pin=json.loads((d/('nl2_hu_b199_rank188_'+flop+'_original_SB_BB_gto_pin.json')).read_text())
           assert pin['schema']=='NL2_HU_B199_RANK188_ORIGINAL_SB_BB_GTO_SOURCE_PIN_V1'
-          assert pin['source_run_id']==run and pin['target_rank']==159
+          assert pin['source_run_id']==run and pin['target_rank']==188
           assert pin['acting_position']=='BB_IP' and pin['minimum_strict_original_actor_IP_combos']>0
           assert pin['original_parent_GTO_not_recomputed'] is True
           for file,key in (
@@ -93,7 +93,7 @@ jobs:
         with: {python-version: '3.11'}
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
-      - name: Download exactly two fresh genuine BB-IP Rust partial source jobs, neither old B1/B5 EXP nor GTO
+      - name: Download exactly two fresh genuine BB-IP Rust partial source jobs, neither old B1/B4 EXP nor GTO
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -146,12 +146,14 @@ jobs:
           sha=lambda b:hashlib.sha256(b).hexdigest()
           good=all(v['strict_combos']>0 for v in positives.values())
           idx=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
-            batch='B200_R188_SBBB_2FLOP_EXP_IP',
+            batch='B200_R188_SBBB_2FLOP_EXP_IP',rank=188,
+            model_id='ln-ipc-r_model-1s0a4ds',
             run_id=x['source_run_id'],actual_spot_flop_version_jobs=2,
             verified_cases=2,gto_cases=0,locked_cases=2,
             source_sha256=sha(raw),gzip_sha256=sha(compressed.read_bytes()),
             exact_SB_BB_BB_IP_line='x b50 c/x b100 c/x',actor_seat=1,
-            real_B1_B5_GTO_pinned_flop_sources=positives,
+            exact_action_line='x b50 c/x b100 c/x',
+            real_B1_B4_GTO_pinned_flop_sources=positives,
             both_new_flops_positive_strict_BB_IP_combos=good,
             source_NL2_aggregate_rate_not_private_hand_observed=True,
             generic_model_certification=0,immediate_CERT_upgrades=0,
@@ -159,7 +161,7 @@ jobs:
           p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
           p.unlink()
           pathlib.Path('trainer/docs/NL2_HU_B200_RANK188_TWO_TRUE_SB_BB_BB_IP_PARTIAL_LOCKS.md').write_text(
-            '# B200 rank188 original B1/B5 GTO with fresh real SB_BB BB-IP partial locks\n\n'
+            '# B200 rank188 original B1/B4 GTO with fresh real SB_BB BB-IP partial locks\n\n'
             '8s8h3d/5s and 9s6h3d/Ts genuine exact 100bb GTO parents, '
             'BB IP actor after x b50 c/x b100 c/x, true Rust partial NL2 source: '+
             json.dumps(positives,ensure_ascii=False)+'. '
@@ -167,21 +169,21 @@ jobs:
             'not observed villain conditional private-hand decisions. '
             'Only exact named flops and action lines are covered. '
             'No false generic CERT, rank188 remains APPROX pending independent three-board gate; '
-            'existing 148 CERT /244 APPROX / 572 named boards, HU 2475. '
+            'existing 149 CERT /243 APPROX / 575 named boards, HU 2475. '
             'PR2 Draft, NEVER MERGE.\n')
           print('PASS B200 verified genuine SB BB IP Rust partial, preserve exact positivity',idx)
           PY
-      - name: Complete all original 148 CERT 572 real named-board GTO/NL2 lock and b50 provenance plus 2475 HU path audits
+      - name: Complete all current 149 CERT 575 real named-board GTO/NL2 lock and b50 provenance plus 2475 HU path audits
         working-directory: trainer
         run: |
           set -euo pipefail
           mkdir -p nl2-audit
-          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v35_b193_rank201.json --out nl2-audit/b200-lock.json
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v36_b201_rank159.json --out nl2-audit/b200-lock.json
           python3 - <<'PY'
           import json
           d=json.load(open('nl2-audit/b200-lock.json'))
-          assert (d['cert_multiboard'],d['approx'],d['EST'])==(148,244,0)
-          assert d['aggregate']['named_board_proofs']==572
+          assert (d['cert_multiboard'],d['approx'],d['EST'])==(149,243,0)
+          assert d['aggregate']['named_board_proofs']==575
           assert d['aggregate']['paired_hero_locked_source_variants']>=664
           assert d['aggregate']['board_examples_with_b50_candidate']>=132
           assert d['not_generalized_handclass_GTO'] and d['not_actual_NL2_earnings']
@@ -191,7 +193,7 @@ jobs:
           node tools/reach_verify.js --log nl2-audit/reach.md --json nl2-audit/reach.json
           node tools/hu_model_path_audit.js nl2-audit/model-path.json
           node -e 'const c=require("./nl2-audit/links.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS 2475/2475")'
-      - name: Commit only after original B1/B5 SHA plus 2 genuine BB IP NL2 Rust children and full 572/2475 audit PASS, never merge PR2 Draft
+      - name: Commit only after original B1/B4 SHA plus 2 genuine BB IP NL2 Rust children and full 575/2475 audit PASS, never merge PR2 Draft
         working-directory: trainer
         run: |
           set -euo pipefail
@@ -209,7 +211,7 @@ jobs:
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: TASK-HYBRID-B200-original-B1B5-true-BBIP-two-Rust-572-2475
+          name: TASK-HYBRID-B200-original-B1B4-true-BBIP-two-Rust-572-2475
           path: |
             trainer/data/solver_evidence/NL2_MULTIBOARD_B200_R188_SBBB_2FLOP_EXP_IP.*
             trainer/docs/NL2_HU_B200_RANK188_TWO_TRUE_SB_BB_BB_IP_PARTIAL_LOCKS.md
