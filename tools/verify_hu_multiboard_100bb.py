@@ -235,6 +235,65 @@ def authorized_b167_rank80_exact_true_gto_parent(m):
         return False
 
 
+def authorized_b176_rank138_exact_b2_co_ip_xx(m):
+    """Only original successful B2 CO_BB Js9h4d full GTO root for rank138.
+
+    Never permit a generic check-check board without exact source SHA,
+    original successful B2 job, frozen positive GTO combo reach, same
+    actor/line/SPR and a genuine separately solved EXP_IP child.
+    """
+    if not (m.get('spot')=='CO_BB' and m.get('version')=='exp_ip' and
+            m.get('flop')=='Js9h4d' and
+            m.get('selected_lines')==['x x'] and
+            m.get('selected_turn_lines')==['x x'] and
+            m.get('turns')==['Ts'] and
+            m.get('flop_line_policy')=='checkcheck' and
+            m.get('turn_line_policy')=='xxonly' and
+            m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK' and
+            m.get('NL2_hero_lock_scope')=='TURN_RIVER_ONLY_FROM_SHA_PINNED_B2_RANK138_TRUE_GTO' and
+            m.get('gto_parent_source_run_id')==44666290556 and
+            m.get('preflop_ranges',{}).get('source')=='PINNED_POKER_SOLVER_PREFLOP_CFR' and
+            m.get('original_B2_GTO_flop_byte_identical_not_recomputed') is True):
+        return False
+    d=pathlib.Path(__file__).resolve().parents[1]/'data'
+    pfile=d/'nl2_hu_b176_rank138_js9h4d_b2_gto_parent_pin.json'
+    bz=d/'solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json.gz'
+    index=bz.with_suffix('').with_suffix('.index.json')
+    prior=d/'nl2_hu_b175_v32_248_exact_GTO_source_provenance.json'
+    old=d/'nl2_hu_b107_co_js9h4d_b2_gto_parent_pin.json'
+    try:
+        import gzip
+        p=json.loads(pfile.read_text())
+        i=json.loads(index.read_text())
+        a=json.loads(prior.read_text())
+        o=json.loads(old.read_text())
+        row=next(z for z in a['rows'] if z['rank']==138)
+        authentic=[z for z in row['exact_authentic_gto_source_proofs'] if
+          z['flop']=='Js9h4d' and z['turn']=='Ts' and
+          z['source_run']==44666290556 and
+          z['source_sha']==p['original_GTO_sample_sha256'] and
+          z['exact_line']=='x x/x x/x' and z['actor']==1 and
+          z['strict_legal_combos']>0 and z['GTO_gap_pct']<=0.5 and
+          z['SPR_error_pct']<=5 and not z['true_NL2_actor_locked']]
+        return (a['schema']=='NL2_HU_B175_V32_ALL_248_GENUINE_GTO_RUN_ACTOR_TURN_SHA_PROVENANCE_V1' and
+          (a['CERT_MULTIBOARD'],a['APPROX'],a['EST'])==(144,248,0) and
+          p['schema']=='NL2_HU_B176_RANK138_CO_BB_JS9H4D_B2_GTO_PARENT_PIN_V1' and
+          p['original_source_run_id']==i['run_id']==44666290556 and
+          p['target_rank']==138 and p['target_model_id']=='ln-ipfr-r_model-hqu5je' and
+          p['public_flop']=='Js9h4d' and p['turn']=='Ts' and
+          p['flop_line']=='x x' and p['turn_line']=='x x' and
+          p['strict_hero_IP_river_combos']>0 and bool(authentic) and
+          i['source_sha256']==hashlib.sha256(gzip.decompress(bz.read_bytes())).hexdigest() and
+          i['gzip_sha256']==sha(bz) and
+          p['B2_PARTIAL_source_archive_SHA256']==i['gzip_sha256'] and
+          o['original_GTO_flop_SHA256']==p['original_GTO_flop_SHA256']==m.get('gto_parent_source_sha256') and
+          o['original_GTO_job_SHA256']==p['original_GTO_job_SHA256']==m.get('flop_root_jobfile_sha256') and
+          o['original_manifest_SHA256']==p['original_manifest_SHA256']==m.get('gto_parent_source_manifest_sha256') and
+          m.get('original_B176_rank138_b2_GTO_pin_sha256')==sha(pfile))
+    except (OSError,KeyError,TypeError,ValueError,EOFError,StopIteration):
+        return False
+
+
 def strict_medium_evidence(n,raw,seq_mask):
     """Re-evaluate b50 relative-equity distribution ONLY after every past
     hero action was legal under max/near-mix and blockers.
@@ -579,6 +638,10 @@ def verify(root,source_pin,run_id):
                         m.get('gto_parent_source_manifest_sha256')=='ab08f31291ed6feb19bdca412c56f8adc9ee5bc06ff43fe6ae6303b0660c2b3f'):
                         raise ValueError('Focused b50-call turn allowed ONLY from byte-identical B117 SB3 Jh9d6s actor OOP GTO parent')
                     if turn_policy=='xxonly' and not (
+                        # B176 rank138 only: B2 independently-successful original
+                        # Js9h4d full GTO parent x-x / x-x CO IP run+SHA.
+                        authorized_b176_rank138_exact_b2_co_ip_xx(m)
+                        or
                         # B167: independently verified exact B165 7s5h3d
                         # GTO parent, IP CO after b33-call/x-x, fixed SHAs.
                         authorized_b167_rank80_exact_true_gto_parent(m)
