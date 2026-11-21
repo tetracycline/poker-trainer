@@ -6,7 +6,7 @@ ASSUMED_EXPLICIT_169CLASS limped ranges disclosed. No generic bucket CERT and no
 import argparse,json,pathlib,shutil,sys,time,traceback
 from solve_hu_multiboard_100bb import make_fallbacks,sha,SIZES
 ROOT=pathlib.Path(__file__).resolve().parents[1]/'data'
-PIN=ROOT/'nl2_hu_b211_rank46_lmp_as9h2d_gto_parent_pin.json'
+PIN=ROOT/'nl2_hu_b211_rank46_lmp_As9h2d_gto_parent_pin.json'
 SPOT='LMP_CO_BB';FLOP='As9h2d';LINE='x b50 c';TURNLINE='x x'
 RUN=44882967346
 
