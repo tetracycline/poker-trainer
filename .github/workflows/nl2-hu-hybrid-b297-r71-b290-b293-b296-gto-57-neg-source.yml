@@ -28,7 +28,7 @@ jobs:
           python3 - <<'PY'
           import pathlib,json,hashlib
           d=pathlib.Path('data')
-          file=d/'nl2_hu_b297_v42_rank71_B294_original_GTO_SHA_negative_gate.json'
+          file=d/'nl2_hu_b297_v42_rank71_B294_three_GTO_SHA_negative_gate.json'
           a=json.loads(file.read_text())
           assert a['schema']=='NL2_HU_B297_RANK71_B290_B293_B296_GTO_OOP_SHA_RIVER_ACTOR_57_NEGATIVES_V1'
           assert (a['CERT_MULTIBOARD'],a['APPROX'],a['EST'],a['TOTAL'])==(155,237,0,392)
