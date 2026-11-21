@@ -1,0 +1,101 @@
+name: TASK-HYBRID B273 V41 all 590 real GTO+NL2 actor lock measured/assumed/UNKNOWN 134 b50 and HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b273-v41-all-590-actor-lock-medium-source.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  all-V41-590-real-board-and-NL2-rate-medium-provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Independently compare all old 587 named true GTO/real NL2 sources against new V41 three rank61 CO-IP actor-locked SHA cases; preserve private-card unknown flags
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b273_v41_all_590_actor_lock_medium_provenance.py
+          python3 tools/hu_b273_v41_all_590_actor_lock_medium_provenance.py
+      - name: Cross-check immutable original 587 sources and all 590 distinct board/actor combos, 682 real NL2 partial locks, 134 exact b50 research-only sources
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json,csv,hashlib
+          d=pathlib.Path('data')
+          p=d/'nl2_hu_b273_v41_all_590_exact_lock_rate_medium_gap_priority.json'
+          x=json.loads(p.read_text())
+          assert x['schema']=='NL2_HU_B273_V41_ALL_590_AUTHENTIC_NAMED_GTO_NL2_LOCK_MEDIUM_SOURCE_V1'
+          assert (x['CERT_MULTIBOARD'],x['APPROX'],x['EST'],x['TOTAL'])==(154,238,0,392)
+          assert (x['certified_models'],x['all_named_boards'],x['all_actor_NL2_lock_variants'])==(154,590,682)
+          assert x['V41_status_sha256']==hashlib.sha256((d/'nl2_hu_multiboard_status_v41_b271_rank61.json').read_bytes()).hexdigest()
+          assert x['V41_matrix_sha256']==hashlib.sha256((d/'nl2_hu_cert_lock_medium_matrix_v41_b271.json').read_bytes()).hexdigest()
+          assert x['unchanged_prior_V40_587_real_board_source_SHA_and_NL2_locks']
+          assert x['three_additional_rank61_true_GTO_NL2_flops']==['Js9h5d','KsQh4d','QsJh4d']
+          assert x['pool_marginal_does_not_equal_private_hand_conditionals']
+          assert x['UNKNOWN_never_reclassified_as_observed'] and x['50pct_only_proven_exact_board_nonpolarized_research']
+          assert x['no_unverified_generic_strategy_certification'] and x['PR2_Draft_NEVER_MERGE']
+          a=x['counts']
+          assert (a['named_boards'],a['genuine_actor_NL2_lock_variants'],a['b50_named_board_research_only'])==(590,682,134)
+          assert (a['observed_pool_marginal_nodes'],a['assumed_default_nodes'],a['unmatched_villain_nodes'])==(4544,2143,3871)
+          assert (a['unknown_source_denominator_variants'],a['boards_with_incomplete_measured_source_rate'])==(321,575)
+          rows=x['per_exact_board_source_provenance']
+          assert len(rows)==590
+          assert len({(z['model_id'],z['flop'],z['turn'],z['exact_action_line'],z['actor_seat']) for z in rows})==590
+          assert sum(z['lock_variant_count'] for z in rows)==682
+          assert sum(z['exact_50pct_depolarized_board_research_only'] for z in rows)==134
+          assert all(z['all_private_card_conditional_NL2_rates_unobserved'] and
+            z['no_generalized_50_pct_advice'] and z['no_generic_handclass_CERT'] and
+            z['strict_hero_combos']>0 and len(z['genuine_GTO_sha256'])==64 for z in rows)
+          with (d/'nl2_hu_b273_v41_all_590_exact_lock_rate_medium_gap_priority.csv').open(encoding='utf8',newline='') as f:
+             assert len(list(csv.DictReader(f)))==590
+          print('PASS B273 exact source/actor V41 590 boards 682 locks 134 medium50 321 unknown lock variants')
+          PY
+      - name: Full V41 independent GTO+NL2 590 exact source-locked boards, 134 b50 research, 2475 HU link/actor range/model audits
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v41_b271_rank61.json --out nl2-audit/b273-lock-medium.json
+          python3 - <<'PY'
+          import json
+          z=json.load(open('nl2-audit/b273-lock-medium.json'))
+          assert (z['cert_multiboard'],z['approx'],z['EST'])==(154,238,0)
+          assert (z['aggregate']['named_board_proofs'],
+            z['aggregate']['paired_hero_locked_source_variants'],
+            z['aggregate']['board_examples_with_b50_candidate'])==(590,682,134)
+          assert z['not_generalized_handclass_GTO'] and z['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS HU 2475/2475")'
+      - name: Commit all V41 590 true named board provenance only after FULL Actions source lock and HU2475 PASS, PR#2 Draft no merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b273_v41_all_590_exact_lock_rate_medium_gap_priority.json              data/nl2_hu_b273_v41_all_590_exact_lock_rate_medium_gap_priority.csv              docs/NL2_HU_B273_V41_ALL_590_EXACT_NL2_LOCK_POOL_UNKNOWN_NONPOLAR.md
+          git commit -m 'TASK-HYBRID B273 V41: 590 real GTO/NL2 named board lock sources, 682 measured/default/UNKNOWN variants, 134 exact b50 and 2475 HU PASS; 154 CERT/238 APPROX'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B273-V41-all-590-authentic-GTO-NL2-lock-134b50-HU2475
+          path: |
+            data/nl2_hu_b273_v41_all_590_exact_lock_rate_medium_gap_priority.json
+            data/nl2_hu_b273_v41_all_590_exact_lock_rate_medium_gap_priority.csv
+            docs/NL2_HU_B273_V41_ALL_590_EXACT_NL2_LOCK_POOL_UNKNOWN_NONPOLAR.md
+            nl2-audit/
+          retention-days: 30
