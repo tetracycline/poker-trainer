@@ -383,8 +383,18 @@ def verify(root,source_pin,run_id):
                          m.get('gto_parent_source_run_id')==44666285424 and
                          m.get('gto_parent_source_sha256')=='80cbf4e9c56d01f6fb56400006b02029088de5114d3e70d848c3a233157e7a8e' and
                          m.get('flop_root_jobfile_sha256')=='f23084dbc9a1f9539c5d52ab57d91d62253c794e000fb96b87321e274e888a19' and
-                         m.get('gto_parent_source_manifest_sha256')=='385c2fc4341b185633345d617638ea71c1a922b5cfe6297625c0a44cb6678fbb')):
-                        raise ValueError('x-x extraction outside strictly SHA-pinned BTN, B98 LMP, B101 SB or B104 BTN actor parent')
+                         m.get('gto_parent_source_manifest_sha256')=='385c2fc4341b185633345d617638ea71c1a922b5cfe6297625c0a44cb6678fbb7')
+                        or
+                        # B129: exact B124 BTN_BB As7h3d pinned original GTO
+                        # and fresh NL2 IP turn-only genuine Rust continuation.
+                        (m['spot']=='BTN_BB' and m['version']=='exp_ip' and
+                         m['flop']=='As7h3d' and m.get('selected_lines')==['b33 c'] and
+                         m.get('selected_turn_lines')==['x x'] and
+                         m.get('gto_parent_source_run_id')==44839543260 and
+                         m.get('gto_parent_source_sha256')=='afc78d90660b563671bad694f20e9de4eb9aa4b7c38101a7136b926a3b6e80c1' and
+                         m.get('flop_root_jobfile_sha256')=='f76c10266568e783726d05aeed4107c0db9295bc7dfe1cd9a055526d38fea036' and
+                         m.get('gto_parent_source_manifest_sha256')=='009a322dc392543e9675a3c03582fa9cd2bda5e7ef48aafcc8bff8f1450945f0')):
+                        raise ValueError('x-x extraction outside one strictly SHA-pinned B98/B101/B104/B129 actor parent')
                     if turn_policy=='xb100only' and not (
                         m['spot']=='CO_BB' and m['version']=='exp_ip' and
                         m['flop']=='Js9h4d' and m.get('selected_lines')==['x b33 c'] and
