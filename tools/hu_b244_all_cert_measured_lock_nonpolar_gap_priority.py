@@ -188,6 +188,6 @@ def main():
       'and HU2475 independent Actions must pass before this report is committed.',
       'PR #2 Draft, NEVER MERGE.',''])
     MD_OUT.write_text('\n'.join(lines))
-    print('PASS B244',json.dumps(dict(tot),flush=True))
+    print('PASS B244',json.dumps(dict(tot),sort_keys=True),flush=True)
 if __name__=='__main__':
     main()
