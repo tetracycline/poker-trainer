@@ -21,7 +21,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile tools/verify_hu_multiboard_100bb.py             tools/solve_hu_b294_rank71_new_original_gto_nl2_oop.py             tools/test_hu_b297_rank71_b294_B290_B293_B296_gto_nl2_source_gate.py
-          python3 tools/test_hu_b297_rank71_b294_new_original_GTO_nl2_source_gate.py
+          python3 tools/test_hu_b297_rank71_b294_B290_B293_B296_gto_nl2_source_gate.py
       - name: Independently assert source-authorization cannot fabricate new rank71 BB-OOP CERT and retains original V42 SHA
         run: |
           set -euo pipefail
@@ -87,7 +87,7 @@ jobs:
         with:
           name: NL2-HU-B297-rank71-57-authentic-GTO-BB-OOP-SHA-negative-HU2475
           path: |
-            data/nl2_hu_b297_v42_rank71_B294_original_GTO_SHA_negative_gate.json
-            docs/NL2_HU_B297_R71_B290_B293_ORIGINAL_GTO_SHA_OOP_FAILCLOSED.md
+            data/nl2_hu_b297_v42_rank71_B294_three_GTO_SHA_negative_gate.json
+            docs/NL2_HU_B297_R71_B290_B293_B296_GTO_SHA_OOP_FAILCLOSED.md
             nl2-audit/
           retention-days: 30
