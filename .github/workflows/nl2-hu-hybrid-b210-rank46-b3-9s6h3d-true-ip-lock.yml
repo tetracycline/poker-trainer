@@ -104,9 +104,9 @@ jobs:
           set -euo pipefail
           mkdir -p downloads
           gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" \
-            --name 'nl2-multiboard-B210_R46_B3-LMP_CO_BB-exp_ip-9s6h3d' --dir downloads
-          test -s downloads/evidence/LMP_CO_BB-exp_ip-9s6h3d.json
-          test -s downloads/solver/postflop/out/LMP_CO_BB/exp_ip/9s6h3d_multiboard.json
+            --name 'nl2-multiboard-B210_R46_B3-LMP_CO_BB-exp_ip-9s6h3d' --dir downloads/nl2-multiboard-B210_R46_B3-LMP_CO_BB-exp_ip-9s6h3d
+          test -s downloads/nl2-multiboard-B210_R46_B3-LMP_CO_BB-exp_ip-9s6h3d/evidence/LMP_CO_BB-exp_ip-9s6h3d.json
+          test -s downloads/nl2-multiboard-B210_R46_B3-LMP_CO_BB-exp_ip-9s6h3d/solver/postflop/out/LMP_CO_BB/exp_ip/9s6h3d_multiboard.json
       - name: Independently verify Rust CFR SHA, correct CO-IP actor/turn/full-street reach, pot SPR, true GTO parent byte SHA, observed vs assumed NL2 frequencies
         run: |
           set -euo pipefail
