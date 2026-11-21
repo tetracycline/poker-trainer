@@ -452,6 +452,69 @@ def authorized_b189_rank199_202_B3_original_gto_IP_xb33_xb50(m):
         return False
 
 
+def authorized_b192_rank201_exact_original_B3_CO_IP_xb33_xb100(m):
+    """Only original SHA-pinned B191 rank201 two B3 real GTO flops.
+
+    B175 independently proves exact actor CO-IP and strictly positive
+    full street combos for x b33 c / x b100 c / x. No other flop
+    or preflop policy, no generic texture model certification.
+    """
+    if not (m.get('spot')=='LMP_CO_BB' and m.get('version')=='exp_ip' and
+       m.get('flop') in ('8s8h3d','9s6h3d') and
+       m.get('selected_lines')==['x b33 c'] and
+       m.get('selected_turn_lines')==['x b100 c'] and
+       m.get('flop_line_policy')=='checked-b33only' and
+       m.get('turn_line_policy')=='xb100only' and
+       m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK' and
+       m.get('NL2_hero_lock_scope')=='TURN_RIVER_ONLY_FROM_SHA_PINNED_B3_RANK201_XB33_XB100_GTO' and
+       m.get('gto_parent_source_run_id')==44666294821 and
+       m.get('preflop_ranges',{}).get('source')=='ASSUMED_EXPLICIT_169CLASS' and
+       m.get('original_full_GTO_flop_byte_identical_not_recomputed') is True):
+        return False
+    d=pathlib.Path(__file__).resolve().parents[1]/'data'
+    pinfile=d/('nl2_hu_b191_rank201_'+m['flop']+'_B3_original_gto_pin.json')
+    b188=d/('nl2_hu_b188_rank199_202_'+m['flop']+'_B3_gto_pin.json')
+    b175=d/'nl2_hu_b175_v32_248_exact_GTO_source_provenance.json'
+    archive=d/'solver_evidence/NL2_MULTIBOARD_B3.json.gz'
+    index=d/'solver_evidence/NL2_MULTIBOARD_B3.index.json'
+    try:
+        import gzip
+        p=json.loads(pinfile.read_text())
+        prev=json.loads(b188.read_text())
+        gap=json.loads(b175.read_text())
+        ix=json.loads(index.read_text())
+        row=next(z for z in gap['rows'] if z['rank']==201)
+        legal=[z for z in row['exact_authentic_gto_source_proofs'] if
+           z['flop']==m['flop'] and z['turn']==p['turn'] and
+           z['source_run']==44666294821 and z['source_sha']==p['original_GTO_case_SHA256']
+           and z['exact_line']=='x b33 c/x b100 c/x' and
+           z['actor']==1 and z['strict_legal_combos']>0 and
+           z['GTO_gap_pct']<=.5 and z['SPR_error_pct']<=5 and
+           not z['true_NL2_actor_locked']]
+        return (p['schema']=='NL2_HU_B191_RANK201_B3_ORIGINAL_XB33_XB100_GTO_PARENT_PIN_V1' and
+           p['source_run_id']==44666294821 and p['target_rank']==201 and
+           p['model_id']=='ln-iso-lmp_r_model-qsgdjf' and p['actor']==1 and
+           p['spot']=='LMP_CO_BB' and p['original_GTO_flop_line']=='x b33 c' and
+           p['target_turn_line']=='x b100 c' and p['exact_river_line']=='x b33 c/x b100 c/x' and
+           p['original_assumed_preflop_169class_not_measured'] is True and
+           p['original_full_GTO_flop_not_recomputed'] is True and
+           p['minimum_strict_original_GTO_legal_IP_combos']>0 and bool(legal) and
+           p['original_B188_parent_pin_sha256']==sha(b188) and
+           p['original_gto_root_sha256']==prev['original_gto_root_sha256'] and
+           p['original_gto_job_sha256']==prev['original_gto_job_sha256'] and
+           p['original_gto_manifest_sha256']==prev['original_gto_manifest_sha256'] and
+           p['original_B3_verified_archive_sha256']==ix['gzip_sha256']==sha(archive) and
+           ix['source_sha256']==hashlib.sha256(gzip.decompress(archive.read_bytes())).hexdigest() and
+           p['original_B3_index_sha256']==sha(index) and
+           m.get('turns')==[p['turn']] and
+           m.get('gto_parent_source_sha256')==p['original_gto_root_sha256'] and
+           m.get('flop_root_jobfile_sha256')==p['original_gto_job_sha256'] and
+           m.get('gto_parent_source_manifest_sha256')==p['original_gto_manifest_sha256'] and
+           m.get('original_B191_parent_pin_sha256')==sha(pinfile))
+    except (OSError,KeyError,TypeError,ValueError,EOFError,AssertionError,StopIteration):
+        return False
+
+
 def strict_medium_evidence(n,raw,seq_mask):
     """Re-evaluate b50 relative-equity distribution ONLY after every past
     hero action was legal under max/near-mix and blockers.
@@ -912,6 +975,10 @@ def verify(root,source_pin,run_id):
                          m.get('gto_parent_source_manifest_sha256')=='009a322dc392543e9675a3c03582fa9cd2bda5e7ef48aafcc8bff8f1450945f0')):
                         raise ValueError('x-x extraction outside individually SHA-pinned B98/B101/B104/B129/B164/B167 actor parents')
                     if turn_policy=='xb100only' and not (
+                        # B192 only: B191 SHA original B3 rank201 8s8h3d/9s6h3d
+                        # exact x b33 c / x b100 c / x CO IP legal combo.
+                        authorized_b192_rank201_exact_original_B3_CO_IP_xb33_xb100(m)
+                        or
                         m['spot']=='CO_BB' and m['version']=='exp_ip' and
                         m['flop']=='Js9h4d' and m.get('selected_lines')==['x b33 c'] and
                         m.get('selected_turn_lines')==['x b100 c'] and
