@@ -608,7 +608,7 @@ def authorized_b200_rank188_original_SB_BB_BB_IP_xb100_xx(m):
           not z['true_NL2_actor_locked']]
         return (
           pin['schema']=='NL2_HU_B199_RANK188_ORIGINAL_SB_BB_GTO_SOURCE_PIN_V1' and
-          (pin['target_rank'],pin['model_id'])==(159,'ln-ipc-r_model-1s0a4ds') and
+          (pin['target_rank'],pin['model_id'])==(188,'ln-ipc-r_model-1s0a4ds') and
           (pin['spot'],pin['acting_seat'],pin['acting_position'])==('SB_BB',1,'BB_IP') and
           pin['exact_river_line']=='x b50 c/x b100 c/x' and
           pin['original_parent_GTO_not_recomputed'] is True and
