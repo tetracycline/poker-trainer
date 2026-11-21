@@ -224,6 +224,33 @@ el('node').addEventListener('change',selectNode);
 el('all-combos').addEventListener('change',fillCombos);
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
+ const v38=d=>{
+ if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V38_B206_RANK190'||
+    d.CERT_MULTIBOARD!==151||d.APPROX!==241||d.EST!==0||d.TOTAL!==392||
+    d.parent_v37_sha256?.length!==64||
+    d.B206_rank190_three_genuine_GTO_NL2_BB_IP_flops?.rank!==190||
+    d.B206_rank190_three_genuine_GTO_NL2_BB_IP_flops?.flops?.join(',')!=='8s8h3d,Js9h4d,Ks7h2d'||
+    d.B206_rank190_three_genuine_GTO_NL2_BB_IP_flops?.exact_line!=='x b75 c/x b100 c/x'||
+    d.B206_rank190_three_genuine_GTO_NL2_BB_IP_flops?.actor!=='BB_IP'||
+    d.B206_rank190_three_genuine_GTO_NL2_BB_IP_flops?.original_GTO_runs?.['8s8h3d']!==44666285424||
+    d.B206_rank190_three_genuine_GTO_NL2_BB_IP_flops?.original_GTO_runs?.['Js9h4d']!==44666285424||
+    d.B206_rank190_three_genuine_GTO_NL2_BB_IP_flops?.original_GTO_runs?.Ks7h2d!==44654973894||
+    d.B206_rank190_three_genuine_GTO_NL2_BB_IP_flops?.preflop_CFR_pinned_not_observed_NL2_private_hand!==true||
+    d.records?.['ln-ipc-r_model-dfikbd']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-ipc-r_model-dfikbd']?.proven_exact_board_count!==3||
+    d.records?.['ln-ipc-r_model-1s0a4ds']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-ipc-r_model-vvxn9n']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-qsgdjf']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-10l8t7i']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-yh8124']?.label!=='CERT-MULTIBOARD'||
+    d.records?.['ln-iso-lmp_r_model-vlgh2t']?.label!=='APPROX'||
+    d.records?.['ln-iso-lmp_r_model-wpg493']?.label!=='APPROX'||
+    d.no_generic_texture_GTO!==true||d.no_observed_private_card_NL2_rates!==true||
+    d.PR2_remains_draft_never_merge!==true||
+    Object.keys(d.records||{}).length!==392)
+     throw Error('V38 rank190 3 named original GTO and actual BB-IP NL2 source gate failed');
+ return d;
+};
  const v37=d=>{
  if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V37_B205_RANK188'||
     d.CERT_MULTIBOARD!==150||d.APPROX!==242||d.EST!==0||d.TOTAL!==392||
@@ -713,7 +740,8 @@ function fetchCertifiedRegistry(){
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v37_b205_rank188.json',{cache:'no-store'}).then(open).then(v37)
+ return fetch('data/nl2_hu_multiboard_status_v38_b206_rank190.json',{cache:'no-store'}).then(open).then(v38)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v37_b205_rank188.json',{cache:'no-store'}).then(open).then(v37))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v36_b201_rank159.json',{cache:'no-store'}).then(open).then(v36))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v35_b193_rank201.json',{cache:'no-store'}).then(open).then(v35))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v34_b190_rank199_202.json',{cache:'no-store'}).then(open).then(v34))
