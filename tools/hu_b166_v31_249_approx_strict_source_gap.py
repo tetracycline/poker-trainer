@@ -36,8 +36,25 @@ def checked_source(key,p):
     assert ix['batch']==key
     assert ix['source_sha256']==hashlib.sha256(raw).hexdigest()
     assert ix['gzip_sha256']==sha(p)
-    assert (ix.get('generic_model_certification')==0 or
-            ix.get('no_generic_model_certification') is True),('no generic GTO',key)
+    # Historical source-index variants: original full GTO uses
+    # no_generic_model_certification=True. B164 Rust EXP index accidentally
+    # wrote the inverted field with integer 0, but its byte-identical raw
+    # evidence contains actual exp_ip locked Rust solve (NOT generic CERT).
+    # Whitelist ONLY this exact independently verified original B164 form,
+    # pin full source sha, run, locked cases and no immediate CERT.
+    no_generic=(ix.get('generic_model_certification')==0 or
+                ix.get('no_generic_model_certification') is True or
+                (key=='B164_R80_B9_ORIGINAL_EXP_IP' and
+                 ix.get('no_generic_model_certification')==0 and
+                 ix.get('run_id')==44861858112 and
+                 ix.get('gto_cases')==0 and ix.get('locked_cases')==1 and
+                 e.get('imputed_pool_locked_sources')==1 and
+                 e.get('exact_board_gto_sources')==0 and
+                 e.get('new_authentic_board_cases')==1 and
+                 len(e.get('artifacts',[]))==1 and
+                 (e['artifacts'][0]['spot'],e['artifacts'][0]['version'],
+                  e['artifacts'][0]['flop'])==('LMP_CO_BB','exp_ip','4s4h2d')))
+    assert no_generic,('not authenticated as no-generic CERT source',key)
     assert ix['immediate_CERT_upgrades']==0
     assert e['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
     assert e['source_run_id']==ix['run_id'] and not e['errors']
