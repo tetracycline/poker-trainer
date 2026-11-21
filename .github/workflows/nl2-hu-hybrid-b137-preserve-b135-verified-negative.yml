@@ -1,0 +1,135 @@
+name: TASK-HYBRID B137 preserve true B135 rank88 GTO and NL2 actor-OOP negative strict source (max9m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b137-preserve-b135-verified-negative.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Fetch finished B135 independent Rust source files without re-solving any flop
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for version in gto exp_oop; do
+            name="nl2-multiboard-B135_R88_SB3_AS9H2D-SB3_BTN-${version}-As9h2d"
+            mkdir -p "downloads/$name"
+            gh run download 44841789728 --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$name"
+            test -s "downloads/$name/evidence/SB3_BTN-${version}-As9h2d.json"
+          done
+      - name: Independently validate solver roots, rake, range source, exact path, GTO gaps, lock/default and sequential reach
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/verify_hu_multiboard_100bb.py
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver --run-id 44841789728 --out trainer/data/solver_evidence/NL2_MULTIBOARD_B135_R88_SB3_AS9H2D.json
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Preserve evidence, separately gate exact actor-OOP reach and flag rank88 APPROX
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,gzip,hashlib,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B135_R88_SB3_AS9H2D.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert d['source_run_id']==44841789728 and not d['errors']
+          assert (d['exact_board_gto_sources'],d['imputed_pool_locked_sources'])==(1,1)
+          assert len(d['artifacts'])==2
+          arts={a['version']:a for a in d['artifacts']}
+          assert set(arts)=={'gto','exp_oop'}
+          for a in arts.values():
+              assert (a['spot'],a['flop'])==('SB3_BTN','As9h2d')
+              assert not a['errors'] and a['cases']
+              assert all((c['flop_line'],c['turn'])==('b33 c','Kd') for c in a['cases'])
+          def strict(version):
+              return [n for c in arts[version]['cases'] for n in c['nodes']
+                  if n['exact_node_line']=='b33 c/b50 c/' and n['acting_seat']==0
+                  and n['strictly_reachable_combos']>0]
+          gto=strict('gto');exp=strict('exp_oop')
+          assert gto and not exp, 'B135 changed dual-policy reach; do not publish unreviewed source classification'
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          idx=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+             batch='B135_R88_SB3_AS9H2D',run_id=44841789728,
+             actual_spot_flop_version_jobs=2,
+             verified_cases=d['new_authentic_board_cases'],
+             gto_cases=1,locked_cases=1,
+             source_sha256=hashlib.sha256(raw).hexdigest(),
+             gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+             generic_model_certification=0,
+             rank88_GTO_hero_actor_combo_sum=sum(n['strictly_reachable_combos'] for n in gto),
+             rank88_NL2_locked_hero_actor_combo_sum=0,
+             missing_exact_actor_OOP_line='b33 c/b50 c/',
+             no_certification_reason='B135_GTO_STRICT_OOP_RIVER_NONZERO_BUT_EXP_OOP_HAS_ZERO_EXACT_ACTION_REACH',
+             rank88_remains_APPROX=True,original_GTO_board_not_recomputed=True,
+             exact_turn='Kd',strict_GTO_hero_nodes=len(gto),
+             source_pair_differs_in_exact_hero_line=True,immediate_CERT_upgrades=0)
+          p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          doc=pathlib.Path('trainer/docs/NL2_HU_B137_RANK88_GENUINE_NEGATIVE.md')
+          doc.write_text('# B137 rank88 genuine negative exact SB3 BTN source\n\n'
+             'B135 run 44841789728 genuine independently SHA-verified GTO+EXP_OOP '
+             'As9h2d, turn Kd, target b33 c/b50 c/.\n'
+             'GTO positive legal hero-OOP rows: '+str(idx['rank88_GTO_hero_actor_combo_sum'])
+             + '; actual locked legal hero-OOP rows: 0. No false promotion.\n'
+             'Status after B123 remains **140 CERT /252 APPROX /0 EST**. '
+             'This is an exact source negative, not proof of a profitable betting action.\n'
+             'PR#2 Draft, NEVER MERGE.\n')
+          print('PASS authenticated B135 negative source while keeping rank88 APPROX',idx)
+          PY
+      - name: Full HU contract and all 2475 reachable river routes, unchanged V28 cert and lock matrix
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 - <<'PY'
+          import json
+          d=json.load(open('data/nl2_hu_multiboard_status_v28_b133_rank69.json'))
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v28_b133.json'))
+          assert (d['CERT_MULTIBOARD'],d['APPROX'],d['EST'],d['TOTAL'])==(140,252,0,392)
+          assert len(m['boards'])==548 and len(m['models'])==140
+          assert d['records']['ln-3bp-3b_r_model-8uwbze']['label']=='APPROX'
+          assert d['independently_verified_completed_batches']['B4_MICRO']['status']=='VERIFIED'
+          print('PASS unchanged 140 CERT 252 APPROX, 548 named board proofs, Batch E')
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts; console.log(c.reachRiver+"/"+c.continuing+" "+c.riverShare+"%"); if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100) process.exit(1)'
+      - name: Commit B135 true negative proof to PR2 Draft branch without changing certified counts
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B135_R88_SB3_AS9H2D.json.gz data/solver_evidence/NL2_MULTIBOARD_B135_R88_SB3_AS9H2D.index.json docs/NL2_HU_B137_RANK88_GENUINE_NEGATIVE.md
+          git commit -m 'TASK-HYBRID B137: independently archive genuine B135 rank88 GTO and NL2 OOP source; strict OOP river hero zero, keep APPROX'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B137-authentic-rank88-negative
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B135_R88_SB3_AS9H2D.*
+            trainer/docs/NL2_HU_B137_RANK88_GENUINE_NEGATIVE.md
+          retention-days: 30
