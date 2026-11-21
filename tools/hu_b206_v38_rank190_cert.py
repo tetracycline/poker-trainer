@@ -47,7 +47,7 @@ def source_gate():
     for flop,pfile in PINS.items():
         p=load(pfile)
         assert p['schema']=='NL2_HU_B203_RANK190_ORIGINAL_SB_BB_GTO_SOURCE_PIN_V1'
-        assert (p['target_rank'],p['model_id'],p['spot'],p['flop'])==(188,MID,'SB_BB',flop)
+        assert (p['target_rank'],p['model_id'],p['spot'],p['flop'])==(190,MID,'SB_BB',flop)
         assert p['acting_seat']==1 and p['acting_position']=='BB_IP'
         assert p['exact_river_line']==LINE
         assert p['flop_line']=='x b75 c' and p['turn_line']=='x b100 c'
@@ -143,20 +143,20 @@ def main():
        prereg_cohort='B175_V32_FROZEN_RANK190_TWO_MISSING_TRUE_GTO_NL2_BBIP_FLOPS',
        certified_3_to_5_exact_flop_boards=boards,proven_exact_board_count=3,
        blocked_reason=None,
-       source_credibility='B203_ORIGINAL_B1_8S8H3D_B4_9S6H3D_GTO_SHA_PLUS_B204_TRUE_BBIP_NL2_RUST_AND_OFFICIAL_KS7H2D')
+       source_credibility='B203_ORIGINAL_B1_8S8H3D_AND_JS9H4D_GTO_SHA_PLUS_B204_TRUE_BBIP_NL2_RUST_AND_OFFICIAL_KS7H2D')
     assert {mid for mid in old['records'] if old['records'][mid]!=out['records'][mid]}=={MID}
     assert sum(z['label']=='CERT-MULTIBOARD' for z in out['records'].values())==151
     assert sum(z['label']=='APPROX' for z in out['records'].values())==241
     out.update(schema='NL2_HU_392_MULTIBOARD_CERT_STATUS_V38_B206_RANK190',
         CERT_MULTIBOARD=151,APPROX=241,EST=0,TOTAL=392,
-        parent_v36_sha256=sha(PARENT),source_evidence=summary,
+        parent_v37_sha256=sha(PARENT),source_evidence=summary,
         B175_sourceblind_sha256=sha(B175),
-        B203_original_B1_B4_GTO_pin_sha256s={k:sha(v) for k,v in PINS.items()},
+        B203_original_B1_GTO_pin_sha256s={k:sha(v) for k,v in PINS.items()},
         B204_real_BB_IP_NL2_source_index_sha256=sha(LOCK.with_suffix('').with_suffix('.index.json')),
         source_blind_expansion_ranks=sorted(set(old['source_blind_expansion_ranks'])|{188}),
         supplementary_cert_count=old['supplementary_cert_count']+1,
         B206_rank190_three_genuine_GTO_NL2_BB_IP_flops=dict(
-            rank=188,model_id=MID,flops=sorted(FLOPS),exact_line=LINE,actor='BB_IP',
+            rank=190,model_id=MID,flops=sorted(FLOPS),exact_line=LINE,actor='BB_IP',
             original_GTO_runs={'8s8h3d':44666285424,'Js9h4d':44666285424,'Ks7h2d':44654973894},
             genuine_B204_real_NL2_child_run=ix['run_id'],
             preflop_CFR_pinned_not_observed_NL2_private_hand=True),
@@ -194,7 +194,7 @@ def main():
        'independent GitHub Actions PASS, PR2 Draft, NEVER MERGE.\n')
     MATDOC.write_text('# B206 V38 all 581 genuine named GTO/NL2 board lock and medium evidence\n\n'+write_md(matrix))
     print(json.dumps(dict(PASS=True,CERT=151,APPROX=241,EST=0,
-      promoted_rank=188,boards=len(matrix['boards']),
+      promoted_rank=190,boards=len(matrix['boards']),
       actor_locked_source_variants=matrix['strict_aggregate']['hero_lock_variants'],
       exact_b50_research=matrix['strict_aggregate']['b50_research_candidate_boards'],
       new_true_BB_IP_Rust_run=ix['run_id'],HU_links_required=2475),ensure_ascii=False))
