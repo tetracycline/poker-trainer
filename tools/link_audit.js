@@ -59,11 +59,15 @@ function parseSecs(html) {
       const cells = [];
       for (const tm of body.matchAll(/<td\b([^>]*)>([\s\S]*?)<\/td>/g)) {
         const na = /\bna\b/.test(tm[1]);
+        const actSrc = (tm[2].match(/<span class="act">([\s\S]*?)<\/span>/) || [])[1] || tm[2];
         const text = strip(tm[2]);
-        const href = (tm[2].match(/<a class="jmp" href="#([^"]+)"/) || [])[1] || '';
-        const extras = [...tm[2].matchAll(/<a class="jmp sub" href="#([^"]+)"/g)].map(x => x[1]);
+        const links = [...tm[2].matchAll(/<a class="jmp([^"]*)" href="#([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)].map(x => ({ sub: /\bsub\b/.test(x[1]), href: x[2], lab: strip(x[3]) }));
+        const nextL = links.find(l => /若對手跟注|若對手過|^下一街/.test(l.lab));
+        const href = (nextL && nextL.href) || ((links.find(l => !l.sub) || {}).href || '');
+        const extras = links.filter(l => l !== nextL).map(x => x.href);
+        const extraLabs = links.map(x => ({ href: x.href, lab: x.lab }));
         const note = /（無後續表）/.test(tm[2]) || /（無後續表）/.test(text);
-        cells.push({ na, text, href, extras, note, act: actOf(text) });
+        cells.push({ na, text, href, extras, extraLabs, note, act: actOf(strip(actSrc)) });
       }
       rows.push({ lab, id: rid, bt, cells });
     }
@@ -148,6 +152,25 @@ for (const s of allSecs) {
       const through = nx.filter(x => x.st === s.st + 1 && (typeof Q.isThrough === 'function' ? Q.isThrough(x) : true));
       if (through.length) addMiss('沉默無連結', s, row, c, '有下一街 ' + through.map(x => x.nd).join(',') + ' 卻沒主連結');
       else addMissing(s, verb || c.act, 1);
+    }
+  }
+}
+
+// 後續連結語意：下注／加注不可連「若面對下注」；「若被加注」須同一街；「若對手跟注／若對手過／下一街」須下一街。
+for (const s of allSecs) {
+  for (const row of s.rows) for (const c of row.cells) {
+    if (c.na || c.act === 'fold') continue;
+    const labs = c.extraLabs || [];
+    for (const l of labs) {
+      const base = baseId(l.href);
+      const tsec = idMap.get(l.href) || idMap.get(base);
+      if (!tsec) { addMiss('錨點不存在', s, row, c, '#' + l.href + '（' + l.lab + '）'); continue; }
+      if ((c.act === 'bet' || c.act === 'raise') && /^若面對下注|^若面對超池/.test(l.lab))
+        addMiss('下注後誤連面對下注', s, row, c, l.lab + ' → ' + tsec.nd);
+      if (/被加注/.test(l.lab) && tsec.st !== s.st)
+        addMiss('被加注街次不對', s, row, c, l.lab + ' 連到 ' + tsec.nd + ' st=' + tsec.st + '（應為同一街）');
+      if (/若對手跟注|若對手過|^下一街/.test(l.lab) && tsec.st !== s.st + 1)
+        addMiss('跟注／過完街次不對', s, row, c, l.lab + ' 連到 ' + tsec.nd + ' st=' + tsec.st + '（應為下一街）');
     }
   }
 }
@@ -416,7 +439,7 @@ function mdReview() {
   o.push('');
   o.push('## 結構');
   o.push('');
-  o.push('這是 NL2 行動線對照表。格子的主連結（動作本身）是「這一步被跟或過完之後」的下一街表，對得到就停在同一種牌面列。同一街若還有「被加注／面對下注」的表，格子旁邊有小連結「若被加注→」「若面對下注→」。後面的表有「↑ 上一步」。多人必須對在同一條翻前線。轉牌牌面若改變（K 高翻牌轉 A、轉出對子、同花完成），請改讀下一張表對應的新列。');
+  o.push('這是 NL2 行動線對照表。格子裡動作與根據各佔一行；「這一步被跟或過完之後」的下一街用「若對手跟注→」或「若對手過→」或「下一街→」，同一街的被加注／面對下注用「若被加注→」「若面對下注→」。下注或加注的格子不會連到「若面對下注」。後面的表有「↑ 上一步」。多人必須對在同一條翻前線。轉牌牌面若改變（K 高翻牌轉 A、轉出對子、同花完成），請改讀下一張表對應的新列。');
   o.push('');
   o.push('橫列固定六列，順序是：9 以下低牌面、J/T 高面、K/Q 高面、A 高面、成對面、單色面。');
   o.push('');

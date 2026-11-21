@@ -160,7 +160,11 @@ function lineCatalog(sp) {
   }
   return out;
 }
-function facingOk(face) { return !/你(超池下注|下注|跟|加注|全下)/.test(face || ''); }
+function facingOk(face) { return !/你/.test(face || ''); }
+function isThrough(x) {
+  const face = ((x && x.key) || '').split('|').pop() || '';
+  return !face || face === '對手過' || (/(^|、)對手過$/.test(face) && !/下注|加注/.test(face));
+}
 function nextEntries(cat, item, verb) {
   if (!verb || !cat || !item) return [];
   const segs0 = (item.key || '').split('|');
@@ -241,18 +245,27 @@ function secLab(x) {
   if (/over/.test(kind) || /超池/.test(face)) return '若面對超池';
   return '若面對下注';
 }
-function isThrough(x) {
-  const face = ((x && x.key) || '').split('|').pop() || '';
-  return !face || face === '對手過' || (/(^|、)對手過$/.test(face) && !/下注|加注/.test(face));
+function branchLab(x, item, verb) {
+  if (x && item && x.st === item.st + 1) {
+    const face = ((x.key || '').split('|').pop() || '');
+    if (/超池/.test(face) || /over/.test(x.nd || '')) return '下一街面對超池';
+    if (/下注/.test(face) || /vs_bet|vs_probe|vs_donk|vs_barrel|vs_cbet/.test(x.nd || '')) return '下一街面對下注';
+    if (verb === '過') return '若對手過';
+    if (verb === '跟') return '下一街';
+    return '若對手跟注';
+  }
+  return secLab(x);
 }
 function nextLinks(cat, item, a, bt) {
   const verb = VERB_OF[a] || (a === 'big' || a === 'small' ? '下注' : '');
   const nx = nextEntries(cat, item, verb);
   const through = nx.filter(x => x.st === item.st + 1 && isThrough(x));
-  const secondary = nx.filter(x => !through.includes(x));
+  const nextOther = nx.filter(x => x.st === item.st + 1 && !through.includes(x));
+  const same = nx.filter(x => x.st === item.st);
+  const ordered = through.concat(nextOther, same);
   return {
-    href: through[0] ? hrefOf(through[0], bt) : '',
-    extras: secondary.map(x => ({ href: hrefOf(x, bt), lab: secLab(x) })),
+    href: through[0] ? hrefOf(through[0], bt) : (nextOther[0] ? hrefOf(nextOther[0], bt) : ''),
+    extras: ordered.map(x => ({ href: hrefOf(x, bt), lab: branchLab(x, item, verb) })),
     all: nx
   };
 }
@@ -324,10 +337,10 @@ function cellMain(r, nd) {
 }
 function cellInner(r, nd, href, extras) {
   const main = cellMain(r, nd), b = basisOf(r);
-  const act = href ? `<a class="jmp" href="#${href}">${esc(main)}</a>` : esc(main);
-  const sec = (extras || []).map(x => `<a class="jmp sub" href="#${x.href}">${esc(x.lab)}→</a>`).join(' ');
+  const act = `<span class="act">${esc(main)}</span>`;
+  const sec = (extras || []).map(x => `<a class="jmp sub" href="#${x.href}">${esc(x.lab)}→</a>`).join('');
   const lo = lowConf(r) ? '<small class="lo" title="樣本少或與 GTO 頻率差很多">低把握</small>' : '';
-  return `${act}${sec ? ' ' + sec : ''} <small class="df" data-df="${esc(b)}">${esc(b)}</small>${lo ? ' ' + lo : ''}`;
+  return `<div class="cell">${act}<small class="df" data-df="${esc(b)}">${esc(b)}</small>${sec}${lo}</div>`;
 }
 function navHtml(cat, item) {
   if (!cat || !item) return '';
@@ -453,7 +466,7 @@ function lines() {
   const alias = Object.keys(al).map(nd => { const [s2, n2] = al[nd].includes(':') ? al[nd].split(':') : [al[nd], nd];
     return `${esc(nodeLabel(sp, nd))} → 照「${esc(L.spots.find(s => s.id === s2).t)}」的「${esc(nodeLabel(s2, n2))}」`; });
   app.innerHTML = `<div class="sec"><b class="h">NL2 行動線對照表</b><p class="small muted">${esc(L.scope)}<br>${esc(L.bias)}${cv ? `<br>你 10/28–11/4 的 ${f0(cv.tot)} 個翻後決定，${pc(cv.cov, cv.tot)} 落在這張表（皆為直接對應；未對應的決策不計入覆蓋）。` : ''}</p>
-  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、2/3、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔（⅔ 也在這組裡）；池估是牌池實際下注均值再靠檔，不是精確到 1%。格子只寫動作和「GTO」或「剝削」（剝削＝牌池估算比 GTO 更賺，不是封閉證明），不列樣本數或頻率。下注、加注會標尺寸（⅓、½、⅔、¾、1、1½ 或全下）。面對下注時，若資料有尺寸分檔，格子會寫門檻（例：面對小注 跟、面對 ≥¾ 棄）；翻牌／轉牌資料沒有分檔時不另造門檻。點動作或「→ 下一步」會跳到同一街的後續表（過→面對下注、下注／加注→被加注）或下一街同一條線的表，對得到就停在同一種牌面列；多人會對在同一條翻前線。後面的表有「↑ 上一步」。棄牌沒有下一步。同一條行動線一張表。橫列固定、跟翻牌同一套，順序是：9 以下低牌面、J/T 高面、K/Q 高面、A 高面、成對面、單色面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽，以及舊的「最高張 9 以下／T 以上」分半，都併入這六列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。格子的主連結是「這一步被跟或過完之後」的下一街；同一街的被加注／面對下注用旁邊的小連結「若被加注→」「若面對下注→」。棄牌、全下、河牌已結束的格子不再標「（無後續表）」。若資料還沒有下一街的表，格子不標終點，只保留同一街小連結（若有）。樣本很少或剝削動作與 GTO 頻率差很多的格子會標「低把握」。詳細樣本與頻率在「顯示每格的數據」。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
+  <p class="small">怎麼看：標題是這條線從翻前到這一街的行動，<span class="ha">金色粗體</span>是你的動作。一格＝你的動作。走不到的線、牌型不列。<b>≈</b>＝打平（另一個動作也可以）。小字＝根據：池＝玩家池數據（樣本與比較見數據）、GTO＝本機解算器（範圍、代表牌面與設定見數據）。近似＝GTO 近似（兩人 solver），把多人壓縮為最強對手分布；限制見數據。尺寸：格子只標 1/3、1/2、2/3、3/4、1、1.5 或全下（最接近的底池比例）。GTO 照解算樹靠這幾檔（⅔ 也在這組裡）；池估是牌池實際下注均值再靠檔，不是精確到 1%。格子只寫動作和「GTO」或「剝削」（剝削＝牌池估算比 GTO 更賺，不是封閉證明），不列樣本數或頻率。下注、加注會標尺寸（⅓、½、⅔、¾、1、1½ 或全下）。面對下注時，若資料有尺寸分檔，格子會寫門檻（例：面對小注 跟、面對 ≥¾ 棄）；翻牌／轉牌資料沒有分檔時不另造門檻。點動作或「→ 下一步」會跳到同一街的後續表（過→面對下注、下注／加注→被加注）或下一街同一條線的表，對得到就停在同一種牌面列；多人會對在同一條翻前線。後面的表有「↑ 上一步」。棄牌沒有下一步。同一條行動線一張表。橫列固定、跟翻牌同一套，順序是：9 以下低牌面、J/T 高面、K/Q 高面、A 高面、成對面、單色面；欄是牌型。走不到或沒答案是「—」。轉牌、河牌依做決定時的當街牌面歸列（例：K 高翻牌轉 A，算 A 高面；轉出對子，算成對面；同花完成，算單色面）。順子完成、補聽，以及舊的「最高張 9 以下／T 以上」分半，都併入這六列，不另開列。優先序與翻牌相同：單色（3 張以上同花）＞成對＞最高張。格子裡動作、根據（GTO 或剝削）、以及每個「若…」連結各佔一行、置中。下注或加注之後，連「若對手跟注→」（下一街同一條線，你先行動或對手過牌）、「下一街面對下注→」（跟注後對手在下一街先下注，這不是同一街的面對下注），以及「若被加注→」（同一街被加注）。過牌之後，連「若對手過→」（過完進下一街）和「若面對下注→」或「若面對超池→」（同一街對手先下注）。跟注之後若有下一街表，標「下一街→」。已下注的格子不會再標同一街的「若面對下注」。棄牌、全下、河牌已結束的格子不再標「（無後續表）」。若資料還沒有下一街的表，格子不標終點，只保留同一街小連結（若有）。樣本很少或剝削動作與 GTO 頻率差很多的格子會標「低把握」。詳細樣本與頻率在「顯示每格的數據」。多人近似每街「下注 1/2」、加注只含全下，面對加注的答案僅適用此尺寸。牌型：頂對好＝超對或頂對 J 以上踢腳；頂對弱＝頂對 T 以下踢腳；中小對含比頂對小的口袋對；強聽＝同花聽、兩頭順；弱聽＝卡順或兩張高牌。</p>
   ${L.notes ? `<details class="small muted"><summary>依據與解算設定註解</summary>${L.notes.map((n, i) => `<p>${i + 1}. ${esc(n)}</p>`).join('')}</details>` : ''}
   <div class="chips">${L.spots.map(s => `<button class="chip${s.id === sp ? ' on' : ''}" data-sp="${s.id}">${esc(s.t.split('（')[0])}</button>`).join('')}</div>
   <button class="btn tg" data-tg="1">${LS.data ? '收起數據' : '顯示每格的數據'}</button>　<a class="btn" href="#drill">練習這張表 →</a></div>` + defsHtml(false) + `
@@ -635,7 +648,7 @@ app.addEventListener('click', e => {
 if (window.__LINES_QA) window.__linesQA = { tableOnly, egCond, egInException, egOk,
   answer: a => lanswer(a, {classList: {add() {}}}),
   render: sp => { LS.sp = sp; lines(); }, pool, card, DEF, defsHtml, drill, gridHtml, story, nodesOf, stOf, nodeVisible, rowReached, REACH, TITLES, lineList,
-  lineCatalog, nextEntries, prevEntry, nextLinks, catItem, lid, keyForLid, shownOf, VERB_OF, isThrough
+  lineCatalog, nextEntries, prevEntry, nextLinks, catItem, lid, keyForLid, shownOf, VERB_OF, isThrough, branchLab, facingOk
 };
 window.addEventListener('hashchange', route); route();
 })();
