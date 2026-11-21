@@ -739,6 +739,64 @@ def authorized_b198_rank159_original_SB_BB_BB_IP_xb100_xx(m):
         return False
 
 
+def authorized_b210_rank46_original_B3_LMP_CO_IP_xb50_x(m):
+    """Rank46 only, exact 9s6h3d/Ts source-blind original B3 GTO SHA.
+
+    Full 100bb limped GTO flop is byte-identical run44666294821;
+    the actual fresh BB-villain NL2 pooled-marginal IP child uses exact
+    x b50 c / x turn state only, with no inferred hole-card conditionals.
+    """
+    if not (m.get('spot')=='LMP_CO_BB' and m.get('version')=='exp_ip' and
+        m.get('flop')=='9s6h3d' and m.get('selected_lines')==['x b50 c'] and
+        m.get('selected_turn_lines')==['x x'] and
+        m.get('flop_line_policy')=='checked-b50only' and
+        m.get('turn_line_policy')=='xxonly' and
+        m.get('flop_parent_mode')=='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK' and
+        m.get('NL2_hero_lock_scope')=='TURN_RIVER_ONLY_FROM_SHA_PINNED_B209_RANK46_B3_GTO' and
+        m.get('gto_parent_source_run_id')==44666294821 and
+        m.get('original_full_GTO_flop_byte_identical_not_recomputed') is True and
+        m.get('preflop_ranges',{}).get('source')=='ASSUMED_EXPLICIT_169CLASS'):
+        return False
+    d=pathlib.Path(__file__).resolve().parents[1]/'data'
+    pinfile=d/'nl2_hu_b209_rank46_lmp_9s6h3d_original_b3_gto_pin.json'
+    archive=d/'solver_evidence/NL2_MULTIBOARD_B3.json.gz'
+    idx=d/'solver_evidence/NL2_MULTIBOARD_B3.index.json'
+    ledger=d/'nl2_hu_b175_v32_248_exact_GTO_source_provenance.json'
+    try:
+        import gzip
+        pin=json.loads(pinfile.read_text())
+        index=json.loads(idx.read_text())
+        b175=json.loads(ledger.read_text())
+        row=next(q for q in b175['rows'] if q['rank']==46)
+        exact=[q for q in row['exact_authentic_gto_source_proofs'] if
+            q['flop']=='9s6h3d' and q['turn']=='Ts' and
+            q['source_run']==44666294821 and
+            q['source_sha']==pin['original_GTO_case_SHA256'] and
+            q['exact_line']=='x b50 c/x' and q['actor']==1 and
+            q['strict_legal_combos']>0 and q['GTO_gap_pct']<=.5 and
+            q['SPR_error_pct']<=5 and not q['true_NL2_actor_locked']]
+        return (
+            pin['schema']=='NL2_HU_B209_RANK46_ORIGINAL_B3_9S6H3D_GTO_PARENT_PIN_V1' and
+            pin['source_run_id']==index['run_id']==44666294821 and
+            pin['target_rank']==46 and pin['model_id']=='ln-iso-lmp_t_model-17z0wyl' and
+            pin['flop']=='9s6h3d' and pin['turn']=='Ts' and pin['actor']==1 and
+            pin['spot']=='LMP_CO_BB' and pin['original_GTO_flop_line']=='x b50 c' and
+            pin['exact_turn_line']=='x b50 c/x' and
+            pin['strict_original_GTO_actor_IP_combos']>0 and bool(exact) and
+            pin['original_full_GTO_flop_not_recomputed'] is True and
+            pin['assumed_preflop_169class_not_observed'] is True and
+            pin['original_B3_archive_sha256']==index['gzip_sha256']==sha(archive) and
+            pin['original_B3_index_sha256']==sha(idx) and
+            index['source_sha256']==hashlib.sha256(gzip.decompress(archive.read_bytes())).hexdigest() and
+            m.get('turns')==['Ts'] and
+            m.get('original_B209_parent_pin_sha256')==sha(pinfile) and
+            m.get('gto_parent_source_sha256')==pin['original_gto_root_sha256'] and
+            m.get('flop_root_jobfile_sha256')==pin['original_gto_job_sha256'] and
+            m.get('gto_parent_source_manifest_sha256')==pin['original_gto_manifest_sha256'])
+    except (OSError,ValueError,KeyError,TypeError,EOFError,StopIteration,AssertionError):
+        return False
+
+
 def strict_medium_evidence(n,raw,seq_mask):
     """Re-evaluate b50 relative-equity distribution ONLY after every past
     hero action was legal under max/near-mix and blockers.
@@ -1098,6 +1156,10 @@ def verify(root,source_pin,run_id):
                         m.get('gto_parent_source_manifest_sha256')=='ab08f31291ed6feb19bdca412c56f8adc9ee5bc06ff43fe6ae6303b0660c2b3f'):
                         raise ValueError('Focused b50-call turn allowed ONLY from byte-identical B117 SB3 Jh9d6s actor OOP GTO parent')
                     if turn_policy=='xxonly' and not (
+                        # B210 rank46: only original B209 B3 authentic 9s6h3d
+                        # x b50 c/x turn actor-IP positive source 100bb GTO.
+                        authorized_b210_rank46_original_B3_LMP_CO_IP_xb50_x(m)
+                        or
                         # B198: only original B197 SB_BB As9h2d/KsQh4d
                         # exact BB IP x b100 c / x x / x from frozen B1/B5.
                         authorized_b198_rank159_original_SB_BB_BB_IP_xb100_xx(m)
