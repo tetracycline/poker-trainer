@@ -1,0 +1,168 @@
+name: TASK-HYBRID B140 rank88 fast true actor-OOP SB3_BTN turn-only child from SHA-pinned B117 GTO (max28m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b140-rank88-sb3-fast-child.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Fetch only immutable finished successful B117 GTO raw flop, not the still-running EXP flop
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p gto_parent
+          gh run download 44837416843 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B117_R88_SB3_B33B50-SB3_BTN-gto-Jh9d6s' --dir gto_parent
+          test -s gto_parent/evidence/SB3_BTN-gto-Jh9d6s.json
+          test -s gto_parent/solver/postflop/out/SB3_BTN/gto/Jh9d6s_multiboard.json
+          test -s gto_parent/solver/postflop/out/SB3_BTN/gto/Jh9d6s_multiboard.job.json
+      - name: Compile pinned authentic Rust CFR, strict B117 GTO parent SHA audited
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_b140_sb3_rank88_turnonly.py trainer/tools/verify_hu_multiboard_100bb.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve real Rust turn-only NL2 actor-OOP x-x / turn 3c from unchanged B117 root
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-engine-pin.txt
+          python3 trainer/tools/solve_hu_b140_sb3_rank88_turnonly.py --solver-root solver --gto-artifact-root gto_parent --manifest evidence/SB3_BTN-Jh9d6s-b33c-exp_oop.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B140_R88_SB3_B33B50-SB3_BTN-exp_oop-Jh9d6s
+          path: |
+            evidence/
+            solver/postflop/out/
+          retention-days: 30
+          if-no-files-found: warn
+  verify-and-commit:
+    needs: solve
+    if: ${{ needs.solve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download one verified genuine Rust turn-only IP NL2 source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          name='nl2-multiboard-B140_R88_SB3_B33B50-SB3_BTN-exp_oop-Jh9d6s'
+          mkdir -p "downloads/$name"
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$name" --dir "downloads/$name"
+          test -s "downloads/$name/evidence/SB3_BTN-Jh9d6s-b33c-exp_oop.json"
+      - name: Independent source SHA, strict combo reach, exact actor and original B117 GTO root checksum
+        run: |
+          set -euo pipefail
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver --run-id "$GITHUB_RUN_ID" --out trainer/data/solver_evidence/NL2_MULTIBOARD_B140_R88_SB3_B33B50.json
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Preserve SHA-authenticated exact turn actor-OOP source and strict source-blind target gate
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,pathlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B140_R88_SB3_B33B50.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert not d['errors'] and len(d['artifacts'])==1
+          assert d['exact_board_gto_sources']==0
+          assert d['imputed_pool_locked_sources']==d['new_authentic_board_cases']>=1
+          a=d['artifacts'][0]
+          assert (a['spot'],a['version'],a['flop'])==('SB3_BTN','exp_oop','Jh9d6s')
+          assert not a['errors'] and len(a['cases'])==1
+          c=a['cases'][0]
+          assert (c['flop_line'],c['turn'])==('b33 c','3c')
+          hero=[n for n in c['nodes'] if n['exact_node_line']=='b33 c/b50 c/' and
+             n['acting_seat']==0 and n['strictly_reachable_combos']>0]
+          reason=None if hero else 'NO_STRICT_RANK88_SB3_OOP_RIVER_COMBOS_KEEP_APPROX'
+          raw=p.read_bytes()
+          gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          idx=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+            batch='B140_R88_SB3_B33B50',run_id=d['source_run_id'],
+            actual_spot_flop_version_jobs=1,
+            verified_cases=d['new_authentic_board_cases'],
+            gto_cases=0,locked_cases=d['imputed_pool_locked_sources'],
+            source_sha256=hashlib.sha256(raw).hexdigest(),
+            gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+            generic_model_certification=0,
+            original_gto_parent_run=44837416843,
+            original_parent_GTO_root_SHA256='51d421761aa0cfc81f3c951b6c9854e56cecbe53f9fe084439da19151a4ea9a2',
+            original_parent_GTO_job_SHA256='6e6c91ff9841c7662f1b36b39933631dcf22de602f66749e698ef3991641ba1b',
+            original_parent_GTO_manifest_SHA256='ab08f31291ed6feb19bdca412c56f8adc9ee5bc06ff43fe6ae6303b0660c2b3f',
+            original_GTO_flop_NOT_recomputed=True,
+            source_GTO_preflop_CFR_pinned=True,
+            targeted_turn_policy='b50only',
+            exact_actor_OOP_river_nodes=len(hero),strict_failure_reason=reason,
+            rank88_frozen_missing_exact_flop='Jh9d6s',
+            immediate_CERT_upgrades=0)
+          p.with_suffix('.index.json').write_text(json.dumps(idx,ensure_ascii=False,indent=2)+'\n')
+          p.unlink()
+          print('PASS B140 independently verified authentic B117 GTO-pinned IP-turn child',idx)
+          PY
+      - name: Complete independent 392 status, 548 source board locks and all HU 2475 river route checks
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 - <<'PY'
+          import json
+          v=json.load(open('data/nl2_hu_multiboard_status_v28_b133_rank69.json'))
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v28_b133.json'))
+          assert (v['CERT_MULTIBOARD'],v['APPROX'],v['EST'],v['TOTAL'])==(140,252,0,392)
+          assert len(m['boards'])==548 and len(m['models'])==140
+          assert v['records']['ln-3bp-3b_r_model-8uwbze']['label']=='APPROX'
+          assert v['independently_verified_completed_batches']['B4_MICRO']['status']=='VERIFIED'
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS 2475/2475")'
+      - name: Push exact-source B140 archive to Draft PR2, do not claim rank88 CERT before separate matching gate
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B140_R88_SB3_B33B50.json.gz data/solver_evidence/NL2_MULTIBOARD_B140_R88_SB3_B33B50.index.json
+          git commit -m 'TASK-HYBRID B140: authentic SB3_BTN Jh9d6s actor-OOP turn-only NL2 lock from untouched SHA-pinned B117 GTO root'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B140-verified-actor-OOP-child
+          path: trainer/data/solver_evidence/NL2_MULTIBOARD_B140_R88_SB3_B33B50*
+          retention-days: 30
