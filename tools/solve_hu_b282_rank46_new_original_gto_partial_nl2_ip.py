@@ -10,7 +10,8 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]/'data'
 PIN=None
 SPOT='LMP_CO_BB';FLOP=None;TURN=None;LINE='x b50 c';TURNLINE='x x'
 RUN=None
-PINS={'KsJh4d':('B279',44937413659),'QsJh4d':('B280',44937484979)}
+PINS={'KsJh4d':('B279',44937413659),'QsJh4d':('B280',44937484979),
+      '7s5h3d':('B284',44938881037),'7s7h2d':('B286',44939456600)}
 
 def main():
     ap=argparse.ArgumentParser()
