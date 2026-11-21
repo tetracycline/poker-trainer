@@ -18,7 +18,7 @@ SPECS={
  (60,'As9h2d'):dict(gto='B259',gto_run=44902738797,child='B255',model='ln-ipfr-t_model-hxdit',line='x b50 c',spr=8.614),
  (61,'As9h2d'):dict(gto='B260',gto_run=44902742001,child='B256',model='ln-ipfr-t_model-qpx6tn',line='x b100 c',spr=5.576),
  (60,'Js9h5d'):dict(gto='B261',gto_run=44902827510,child='B255',model='ln-ipfr-t_model-hxdit',line='x b50 c',spr=8.614),
- (61,'Js9h5d'):dict(gto='B262',gto_run=44902831383,child='B256',model='ln-ipfr-t_model-qpx6tn',line='x b100 c',spr=5.576)
+ (61,'Js9h5d'):dict(gto='B262',gto_run=44902831383,child='B264',model='ln-ipfr-t_model-qpx6tn',line='x b100 c',spr=5.576)
 }
 def sha(path):
  h=hashlib.sha256()
