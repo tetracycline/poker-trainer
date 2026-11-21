@@ -1,0 +1,102 @@
+name: TASK-HYBRID B277 V41 238 remaining APPROX rank71 single-flop authentic source gap, 590 locks 2475 HU (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b277-v41-238-approx-sourceblind-one-flop-gap.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  frozen-V41-238-approx-one-authentic-flop-short:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Create source-blind V41 238 APPROX queue without tuning by new Rust outcomes and failclosed SHA-pinned rank71 GTO-only proofs
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b277_v41_238_approx_sourceblind_queue.py
+          python3 tools/hu_b277_v41_238_approx_sourceblind_queue.py
+      - name: Audit frozen ranks 71 one paired-flop short, rank313 and rank61 already genuinely CERT, no GTO-only artifact masquerades as NL2 lock
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import csv,hashlib,json,pathlib
+          d=pathlib.Path('data')
+          base=d/'nl2_hu_multiboard_status_v41_b271_rank61.json'
+          prior=d/'nl2_hu_b258_v39_240_approx_frequency_sourceblind_queue.json'
+          result=d/'nl2_hu_b277_v41_238_approx_true_sourceblind_queue.json'
+          x=json.loads(result.read_text());s=json.loads(base.read_text())
+          assert x['schema']=='NL2_HU_B277_V41_238_APPROX_SOURCEBLIND_TRUE_GTO_ACTOR_LOCK_GAP_V1'
+          assert x['V41_status_sha256']==hashlib.sha256(base.read_bytes()).hexdigest()
+          assert x['parent_B258_V39_snapshot_sha256']==hashlib.sha256(prior.read_bytes()).hexdigest()
+          assert (x['CERT_MULTIBOARD'],x['APPROX'],x['EST'],x['TOTAL'])==(154,238,0,392)
+          assert x['historical_only_one_flop_short_rank']==71
+          assert [z['rank'] for z in x['one_flop_short']]==[71]
+          assert x['removed_from_240_approx_because_verified_V41_certified']==[
+            'ln-ipfr-t_model-qpx6tn','ln-iso-lmp_r_model-wpg493']
+          assert x['original_frozen_provenance_reused_without_frequency_reoptimization']
+          assert x['no_actual_NL2_hero_lock_source_inferred_from_GTO_only']
+          assert x['no_new_GTO_source_claim_without_SHA'] and x['no_generic_texture_GTO']
+          assert x['no_measured_private_card_NL2_frequency_fabrication']
+          assert (x['existing_named_certified_boards'],x['existing_hero_lock_variants'],
+            x['exact_board_nonpolarized_b50_research_only'])==(590,682,134)
+          assert len(x['all_238_approx_source_gaps'])==238
+          assert len({z['model_id'] for z in x['all_238_approx_source_gaps']})==238
+          assert all(s['records'][z['model_id']]['label']=='APPROX' for z in x['all_238_approx_source_gaps'])
+          assert len(x['current_rank71_preregistered_original_GTO_artifact_audit'])==3
+          assert all(not z['actual_NL2_actor_locked_source_present'] and not z['counts_as_third_certified_flop']
+            and z['cert_upgrade']==0 for z in x['current_rank71_preregistered_original_GTO_artifact_audit'])
+          assert x['PR2_Draft_NEVER_MERGE']
+          with (d/'nl2_hu_b277_v41_238_approx_true_sourceblind_queue.csv').open(encoding='utf8',newline='') as f:
+            assert len(list(csv.DictReader(f)))==238
+          print('PASS B277 rank71 sole original one-board-short source, 238 verified APPROX no false certification')
+          PY
+      - name: Full V41 154 CERT 590 real original GTO plus actor NL2 locked named boards, b50 exact-only, and 2475 HU route/contract audit
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v41_b271_rank61.json --out nl2-audit/b277-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b277-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(154,238,0)
+          assert (a['aggregate']['named_board_proofs'],
+             a['aggregate']['paired_hero_locked_source_variants'],
+             a['aggregate']['board_examples_with_b50_candidate'])==(590,682,134)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS V41 B277 HU2475/2475")'
+      - name: Commit only after all V41 590 original actor NL2 source and HU2475 PASS, no merge no force push
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b277_v41_238_approx_true_sourceblind_queue.json             data/nl2_hu_b277_v41_238_approx_true_sourceblind_queue.csv             docs/NL2_HU_B277_V41_238_APPROX_FROZEN_AUTHENTIC_GTO_NL2_PRIORITY.md
+          git commit -m 'TASK-HYBRID B277 V41: 238 APPROX frozen sourceblind, rank71 sole one-paired-flop short, SHA check pending GTO-only, 590 source lock HU2475 PASS'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B277-V41-238-APPROX-frozen-sourceblind-HU2475
+          path: |
+            data/nl2_hu_b277_v41_238_approx_true_sourceblind_queue.json
+            data/nl2_hu_b277_v41_238_approx_true_sourceblind_queue.csv
+            docs/NL2_HU_B277_V41_238_APPROX_FROZEN_AUTHENTIC_GTO_NL2_PRIORITY.md
+            nl2-audit/
+          retention-days: 30
