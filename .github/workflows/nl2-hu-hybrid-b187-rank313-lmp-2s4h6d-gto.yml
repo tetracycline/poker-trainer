@@ -2,6 +2,9 @@ name: TASK-HYBRID B187 frozen rank313 2s4h6d exact raise-call/x-b50-call full-si
 # Independent exact rank313 third-flop GTO candidate; never use other rank's source or grant generic certification.
 # Staged only; require prior rank313 original GTO result review before triggering another distinct flop.
 on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b187-rank313-lmp-2s4h6d-gto.yml']
   workflow_dispatch:
 permissions:
   contents: write
