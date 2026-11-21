@@ -1,6 +1,9 @@
 name: TASK-HYBRID B182 frozen rank313 4s4h2d exact raise-call/x-b50-call full-size GTO actor-IP river (max29m)
-# Staged until prior V33 145/247 and rank71 B180 result are reviewed; no automatic GTO source reuse.
+# Independent exact rank313 third-flop GTO candidate; never use other rank's source or grant generic certification.
 on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b182-rank313-lmp-4s4h2d-gto.yml']
   workflow_dispatch:
 permissions:
   contents: write
