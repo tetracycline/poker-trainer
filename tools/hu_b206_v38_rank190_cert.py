@@ -109,7 +109,7 @@ def main():
     assert LOCK not in sources
     sources.append(LOCK)
     gto,locked,summary=build_source_index(D,sources)
-    item=next(copy.deepcopy(x) for x in load(RANK)['nodes'] if x['rank_by_empirically_grounded_frequency_proxy']==188)
+    item=next(copy.deepcopy(x) for x in load(RANK)['nodes'] if x['rank_by_empirically_grounded_frequency_proxy']==190)
     m=next(z for z in load(STAGE)['records'] if z['model_id']==MID)
     assert item['model_id']==MID and (m['solver_profile'],m['family'],m['street'])==('SB_BB','SRP',2)
     assert hero_seat(m['preflop_text'])==1
@@ -153,7 +153,7 @@ def main():
         B175_sourceblind_sha256=sha(B175),
         B203_original_B1_GTO_pin_sha256s={k:sha(v) for k,v in PINS.items()},
         B204_real_BB_IP_NL2_source_index_sha256=sha(LOCK.with_suffix('').with_suffix('.index.json')),
-        source_blind_expansion_ranks=sorted(set(old['source_blind_expansion_ranks'])|{188}),
+        source_blind_expansion_ranks=sorted(set(old['source_blind_expansion_ranks'])|{190}),
         supplementary_cert_count=old['supplementary_cert_count']+1,
         B206_rank190_three_genuine_GTO_NL2_BB_IP_flops=dict(
             rank=190,model_id=MID,flops=sorted(FLOPS),exact_line=LINE,actor='BB_IP',
