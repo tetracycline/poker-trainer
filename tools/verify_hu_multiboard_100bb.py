@@ -201,7 +201,7 @@ def authorized_b163_rank313_exact_true_gto_parent(m):
           p['source_gto_job_id'] is None and
           (p['spot'],p['flop'],p['flop_line'],p['turn_line'])==(
              'LMP_CO_BB','Ks7h2d','b75 r c','x b50 c') and
-          p['target_rank']==71 and p['model_id']=='ln-iso-lmp_r_model-wpg493' and
+          p['target_rank']==313 and p['model_id']=='ln-iso-lmp_r_model-wpg493' and
           p['original_full_100bb_lmp_gto_not_recomputed'] is True and
           p['observed_preflop_ranges'] is False and
           p['assumed_limped_169class'] is True and
