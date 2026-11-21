@@ -162,7 +162,7 @@ jobs:
              'V33 unchanged 145 CERT / 247 APPROX. Draft PR#2, never merge.\n')
           print('PASS B180 source GTO with exact strict result',idx)
           PY
-      - name: Independent source-provenance audit of existing 563 NL2 locks and 131 exact b50 research boards
+      - name: Independent source-provenance audit of existing 563 NL2 locks and 132 exact b50 research boards
         working-directory: trainer
         run: |
           set -euo pipefail
@@ -173,9 +173,9 @@ jobs:
           x=json.load(open('nl2-audit/nl2-lock-medium.json'))
           assert (x['cert_multiboard'],x['approx'],x['EST'])==(145,247,0)
           assert x['aggregate']['named_board_proofs']==563
-          assert x['aggregate']['board_examples_with_b50_candidate']==131
+          assert x['aggregate']['board_examples_with_b50_candidate']==132
           assert x['not_generalized_handclass_GTO'] and x['not_actual_NL2_earnings']
-          print('PASS 563 verified sources with measured/assumed/unknown lock distinction, only 131 b50 flags')
+          print('PASS 563 verified sources with measured/assumed/unknown lock distinction, 132 b50 flags')
           PY
       - name: Full 392 records, 563 genuine named board locks and 2475 independent HU river paths regression
         working-directory: trainer
