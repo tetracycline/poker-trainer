@@ -1,4 +1,4 @@
-name: TASK-HYBRID B293 rank71 new QJ-high QsJh4d original 100bb LMP Rust GTO BB-OOP actor exact b50/x-b50 + HU2475 (max29m)
+name: TASK-HYBRID B293 rank71 new QJ-high QsJh4d original 100bb LMP Rust GTO retry after 21m timeout BB-OOP actor exact b50/x-b50 + HU2475 (max29m)
 # Active after genuine B289 V42 155 CERT/237 APPROX and 593 exact named board HU audit SUCCESS.
 # Strict GTO only; one-flop-short rank71 remains APPROX until genuine BB-OOP NL2 lock is separately proved.
 # Preregistered distinct QJ-high QsJh4d flop for rank71 exact BB-OOP b50 c/x b50 c/ river, not any of nine SHA-verified zero exact actor sources.
@@ -13,7 +13,7 @@ permissions:
 jobs:
   original-gto-solve:
     runs-on: ubuntu-latest
-    timeout-minutes: 21
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
@@ -55,7 +55,7 @@ jobs:
     needs: original-gto-solve
     if: ${{ needs.original-gto-solve.result == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
         with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
