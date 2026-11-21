@@ -79,7 +79,7 @@ jobs:
             assert any(q['line']=='x b33 c/' and q['board'][-2:]==turn for q in f['nodes'])
             for rank in (199,202):
               b=next(q for q in bx['rows'] if q['rank']==rank)
-              assert (b['spot'],b['hero_seat'])==('LMP_CO_BB',1)
+              assert (vx['records'][b['model_id']]['solver_profile'],b['hero_seat'])==('LMP_CO_BB',1)
               assert vx['records'][b['model_id']]['label']=='APPROX'
               source=[q for q in b['exact_authentic_gto_source_proofs'] if
                 q['flop']==flop and q['turn']==turn and q['source_run']==44666294821
