@@ -21,6 +21,8 @@ SPECS={
  (60,'Js9h6d'):dict(gto='B305',gto_run=44958564785,child='B255',model='ln-ipfr-t_model-hxdit',line='x b50 c',spr=8.614),
  (60,'Js9h3d'):dict(gto='B308',gto_run=44959135103,child='B255',model='ln-ipfr-t_model-hxdit',line='x b50 c',spr=8.614),
  (60,'Js9h2d'):dict(gto='B310',gto_run=44959162296,child='B255',model='ln-ipfr-t_model-hxdit',line='x b50 c',spr=8.614),
+ (60,'8s7h4d'):dict(gto='B314',gto_run=44959459086,child='B255',model='ln-ipfr-t_model-hxdit',line='x b50 c',spr=8.614),
+ (60,'KsJh4d'):dict(gto='B315',gto_run=44959462500,child='B255',model='ln-ipfr-t_model-hxdit',line='x b50 c',spr=8.614),
  (61,'Js9h5d'):dict(gto='B262',gto_run=44902831383,child='B264',model='ln-ipfr-t_model-qpx6tn',line='x b100 c',spr=5.576)
 }
 def sha(path):
@@ -33,7 +35,7 @@ def load(path):return json.loads(path.read_text())
 def main():
  p=argparse.ArgumentParser()
  p.add_argument('--rank',type=int,choices=(60,61),required=True)
- p.add_argument('--flop',choices=('KsQh4d','8s8h3d','As9h2d','Js9h5d','Js9h6d','Js9h3d','Js9h2d'),required=True)
+ p.add_argument('--flop',choices=('KsQh4d','8s8h3d','As9h2d','Js9h5d','Js9h6d','Js9h3d','Js9h2d','8s7h4d','KsJh4d'),required=True)
  p.add_argument('--parent',type=pathlib.Path,required=True)
  p.add_argument('--fresh',type=pathlib.Path,required=True)
  a=p.parse_args();spec=SPECS[(a.rank,a.flop)]
