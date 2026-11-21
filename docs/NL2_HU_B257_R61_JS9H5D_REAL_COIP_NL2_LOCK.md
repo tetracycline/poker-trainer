@@ -1,0 +1,3 @@
+# B257 rank61 Js9h5d/Ah original GTO + authentic CO-IP NL2 partial lock
+
+B262 original full 100bb CO_BB preflop-CFR GTO root kept SHA-identical. Authentic Rust B264 re-solved only downstream turn/river with pooled NL2 bet/street marginal locks and declared defaults; true CO-IP action line x b100 c/x. GTO strict actor combos 110; NL2 strict actor combos 110 and same-SPR combos 110. No observed private-hand opponent conditionals. This is one exact-board example, not a 3–5 flop CERT or generic 50%-pot recommendation. All V39 584 source and HU2475 full audits must pass before commit. PR#2 Draft, NEVER MERGE.
