@@ -1,0 +1,305 @@
+name: TASK-HYBRID B436 rank29 LMP BB OOP exact b50 flop b75 turn; one flop pair per batch, V50 163/229 and HU2475 gated (max28m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b436-r29-lmp50-75-true-actor.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - {spot: LMP_CO_BB, flop: KsQh4d, version: gto}
+          - {spot: LMP_CO_BB, flop: KsQh4d, version: exp_oop}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile exact pinned original Rust CFR
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_multiboard_100bb.py trainer/tools/verify_hu_multiboard_100bb.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve original full 100bb LMP source at exact b50 flop then b75 turn; disclose assumed 169 preflop range and zero-case negative
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          set +e
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver --spot "${{ matrix.spot }}" --flop "${{ matrix.flop }}" \
+            --version "${{ matrix.version }}" --flop-size-profile full \
+            --flop-line-policy oop-b50only --turn-size-menu river-gaps --turn-count 1 \
+            --manifest "evidence/${{ matrix.spot }}-${{ matrix.flop }}-${{ matrix.version }}.json"
+          solve_code=$?
+          set -e
+          export SOLVE_EXIT_CODE="$solve_code"
+          python3 - <<'PY'
+          import json,pathlib,os
+          p=pathlib.Path("evidence/LMP_CO_BB-${{ matrix.flop }}-${{ matrix.version }}.json")
+          assert p.is_file(),"No authentic Rust source manifest"
+          m=json.loads(p.read_text())
+          assert (m['spot'],m['flop'],m['version'])==('LMP_CO_BB','${{ matrix.flop }}','${{ matrix.version }}')
+          assert m['preflop_ranges']['source']=='ASSUMED_EXPLICIT_169CLASS'
+          assert m['flop_size_profile']=='full' and not m['restricted_tree_assumption']
+          assert m['selected_lines']==['b50 c'] and 'b75 c' in m['selected_turn_lines']
+          assert (m['root_pot_bb'],m['root_remaining_bb'])==(2.5,99.0)
+          assert not m['failures']
+          if int(os.environ['SOLVE_EXIT_CODE']) != 0:
+              assert m['solved_cases']==0 and not m['cases']
+          else:
+              assert m['solved_cases']==1 and len(m['cases'])==1
+          print('B436 source manifest:',m['spot'],m['flop'],m['version'],'cases',m['solved_cases'])
+          PY
+      - name: Preserve raw manifest and Rust files even for explicit zero-case results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B436_R29_LMPCOBB_B50_B75-${{ matrix.spot }}-${{ matrix.flop }}-${{ matrix.version }}
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Partition both authentic original jobs; positive cases only, zero cases are never upgraded
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads accepted
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir downloads
+          python3 - <<'PY'
+          import json,pathlib,hashlib,shutil
+          folders=list(pathlib.Path('downloads').glob('nl2-multiboard-B436_R29_LMPCOBB_B50_B75-*'))
+          assert len(folders)==2,[(x.name) for x in folders]
+          expected={('KsQh4d','gto'),('KsQh4d','exp_oop')}
+          actual=set();positive=[];negative=[]
+          for f in folders:
+              flop,version=f.name.rsplit('-',2)[-2:]
+              actual.add((flop,version))
+              mf=f/'evidence'/f'LMP_CO_BB-{flop}-{version}.json'
+              assert mf.is_file(),mf
+              m=json.loads(mf.read_text())
+              assert (m['spot'],m['flop'],m['version'])==('LMP_CO_BB',flop,version)
+              assert m['preflop_ranges']['source']=='ASSUMED_EXPLICIT_169CLASS'
+              assert m['flop_size_profile']=='full' and not m['restricted_tree_assumption']
+              assert m['selected_lines']==['b50 c'] and 'b75 c' in m['selected_turn_lines']
+              assert (m['root_pot_bb'],m['root_remaining_bb'])==(2.5,99.0)
+              assert not m['failures']
+              row=dict(flop=flop,version=version,manifest_sha256=hashlib.sha256(mf.read_bytes()).hexdigest(),
+                 solved_cases=m['solved_cases'],turns=m['turns'],skipped=m.get('skipped',[]))
+              if m['solved_cases']==0:
+                  assert not m['cases']
+                  negative.append(row)
+              else:
+                  assert m['solved_cases']==1 and len(m['cases'])==1
+                  positive.append(row);shutil.copytree(f,pathlib.Path('accepted')/f.name)
+          assert actual==expected and len(positive)+len(negative)==2
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_B436_R29_AUTHENTIC_SOLVE_MANIFESTS.json')
+          p.parent.mkdir(parents=True,exist_ok=True)
+          p.write_text(json.dumps({'schema':'NL2_B436_R29_LMP_FULL_ORIGINAL_SOURCE_PARTITION_V1',
+             'run_id':int(__import__('os').environ['GITHUB_RUN_ID']),
+             'positive_solved_jobs':positive,'explicit_zero_case_negative_jobs':negative,
+             'preflop_ranges_are_assumed_169_class_not_observed_NL2':True},indent=2)+'\n')
+          print('B436 original source partition positive',len(positive),'zero',len(negative))
+          PY
+          if [ "$(python3 -c "import json;d=json.load(open('trainer/data/solver_evidence/NL2_B436_R29_AUTHENTIC_SOLVE_MANIFESTS.json'));print(len(d['positive_solved_jobs']))")" -gt 0 ]; then
+            python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads accepted --solver-root solver --run-id "$GITHUB_RUN_ID" --out trainer/data/solver_evidence/NL2_MULTIBOARD_B436_R29_VERIFIED.json
+          else
+            python3 - <<'PY'
+          import json,pathlib
+          d=json.load(open('trainer/data/solver_evidence/NL2_B436_R29_AUTHENTIC_SOLVE_MANIFESTS.json'))
+          assert len(d['explicit_zero_case_negative_jobs'])==2
+          pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B436_R29_ZERO_CASE_NEGATIVE.json').write_text(json.dumps({
+            'schema':'NL2_B436_R29_ZERO_CASE_NEGATIVE_NOT_CERT_V1','run_id':d['run_id'],
+            'negative_jobs':d['explicit_zero_case_negative_jobs'],'no_positive_case':True},indent=2)+'\n')
+          PY
+          fi
+      - name: Independently verify exact actor BB OOP, b50 flop b75 turn, SPR7.52, 40/70 and real source SHA
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json,hashlib,gzip,sys
+          sys.path.insert(0,'trainer/tools')
+          from hu_sequential_cfr_reach import game_reach
+          from hu_sequential_cfr_reach import accepted as accepted_actions
+          D=pathlib.Path('trainer/data');part=json.loads((D/'solver_evidence/NL2_B436_R29_AUTHENTIC_SOLVE_MANIFESTS.json').read_text())
+          st=json.loads((D/'nl2_hu_multiboard_status_v50_b417_rank166.json').read_text())
+          assert (st['CERT_MULTIBOARD'],st['APPROX'],st['EST'],st['TOTAL'])==(163,229,0,392)
+          m=st['records']['ln-iso-lmp_r_model-gifggm']
+          assert (m['frequency_rank'],m['label'],m['solver_profile'],m['assumed_model_node_spr'])==(29,'APPROX','LMP_CO_BB',7.52)
+          proofs=[]
+          if part['positive_solved_jobs']:
+            rawfile=D/'solver_evidence/NL2_MULTIBOARD_B436_R29_VERIFIED.json'
+            raw=rawfile.read_bytes();a=json.loads(raw)
+            assert a['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1' and not a['errors']
+            assert len(a['artifacts'])==len(part['positive_solved_jobs'])
+            for src in part['positive_solved_jobs']:
+              flop,version=src['flop'],src['version']
+              folder=pathlib.Path('accepted')/f'nl2-multiboard-B436_R29_LMPCOBB_B50_B75-LMP_CO_BB-{flop}-{version}'
+              mf=folder/'evidence'/f'LMP_CO_BB-{flop}-{version}.json'
+              root=folder/f'solver/postflop/out/LMP_CO_BB/{version}/{flop}_multiboard.json'
+              job=root.with_suffix('.job.json')
+              assert all(x.is_file() for x in (mf,root,job))
+              mm=json.loads(mf.read_text());fr=json.loads(root.read_text())
+              assert mm['preflop_ranges']['source']=='ASSUMED_EXPLICIT_169CLASS'
+              assert mm['selected_lines']==['b50 c'] and 'b75 c' in mm['selected_turn_lines']
+              assert (mm['root_pot_bb'],mm['root_remaining_bb'])==(2.5,99.0)
+              assert (fr['pot'],fr['stack'],fr['flop'])==(250,9900,flop)
+              assert mm['file_flop_sha256']==hashlib.sha256(root.read_bytes()).hexdigest()
+              assert fr['info']['gto_expl_pct']<=.5
+              roots=[n for n in fr['nodes'] if n['line']=='' and n['player']==0 and len(n['board'])==6]
+              assert len(roots)==1 and 'b50' in roots[0]['acts']
+              elig=len(accepted_actions(roots[0],fr['hands'],'b50'))
+              case=mm['cases'][0];turn=case['turn']
+              assert case['line']=='b50 c' and turn in mm['turns']
+              sub=folder/'solver/postflop'/case['source_path']
+              assert sub.is_file() and hashlib.sha256(sub.read_bytes()).hexdigest()==case['source_sha256']
+              child=json.loads(sub.read_text())
+              assert (child['line0'],child['turn'])==('b50 c',turn)
+              assert child['info']['gto_expl_pct']<=.5
+              if version=='exp_oop':assert child['info']['hero_gap_pct']<=.5
+              overlay,stats=game_reach(fr,child)
+              art=next(x for x in a['artifacts'] if (x['flop'],x['version'])==(flop,version))
+              verified=[x for x in art['cases'] if (x['flop_line'],x['turn'])==('b50 c',turn)]
+              positive={}
+              if verified:
+                assert len(verified)==1 and verified[0]['source_sha256']==hashlib.sha256(sub.read_bytes()).hexdigest()
+                vc=verified[0]
+                for node in child['nodes']:
+                  if not(node['player']==0 and node['line']=='b50 c/b75 c/' and len(node['board'])==10):continue
+                  q=overlay.get('|'.join((node['board'],node['line'],'0')))
+                  assert q is not None
+                  matched=[z for z in vc['nodes'] if (z['exact_node_line'],z['public_board'],z['acting_seat'])==('b50 c/b75 c/',node['board'],0)]
+                  if q['count']==0:
+                    assert not matched or (len(matched)==1 and matched[0]['strictly_reachable_combos']==0)
+                    continue
+                  assert len(matched)==1 and matched[0]['strictly_reachable_combos']==q['count']
+                  spr=matched[0]['node_spr']
+                  if abs(spr-7.52)/7.52<=.05:
+                    positive[node['board']]={'strict_combos':q['count'],'SPR':spr}
+              proofs.append({'flop':flop,'version':version,'turn':turn,
+                'root_gto_sha256':hashlib.sha256(root.read_bytes()).hexdigest(),
+                'root_job_sha256':hashlib.sha256(job.read_bytes()).hexdigest(),
+                'source_manifest_sha256':hashlib.sha256(mf.read_bytes()).hexdigest(),
+                'turn_river_sha256':hashlib.sha256(sub.read_bytes()).hexdigest(),
+                'verified_case_count':len(verified),'root_b50_strict_combos':elig,
+                'strict_BB_OOP_exact_river_nodes':positive,
+                'strict_BB_OOP_combo_rows':sum(x['strict_combos'] for x in positive.values()),
+                'preflop_169_class_range_is_assumed_not_observed':True})
+            gz=rawfile.with_suffix('.json.gz');gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+            rawfile.with_suffix('.index.json').write_text(json.dumps({
+              'schema':'NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1','run_id':a['source_run_id'],
+              'batch':'B436_R29_LMP_B50_B75','verified_cases':a['new_authentic_board_cases'],
+              'positive_jobs':len(proofs),'negative_jobs':len(part['explicit_zero_case_negative_jobs']),
+              'raw_sha256':hashlib.sha256(raw).hexdigest(),
+              'gzip_sha256':hashlib.sha256(gz.read_bytes()).hexdigest(),
+              'assumed_169_class_preflop_not_observed':True},indent=2)+'\n')
+          else:
+            a={'source_run_id':part['run_id'],'new_authentic_board_cases':0,'errors':[]}
+          gg=next((x for x in proofs if x['version']=='gto'),None)
+          ee=next((x for x in proofs if x['version']=='exp_oop'),None)
+          common=sorted(set(gg['strict_BB_OOP_exact_river_nodes'])&set(ee['strict_BB_OOP_exact_river_nodes'])) if gg and ee and gg['turn']==ee['turn'] else []
+          out={'schema':'NL2_B436_R29_NEW_ONE_ORIGINAL_LMP_GTO_NL2_OOP_SOURCE_PROOF_V1',
+            'source_run_id':part['run_id'],'true_verified_case_count':a['new_authentic_board_cases'],
+            'source_proofs':proofs,'candidate_pairs':[{'flop':'KsQh4d','new_exact_matched_GTO_NL2_OOP_river_boards':common,'strict_authenticated_pair':bool(common)}],
+            'baseline_CERT':163,'baseline_APPROX':229,'baseline_EST':0,'HU_routes_expected':2475,
+            'preflop_range_assumed_169_class_not_observed':True,
+            'pool_NL2_marginals_not_per_private_hand_rates':True,
+            'rank29_remains_APPROX_until_three_distinct_flop_pairs':True,
+            'PR2_Draft_NEVER_MERGE':True}
+          p=D/'nl2_hu_b436_rank29_one_new_true_source_proof.json'
+          p.write_text(json.dumps(out,indent=2,ensure_ascii=False)+'\n')
+          doc=pathlib.Path('trainer/docs/NL2_HU_B436_R29_LMP_B50_B75_SOURCE_PROOF.md')
+          doc.write_text('# B436 rank29 LMP_CO_BB BB OOP exact b50 flop / b75 turn\n\n'
+            'Original full 100bb Rust CFR; explicit 169-class assumed preflop ranges, NOT observed NL2 preflop combos. Exact actor BB OOP b50 c/b75 c/ and SPR 7.52. GTO and actual partially NL2-marginal-locked OOP are separately SHA verified. A zero-case source is a negative, never a CERT.\n\n'
+            + '\n'.join(f"- {x['flop']} {x['version']}: {x['strict_BB_OOP_combo_rows']} strict BB OOP combo rows" for x in proofs)
+            + '\n\nRank29 remains APPROX until 3 different exact paired flops. Current V50 163 CERT /229 APPROX. Unknown node denominators remain UNKNOWN; no invented per-private-hand frequencies. Full HU2475 audit required. PR2 draft, never merge.\n')
+          print('B436 rank29 exact pair:',common,'source jobs',len(proofs),'zero',len(part['explicit_zero_case_negative_jobs']))
+          PY
+      - name: Full independent V50 392-model source lock and medium-size audit plus HU2475 link/reach
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v50_b417_rank166.json --out nl2-audit/b436-V50-source.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b436-V50-source.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(163,229,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],a['aggregate']['board_examples_with_b50_candidate'])==(618,710,135)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          y=json.load(open('data/nl2_hu_b436_rank29_one_new_true_source_proof.json'))
+          assert y['rank29_remains_APPROX_until_three_distinct_flop_pairs']
+          assert y['preflop_range_assumed_169_class_not_observed']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B436 HU2475/2475")'
+      - name: Commit original source proof or negative and complete HU2475 audit; push PR2 fast-forward only never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_B436_R29_AUTHENTIC_SOLVE_MANIFESTS.json \
+            data/nl2_hu_b436_rank29_one_new_true_source_proof.json \
+            docs/NL2_HU_B436_R29_LMP_B50_B75_SOURCE_PROOF.md
+          if [ -f data/solver_evidence/NL2_MULTIBOARD_B436_R29_VERIFIED.json.gz ]; then
+            git add data/solver_evidence/NL2_MULTIBOARD_B436_R29_VERIFIED.json.gz data/solver_evidence/NL2_MULTIBOARD_B436_R29_VERIFIED.index.json
+          fi
+          if [ -f data/solver_evidence/NL2_MULTIBOARD_B436_R29_ZERO_CASE_NEGATIVE.json ]; then
+            git add data/solver_evidence/NL2_MULTIBOARD_B436_R29_ZERO_CASE_NEGATIVE.json
+          fi
+          git diff --cached --quiet && exit 1
+          git commit -m 'TASK-HYBRID B436: rank29 LMP BB OOP b50 flop b75 turn original 100bb GTO and real partial NL2 lock, assumed range disclosed, V50 163/229 HU2475 audited'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-B436-rank29-one-new-LMP-BB-OOP-exact-b50-b75-HU2475
+          path: |
+            trainer/data/solver_evidence/NL2_B436_R29_AUTHENTIC_SOLVE_MANIFESTS.json
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B436_R29_VERIFIED.*
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B436_R29_ZERO_CASE_NEGATIVE.json
+            trainer/data/nl2_hu_b436_rank29_one_new_true_source_proof.json
+            trainer/docs/NL2_HU_B436_R29_LMP_B50_B75_SOURCE_PROOF.md
+            trainer/nl2-audit/
+          retention-days: 30
