@@ -127,7 +127,7 @@ def patch_ui_v52(path):
     marker = "const v49b405=d=>{"
     s = rep(s, marker, validator + marker)
     old = "return fetch('data/nl2_hu_multiboard_status_v50_b417_rank166.json',{cache:'no-store'}).then(open).then(v50b417)"
-    new = "return fetch('data/nl2_hu_multiboard_status_v52_b433_rank216_218.json',{cache:'no-store'}).then(open).then(v52b433)\\n    .catch(()=>fetch('data/nl2_hu_multiboard_status_v50_b417_rank166.json',{cache:'no-store'}).then(open).then(v50b417))"
+    new = "return fetch('data/nl2_hu_multiboard_status_v52_b433_rank216_218.json',{cache:'no-store'}).then(open).then(v52b433)\n    .catch(()=>fetch('data/nl2_hu_multiboard_status_v50_b417_rank166.json',{cache:'no-store'}).then(open).then(v50b417))"
     s = rep(s, old, new)
     old = "'NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166','NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219'"
     new = "'" + V52 + "'," + old
