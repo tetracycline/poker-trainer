@@ -1,0 +1,137 @@
+name: TASK-HYBRID B349 V45 235 APPROX strictly sourceblind rank79/96 next 2-flop short, 600 source HU2475 PASS commit (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b349-v45-235-approx-sourceblind-rank79.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  independent-frozen-V45-next-sourceblind-priority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Source blind compare all V43 236 with current V45 235 and rank71 true original three GTO and genuine Rust NL2 actor lock, prioritize top frozen rank79 not artificial third board
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib,pathlib,collections
+          d=pathlib.Path('data')
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          prior=d/'nl2_hu_b329_v43_236_approx_sourceblind_oneflop_priority.json'
+          current=d/'nl2_hu_multiboard_status_v45_b345_rank71.json'
+          proof=d/'nl2_hu_b345_v45_rank71_three_gto_nl2_source_gate.json'
+          a=json.loads(prior.read_text());s=json.loads(current.read_text());p=json.loads(proof.read_text())
+          assert a['schema']=='NL2_HU_B329_V43_236_APPROX_FROZEN_SOURCEBLIND_PRIORITY_V1'
+          assert (a['CERT_MULTIBOARD'],a['APPROX'],a['EST'],a['TOTAL'])==(156,236,0,392)
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(157,235,0,392)
+          assert p['V45_sha256']==sha(current)
+          assert p['certified_flops']==['4s4h2d','7s5h3d','3s3h2d']
+          assert set(p['two_plus_textures'])=={'LOW','PAIRED'}
+          rows=a['all_236_APPROX_source_gap_rows']
+          assert len(rows)==236 and [z['rank'] for z in rows]==sorted(z['rank'] for z in rows)
+          assert [(z['rank'],z['minimum_remaining_new_exact_flop_actor_lock_pairs']) for z in rows if z['minimum_remaining_new_exact_flop_actor_lock_pairs']==1]==[(71,1)]
+          rank71=rows[0]
+          assert rank71['rank']==71 and rank71['model_id']=='ln-iso-lmp_r_model-vlgh2t'
+          assert s['records'][rank71['model_id']]['label']=='CERT-MULTIBOARD'
+          result=[]
+          for x in rows[1:]:
+            m=s['records'][x['model_id']]
+            assert m['label']=='APPROX' and m['frequency_rank']==x['rank']
+            assert m['solver_profile']==x['spot']
+            assert x['genuine_paired_flop_count']+x['minimum_remaining_new_exact_flop_actor_lock_pairs']==3
+            assert x['minimum_remaining_new_exact_flop_actor_lock_pairs']>=2
+            result.append(dict(rank=x['rank'],model_id=x['model_id'],spot=x['spot'],
+              frozen_frequency_proxy=x['frozen_frequency_proxy'],
+              historical_original_GTO_plus_real_NL2_actor_paired_flops=x['actor_legal_GTO_plus_REAL_NL2_locked_flops'],
+              original_GTO_but_NL2_actor_lock_not_authenticated=x['GTO_but_hero_NL2_lock_missing'],
+              original_paired_flops=x['genuine_paired_flop_count'],
+              further_distinct_authenticated_true_flop_actor_lock_pairs_needed=x['minimum_remaining_new_exact_flop_actor_lock_pairs'],
+              no_generic_texture_GTO_or_fake_private_card_NL2_data=True,
+              no_later_unverified_source_results_used_for_rank=True))
+          assert len(result)==235
+          assert (result[0]['rank'],result[0]['spot'],result[0]['original_paired_flops'],result[0]['further_distinct_authenticated_true_flop_actor_lock_pairs_needed'])==(79,'UTG_CO',1,2)
+          assert (result[1]['rank'],result[1]['spot'])==(96,'UTG_CO')
+          assert [z['further_distinct_authenticated_true_flop_actor_lock_pairs_needed'] for z in result].count(2)==28
+          assert [z['further_distinct_authenticated_true_flop_actor_lock_pairs_needed'] for z in result].count(3)==207
+          out=dict(schema='NL2_HU_B349_V45_FROZEN_235_APPROX_GENUINE_GTO_AND_NL2_SOURCEBLIND_V1',
+             historical_B329_V43_sha256=sha(prior),
+             authoritative_V45_status_sha256=sha(current),
+             certified_B345_rank71_source_proof_sha256=sha(proof),
+             CERT_MULTIBOARD=157,APPROX=235,EST=0,TOTAL=392,
+             remain_one_distinct_true_GTO_NL2_flop_short=0,
+             remain_two_distinct_true_GTO_NL2_flops_short=28,
+             remain_three_distinct_true_GTO_NL2_flops_short=207,
+             next_top_high_frequency_rank=79,next_rank_model_id='ln-ipc-t_model-1cla93g',
+             next_spot='UTG_CO',actor='CO_IP',exact_line='b50 c/x',model_SPR=7,
+             next_source_historical_validated_flop='Ks7h2d',
+             predeclared_two_new_nonisomorphic_flops_for_original_GTO_plus_NL2_Rust=['8s8h3d','Js9h4d'],
+             next_after_rank79_rank=96,
+             no_GTO_only_or_expired_job_as_actor_NL2_source=True,
+             frozen_rank_frequency_not_recalculated_using_new_source_EV=True,
+             235_remaining_frozen_source_gap_rows=result,
+             PR2_Draft_NEVER_MERGE=True)
+          dest=d/'nl2_hu_b349_v45_235_approx_next2flop_rank79_sourceblind.json'
+          dest.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+          print('PASS B349 no one-flop short, 28 two-flop and 207 three-flop; rank79 first under frozen frequency, no source-blind leakage')
+          PY
+      - name: Full independent current 157 CERT/235 APPROX original 600 named GTO plus true NL2 actor lock692 source/134 exact medium plus every 2475 HU river route
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v45_b345_rank71.json --out nl2-audit/b349-v45-source.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b349-v45-source.json'))
+          x=json.load(open('data/nl2_hu_b349_v45_235_approx_next2flop_rank79_sourceblind.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(157,235,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],a['aggregate']['board_examples_with_b50_candidate'])==(600,692,134)
+          assert len(x['235_remaining_frozen_source_gap_rows'])==235
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B349 HU 2475/2475")'
+      - name: Commit only pre-source frozen 235 status rank79 next after full 600 lock+HU PASS, draft PR #2 never merge
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          pathlib.Path('docs/NL2_HU_B349_V45_SOURCEBLIND_RANK79_NEXT.md').write_text(
+          '# B349 V45 235 APPROX sourceblind next rank79\n\n'
+          'Rank71 B345 already authentic 3-flop CERT, so NO remaining single-flop-short APPROX. '
+          'Next highest-frequency one paired proof is rank79 CO-IP UTG_CO b50 c/x, SPR7. '
+          'Precisely 28 cells need two more original GTO+real NL2 actor matched public flops; 207 cells need three. '
+          'Two new frozen rank79 public flop candidates 8s8h3d (paired) and Js9h4d (J-high), original Ks7h2d already source paired. '
+          'Candidate flops must each pass independent original Rust GTO and separately authentic CO-IP NL2 partial node lock, 40/70 action ancestors and exact SPR. '
+          'Only street/size NL2 marginal player-pool data may be called measured; no private-hand conditional inferred. '
+          'Current V45 is unchanged 157 CERT/235 APPROX, 600 real named GTO+NL2 proofs, 692 partial actor locks and 134 exact b50 research-only flags, HU2475/2475 audited. PR2 remains draft, never merge.\\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b349_v45_235_approx_next2flop_rank79_sourceblind.json docs/NL2_HU_B349_V45_SOURCEBLIND_RANK79_NEXT.md
+          git commit -m 'TASK-HYBRID B349: V45 235 APPROX frozen sourceblind no one-flop short; rank79 UTGCO next needs2 genuine GTO/NL2 flops, 600 locks HU2475 PASS'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B349-V45-235-APPROX-sourceblind-rank79-next-HU2475
+          path: |
+            data/nl2_hu_b349_v45_235_approx_next2flop_rank79_sourceblind.json
+            docs/NL2_HU_B349_V45_SOURCEBLIND_RANK79_NEXT.md
+            nl2-audit/
+          retention-days: 30
