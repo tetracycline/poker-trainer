@@ -1,6 +1,6 @@
 # B368: historical node-lock denominators recovered only from exact original sources
 
-Original historical UNKNOWN lock variants: **334**. Recovered exact source variants: **323**. Remaining UNKNOWN: **11**.
+Original historical UNKNOWN lock variants: **334**. Recovered exact source variants: **334**. Remaining UNKNOWN: **0**.
 
 Recovery required all of: original run artifact available, exact raw subgame SHA match, exact original root SHA, pinned poker-solver commit, exact trainer helper code from that source run head SHA, exact original job lock-list equivalence to regenerated pinned pool_stats patterns, and full root villain decision-node partition into observed / assumed / unmatched. Unmatched nodes remain explicitly unlocked. No counts were imputed from board rank or neighboring models. No opponent private-card-conditional NL2 frequencies are claimed.
 
