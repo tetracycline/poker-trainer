@@ -63,7 +63,7 @@ jobs:
           a=json.load(open('/tmp/b420-source-audit.json'))
           assert x['original_GTO_and_NL2_IP_source_SHA_pairing_verified']
           assert len(x['durable_immutable_gzip_CFR_source_archives'])==2
-          assert (a['cert_multiboard'],a['approx'],a['EST'])==(162,230,0)
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(163,229,0)
           print('PASS B420 two real original source archive batches, certified CO-IP 163/229')
           PY
       - name: Wire exact source IDs to viewer without incorrectly treating partial NL2 lock as original GTO
