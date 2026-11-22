@@ -1,0 +1,89 @@
+name: B442 rank29 completed GTO strict-zero-reach audit (no solver reruns)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b442-r29-negative-reach-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: b442-r29-negative-reach
+  cancel-in-progress: false
+jobs:
+  audit-preserved-gto:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: trainer
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download only the three already completed B434/B437/B438 GTO artifacts
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p ../downloads
+          gh run download 45065684467 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-multiboard-B434_R29_LMPCOBB_B50_B75-LMP_CO_BB-4s4h2d-gto' \
+            --dir ../downloads/nl2-multiboard-B434_R29_LMPCOBB_B50_B75-LMP_CO_BB-4s4h2d-gto
+          gh run download 45066400126 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-multiboard-B437_R29_LMPCOBB_B50_B75-LMP_CO_BB-8s8h3d-gto' \
+            --dir ../downloads/nl2-multiboard-B437_R29_LMPCOBB_B50_B75-LMP_CO_BB-8s8h3d-gto
+          gh run download 45066455212 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-multiboard-B438_R29_LMPCOBB_B50_B75-LMP_CO_BB-9s6h3d-gto' \
+            --dir ../downloads/nl2-multiboard-B438_R29_LMPCOBB_B50_B75-LMP_CO_BB-9s6h3d-gto
+      - name: Verify source hashes and exact sequential GTO reach; archive negative evidence
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/verify_b442_rank29_negative.py --downloads-root ../downloads
+      - name: Full V50 source, medium-size, and HU2475 navigation audit
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_cert_lock_medium_audit.py \
+            --source data/nl2_hu_multiboard_status_v50_b417_rank166.json --out /tmp/b442-v50.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b442-v50.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'],a['models_total'])==(163,229,0,392)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'])==(618,710)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > /tmp/b442-contract.json
+          node tools/link_audit.js --md /tmp/b442-link.md --json /tmp/b442-link.json
+          node tools/reach_verify.js --log /tmp/b442-reach.md --json /tmp/b442-reach.json
+          node tools/hu_model_path_audit.js /tmp/b442-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b442-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B442 HU2475/2475")'
+          git diff --check
+      - name: Commit rank29 negative evidence; preserve PR2 draft
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b442_rank29_strict_gto_zero_reach.json \
+            data/solver_evidence/NL2_B442_R29_4s4h2d_GTO_ONLY.json.gz \
+            data/solver_evidence/NL2_B442_R29_8s8h3d_GTO_ONLY.json.gz \
+            data/solver_evidence/NL2_B442_R29_9s6h3d_GTO_ONLY.json.gz \
+            data/solver_evidence/NL2_B442_R29_NEGATIVE.index.json \
+            docs/NL2_HU_B442_R29_STRICT_GTO_ZERO_REACH.md
+          git diff --cached --quiet && exit 1
+          git commit -m 'B442: archive four authentic rank29 GTO negatives; zero strict b75 reach'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
