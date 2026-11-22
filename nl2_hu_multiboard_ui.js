@@ -923,7 +923,8 @@ const v42=d=>{
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v48_b369_rank27.json',{cache:'no-store'}).then(open).then(v48)\n   .catch(()=>fetch('data/nl2_hu_multiboard_status_v47_b364_rank96.json',{cache:'no-store'}).then(open).then(v47))
+ return fetch('data/nl2_hu_multiboard_status_v48_b369_rank27.json',{cache:'no-store'}).then(open).then(v48)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v47_b364_rank96.json',{cache:'no-store'}).then(open).then(v47))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v46_b354_rank79.json',{cache:'no-store'}).then(open).then(v46))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v45_b345_rank71.json',{cache:'no-store'}).then(open).then(v45))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json',{cache:'no-store'}).then(open).then(v44))
