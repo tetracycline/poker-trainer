@@ -24,7 +24,7 @@ def case(data,flop,turn,version):
     c=hit[0]
     assert c['run_id']==data['source_run_id']
     assert c['empirical_scope']=='PINNED_PREFLOP_CFR'
-    assert abs(c['real_flop_parent_spr']-7)/7<=.05
+    assert abs(c['turn_spr']-7)/7<=.05
     assert (c['flop_root_pot_bb'],c['flop_root_stack_bb'])==(6.5,97.5)
     assert c['gto_exploitability_pct']<=.5 and len(c['source_sha256'])==64
     return c
