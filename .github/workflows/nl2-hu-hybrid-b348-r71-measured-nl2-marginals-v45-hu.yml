@@ -1,0 +1,169 @@
+name: TASK-HYBRID B348 V45 rank71 3s3h2d true Rust NL2 marginal-source pattern audit measured14 assumed11 unknown22, 600/692 HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b348-r71-measured-nl2-marginals-v45-hu.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  original-rust-B343-BB-OOP-nl2-source-marginals-not-card-conditionals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Independently authenticate original B343 six real Rust source cases SHA, actual 3s3h2d BB OOP actor/turn/river exact source and NL2 pooled marginal vs assumed 50% node locks
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,gzip,hashlib,pathlib
+          d=pathlib.Path('data')
+          sh=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          ip=d/'solver_evidence/NL2_MULTIBOARD_B343_LMP50_LEGAL.index.json'
+          gz=d/'solver_evidence/NL2_MULTIBOARD_B343_LMP50_LEGAL.json.gz'
+          idx=json.loads(ip.read_text());compressed=gz.read_bytes()
+          raw=gzip.decompress(compressed);a=json.loads(raw)
+          assert idx['run_id']==a['source_run_id']==44966926752
+          assert (idx['actual_spot_flop_version_jobs'],idx['verified_cases'],idx['gto_cases'],idx['locked_cases'])==(6,6,3,3)
+          assert idx['source_sha256']==hashlib.sha256(raw).hexdigest()
+          assert idx['gzip_sha256']==sh(gz)
+          assert not a['errors'] and a['actual_NL2_stake_hands']==2334487
+          assert len(a['artifacts'])==6
+          gates=json.loads((d/'nl2_hu_b343_rank71_three_real_lmp50_GTO_NL2_actor_reach.json').read_text())
+          assert gates['original_GTO_run_id']==44966926752
+          assert gates['new_rank71_legal_genuine_GTO_NL2_pair_flops']==['3s3h2d']
+          status=json.loads((d/'nl2_hu_multiboard_status_v45_b345_rank71.json').read_text())
+          proof=json.loads((d/'nl2_hu_b345_v45_rank71_three_gto_nl2_source_gate.json').read_text())
+          assert (status['CERT_MULTIBOARD'],status['APPROX'],status['EST'])==(157,235,0)
+          assert proof['source_B343_sha256']==sh(d/'nl2_hu_b343_rank71_three_real_lmp50_GTO_NL2_actor_reach.json')
+          assert proof['V45_sha256']==sh(d/'nl2_hu_multiboard_status_v45_b345_rank71.json')
+          board=next(z for z in status['records']['ln-iso-lmp_r_model-vlgh2t']['certified_3_to_5_exact_flop_boards'] if z['flop']=='3s3h2d')
+          assert (board['turn'],board['actual_exact_action_line'],board['acting_seat'])==('7d','b50 c/x b50 c/',0)
+          assert board['nl2_locked_variants'][0]['version']=='exp_oop'
+          src={}
+          for ver in ('gto','exp_oop'):
+            matches=[c for a0 in a['artifacts'] if (a0['spot'],a0['flop'],a0['version'])==('LMP_CO_BB','3s3h2d',ver)
+              for c in a0['cases'] if (c['flop_line'],c['turn'])==('b50 c','7d')]
+            assert len(matches)==1
+            src[ver]=matches[0]
+            assert matches[0]['gto_exploitability_pct']<=.5
+            assert matches[0]['flop_root_pot_bb']==2.5 and matches[0]['flop_root_stack_bb']==99
+            assert matches[0]['empirical_scope']=='ASSUMED_PREFLOP_RANGES'
+          gto,locked=src['gto'],src['exp_oop']
+          assert (gto['source_sha256'],locked['source_sha256'])==(
+            board['source_sha256'],board['nl2_locked_variants'][0]['sha256'])
+          assert locked['locked_hero_gap_pct']<=.5
+          scope=locked['villain_lock_scope']
+          assert (scope['villain_decision_nodes'],scope['pattern_matched_nodes'],
+             scope['observed_marginal_source_nodes'],scope['imputed_assumption_nodes'],
+             scope['unmatched_nodes'])==(47,25,14,11,22)
+          assert scope['coverage_pct']==53.191 and not scope['all_villain_nodes_locked']
+          assert len(locked['lock_patterns'])==19 and not gto['lock_patterns']
+          measured=[p for p in locked['lock_patterns'] if p['scope'].startswith('IMPUTED_HISTORY_FROM_TRUE_STREET') and int(p['n'])>0]
+          assumptions=[p for p in locked['lock_patterns'] if p['scope'].startswith('ASSUMED')]
+          assert measured and assumptions
+          assert all('NL2.HU_' in p['source'] and p['n']>0 for p in measured)
+          assert all('ASSUMED' in p['source'] and p['n']==0 for p in assumptions)
+          def actor_node(c):
+            return {x['public_board']:x for x in c['nodes'] if
+               x['exact_node_line']=='b50 c/x b50 c/' and x['acting_seat']==0
+               and len(x['public_board'])==10 and x['strictly_reachable_combos']>0
+               and abs(x['node_spr']-9.916)/9.916<=.05}
+          gn=actor_node(gto); en=actor_node(locked)
+          assert {k:v['strictly_reachable_combos'] for k,v in gn.items()}=={
+            '2d3h3s7dJs':53,'2d3h3s7d2c':48}
+          assert {k:v['strictly_reachable_combos'] for k,v in en.items()}=={
+            '2d3h3s7dJs':112,'2d3h3s7d2c':115}
+          assert board['public_board'] in (gn.keys()&en.keys())
+          assert board['strict_full_street_combo_reachable']==gn[board['public_board']]['strictly_reachable_combos']
+          assert len(board['nl2_locked_variants'][0]['sha256'])==64
+          # V45 frozen ledger intentionally leaves generic per-node provenance denominators UNKNOWN;
+          # this separate source-matched report discloses actual B343 solver pattern-match counts
+          # and must not rewrite their meaning into hole-card conditional observations.
+          out=dict(schema='NL2_HU_B348_V45_R71_3S3H2D_TRUE_RUST_MEASURED_STREET_SIZE_MARGINAL_V1',
+            original_B343_run=idx['run_id'],original_index_sha256=sh(ip),
+            original_verified_raw_archive_sha256=sh(gz),
+            original_GTO_exact_case_sha256=gto['source_sha256'],
+            genuine_Rust_NL2_BB_OOP_case_sha256=locked['source_sha256'],
+            V45_status_sha256=sh(d/'nl2_hu_multiboard_status_v45_b345_rank71.json'),
+            V45_CERT=157,V45_APPROX=235,V45_EST=0,authenticated_V45_public_boards=600,
+            original_NL2_pooled_hands_source_count=2334487,
+            actor='BB_OOP',flop='3s3h2d',turn='7d',line='b50 c/x b50 c/',
+            GTO_strict_river_nodes={k:v['strictly_reachable_combos'] for k,v in gn.items()},
+            NL2_partial_strict_river_nodes={k:v['strictly_reachable_combos'] for k,v in en.items()},
+            true_nl2_villain_decision_nodes=47,source_pattern_matched_nodes=25,
+            matched_using_measured_NL2_street_and_size_marginals=14,
+            source_rate_assumed_defaults_not_measured=11,
+            unmatched_villain_nodes_remain_unlocked=22,
+            node_pattern_match_coverage_pct=53.191,
+            genuine_nl2_source_patterns=locked['lock_patterns'],
+            observed_marginal_lock_pattern_examples=[dict(pat=x['pat'],source=x['source'],n=x['n']) for x in measured],
+            assumed_lock_pattern_examples=[dict(pat=x['pat'],source=x['source'],n=x['n']) for x in assumptions],
+            full_flop_is_restricted_50pct_original_GTO_not_whole_flop_NL2_locked=True,
+            no_observed_private_hand_conditional_NL2_rates=True,
+            not_a_new_CERT_or_generic_bet_size_claim=True,
+            V45_frozen_status_not_mutated=True,PR2_Draft_NEVER_MERGE=True)
+          p=d/'nl2_hu_b348_v45_rank71_original_NL2_measured_marginal_source_gate.json'
+          p.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+          print('PASS B348 original 100bb restricted R71 GTO+true NL2 BB-OOP original run 44966926752, 14 actual pooled pattern matches, 11 assumed, 22 unlocked, no observed private hand conditionals')
+          PY
+      - name: Full independent V45 157 CERT all600 true board actor NL2 partial lock proof and 2475 HU river lines
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v45_b345_rank71.json --out nl2-audit/b348-v45-lock.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('nl2-audit/b348-v45-lock.json'))
+          p=json.load(open('data/nl2_hu_b348_v45_rank71_original_NL2_measured_marginal_source_gate.json'))
+          assert (x['cert_multiboard'],x['approx'],x['EST'])==(157,235,0)
+          assert (x['aggregate']['named_board_proofs'],x['aggregate']['paired_hero_locked_source_variants'])==(600,692)
+          assert p['matched_using_measured_NL2_street_and_size_marginals']==14 and p['source_rate_assumed_defaults_not_measured']==11
+          assert p['unmatched_villain_nodes_remain_unlocked']==22
+          assert p['V45_frozen_status_not_mutated'] and p['no_observed_private_hand_conditional_NL2_rates']
+          assert x['not_generalized_handclass_GTO'] and x['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B348 2475/2475")'
+      - name: Commit only original Sha anchored real measured-vs-assumed NL2 partial lock source after full HU audit PASS, PR2 never merge
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          pathlib.Path('docs/NL2_HU_B348_V45_RANK71_REAL_NL2_MARGINAL_VS_ASSUMED.md').write_text(
+            '# B348 exact rank71 3s3h2d real NL2 BBOOP source versus assumed-villain frequencies\n\n'
+            'Authentic B343 Rust original GTO plus independently real NL2 BB-OOP partial lock 100bb restricted 50%-only game on exact flop **3s3h2d**, turn **7d**, history **b50 c/x b50 c/**. '
+            'Actual NL2 pooled source sample **2,334,487** hands; matched villain decision nodes **14** true NL2 street/size marginal-source buckets, **11** disclosed assumption defaults, **22** remaining unmatched (not locked). '
+            'These are source PATTERN matched node counts, not numbers of observed conditional player decisions or a claim of true private-card lock. Pooled frequencies are by street and size, not observed per-private-hand probabilities. '
+            'Original GTO actor river strict combos **53/48** on two exact rivers and real NL2 partial lock **112/115**, all original SHA and public action ancestor 40%/70% checked. '
+            'The frozen V45 model remains 157 CERT /235 APPROX /0 EST; 600 exact source boards and 692 actor lock variants, 134 medium50 only exact-board research flags. '
+            'No generic bet-size or unrestricted-tree advice. Full 2475/2475 HU paths audited before commit; Draft PR2 NEVER merge or force push.\\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b348_v45_rank71_original_NL2_measured_marginal_source_gate.json docs/NL2_HU_B348_V45_RANK71_REAL_NL2_MARGINAL_VS_ASSUMED.md
+          git commit -m 'TASK-HYBRID B348: rank71 real B343 Rust NL2 BB-OOP measured pooled street-size lock14 vs assumed11 and unlocked22 source SHA; V45 600/692 HU2475 PASS no false per-card rates'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B348-V45-original-rank71-NL2-measured14-assumed11-unlocked22-HU2475
+          path: |
+            data/nl2_hu_b348_v45_rank71_original_NL2_measured_marginal_source_gate.json
+            docs/NL2_HU_B348_V45_RANK71_REAL_NL2_MARGINAL_VS_ASSUMED.md
+            nl2-audit/
+          retention-days: 30
