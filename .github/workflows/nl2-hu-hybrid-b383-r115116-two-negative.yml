@@ -1,0 +1,58 @@
+name: NL2 B383 rank115/116 two genuine B375 original GTO zero strict IP negatives, HU2475
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b383-r115116-two-negative.yml','tools/hu_b383_r115116_strict_source_negative.py']
+  workflow_dispatch:
+permissions: {contents: write, actions: read}
+jobs:
+  original-gto-negative-and-full-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Independently authenticate two real original Rust GTO sources and 40-70 zero reach
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b383-sources/nl2-multiboard-B375_R115116-LMP_CO_BB-7s5h3d-gto /tmp/b383-sources/nl2-multiboard-B375_R115116-LMP_CO_BB-8s8h3d-gto
+          gh run download 45017303339 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B375_R115116-LMP_CO_BB-7s5h3d-gto --dir /tmp/b383-sources/nl2-multiboard-B375_R115116-LMP_CO_BB-7s5h3d-gto
+          gh run download 45017303339 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B375_R115116-LMP_CO_BB-8s8h3d-gto --dir /tmp/b383-sources/nl2-multiboard-B375_R115116-LMP_CO_BB-8s8h3d-gto
+          python3 -m py_compile tools/hu_b383_r115116_strict_source_negative.py
+          python3 tools/hu_b383_r115116_strict_source_negative.py /tmp/b383-sources
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b383-gate.json
+      - name: Complete HU2475 river reach, link, model path, frontend and source audit
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b383-contract.json
+          node tools/link_audit.js --md /tmp/b383-link.md --json /tmp/b383-link.json
+          node tools/reach_verify.js --log /tmp/b383-reach.md --json /tmp/b383-reach.json
+          node tools/hu_model_path_audit.js /tmp/b383-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b383-gate.json'))
+          q=json.load(open('data/nl2_hu_b383_rank115_116_b375_two_original_gto_zero_strict_negatives.json'))
+          c=json.load(open('/tmp/b383-link.json'))['counts']
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert (c['continuing'],c['reachRiver'],c['riverShare'])==(2475,2475,100)
+          assert len(q['true_original_Rust_GTO_but_strict_negative'])==2
+          assert q['no_new_qualifying_distinct_GTO_flops']
+          print('PASS B383 GTO negatives, HU 2475/2475; CERT159 APPROX233')
+          PY
+          git diff --check
+      - name: Commit two true original GTO negative source audits, draft PR2 unmerged
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b383_rank115_116_b375_two_original_gto_zero_strict_negatives.json docs/NL2_HU_B383_RANK115_116_STRICT_GTO_ZERO_NEGATIVES.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'B383: authentic rank115/116 new GTO flops have 0 legal target CO-IP combo; no false CERT'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
