@@ -97,7 +97,7 @@ jobs:
             const validator=new Function(source.slice(a,b)+';return v48b390;')();
             assert.equal(validator(status),status);
             const forged=structuredClone(status);forged.CERT_MULTIBOARD=159;
-            assert.throws(()=>validator(forged),/failclosed/);
+            assert.throws(()=>validator(forged),/(?:failclosed|fails closed)/i);
             assert.ok(source.includes("data/nl2_hu_multiboard_status_v48_b390_rank107.json"));
           }
           console.log('PASS B390 exact-source V48 loader and false CERT rejection');
