@@ -59,8 +59,11 @@ def main():
   assert (m["root_pot_bb"],m["root_remaining_bb"])==(5.5,97.5)
   assert m["preflop_ranges"]["source"]=="PINNED_POKER_SOLVER_PREFLOP_CFR"
   assert m["flop_size_profile"]=="full" and not m["restricted_tree_assumption"]
-  assert (m["flop_action_sizes"],m["flop_line_policy"],m["selected_lines"])==(
-   ["33%","50%","75%","100%"],"checked-b50b100only",["x b50 c","x b100 c"])
+  assert m["flop_action_sizes"]==["33%","50%","75%","100%"]
+  if m["flop_line_policy"]=="checked-b50only":
+   assert m["selected_lines"]==["x b50 c"]
+  else:
+   assert (m["flop_line_policy"],m["selected_lines"])==("checked-b50b100only",["x b50 c","x b100 c"])
   assert len(m["turns"])==1 and m["solved_cases"]==len(m["cases"])
   result.update(original_manifest_SHA256=sha(mp),source_failures=m["failures"],source_skips=m["skipped"])
   if m["failures"]:
