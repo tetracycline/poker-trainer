@@ -444,6 +444,10 @@ def main():
               x["candidate_villain_decision_nodes"],x["observed_marginal"],x["assumed_default"],
               x["unmatched_unlocked"],x["observed_fraction_pct"],x["lock_pattern_count"],
               json.dumps(x["pattern_sample_denominators"],ensure_ascii=False,separators=(",",":"))])
+    # JSON provenance strings may contain trailing spaces from legacy lock metadata.
+    # Normalize CSV physical line endings so git diff --check is deterministic.
+    csv_lines=CSV.read_text(encoding="utf-8").splitlines()
+    CSV.write_text("\n".join(line.rstrip() for line in csv_lines)+"\n",encoding="utf-8")
     DOC.write_text("# B368: historical node-lock denominators recovered only from exact original sources\n\n"
       f"Original historical UNKNOWN lock variants: **{before_unknown}**. Recovered exact source variants: **{updated}**. Remaining UNKNOWN: **{new_unknown}**.\n\n"
       "Recovery required all of: original run artifact available, exact raw subgame SHA match, exact original root SHA, pinned poker-solver commit, exact trainer helper code from that source run head SHA, exact original job lock-list equivalence to regenerated pinned pool_stats patterns, and full root villain decision-node partition into observed / assumed / unmatched. Unmatched nodes remain explicitly unlocked. No counts were imputed from board rank or neighboring models. No opponent private-card-conditional NL2 frequencies are claimed.\n\n"
