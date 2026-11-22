@@ -42,7 +42,10 @@ def main():
     assert (gr["flop"],gr["pot"],gr["stack"])==("As9h2d",250,9900)
     assert (gs["flop"],gs["turn"],gs["line0"])==("As9h2d","Kd","b50 c") and gs["info"]["gto_expl_pct"]<=.5
 
-    mf=E/"evidence/LMP_CO_BB-As9h2d-exp_oop.json"
+    # gh run download preserves the EXP artifact's trainer/ and solver/ roots.
+    # GTO artifact has evidence/ and solver/ at its root; normalize only EXP evidence.
+    EDATA=E/"trainer" if (E/"trainer/evidence").is_dir() else E
+    mf=EDATA/"evidence/LMP_CO_BB-As9h2d-exp_oop.json"
     erpath=E/"solver/postflop/out/LMP_CO_BB/exp_oop/As9h2d_multiboard.json"
     ejpath=erpath.with_suffix(".job.json")
     espath=erpath.parent/"As9h2d_b50c_Kd.json"
