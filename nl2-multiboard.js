@@ -66,8 +66,13 @@ function sourceCase(version){
  return chosenBoard.nl2_locked_variants.find(v=>v.version===kind)||null;
 }
 async function getProof(run){
- const batch=Object.entries(status.independently_verified_completed_batches||{})
+ let batch=Object.entries(status.independently_verified_completed_batches||{})
      .find(([name,v])=>v?.run_id===run&&v?.status==='VERIFIED');
+ if(!batch){
+   const rank96=status?.B364_rank96_three_true_original_GTO_NL2_OOP_flops?.genuine_sources
+     ?.find(x=>x.run_id===run);
+   if(rank96)batch=[`B${rank96.pin.batch}_R96_VERIFIED`,{run_id:run,status:'VERIFIED'}];
+ }
  if(!batch)return null;
  const code=batch[0];
  if(proofCache[code])return proofCache[code];
@@ -1171,10 +1176,25 @@ fetchCertifiedRegistry()
       .sort((a,b)=>a.frequency_rank-b.frequency_rank);
    el('model').replaceChildren();
    models.forEach((x,i)=>opt(el('model'),String(i),'#'+x.frequency_rank+' '+x.solver_profile+' '+x.model_id));
-   text('summary','CERT-MULTIBOARD '+d.CERT_MULTIBOARD+'／392；APPROX '+d.APPROX+
+   const summaryBase='CERT-MULTIBOARD '+d.CERT_MULTIBOARD+'／392；APPROX '+d.APPROX+
         '／392。原始頻率優先前'+d.top_N_rank_cutoff+
         '格'+(d.supplementary_cert_count?'；另有經事前登記的補充認證 '+d.supplementary_cert_count+' 格':'')+
-        '；CERT 僅限下方 3–5 張具名牌面，其他 '+d.APPROX+' 個模型仍為 APPROX。');
+        '；CERT 僅限下方 3–5 張具名牌面，其他 '+d.APPROX+' 個模型仍為 APPROX。';
+   text('summary',summaryBase);
+   fetch('data/nl2_hu_cert_lock_medium_matrix_v47_b364.json',{cache:'no-store'})
+    .then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json()})
+    .then(m=>{
+      const locks=(m.boards||[]).flatMap(b=>b.hero_lock_proofs||[]);
+      const unknown=locks.filter(x=>x.node_rate_data_status==='HISTORICAL_POOL_MARGINAL_SOURCE_COUNTS_UNKNOWN').length;
+      const a=m.strict_aggregate||{};
+      text('summary',summaryBase+'；具名來源牌面 '+fmt(a.named_board_proofs,0)+
+        '；部分 NL2 node-lock '+fmt(a.hero_lock_variants,0)+
+        '（實測聚合節點 '+fmt(a.observed_marginal_pattern_nodes,0)+
+        '／假設 '+fmt(a.assumed_pattern_nodes,0)+'／未匹配 '+fmt(a.unmatched_opponent_nodes,0)+
+        '）；分母 UNKNOWN '+unknown+
+        '；50% 非極化精確牌面研究候選 '+fmt(a.b50_research_candidate_boards,0)+
+        '。UNKNOWN 不當作零；50% 標記只限具名牌面研究。');
+    }).catch(()=>{});
    const id=q.get('model');
    const i=id?models.findIndex(x=>x.model_id===id):-1;
    if(i>=0)el('model').value=String(i);
