@@ -1,0 +1,198 @@
+name: TASK-HYBRID B340 V44 all597 original GTO+real actor NL2 locks 689 provenance and exact b50 medium 134 source HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b340-v44-all597-actor-lock-medium-provenance.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  revalidate-per-board-partial-locks-and-exact-b50-no-invented-rates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Rebuild every one of 597 true named original GTO+matched actor NL2 lock records, compare byte-value to pinned V44 matrix, separate observed NL2 pooled marginal from assumed/unknown and exact b50 research
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_cert_lock_medium_coverage_matrix.py tools/hu_cert_lock_medium_audit.py
+          python3 - <<'PY'
+          import pathlib,hashlib,json,collections,csv,sys
+          sys.path.insert(0,'tools')
+          from hu_cert_lock_medium_coverage_matrix import create
+          from hu_cert_lock_medium_audit import audit
+          d=pathlib.Path('data')
+          sh=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          statusfile=d/'nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json'
+          matrixfile=d/'nl2_hu_cert_lock_medium_matrix_v44_b331.json'
+          s=json.loads(statusfile.read_text());f=json.loads(matrixfile.read_text())
+          assert s['schema']=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V44_B331_RANK60_FOUR'
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(156,236,0,392)
+          assert f['parent_V44_status_sha256']==sh(statusfile)
+          assert f['schema']=='NL2_CERT_PER_NAMED_BOARD_LOCK_AND_MEDIUM_PROVENANCE_V44_B331'
+          comp=create(s)
+          assert comp['boards']==f['boards']
+          assert comp['models']==f['models']
+          assert comp['strict_aggregate']==f['strict_aggregate']
+          assert comp['policy']==f['policy']
+          lockaudit=audit(s)
+          assert (lockaudit['cert_multiboard'],lockaudit['approx'],lockaudit['EST'])==(156,236,0)
+          assert (lockaudit['aggregate']['named_board_proofs'],lockaudit['aggregate']['paired_hero_locked_source_variants'])==(597,689)
+          ag=f['strict_aggregate']
+          assert (ag['named_board_proofs'],ag['hero_lock_variants'],ag['b50_research_candidate_boards'])==(597,689,134)
+          assert (ag['observed_marginal_pattern_nodes'],ag['assumed_pattern_nodes'],ag['unmatched_opponent_nodes'])==(4544,2143,3871)
+          assert ag['turn_river_only_locks']==68
+          assert len(f['boards'])==597 and len(f['models'])==156
+          rows=[];source_variants=0;unknown=0;research=0;has_unknown=set()
+          seen=set()
+          for b in f['boards']:
+            key=(b['model_id'],b['flop'],b['turn'],b['exact_action_line'],b['actor_seat'])
+            assert key not in seen
+            seen.add(key)
+            assert b['strictly_reachable_combo_count']>0
+            assert b['spr_relative_error_pct']<=5 and b['genuine_GTO_exploitability_pct']<=.5
+            assert len(b['GTO_sha256'])==64 and b['GTO_run_id']>0
+            assert b['hero_lock_proofs']
+            assert b['generic_handclass_texture_policy_is_not_GTO'] and b['no_general_bet_size_recommendation']
+            nresearch=b['b50_research_status']=='EXACT_BOARD_NONPOLARIZED_RESEARCH_CANDIDATE'
+            assert nresearch or b['b50_research_status']=='NOT_SUPPORTED_BY_CURRENT_EXACT_BOARD_EVIDENCE'
+            if nresearch:
+              assert b['b50_eligible_combo_count']>0
+              research+=1
+            variant_rows=[]
+            for v in b['hero_lock_proofs']:
+              source_variants+=1
+              assert v['version']==('exp_ip' if b['actor_seat']==1 else 'exp_oop')
+              assert v['source_run_id']>0 and len(v['source_sha256'])==64
+              assert v['EV_is_model_estimate_not_real_winnings']
+              cnt=v['source_node_counts']
+              kind=v['node_rate_data_status']
+              if kind=='HISTORICAL_POOL_MARGINAL_SOURCE_COUNTS_UNKNOWN':
+                assert all(cnt[k] is None for k in ('observed_marginal','assumed_default','unmatched_unlocked'))
+                assert v['observed_fraction_of_source_nodes_pct'] is None
+                unknown+=1;has_unknown.add(key)
+              else:
+                assert kind=='MIXED_SOURCE_NL2_MARGINAL_PROXY'
+                assert all(isinstance(cnt[k],int) and cnt[k]>=0 for k in ('observed_marginal','assumed_default','unmatched_unlocked'))
+              assert v['source_scope'] and v['lock_scope'] in ('PARTIALLY_LOCKED_SOURCE','DOWNSTREAM_TURN_RIVER_ONLY')
+              variant_rows.append(dict(run=v['source_run_id'],sha=v['source_sha256'],
+                source_kind=kind,scope=v['lock_scope'],pool_observed_marginal=cnt['observed_marginal'],
+                disclosed_default=cnt['assumed_default'],unmatched=cnt['unmatched_unlocked'],
+                observed_source_pct=v['observed_fraction_of_source_nodes_pct']))
+            rows.append(dict(rank=b['rank'],model_id=b['model_id'],spot=b['spot'],
+              flop=b['flop'],turn=b['turn'],exact_line=b['exact_action_line'],
+              actor_seat=b['actor_seat'],strict_combos=b['strictly_reachable_combo_count'],
+              GTO_run=b['GTO_run_id'],GTO_sha=b['GTO_sha256'],
+              genuine_actor_lock_variants=variant_rows,
+              medium50_research_only=nresearch,
+              medium50_legally_reachable_combo_count=b['b50_eligible_combo_count'],
+              NL2_per_private_hand_conditionals_observed=False,
+              source_frequency_is_pooled_NL2_street_and_size_marginal_only=True,
+              not_generic_bet_size_or_textural_GTO=True))
+          assert len(rows)==597 and source_variants==689 and research==134
+          assert unknown==328 and len(has_unknown)==328
+          assert f['unknown_source_denominators_are_not_zero_or_empirical']
+          assert f['partial_NL2_locks_are_not_whole_flop_GTO']
+          assert f['NL2_private_combo_conditional_rates_not_observed']
+          assert f['PR2_Draft_NEVER_MERGE']
+          out=dict(schema='NL2_HU_B340_V44_ALL_597_ACTOR_NL2_LOCK_AND_B50_SOURCE_PROVENANCE_V1',
+             source_status_sha256=sh(statusfile),source_matrix_sha256=sh(matrixfile),
+             CERT_MULTIBOARD=156,APPROX=236,EST=0,TOTAL=392,
+             exact_authenticated_original_GTO_plus_partial_real_NL2_board_count=597,
+             actual_actor_correct_NL2_lock_variants=689,
+             historical_lock_variants_WITH_UNKNOWN_per_node_denominator=unknown,
+             source_rate_unknown_named_boards=len(has_unknown),
+             exact_board_50pct_nonpolarized_research_candidates=134,
+             real_actor_turn_river_only_partial_locked_variants=68,
+             pooled_NL2_measured_street_size_source_nodes=4544,
+             transparently_assumed_default_source_nodes=2143,
+             unmatched_unlocked_villain_source_nodes=3871,
+             rank60_V44_four_original_GTO_plus_actor_NL2_3_textures=True,
+             no_observed_villain_private_card_conditional_bets_claimed=True,
+             no_global_50pct_bet_or_generic_texture_GTO=True,
+             no_measured_or_assumed_denominator_fabricated=True,
+             pending_rank71_GTO_only_cannot_upgrade_CERT=True,
+             entries=rows,PR2_Draft_NEVER_MERGE=True)
+          dest=d/'nl2_hu_b340_v44_597_actor_lock_nonpolar_source_provenance.json'
+          dest.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+          csvpath=d/'nl2_hu_b340_v44_597_actor_lock_nonpolar_source_provenance.csv'
+          with csvpath.open('w',encoding='utf8',newline='') as fcsv:
+            w=csv.writer(fcsv)
+            w.writerow(['rank','model_id','spot','flop','turn','exact_line','actor_seat','strict_combos','GTO_run',
+             'NL2_lock_run_ids','lock_variant_count','source_rate_kind','observed_street_size_nodes','assumed_default_nodes',
+             'unmatched_villain_nodes','unknown_lock_denominator','exact50_nonpolarized_research','b50_eligible_combos'])
+            for z in rows:
+              locks=z['genuine_actor_lock_variants']
+              def nsum(k):
+                arr=[v[k] for v in locks]
+                return '' if any(x is None for x in arr) else sum(arr)
+              w.writerow([z['rank'],z['model_id'],z['spot'],z['flop'],z['turn'],z['exact_line'],z['actor_seat'],z['strict_combos'],
+                z['GTO_run'],','.join(str(v['run']) for v in locks),len(locks),
+                '|'.join(v['source_kind'] for v in locks),nsum('pool_observed_marginal'),
+                nsum('disclosed_default'),nsum('unmatched'),
+                any(v['source_kind']=='HISTORICAL_POOL_MARGINAL_SOURCE_COUNTS_UNKNOWN' for v in locks),
+                z['medium50_research_only'],z['medium50_legally_reachable_combo_count']])
+          print('PASS B340 597 original exact GTO plus 689 true actor NL2 source variants; 328 UNKNOWN, 134 b50 exact-only research; no source rates made up')
+          PY
+      - name: Full independently audited V44 597 source, 689 actor-NL2 locks, 134 nonpolarized research and 2475 HU river reach/nav
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json --out nl2-audit/b340-lock-medium.json
+          python3 - <<'PY'
+          import json,csv
+          a=json.load(open('nl2-audit/b340-lock-medium.json'))
+          p=json.load(open('data/nl2_hu_b340_v44_597_actor_lock_nonpolar_source_provenance.json'))
+          with open('data/nl2_hu_b340_v44_597_actor_lock_nonpolar_source_provenance.csv',newline='',encoding='utf8') as f:rr=list(csv.DictReader(f))
+          assert len(rr)==len(p['entries'])==597
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(156,236,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],a['aggregate']['board_examples_with_b50_candidate'])==(597,689,134)
+          assert p['historical_lock_variants_WITH_UNKNOWN_per_node_denominator']==328
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B340 V44 2475/2475")'
+      - name: Commit exact per-board NL2 node-lock/marginal UNKNOWN flags and b50-only research after full PASS, no generic model upgrade and never merge
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          pathlib.Path('docs/NL2_HU_B340_V44_ALL_597_TRUE_ACTOR_LOCK_VS_B50_RESEARCH.md').write_text(
+          '# B340 full 597 original public board GTO + real NL2 actor lock provenance\n\n'
+          'Original V44 **156 CERT /236 APPROX /0 EST**, 392 models unchanged. 597 exact public flop/turn/action GTO sources, 689 actor-matched true partial NL2 lock variants; **328** historical source variants lack measurable per-node rate denominator. '
+          'Their rates are UNKNOWN, not zero and not invented. Where available the NL2 pool frequencies are only measured by street and size, not private-hand-conditional villain behavior. '
+          'Actual measured pooled source action nodes 4,544, assumed defaults 2,143, unmatched villain nodes 3,871; downstream-only partial Rust lock source variants 68.\n\n'
+          '**134** individual named boards have actual 50%-pot nonpolarized research-candidate evidence. This is not proof of universally best 50% bet or 50% sizing on unobserved textures. '
+          'Every board retains independent GTO source run+SHA, exact actor, 40/70 strict combos, SPR <=5%, and actual partial NL2 lock run+SHA; original V44 matrix independently recomputed and matched.\n\n'
+          'All HU 2475/2475 navigation/action/previous-street/river contract passed before commit. Full downloadable per-board JSON/CSV are in data; rank71 APPROX not changed by GTO-only sources. '
+          'PR #2 Draft/Open, NEVER merge, never force-push.\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b340_v44_597_actor_lock_nonpolar_source_provenance.json data/nl2_hu_b340_v44_597_actor_lock_nonpolar_source_provenance.csv docs/NL2_HU_B340_V44_ALL_597_TRUE_ACTOR_LOCK_VS_B50_RESEARCH.md
+          git commit -m 'TASK-HYBRID B340: V44 all597 exact actor NL2 689 locks, 328 UNKNOWN denominator, 134 b50 source-only research; HU2475 PASS 156/236'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B340-V44-597-exact-actor-lock-689-unknown328-b50-134-HU2475
+          path: |
+            data/nl2_hu_b340_v44_597_actor_lock_nonpolar_source_provenance.json
+            data/nl2_hu_b340_v44_597_actor_lock_nonpolar_source_provenance.csv
+            docs/NL2_HU_B340_V44_ALL_597_TRUE_ACTOR_LOCK_VS_B50_RESEARCH.md
+            nl2-audit/
+          retention-days: 30
