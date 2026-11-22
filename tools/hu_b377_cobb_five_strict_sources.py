@@ -118,7 +118,7 @@ def main():
  per_rank={str(rank):[x for x in paired if x["exact_line"]==line]
            for rank,line in LINES.items()}
  out=dict(schema="NL2_HU_B377_CO_BB_FIVE_APPROX_TWO_NEW_100BB_ORIGINAL_SHA_GATED_CFR_V1",
-  2026_live_data_not_used=True,
+  no_2026_live_data_used=True,
   models_and_frozen_lines={str(k):dict(model_id=MIDS[k],exact_line=LINES[k]) for k in sorted(MIDS)},
   source_flops=list(FLOPS),pre_registered_b370_first10_proven_one_flop="Js9h4d",
   source_solver_pin=PIN,source_rust_pin=RUST,
