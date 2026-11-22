@@ -1,0 +1,62 @@
+name: NL2 B416 independent recover existing B413 three real GTO flops rank166/216/218 HU2475 (max9m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b416-recover-b413-original-source.yml'
+      - 'tools/hu_b416_recover_b413_original_three_approx.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-existing-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Recover only SHA-pinned original B413 full 100bb Rust solves, never rerun CFR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b416-original-B413
+          gh run download 45029803227 --repo "$GITHUB_REPOSITORY" --dir /tmp/b416-original-B413
+          python3 -m py_compile tools/hu_b416_recover_b413_original_three_approx.py
+          python3 tools/hu_b416_recover_b413_original_three_approx.py --downloads /tmp/b416-original-B413 --run-id 45029803227
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v49_b405_rank214_219.json --out /tmp/b416-audit.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('data/nl2_hu_b416_three_remaining_cobb_original_gto_flops.json'))
+          a=json.load(open('/tmp/b416-audit.json'))
+          assert set(x['models'])=={'166','216','218'}
+          assert [z['flop'] for z in x['real_original_GTO_only_solve_sources']]==['Jh8d6s','9c7h2d','AhTd5s']
+          assert x['original_source_run_B413']==45029803227
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(162,230,0)
+          print('PASS B416 all 3 authenticated original GTO-first B413 assets, no fake promotion')
+          PY
+      - name: Full HU2475 river and model path, JS V49, source medium audit, git diff
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b416-contract.json
+          node tools/link_audit.js --md /tmp/b416-link.md --json /tmp/b416-link.json
+          node tools/reach_verify.js --log /tmp/b416-reach.md --json /tmp/b416-reach.json
+          node tools/hu_model_path_audit.js /tmp/b416-model.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b416-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B416 HU2475/2475")'
+          git diff --check
+      - name: Commit and push only verified B413 original source outcomes to draft PR2
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b416_three_remaining_cobb_original_gto_flops.json docs/NL2_HU_B416_RECOVER_B413_THREE_APPROX_SOURCE.md
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B416: recover B413 original real GTO 3 flops for 166/216/218; strict 40-70, HU2475'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
