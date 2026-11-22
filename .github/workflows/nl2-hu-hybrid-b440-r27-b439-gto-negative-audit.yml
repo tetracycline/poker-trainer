@@ -94,6 +94,10 @@ jobs:
           ap.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
           payload['raw_source_archive_sha256']=sha(ap)
           out.write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n')
+          json.loads(out.read_text())
+          doc=pathlib.Path('docs/NL2_HU_B440_R27_B439_GTO_ONLY_STRICT_ZERO_REACH.md').read_text()
+          assert chr(10) in doc and chr(92)+'n' not in doc
+          print('PASS B440 JSON/Markdown serialization')
           pathlib.Path('docs/NL2_HU_B440_R27_B439_GTO_ONLY_STRICT_ZERO_REACH.md').write_text(
               '# B440 rank27 B439 GTO-only source: strict-zero reach negative\n\n'
               'Recovered the already completed B439 original 100bb Rust GTO source for As9h2d/Kd; '
