@@ -28,7 +28,7 @@ def main():
  assert from_rebuild['strict_aggregate']==m['strict_aggregate']
  assert from_rebuild['boards']==m['boards'] and from_rebuild['models']==m['models']
  source=read(D/'nl2_hu_b405_rank214_219_two_three_source_cert_proof.json')
- assert (source['CERT_after'],source['APPROX_after'],source['named_boards_after'],source['locked_hero_variants_after'])==(160,232,609,701)
+ assert (source['CERT_after'],source['APPROX_after'],source['named_boards_after'],source['locked_hero_variants_after'])==(162,230,615,707)
  archive=read(D/'nl2_hu_b392_rank107_persistent_original_source_archive_index.json')
  assert len(archive['verified_archives'])==3 and archive['genuine_GTO_and_NL2_partial_source_SHA_matches_160_CERT']
  rec=read(D/'nl2_hu_b368_lock_denominator_recovery.json')
@@ -100,7 +100,7 @@ def main():
   B390_exact_rank107_source_sha256=sha(D/'nl2_hu_b390_rank107_three_true_GTO_NL2_IP_cert_proof.json'),
   B405_new_CO_BB_cert_source_sha256=sha(D/'nl2_hu_b405_rank214_219_two_three_source_cert_proof.json'),
   B392_persisted_original_Rust_SHA_index=sha(D/'nl2_hu_b392_rank107_persistent_original_source_archive_index.json'),
-  CERT_MULTIBOARD=160,APPROX=232,EST=0,TOTAL=392,
+  CERT_MULTIBOARD=162,APPROX=230,EST=0,TOTAL=392,
   exact_named_boards=len(rows),hero_lock_source_variants=totals['lock_variants'],
   B368_historical_unknown_before=334,B368_historical_recovered=334,unknown_remains=0,
   exact_nonpolarized_50pct_research_candidate_boards=statuses['EXACT_BOARD_NONPOLARIZED_RESEARCH_CANDIDATE'],
