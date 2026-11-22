@@ -30,8 +30,9 @@ def main():
   case=next(x for x in art['cases'] if x['flop_line']=='b50 c')
   folder=q.download_root/f'{batch}-{flop}'
   root=folder/f'solver/postflop/out/LMP_CO_BB/gto/{flop}_multiboard.json'
-  sub=folder/'solver/postflop'/json.loads(manifest.read_text())['cases'][0]['source_path']
   manifest=folder/f'evidence/LMP_CO_BB-{flop}-gto.json'
+  assert manifest.is_file()
+  sub=folder/'solver/postflop'/json.loads(manifest.read_text())['cases'][0]['source_path']
   assert all(x.is_file() for x in (root,sub,manifest))
   assert case['flop_source_sha256']==sha(root) and case['source_sha256']==sha(sub)
   mf=json.loads(manifest.read_text()); fr=json.loads(root.read_text());su=json.loads(sub.read_text())
