@@ -133,10 +133,9 @@ def patch_ui_v52(path):
     new = "'" + V52 + "'," + old
     s = rep(s, old, new)
     # Existing B2/B400/B393 proof lookup lists must continue to work under the new V52 registry.
-    allow1 = "'NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B390_RANK107','NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219','NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'"
     allow2 = "'NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219','NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'"
-    s = rep(s, allow1, "'" + V52 + "'," + allow1)
-    s = rep(s, allow2, "'" + V52 + "'," + allow2)
+    # This suffix occurs once inside the three-entry list and once in the two-entry list.
+    s = rep(s, allow2, "'" + V52 + "'," + allow2, expected=2)
     old = "status?.schema==='NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'"
     new = "['NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166','" + V52 + "'].includes(status?.schema)"
     s = rep(s, old, new)
