@@ -75,7 +75,7 @@ jobs:
              next_after_rank79_rank=96,
              no_GTO_only_or_expired_job_as_actor_NL2_source=True,
              frozen_rank_frequency_not_recalculated_using_new_source_EV=True,
-             235_remaining_frozen_source_gap_rows=result,
+             remaining_235_frozen_source_gap_rows=result,
              PR2_Draft_NEVER_MERGE=True)
           dest=d/'nl2_hu_b349_v45_235_approx_next2flop_rank79_sourceblind.json'
           dest.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
@@ -92,7 +92,7 @@ jobs:
           x=json.load(open('data/nl2_hu_b349_v45_235_approx_next2flop_rank79_sourceblind.json'))
           assert (a['cert_multiboard'],a['approx'],a['EST'])==(157,235,0)
           assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],a['aggregate']['board_examples_with_b50_candidate'])==(600,692,134)
-          assert len(x['235_remaining_frozen_source_gap_rows'])==235
+          assert len(x['remaining_235_frozen_source_gap_rows'])==235
           assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
           PY
           node tools/hu_line_contract.js > nl2-audit/hu-contract.json
