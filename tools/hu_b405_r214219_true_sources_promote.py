@@ -248,10 +248,13 @@ def main():
  assert content.count(old_allow)==1
  auditPath.write_text(content.replace(old_allow,
   "'NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B390_RANK107','"+V49+"')"),encoding="utf-8")
- checked=audit(new)
+ import importlib,hu_cert_lock_medium_audit as source_audit,hu_cert_lock_medium_coverage_matrix as medium_matrix
+ source_audit=importlib.reload(source_audit)
+ medium_matrix.audit=source_audit.audit
+ checked=source_audit.audit(new)
  assert (checked["cert_multiboard"],checked["approx"],checked["EST"])==(162,230,0)
- assert (checked["aggregate"]["named_board_proofs"],checked["aggregate"]["paired_hero_locked_source_variants"])==(615,705)
- matrix=create(new)
+ assert (checked["aggregate"]["named_board_proofs"],checked["aggregate"]["paired_hero_locked_source_variants"])==(615,707)
+ matrix=medium_matrix.create(new)
  assert (len(matrix["models"]),len(matrix["boards"]))==(162,615)
  unknown=sum(1 for z in matrix["boards"] for v in z["hero_lock_proofs"]
   if v["node_rate_data_status"]=="HISTORICAL_POOL_MARGINAL_SOURCE_COUNTS_UNKNOWN")
@@ -271,7 +274,7 @@ def main():
   only_named_board_no_generic_texture_GTO=True,no_NL2_villain_private_hand_observations=True,
   CERT_before=160,CERT_after=162,APPROX_before=232,APPROX_after=230,EST=0,
   named_boards_before=609,named_boards_after=615,
-  locked_hero_variants_before=701,locked_hero_variants_after=705,
+  locked_hero_variants_before=701,locked_hero_variants_after=707,
   unknown_lock_denominators_after=0,
   V49_status_sha256=sha(STATUS),V49_matrix_sha256=sha(MATRIX),V49_audit_sha256=sha(AUDIT),
   PR2_draft_never_merge=True),ensure_ascii=False,indent=2)+"\n")
@@ -297,7 +300,7 @@ def main():
   "hero combo reach, and <=5% SPR difference. "
   "Observed NL2 sources are pooled street/size marginals, not villain private-card conditional behavior. "
   "b50 depolarization applies only where the exact public-board source supports it, never to unsupported textures. "
-  "**162 CERT /230 APPROX /0 EST**, 615 exact boards and 705 partial locked source variants; UNKNOWN=0, "
+  "**162 CERT /230 APPROX /0 EST**, 615 exact boards and 707 partial locked source variants; UNKNOWN=0, "
   "subject to full HU2475, frontend and source Actions gate. PR #2 DRAFT and never merge.\n")
- print("PASS B405 original CO-IP 2 rank three-GTO/NL2-source upgrade, 162 CERT 230 APPROX, 615 boards 705 locks UNKNOWN=0")
+ print("PASS B405 original CO-IP 2 rank three-GTO/NL2-source upgrade, 162 CERT 230 APPROX, 615 boards 707 locks UNKNOWN=0")
 if __name__=="__main__":main()

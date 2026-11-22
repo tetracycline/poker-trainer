@@ -72,8 +72,8 @@ jobs:
           assert (a['cert_multiboard'],a['approx'],a['EST'])==(162,230,0)
           assert (len(m['models']),len(m['boards']))==(162,615)
           assert (m['source_unknown_variants_after'],len(p['model_source_pins']))==(0,2)
-          assert p['locked_hero_variants_after']==705
-          print('PASS B405 162 CERT/230 APPROX; 615 exact-source boards, 705 verified partial NL2 locks, UNKNOWN=0')
+          assert p['locked_hero_variants_after']==707
+          print('PASS B405 162 CERT/230 APPROX; 615 exact-source boards, 707 verified partial NL2 locks, UNKNOWN=0')
           PY
       - name: Real V49 loader, SHA-pinned rank214/219 three-board public runout UI, preserve B390/B392 V48 fallback
         if: steps.ready.outputs.ready == 'true'
