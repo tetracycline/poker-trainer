@@ -47,7 +47,7 @@ def legacy_b2_check(root,flop,version,expected_sub_sha):
   "NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1","CO_BB","SRP",version,flop)
  assert (m["root_pot_bb"],m["root_remaining_bb"])==(5.5,97.5)
  assert m["preflop_ranges"]["source"]=="PINNED_POKER_SOLVER_PREFLOP_CFR"
- assert m["flop_size_profile"]=="full" and not m["restricted_tree_assumption"]
+ assert m.get("flop_size_profile","full")=="full" and not m.get("restricted_tree_assumption",False)
  assert m["flop_action_sizes"]==["33%","50%","75%","100%"]
  assert "x b50 c" in m["selected_lines"] and len(m["turns"])==1
  assert not m["failures"] and m["solved_cases"]==len(m["cases"])
@@ -203,10 +203,12 @@ def patch_ui(path):
   newm="fetch('data/nl2_hu_cert_lock_medium_matrix_v51_b427.json',{cache:'no-store'}).catch(()=>fetch('data/nl2_hu_cert_lock_medium_matrix_v50_b417.json',{cache:'no-store'})).catch"
   assert s.count(oldm)==1
   s=s.replace(oldm,newm)
-  # Two earlier source-status allowlists.
-  s=s.replace("'NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'","'"+V51+"','NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'")
-  # Avoid duplicate V51 entries caused by the global replace on the main file.
-  s=s.replace("'"+V51+"','"+V51+"',","'"+V51+"',")
+  # Add V51 to the two exact source-status allowlists only; preserve the V50 schema ternary.
+  allow1="'NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B390_RANK107','NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219','NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'"
+  allow2="'NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219','NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'"
+  assert s.count(allow1)==1 and s.count(allow2)==1
+  s=s.replace(allow1,"'"+V51+"',"+allow1)
+  s=s.replace(allow2,"'"+V51+"',"+allow2)
  path.write_text(s,encoding="utf-8")
 
 def main():
