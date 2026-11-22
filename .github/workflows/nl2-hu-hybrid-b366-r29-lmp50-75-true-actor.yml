@@ -43,19 +43,19 @@ jobs:
           git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
           set +e
           python3 trainer/tools/solve_hu_multiboard_100bb.py \
-            --solver-root solver --spot "\${{ matrix.spot }}" --flop "\${{ matrix.flop }}" \
-            --version "\${{ matrix.version }}" --flop-size-profile full \
+            --solver-root solver --spot "${{ matrix.spot }}" --flop "${{ matrix.flop }}" \
+            --version "${{ matrix.version }}" --flop-size-profile full \
             --flop-line-policy oop-b50only --turn-size-menu river-gaps --turn-count 1 \
-            --manifest "evidence/\${{ matrix.spot }}-\${{ matrix.flop }}-\${{ matrix.version }}.json"
+            --manifest "evidence/${{ matrix.spot }}-${{ matrix.flop }}-${{ matrix.version }}.json"
           solve_code=$?
           set -e
           export SOLVE_EXIT_CODE="$solve_code"
           python3 - <<'PY'
           import json,pathlib,os
-          p=pathlib.Path("evidence/LMP_CO_BB-\${{ matrix.flop }}-\${{ matrix.version }}.json")
+          p=pathlib.Path("evidence/LMP_CO_BB-${{ matrix.flop }}-${{ matrix.version }}.json")
           assert p.is_file(),"No authentic Rust source manifest"
           m=json.loads(p.read_text())
-          assert (m['spot'],m['flop'],m['version'])==('LMP_CO_BB','\${{ matrix.flop }}','\${{ matrix.version }}')
+          assert (m['spot'],m['flop'],m['version'])==('LMP_CO_BB','${{ matrix.flop }}','${{ matrix.version }}')
           assert m['preflop_ranges']['source']=='ASSUMED_EXPLICIT_169CLASS'
           assert m['flop_size_profile']=='full' and not m['restricted_tree_assumption']
           assert m['selected_lines']==['b50 c'] and 'b75 c' in m['selected_turn_lines']
@@ -71,7 +71,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nl2-multiboard-B366_R29_LMPCOBB_B50_B75-\${{ matrix.spot }}-\${{ matrix.flop }}-\${{ matrix.version }}
+          name: nl2-multiboard-B366_R29_LMPCOBB_B50_B75-${{ matrix.spot }}-${{ matrix.flop }}-${{ matrix.version }}
           path: |
             evidence
             solver/postflop/out
@@ -91,7 +91,7 @@ jobs:
         with: {python-version: '3.11'}
       - name: Partition both authentic original jobs; positive cases only, zero cases are never upgraded
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mkdir -p downloads accepted
