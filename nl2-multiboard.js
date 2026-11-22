@@ -89,6 +89,12 @@ async function getProof(run){
    const code=verifiedOriginalRuns[run];
    if(code)batch=[code,{run_id:run,status:'VERIFIED'}];
  }
+ if(!batch && chosenModel?.model_id==='ln-ipfr-r_model-1spq1ko' &&
+   status?.schema==='NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'){
+   const verifiedOriginalRuns={45028060598:'B420_COBB_B400',45029267778:'B420_COBB_B407'};
+   const code=verifiedOriginalRuns[run];
+   if(code)batch=[code,{run_id:run,status:'VERIFIED'}];
+ }
  if(!batch)return null;
  const code=batch[0];
  if(proofCache[code])return proofCache[code];

@@ -1,0 +1,3 @@
+# B420 rank166 original Rust source permanent archive
+
+Archived original 100bb GTO (B393) and genuine partially NL2 IP-locked (B396) full source including exact hand combo/action frequencies for certified named public boards on KcJh7d and QhTc5d. Historical third flop Js9h4d remains in frozen authenticated V47 source. All original source SHAs are compared against independently verified B405 rank166 3-flop CERT; no fabricated generic texture strategies, no purported observed NL2 private-card frequencies. **163 CERT/229 APPROX**, 618 named boards, 710 NL2 lock variants, subject to HU2475 PASS. PR #2 remains DRAFT and never merge.
