@@ -1,0 +1,95 @@
+name: TASK-HYBRID B350 rank79 eight existing SHA verified ORIGINAL 100bb UTGCO GTO IP b50 c/x strict 40-70 legal preflight V45 HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b350-r79-8-original-gto-actor-ip-preflight-v45.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  original-evidence-read-only-actor-IP-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Authenticate eight immutable original GTO 100bb UTGCO Rust archive/index SHA and exact rank79 CO-IP 40/70 full action-line/legal SPR 7 turn node; no NL2 source imputation
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b350_rank79_original_utgco_8_gto_source_preflight.py
+          python3 tools/hu_b350_rank79_original_utgco_8_gto_source_preflight.py
+          python3 - <<'PY'
+          import pathlib,json,hashlib
+          d=pathlib.Path('data')
+          p=d/'nl2_hu_b350_rank79_8_original_utgco_gto_turn_legality.json'
+          a=json.loads(p.read_text())
+          assert a['schema']=='NL2_HU_B350_R79_EIGHT_ORIGINAL_UTG_CO_FULL_ROOT_40_70_IP_TURN_SOURCE_SCAN_V1'
+          assert a['V45_status_sha256']==hashlib.sha256((d/'nl2_hu_multiboard_status_v45_b345_rank71.json').read_bytes()).hexdigest()
+          assert len(a['original_gto_source_rows'])==8
+          assert a['rank']==79 and a['actor']=='CO_IP' and a['exact_line']=='b50 c/x' and a['model_spr']==7
+          assert (a['CURRENT_CERT'],a['CURRENT_APPROX'],a['CURRENT_EST'],a['CURRENT_TOTAL'])==(157,235,0,392)
+          assert a['two_fresh_independent_real_NL2_CO_IP_partial_locks_STILL_NEEDED']
+          assert all(x['NO_real_rank79_NL2_actor_turn_lock_in_this_GTO_archive'] for x in a['original_gto_source_rows'])
+          assert all(x['original_gto_gap_pct']<=.5 and len(x['original_GTO_case_sha256'])==64 for x in a['original_gto_source_rows'])
+          print('PASS B350 original8 rank79 source frozen; legal IP turn GTO candidate flops',a['source_proven_legal_original_gto_candidate_flops'])
+          PY
+      - name: Full V45 independently auditable 157 CERT 235 APPROX, 600 real named GTO plus actor NL2 lock source692 and all 2475 HU linked rivers
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v45_b345_rank71.json --out nl2-audit/b350-source.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b350-source.json'))
+          b=json.load(open('data/nl2_hu_b350_rank79_8_original_utgco_gto_turn_legality.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(157,235,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],
+                  a['aggregate']['board_examples_with_b50_candidate'])==(600,692,134)
+          assert b['CURRENT_CERT']==157 and b['CURRENT_APPROX']==235
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B350 full HU 2475/2475")'
+      - name: Commit SHA-anchored eight genuine rank79 CO-IP source preflight ONLY after full source/river audit PASS; PR #2 Draft never merge
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json
+          x=json.load(open('data/nl2_hu_b350_rank79_8_original_utgco_gto_turn_legality.json'))
+          positives=[f"{r['flop']}/{r['turn']} ({r['rank79_CO_IP_turn_strict_SPR_40_70_combos']} strict)" for r in x['original_gto_source_rows'] if r['rank79_CO_IP_turn_reachable_real_original_GTO']]
+          pathlib.Path('docs/NL2_HU_B350_R79_EXISTING_8_TRUE_UTGCO_GTO_CO_IP_SOURCE_PREFLIGHT.md').write_text(
+             '# B350 8 original UTG_CO 100bb genuine Rust GTO exact actor-CO-IP rank79 preflight\n\n'
+             'Historical GTO-only source roots are SHA anchored; rank79 target is b50 c/x, actor CO-IP, model SPR7 +/-5%, prior max action or 40%/70% alternative. '
+             'Exact positive source and turn boards: '+(', '.join(positives) if positives else 'NONE')+'. '
+             'These are ORIGINAL GTO read-only proofs, NOT actual new actor-correct NL2 node locks; no GTO-only promotion, no fake private-hole-card opponent frequencies. '
+             'New independent Rust NL2 hero-IP partial-lock runs are mandatory before any three-flop CERT. '
+             'V45 remains 157 CERT /235 APPROX /0 EST, 600 true named GTO+NL2 public boards, 692 true actor partial locks, 134 exact-board medium50 research flags. '
+             'Source and all 2475/2475 HU paths independently audited. Draft PR #2 remains open and must NEVER merge.\\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b350_rank79_8_original_utgco_gto_turn_legality.json docs/NL2_HU_B350_R79_EXISTING_8_TRUE_UTGCO_GTO_CO_IP_SOURCE_PREFLIGHT.md
+          git commit -m 'TASK-HYBRID B350: rank79 8 authentic GTO UTGCO exact IP turn sources 40-70 SPR7 legal preflight, no NL2-only false CERT, V45 600/692 HU2475 PASS'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B350-R79-eight-original-UTGCO-GTO-actor-IP-40-70-HU2475
+          path: |
+            data/nl2_hu_b350_rank79_8_original_utgco_gto_turn_legality.json
+            docs/NL2_HU_B350_R79_EXISTING_8_TRUE_UTGCO_GTO_CO_IP_SOURCE_PREFLIGHT.md
+            nl2-audit/
+          retention-days: 30
