@@ -437,13 +437,14 @@ def main():
 
     for filename in ("nl2_hu_multiboard_ui.js", "nl2-multiboard.js"):
         patch_ui_v52(pathlib.Path(filename))
-    for filename in ("nl2.html", "nl2-multiboard.html"):
+    for filename, old in (
+        ("nl2.html", "task-hybrid-b417-v50-20261122"),
+        ("nl2-multiboard.html", "task-hybrid-b420-persistent-20261122"),
+    ):
         p = pathlib.Path(filename)
         s = p.read_text(encoding="utf-8")
-        old = "task-hybrid-b417-v50-20261122"
-        assert s.count(old) == 1
-        s = s.replace(old, "task-hybrid-b427-v51-20261122")
-        s = s.replace("task-hybrid-b427-v51-20261122", "task-hybrid-b433-v52-20261122")
+        assert s.count(old) == 1, (filename, old, s.count(old))
+        s = s.replace(old, "task-hybrid-b433-v52-20261122")
         p.write_text(s, encoding="utf-8")
     test = pathlib.Path("tools/hu_b378_v47_loader_runtime_test.cjs")
     ts = test.read_text(encoding="utf-8")
