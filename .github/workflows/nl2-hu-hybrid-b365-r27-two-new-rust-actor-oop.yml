@@ -145,8 +145,10 @@ jobs:
           status=D/'nl2_hu_multiboard_status_v47_b364_rank96.json'
           st=json.loads(status.read_text())
           assert (st['CERT_MULTIBOARD'],st['APPROX'],st['EST'],st['TOTAL'])==(159,233,0,392)
-          rank=st['records']['ln-opfr-r_model-18g2rvt']
+          rank=st['records']['ln-iso-lmp_r_model-1aov4pd']
           assert (rank['frequency_rank'],rank['label'],rank['solver_profile'],rank['assumed_model_node_spr'])==(27,'APPROX','LMP_CO_BB',11.53)
+          assert rank['high_frequency_preregistered'] is False
+          assert rank['blocked_reason']=='LOWER_FREQUENCY_BELOW_PREREGISTERED_TOP24_CUTOFF'
           b356=json.loads((D/'nl2_hu_b356_v46_603_real_actor_lock_medium_50_source_provenance.json').read_text())
           assert (b356['genuine_named_public_board_count'],b356['genuine_actor_partial_NL2_lock_source_variants'],b356['NL2_source_variants_WITH_UNKNOWN_per_node_denominator'],b356['exact_board_b50_nonpolarized_research_candidates'])==(603,695,334,134)
           proofs=[]
@@ -214,6 +216,8 @@ jobs:
             'historical_334_UNKNOWN_denominators_NOT_fabricated':True,
             'observed_NL2_pool_marginals_NOT_per_holecard_frequencies':True,
             'rank27_remains_APPROX_pending_independent_3_board_gate':True,
+            'rank27_is_user_directed_source_blind_expansion':True,
+            'rank27_was_not_originally_preregistered_top24':True,
             'PR2_Draft_NEVER_MERGE':True}
           path=D/'nl2_hu_b365_rank27_two_new_true_source_proofs.json'
           path.write_text(json.dumps(out,indent=2,ensure_ascii=False)+'\n')
