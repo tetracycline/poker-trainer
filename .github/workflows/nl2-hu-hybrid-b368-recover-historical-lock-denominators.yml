@@ -72,6 +72,7 @@ jobs:
           print('B368 recovery:',q['recovered_lock_variants'],'of 334; still UNKNOWN:',q['remaining_unknown_variants'])
           PY
       - name: Independent V47 source audit after recovered denominators and static frontend JavaScript checks
+        if: always()
         working-directory: trainer
         run: |
           set -euo pipefail
@@ -98,6 +99,11 @@ jobs:
               assert not missing, f'{name}: missing schemas {missing}'
               assert "data/nl2_hu_multiboard_status_v47_b364_rank96.json" in s
               assert "source_run_id" in s and "source_sha256" in s
+              validated=set(re.findall(r"schema!=='([^']+)'",s))
+              allow=re.search(r"if\(!\[(.*?)\]\.includes\(d\.schema\)",s,re.S)
+              assert allow, f'{name}: schema allowlist missing'
+              allowed=set(re.findall(r"'([^']+)'",allow.group(1)))
+              assert not validated-allowed, f'{name}: missing schemas {sorted(validated-allowed)}'
           s=pathlib.Path('nl2-multiboard.js').read_text()
           assert "data/nl2_hu_cert_lock_medium_matrix_v47_b364.json" in s
           for name,needle in [('nl2.html','nl2_hu_multiboard_ui.js?v=task-hybrid-b364-v47-20261122'),('nl2-multiboard.html','nl2-multiboard.js?v=task-hybrid-b364-v47-20261122')]:
@@ -109,6 +115,7 @@ jobs:
           node --check nl2-exploit.js
           git diff --check
       - name: Full HU2475 river navigation/reach and model path audit
+        if: always()
         working-directory: trainer
         run: |
           set -euo pipefail
