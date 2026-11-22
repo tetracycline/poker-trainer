@@ -6,13 +6,13 @@ Each future CERT needs three to five distinct exact original GTO+actor NL2 pairs
 
 | Rank | Model | Verified genuine paired flops | Additional distinct flops needed |
 |---:|---|---:|---:|
-| 27 | `ln-iso-lmp_r_model-1aov4pd` | 0 | 3 |
-| 29 | `ln-iso-lmp_r_model-gifggm` | 0 | 3 |
-| 32 | `ln-opfr-t_model-qx9t0u` | 0 | 3 |
-| 35 | `ln-iso-lmp_r_model-pjewx6` | 0 | 3 |
-| 45 | `ln-iso-iso_t_model-1x553s3` | 0 | 3 |
-| 48 | `ln-bb-r_model-16s8tm3` | 0 | 3 |
-| 52 | `ln-bb-r_model-rb27ni` | 0 | 3 |
-| 56 | `ln-iso-t_model-1xvw4lk` | 0 | 3 |
-| 57 | `ln-opfr-r_model-8ze7gv` | 0 | 3 |
-| 58 | `ln-opfr-r_model-aumml6` | 0 | 3 |
+| 107 | `ln-ipfr-r_model-ujl14x` | 1 | 2 |
+| 115 | `ln-iso-lmp_r_model-17dzvwx` | 1 | 2 |
+| 116 | `ln-iso-lmp_r_model-1c6f833` | 1 | 2 |
+| 166 | `ln-ipfr-r_model-1spq1ko` | 1 | 2 |
+| 200 | `ln-iso-lmp_r_model-68efr6` | 1 | 2 |
+| 214 | `ln-ipfr-r_model-1t7q0mn` | 1 | 2 |
+| 216 | `ln-ipfr-r_model-7kv23r` | 1 | 2 |
+| 218 | `ln-ipfr-r_model-h0c7q7` | 1 | 2 |
+| 219 | `ln-ipfr-r_model-kp19if` | 1 | 2 |
+| 232 | `ln-3bp-3b_r_model-19o21hu` | 1 | 2 |
