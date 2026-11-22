@@ -1,0 +1,58 @@
+name: NL2 B402 all CERT named-board NL2 lock empirical-vs-default and 50pct depolarization proof, HU2475 (max9m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b402-all-cert-node-medium.yml'
+      - 'tools/hu_b402_all_cert_lock_medium_ledger.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  audit-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: All 160 CERT original named public boards, 701 original NL2 partial lock source node denominators and b50 research only
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b402_all_cert_lock_medium_ledger.py
+          python3 tools/hu_b402_all_cert_lock_medium_ledger.py
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v48_b390_rank107.json --out /tmp/b402-independent.json
+          python3 - <<'PY'
+          import json
+          p=json.load(open('data/nl2_hu_b402_cert160_board609_lock701_medium_ledger.json'))
+          a=json.load(open('/tmp/b402-independent.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(160,232,0)
+          assert (p['exact_named_boards'],p['hero_lock_source_variants'],p['unknown_remains'])==(609,701,0)
+          assert p['exact_nonpolarized_50pct_research_candidate_boards']+p['exact_50pct_unproven_boards']==609
+          assert p['disallow_50pct_bet_extrapolation_to_unproven_board_or_generic_handclass']
+          print('PASS B402 160/232 + every named board's measured/assumed/unlocked NL2 source and 50%-research-only')
+          PY
+      - name: Full HU2475 exact river action reach, per-board source label, old and new front end and cache
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b402-contract.json
+          node tools/link_audit.js --md /tmp/b402-link.md --json /tmp/b402-link.json
+          node tools/reach_verify.js --log /tmp/b402-reach.md --json /tmp/b402-reach.json
+          node tools/hu_model_path_audit.js /tmp/b402-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b402-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B402 HU2475/2475")'
+          git diff --check
+      - name: Commit and push 609 board-by-board source / measured default node lock and depolarization evidence, PR2 draft
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b402_cert160_board609_lock701_medium_ledger.json docs/NL2_HU_B402_ALL_CERT_LOCK_DEPOL_160_609.md
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B402: audit 160 CERT 609 authentic boards, 701 actual NL2 partial locks, measured/default/unmatched and exact b50'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
