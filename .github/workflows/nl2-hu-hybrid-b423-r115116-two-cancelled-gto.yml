@@ -1,0 +1,106 @@
+name: NL2 B423 rank115/116 finish two previously cancelled original LMP GTO flops, HU2475 <=29m
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b423-r115116-two-cancelled-gto.yml'
+      - 'tools/hu_b423_r115116_two_cancelled_gto_flops.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        flop: [Js9h4d, QsJh4d]
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Genuine original 100bb LMP CO_BB GTO full-flop source, exact b33-call line
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+          cd ../../..
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver --spot LMP_CO_BB --flop "${{ matrix.flop }}" --version gto \
+            --flop-size-profile full --flop-line-policy oop-b33only --turn-count 1 \
+            --manifest "evidence/LMP_CO_BB-${{ matrix.flop }}-gto.json"
+      - name: Preserve exact original Rust GTO and negative source proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B423_R115116_GTO_FIRST-LMP_CO_BB-${{ matrix.flop }}-gto
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Independent original Rust source SHA, exact LMP action/actor and 40-70 gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b423-original
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir /tmp/b423-original
+          python3 -m py_compile tools/hu_b423_r115116_two_cancelled_gto_flops.py
+          python3 tools/hu_b423_r115116_two_cancelled_gto_flops.py --downloads /tmp/b423-original --run-id "$GITHUB_RUN_ID"
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v50_b417_rank166.json --out /tmp/b423-source.json
+      - name: Complete HU2475 river routes, actor/line/model and front end
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b423-contract.json
+          node tools/link_audit.js --md /tmp/b423-link.md --json /tmp/b423-link.json
+          node tools/reach_verify.js --log /tmp/b423-reach.md --json /tmp/b423-reach.json
+          node tools/hu_model_path_audit.js /tmp/b423-model.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          python3 - <<'PY'
+          import json
+          p=json.load(open('data/nl2_hu_b423_r115_116_two_cancelled_gto_flops.json'))
+          a=json.load(open('/tmp/b423-source.json'))
+          c=json.load(open('/tmp/b423-link.json'))['counts']
+          assert len(p['original_true_Rust_GTO_only_sources'])==2
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(163,229,0)
+          assert (c['continuing'],c['reachRiver'],c['riverShare'])==(2475,2475,100)
+          assert p['NL2_partial_lock_only_after_GTO_strict_actor_positive']
+          print('PASS B423 two real original LMP GTO sources, no premature CERT, HU2475')
+          PY
+          git diff --check
+      - name: Commit and push original GTO sources/negatives only, no CERT shortcut or merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+users.noreply.github.com'
+          git add data/nl2_hu_b423_r115_116_two_cancelled_gto_flops.json docs/NL2_HU_B423_R115_116_TWO_CANCELLED_GTO_SOURCES.md
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B423: finish previously cancelled rank115/116 LMP original GTO sources, HU2475; no fake CERT'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
