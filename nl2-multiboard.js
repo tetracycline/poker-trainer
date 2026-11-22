@@ -95,6 +95,12 @@ async function getProof(run){
    const code=verifiedOriginalRuns[run];
    if(code)batch=[code,{run_id:run,status:'VERIFIED'}];
  }
+ if(!batch && chosenModel?.model_id==='ln-ipfr-t_model-snfiz2' &&
+   status?.schema==='NL2_HU_392_MULTIBOARD_CERT_STATUS_V51_B444_R62'){
+   const pins=status?.B444_rank62_three_true_original_GTO_NL2_IP_flops?.pins||[];
+   const pin=pins.find(x=>Number(x.source_run_id)===Number(run));
+   if(pin?.archive_code)batch=[pin.archive_code,{run_id:run,status:'VERIFIED'}];
+ }
  if(!batch)return null;
  const code=batch[0];
  if(proofCache[code])return proofCache[code];
@@ -361,7 +367,33 @@ el('node').addEventListener('change',selectNode);
 el('all-combos').addEventListener('change',fillCombos);
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
- const v50b417=d=>{
+ const v51b444=d=>{
+ const q=d.B444_rank62_three_true_original_GTO_NL2_IP_flops;
+ const r=d.records?.['ln-ipfr-t_model-snfiz2'];
+ const p=d.B417_rank166_three_true_original_GTO_NL2_IP_flops;
+ const r166=d.records?.['ln-ipfr-r_model-1spq1ko'];
+ if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V51_B444_R62'||
+  d.CERT_MULTIBOARD!==164||d.APPROX!==228||d.EST!==0||d.TOTAL!==392||
+  !q||q.rank!==62||q.spot!=='CO_BB'||q.actor!=='CO_IP'||q.line!=='x b75 c/x'||
+  q.flops?.join(',')!=='As9h2d,8s8h3d,KsQh4d'||q.pins?.length!==3||
+  q.pins.some(z=>z.GTO_strict_combos<40||z.NL2_strict_combos<=0||
+    z.original_GTO_SHA256?.length!==64||z.actual_NL2_SHA256?.length!==64||
+    !z.source_run_id||!z.archive_code)||
+  r?.label!=='CERT-MULTIBOARD'||r?.frequency_rank!==62||r?.solver_profile!=='CO_BB'||
+  r?.proven_exact_board_count!==3||r.certified_3_to_5_exact_flop_boards?.length!==3||
+  r.certified_3_to_5_exact_flop_boards.some(z=>z.acting_seat!==1||
+    z.actual_exact_action_line!=='x b75 c/x'||z.strict_full_street_combo_reachable<40||
+    z.relative_spr_error_pct>5||
+    !z.nl2_locked_variants?.some(v=>v.version==='exp_ip'&&v.sha256?.length===64))||
+  !p||p.rank!==166||p.spot!=='CO_BB'||p.actor!=='CO_IP'||
+  p.flops?.length!==3||p.pins?.length!==3||
+  r166?.label!=='CERT-MULTIBOARD'||r166?.frequency_rank!==166||
+  r166?.proven_exact_board_count!==3||r166?.certified_3_to_5_exact_flop_boards?.length!==3||
+  d.no_generic_texture_GTO!==true||d.PR2_remains_draft_never_merge!==true)
+  throw Error('B444 rank62 or preserved B417 rank166 exact-source registry failed closed');
+ return d;
+};
+const v50b417=d=>{
  const q=d.B417_rank166_three_true_original_GTO_NL2_IP_flops;
  const r=d.records?.['ln-ipfr-r_model-1spq1ko'];
  if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'||
@@ -1245,7 +1277,8 @@ const v42=d=>{
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v50_b417_rank166.json',{cache:'no-store'}).then(open).then(v50b417)
+ return fetch('data/nl2_hu_multiboard_status_v51_b444_rank62.json',{cache:'no-store'}).then(open).then(v51b444)
+    .catch(()=>fetch('data/nl2_hu_multiboard_status_v50_b417_rank166.json',{cache:'no-store'}).then(open).then(v50b417))
     .catch(()=>fetch('data/nl2_hu_multiboard_status_v49_b405_rank214_219.json',{cache:'no-store'}).then(open).then(v49b405))
     .catch(()=>fetch('data/nl2_hu_multiboard_status_v48_b390_rank107.json',{cache:'no-store'}).then(open).then(v48b390))
     .catch(()=>fetch('data/nl2_hu_multiboard_status_v48_b369_rank27.json',{cache:'no-store'}).then(open).then(v48))

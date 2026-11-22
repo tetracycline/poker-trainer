@@ -1,0 +1,220 @@
+name: B444 rank62 third exact CO_BB GTO + measured NL2-IP board
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b444-r62-third-board.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: b444-r62-third-board
+  cancel-in-progress: false
+jobs:
+  solve-gto:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: trainer
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned Rust CFR
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve full CO_BB GTO source with all predeclared flop lines
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C ../solver rev-parse HEAD > evidence/poker-solver-commit.txt
+          git -C ../solver/postflop/postflop-solver rev-parse HEAD > evidence/upstream-engine-commit.txt
+          python3 tools/solve_hu_multiboard_100bb.py \
+            --solver-root ../solver --spot CO_BB --flop KsQh4d --version gto \
+            --flop-size-profile full --flop-line-policy all --turn-count 1 \
+            --manifest evidence/CO_BB-KsQh4d-gto.json
+          python3 - <<'PY'
+          import json,pathlib
+          m=json.loads(pathlib.Path('evidence/CO_BB-KsQh4d-gto.json').read_text())
+          assert (m['spot'],m['version'],m['flop'])==('CO_BB','gto','KsQh4d')
+          assert m['turns']==['Tc'] and 'x b75 c' in m['selected_lines']
+          assert not m['failures'] and not m['skipped']
+          c=next(x for x in m['cases'] if x['line']=='x b75 c' and x['turn']=='Tc')
+          assert c['gto_gap_pct']<=0.5
+          print('PASS B444 GTO',c['source_sha256'],c['gto_gap_pct'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NL2-B444-R62-KsQh4d-GTO
+          path: |
+            trainer/evidence
+            solver/postflop/out/CO_BB/gto
+          retention-days: 30
+          if-no-files-found: error
+  solve-exp-ip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: trainer
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned Rust CFR
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve full CO_BB EXP_IP with pinned measured NL2 marginal locks
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C ../solver rev-parse HEAD > evidence/poker-solver-commit.txt
+          git -C ../solver/postflop/postflop-solver rev-parse HEAD > evidence/upstream-engine-commit.txt
+          python3 tools/solve_hu_multiboard_100bb.py \
+            --solver-root ../solver --spot CO_BB --flop KsQh4d --version exp_ip \
+            --flop-size-profile full --flop-line-policy all --turn-count 1 \
+            --manifest evidence/CO_BB-KsQh4d-exp_ip.json
+          python3 - <<'PY'
+          import json,pathlib
+          m=json.loads(pathlib.Path('evidence/CO_BB-KsQh4d-exp_ip.json').read_text())
+          assert (m['spot'],m['version'],m['flop'])==('CO_BB','exp_ip','KsQh4d')
+          assert m['turns']==['Tc'] and 'x b75 c' in m['selected_lines']
+          assert not m['failures'] and not m['skipped']
+          c=next(x for x in m['cases'] if x['line']=='x b75 c' and x['turn']=='Tc')
+          assert c['hero_gap_pct']<=0.5
+          print('PASS B444 EXP_IP',c['source_sha256'],c['hero_gap_pct'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NL2-B444-R62-KsQh4d-EXP-IP
+          path: |
+            trainer/evidence
+            solver/postflop/out/CO_BB/exp_ip
+          retention-days: 30
+          if-no-files-found: error
+  verify-audit-commit:
+    needs: [solve-gto, solve-exp-ip]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: trainer
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download the two prior exact board source pairs and this batch's GTO/EXP_IP artifacts
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p ../downloads/as9h2d_gto ../downloads/as9h2d_exp_ip ../downloads/8s8h3d_gto ../downloads/8s8h3d_exp_ip ../downloads/new_gto ../downloads/new_exp_ip
+          gh run download 44522421850 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-stage2-CO_BB-gto-0' --dir ../downloads/as9h2d_gto
+          gh run download 44522421850 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-stage2-CO_BB-exp_ip-0' --dir ../downloads/as9h2d_exp_ip
+          gh run download 44653774402 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-stage2-CO_BB-gto-8s8h3d' --dir ../downloads/8s8h3d_gto
+          gh run download 44653774402 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-stage2-CO_BB-exp_ip-8s8h3d' --dir ../downloads/8s8h3d_exp_ip
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name 'NL2-B444-R62-KsQh4d-GTO' --dir ../downloads/new_gto
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name 'NL2-B444-R62-KsQh4d-EXP-IP' --dir ../downloads/new_exp_ip
+      - name: Verify exact history, SPR, full-street reach, measured locks, and source hashes
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b444_rank62_third_board.py
+          python3 tools/hu_b444_rank62_third_board.py \
+            --downloads ../downloads --solver-root ../solver --run-id "$GITHUB_RUN_ID"
+      - name: Full V51 source, measured-lock, medium-size, navigation, reach, and UI audit
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_cert_lock_medium_audit.py \
+            --source data/nl2_hu_multiboard_status_v51_b444_rank62.json --out /tmp/b444-audit.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b444-audit.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'],a['models_total'])==(164,228,0,392)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'])==(621,713)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > /tmp/b444-contract.json
+          node tools/link_audit.js --md /tmp/b444-link.md --json /tmp/b444-link.json
+          node tools/reach_verify.js --log /tmp/b444-reach.md --json /tmp/b444-reach.json
+          node tools/hu_model_path_audit.js /tmp/b444-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b444-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B444 HU2475/2475")'
+          git diff --check
+      - name: Commit B444 rank62 certification and exact source archives to PR2 draft; never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v51_b444_rank62.json \
+            data/nl2_hu_model_history_crosswalk.json \
+            data/nl2_hu_model_source_references.json \
+            data/nl2_hu_b444_rank62_three_board_cert.json \
+            data/solver_evidence/NL2_MULTIBOARD_B444_R62_AS9H2D.json.gz \
+            data/solver_evidence/NL2_MULTIBOARD_B444_R62_AS9H2D.index.json \
+            data/solver_evidence/NL2_MULTIBOARD_B444_R62_8S8H3D.json.gz \
+            data/solver_evidence/NL2_MULTIBOARD_B444_R62_8S8H3D.index.json \
+            data/solver_evidence/NL2_MULTIBOARD_B444_R62_KSQH4D.json.gz \
+            data/solver_evidence/NL2_MULTIBOARD_B444_R62_KSQH4D.index.json \
+            docs/NL2_HU_B444_R62_THREE_BOARD_CERT.md \
+            tools/hu_cert_lock_medium_audit.py \
+            nl2_hu_multiboard_ui.js nl2-multiboard.js
+          git diff --cached --quiet && exit 1
+          git commit -m 'B444: certify rank62 on three exact CO_BB GTO and measured NL2-IP boards'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
