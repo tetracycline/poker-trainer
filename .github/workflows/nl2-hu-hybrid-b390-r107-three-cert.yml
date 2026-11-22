@@ -1,0 +1,123 @@
+name: NL2 B390 true 3-flop rank107 source-blind CERT, full node-lock medium and HU2475 (max11m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b390-r107-three-cert.yml'
+      - 'tools/hu_b390_r107_three_true_sources_promote.py'
+      - 'data/nl2_hu_b389_rank107_three_true_flop_pre_cert_gate.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  source-verify-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Wait for independent B389 true triple-source gate, never promote partial sources
+        id: ready
+        run: |
+          set -euo pipefail
+          if [ ! -s data/nl2_hu_b389_rank107_three_true_flop_pre_cert_gate.json ]; then
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo 'No real B389 three-flop proof; no fake CERT'
+            exit 0
+          fi
+          python3 - <<'PY'
+          import json,os
+          x=json.load(open('data/nl2_hu_b389_rank107_three_true_flop_pre_cert_gate.json'))
+          ready=x.get('provisional_ready_for_independent_V48_source_promotion') is True and x.get('distinct_verified_original_GTO_and_NL2_hero_lock_flops')==3
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('ready='+('true' if ready else 'false')+'\n')
+          print('B390 raw source promotion gate ready:',ready)
+          PY
+      - name: Re-fetch four original SHA-pinned Rust GTO and genuine partial NL2 IP artifacts
+        if: steps.ready.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b390-b374-gto /tmp/b390-b374-exp /tmp/b390-b387-gto /tmp/b390-b388-exp
+          gh run download 45017142943 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B374_R107-BTN_BB-7s5h3d-gto --dir /tmp/b390-b374-gto
+          gh run download 45017142943 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B374_R107-BTN_BB-7s5h3d-exp_ip --dir /tmp/b390-b374-exp
+          gh run download 45023132316 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B387_R107_GTO_FIRST-BTN_BB-QsJh4d-gto --dir /tmp/b390-b387-gto
+          gh run download 45025076333 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B388_R107-BTN_BB-QsJh4d-exp_ip --dir /tmp/b390-b388-exp
+      - name: Independently verify source SHA, 100bb actor-IP 3 public flops, 40-70 strict reach and exact node lock, build V48
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b390_r107_three_true_sources_promote.py
+          python3 tools/hu_b390_r107_three_true_sources_promote.py \
+            --b374-gto /tmp/b390-b374-gto --b374-exp /tmp/b390-b374-exp \
+            --b387-gto /tmp/b390-b387-gto --b388-exp /tmp/b390-b388-exp
+          python3 tools/hu_cert_lock_medium_audit.py \
+            --source data/nl2_hu_multiboard_status_v48_b390_rank107.json \
+            --out /tmp/b390-independent-cert-audit.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status_v48_b390_rank107.json'))
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v48_b390.json'))
+          a=json.load(open('/tmp/b390-independent-cert-audit.json'))
+          proof=json.load(open('data/nl2_hu_b390_rank107_three_true_GTO_NL2_IP_cert_proof.json'))
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(160,232,0,392)
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(160,232,0)
+          assert (len(m['models']),len(m['boards']))==(160,609)
+          assert m['source_unknown_variants_after']==0
+          assert proof['CERT_after']==160 and proof['APPROX_after']==232
+          assert proof['hero_lock_variants_after']==701
+          print('PASS B390 true original 3-flop CERT160/APPROX232/EST0; 609 boards and 701 partial locks')
+          PY
+      - name: Runtime V48 schema, true source UI and original V47 regression
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node - <<'JS'
+          const fs=require('fs'),assert=require('node:assert/strict');
+          const status=JSON.parse(fs.readFileSync('data/nl2_hu_multiboard_status_v48_b390_rank107.json'));
+          for(const file of ['nl2_hu_multiboard_ui.js','nl2-multiboard.js']){
+            const source=fs.readFileSync(file,'utf8');
+            const a=source.indexOf('const v48b390=d=>{');
+            const b=source.indexOf('const v48=d=>{',a);
+            assert.ok(a>0 && b>a,file);
+            const validator=new Function(source.slice(a,b)+';return v48b390;')();
+            assert.equal(validator(status),status);
+            const forged=structuredClone(status);forged.CERT_MULTIBOARD=159;
+            assert.throws(()=>validator(forged),/failclosed/);
+            assert.ok(source.includes("data/nl2_hu_multiboard_status_v48_b390_rank107.json"));
+          }
+          console.log('PASS B390 exact-source V48 loader and false CERT rejection');
+          JS
+      - name: Full HU2475 river paths, link, reach, model action contracts, whitespace and independent summary
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b390-contract.json
+          node tools/link_audit.js --md /tmp/b390-link.md --json /tmp/b390-link.json
+          node tools/reach_verify.js --log /tmp/b390-reach.md --json /tmp/b390-reach.json
+          node tools/hu_model_path_audit.js /tmp/b390-model-path.json
+          node -e 'const c=require("/tmp/b390-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B390 HU2475/2475")'
+          git diff --check
+      - name: Commit and push V48 source-certified three-board rank107, node locks and frontend, NEVER MERGE PR2
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v48_b390_rank107.json \
+            data/nl2_hu_cert_lock_medium_matrix_v48_b390.json \
+            data/nl2_hu_cert_lock_medium_audit_v48_b390.json \
+            data/nl2_hu_b390_rank107_three_true_GTO_NL2_IP_cert_proof.json \
+            docs/NL2_HU_B390_RANK107_THREE_AUTHENTIC_CERT.md \
+            tools/hu_cert_lock_medium_audit.py \
+            nl2_hu_multiboard_ui.js nl2-multiboard.js nl2.html nl2-multiboard.html
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B390: independently verify true rank107 three 100bb GTO/NL2 IP source flops; V48 160 CERT 232 APPROX, HU2475'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
