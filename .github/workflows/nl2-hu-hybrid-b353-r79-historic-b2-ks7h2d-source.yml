@@ -1,4 +1,4 @@
-name: TASK-HYBRID B353 rank79 B2 authentic 100bb UTGCO Ks7h2d/9d GTO+NL2 CO IP SHA 40-70 SPR7 V45/HU2475 (max12m)
+name: TASK-HYBRID B353 rank79 authentic original stage2 44654973894 UTGCO Ks7h2d GTO+NL2 CO-IP SHA exact 40-70 SPR7 V45/HU2475 (max12m)
 on:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
@@ -17,24 +17,35 @@ jobs:
         with: {python-version: '3.11'}
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
-      - name: Independently source pin B2 archived original Rust GTO and true NL2 CO-IP strict per-hand turn Ks7h2d/9d 40/70 actor and SPR7
+      - name: Independently download and SHA audit authentic source run 44654973894 original UTGCO GTO and real NL2 IP and official batch05 verification
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/44654973894" --jq .conclusion)" = success
+          mkdir -p downloads/gto downloads/exp_ip downloads/provenance
+          gh run download 44654973894 --repo "$GITHUB_REPOSITORY" --name 'nl2-stage2-UTG_CO-gto-Ks7h2d' --dir downloads/gto
+          gh run download 44654973894 --repo "$GITHUB_REPOSITORY" --name 'nl2-stage2-UTG_CO-exp_ip-Ks7h2d' --dir downloads/exp_ip
+          gh run download 44654973894 --repo "$GITHUB_REPOSITORY" --name 'nl2-stage2-batch05-verified-provenance' --dir downloads/provenance
+          test -s downloads/provenance/STAGE2_BATCH05.json
+          test -s downloads/gto/evidence/UTG_CO-gto-Ks7h2d.json
+          test -s downloads/exp_ip/evidence/UTG_CO-exp_ip-Ks7h2d.json
           python3 -m py_compile tools/hu_b353_rank79_B2_historic_real_UTGCO_gto_nl2_ip.py
-          python3 tools/hu_b353_rank79_B2_historic_real_UTGCO_gto_nl2_ip.py
+          python3 tools/hu_b353_rank79_B2_historic_real_UTGCO_gto_nl2_ip.py --downloads downloads \\
+            --out data/nl2_hu_b353_rank79_historic_stage2_original_gto_real_nl2_ip_source.json
           python3 - <<'PY'
           import json,hashlib,pathlib
           d=pathlib.Path('data')
-          x=json.loads((d/'nl2_hu_b353_rank79_historic_B2_original_gto_real_nl2_ip_source.json').read_text())
-          assert x['schema']=='NL2_HU_B353_R79_HISTORIC_B2_KS7H2D_9D_GTO_PLUS_REAL_NL2_CO_IP_V1'
-          assert x['original_B2_run_id']==44666290556
-          assert (x['actor'],x['spot'],x['flop'],x['turn'],x['exact_line'])==('CO_IP','UTG_CO','Ks7h2d','9d','b50 c/x')
-          assert x['original_B2_aggregate_run_failed_unrelated_SB3_but_raw_source_individually_verified']
-          assert x['original_B2_archive_sha256']==hashlib.sha256((d/'solver_evidence/NL2_MULTIBOARD_B2_PARTIAL.json.gz').read_bytes()).hexdigest()
-          assert x['original_GTO']['strict_CO_IP_actor_40_70_legal_combos']>0
-          assert x['genuine_real_NL2_actor_IP_partial_source']['strict_CO_IP_actor_40_70_legal_combos']>0
+          x=json.loads((d/'nl2_hu_b353_rank79_historic_stage2_original_gto_real_nl2_ip_source.json').read_text())
+          assert x['schema']=='NL2_HU_B353_R79_STAGE2_ORIGINAL_KS7H2D_9D_GTO_AND_NL2_CO_IP_V1'
+          assert x['authenticated_original_stage2_run']==44654973894
+          assert (x['hero_actor'],x['spot'],x['flop'],x['turn'],x['line'])==('CO_IP','UTG_CO','Ks7h2d','9d','b50 c/x')
+          assert x['original_source_stage2_conclusion_success']
+          assert x['original_40_70_B175_GTO_strict_combos']==18
+          assert x['genuine_UTGCO_source_GTO']['true_actor_CO_IP_reached_combos']>0
+          assert x['genuine_UTGCO_real_NL2_CO_IP_source']['true_actor_CO_IP_reached_combos']>0
           assert x['CURRENT_CERT']==157 and x['CURRENT_APPROX']==235
-          print('PASS B353 historical B2 100bb original actor GTO and real NL2 IP source')
+          print('PASS B353 original true stage2 GTO+NL2 CO IP full historical SHA exact source')
           PY
       - name: Independently full V45 157/235 600 original true GTO plus actor NL2 lock692 134 b50 exact and 2475 HU river paths regression
         run: |
@@ -44,12 +55,12 @@ jobs:
           python3 - <<'PY'
           import json
           a=json.load(open('nl2-audit/b353-source.json'))
-          b=json.load(open('data/nl2_hu_b353_rank79_historic_B2_original_gto_real_nl2_ip_source.json'))
+          b=json.load(open('data/nl2_hu_b353_rank79_historic_stage2_original_gto_real_nl2_ip_source.json'))
           assert (a['cert_multiboard'],a['approx'],a['EST'])==(157,235,0)
           assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],
                a['aggregate']['board_examples_with_b50_candidate'])==(600,692,134)
-          assert b['true_3flop_Cert_requires_two_new_distinct_authentic_actor_matched_sources']
-          assert b['no_hole_card_conditional_NL2_empirical_claim']
+          assert b['still_requires_two_other_distinct_original_GTO_and_real_NL2_actor_locked_flops']
+          assert b['no_observed_private_card_conditional_NL2_frequency']
           assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
           PY
           node tools/hu_line_contract.js > nl2-audit/hu-contract.json
@@ -57,28 +68,29 @@ jobs:
           node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
           node tools/hu_model_path_audit.js nl2-audit/model-path.json
           node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B353 HU 2475/2475")'
-      - name: Commit independent true B2 original GTO and real COIP NL2 source SHA and explicit failed unrelated B2 job after all V45 HU tests PASS, Draft PR2
+      - name: Commit source-verified original stage2 GTO+real NL2 CO IP run Ks7h2d only after V45 and HU2475 complete PASS
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import pathlib,json
-          z=json.load(open('data/nl2_hu_b353_rank79_historic_B2_original_gto_real_nl2_ip_source.json'))
-          n=z['original_GTO']['strict_CO_IP_actor_40_70_legal_combos']
-          m=z['genuine_real_NL2_actor_IP_partial_source']['strict_CO_IP_actor_40_70_legal_combos']
-          pathlib.Path('docs/NL2_HU_B353_R79_B2_HISTORIC_REAL_GTO_NL2_IP_PROOF.md').write_text(
-             '# B353 rank79 original B2 100bb UTGCO Ks7h2d/9d true GTO plus NL2 CO-IP source proof\n\n'
-             'Old B2 overall run was FAILED for unrelated SB3 8s8h3d GTO; the actual UTGCO original GTO and real NL2 partial Rust actor CO-IP sources were separately solved, SHA verified and archived. '
-             'Exact source flop Ks7h2d, turn 9d, b50 c/x, CO IP, SPR7 +/-5%, max action / 40% and 70% ancestral gates. '
-             'Original GTO strict '+str(n)+' combos; genuine NL2 CO-IP partial source strict '+str(m)+' combos. '
-             'This is the first of 3 required distinct original GTO+true NL2 boards; two new matching GTO+NL2 actor sources and multiple textures still required for rank79 promotion. '
-             'No observed per-private-card conditional NL2 action rates. '
-             'V45 remains 157 CERT/235 APPROX and 600 authenticated named original+partial NL2 locks692, medium50 exact-only research134, HU 2475/2475 passed. '
-             'PR2 Draft, never merge / force push.\n')
+          z=json.load(open('data/nl2_hu_b353_rank79_historic_stage2_original_gto_real_nl2_ip_source.json'))
+          n=z['genuine_UTGCO_source_GTO']['true_actor_CO_IP_reached_combos']
+          m=z['genuine_UTGCO_real_NL2_CO_IP_source']['true_actor_CO_IP_reached_combos']
+          pathlib.Path('docs/NL2_HU_B353_R79_TRUE_STAGE2_ORIGINAL_GTO_NL2_COIP.md').write_text(
+             '# B353 rank79 authentic original stage2 UTGCO Ks7h2d GTO plus genuine NL2 IP source\n\n'
+             'Original successful GitHub Actions run 44654973894, stage2 batch05 original Rust CFR GTO and genuine NL2 CO-IP sources independently SHA pinned against original root/turn/reach and verified batch05 artifact. '
+             'Exact board Ks7h2d/9d, action b50 c/x, CO-IP, SPR7 +/-5%, original strategy highest/40/70 source. '
+             'Original GTO reached '+str(n)+' combos, genuine real NL2 CO-IP reached '+str(m)+' combos on original same public turn; B175 stricter source audit original GTO 18 legal combos. '
+             'The unrelated FAILED B2 run 44666290556 was NOT used: no misattributed original source. '
+             'Only one historical paired flop; two new independent GTO+NL2 actor-matched flops across multiple textures still required for rank79 CERT. '
+             'Pool observation is street/size marginal, NOT measured conditional on opponent hole cards. '
+             'Unchanged V45 157 CERT/235 APPROX, 600 original GTO+true partial NL2 source named boards and 692 actor locks; HU 2475/2475 independently PASS. '
+             'PR2 Draft NEVER merge or force-push.\n')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/nl2_hu_b353_rank79_historic_B2_original_gto_real_nl2_ip_source.json docs/NL2_HU_B353_R79_B2_HISTORIC_REAL_GTO_NL2_IP_PROOF.md
-          git commit -m 'TASK-HYBRID B353: real B2 historical rank79 UTGCO GTO plus NL2 COIP Ks7h2d/9d SHA actor 40-70 SPR7, failed unrelated SB3 excluded; V45 HU2475 PASS'
+          git add data/nl2_hu_b353_rank79_historic_stage2_original_gto_real_nl2_ip_source.json docs/NL2_HU_B353_R79_TRUE_STAGE2_ORIGINAL_GTO_NL2_COIP.md
+          git commit -m 'TASK-HYBRID B353: authentic original stage2 run 44654973894 true UTGCO Ks7h2d GTO+NL2 IP SHA 40-70 SPR7 and V45 600 HU2475 PASS no false B2'
           for n in 1 2 3 4; do
             git fetch origin fix/nl2-hu-lines-audit-20261118
             git rebase origin/fix/nl2-hu-lines-audit-20261118
@@ -91,7 +103,7 @@ jobs:
         with:
           name: TASK-HYBRID-B353-rank79-historical-B2-real-GTO-NL2-COIP-SHA-HU2475
           path: |
-            data/nl2_hu_b353_rank79_historic_B2_original_gto_real_nl2_ip_source.json
-            docs/NL2_HU_B353_R79_B2_HISTORIC_REAL_GTO_NL2_IP_PROOF.md
+            data/nl2_hu_b353_rank79_historic_stage2_original_gto_real_nl2_ip_source.json
+            docs/NL2_HU_B353_R79_TRUE_STAGE2_ORIGINAL_GTO_NL2_COIP.md
             nl2-audit/
           retention-days: 30
