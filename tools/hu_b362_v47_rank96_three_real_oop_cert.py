@@ -304,7 +304,7 @@ def main():
       V47_matrix_sha256=sha(MATRIX),source_Auditor_sha256=sha(auditor),
       three_distinct_flops=[x["flop"] for x in boards],
       two_plus_textures=sorted(textures),true_original_source_provenance=pins,
-      100bb_preflop_CFR_pinned=True,
+      preflop_100bb_CFR_pinned=True,
       historical_source_flop_menu_33_50_75_not_full_four=True,
       GTO_and_NL2_are_not_universal_texture_recommendations=True,
       no_observed_NL2_private_card_action_conditionals=True,
