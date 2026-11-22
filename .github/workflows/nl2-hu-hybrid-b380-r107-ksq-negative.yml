@@ -16,7 +16,7 @@ jobs:
         with: {python-version: '3.11'}
       - name: Real Rust source and full-street 40-70 zero reach gate, no re-solve
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mkdir -p /tmp/b380-source
