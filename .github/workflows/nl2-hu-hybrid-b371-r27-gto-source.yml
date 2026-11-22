@@ -1,0 +1,60 @@
+name: NL2 B371 recover only verified B367 GTO original 9s6h3d; no fake NL2 lock
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b371-r27-gto-source.yml'
+      - 'tools/hu_b371_salvage_gto_artifact.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  authenticated-gto-only-salvage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Retrieve true original Rust output from completed B367 cancelled-run GTO matrix job
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b371-original-source
+          gh run download 45013144124 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B367_R27_LMPCOBB_THIRD-LMP_CO_BB-9s6h3d-gto' --dir /tmp/b371-original-source
+          python3 -m py_compile tools/hu_b371_salvage_gto_artifact.py
+          python3 tools/hu_b371_salvage_gto_artifact.py /tmp/b371-original-source
+      - name: Independent source registry and full HU2475 no-extrapolation audit
+        run: |
+          set -euo pipefail
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b371-source-audit.json
+          node tools/hu_line_contract.js > /tmp/b371-contract.json
+          node tools/link_audit.js --md /tmp/b371-link.md --json /tmp/b371-link.json
+          node tools/reach_verify.js --log /tmp/b371-reach.md --json /tmp/b371-reach.json
+          node tools/hu_model_path_audit.js /tmp/b371-path.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b371-source-audit.json'))
+          q=json.load(open('data/nl2_hu_b371_r27_b367_original_gto_only_salvage.json'))
+          c=json.load(open('/tmp/b371-link.json'))['counts']
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert (c['continuing'],c['reachRiver'],c['riverShare'])==(2475,2475,100)
+          assert q['actual_matching_NL2_OOP_hero_lock'] is False
+          print('PASS B371 GTO-only and 2475/2475 river paths; no CERT promotion.')
+          PY
+          git diff --check
+      - name: Commit raw-source-SHA proof only, never promote or merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b371_r27_b367_original_gto_only_salvage.json docs/NL2_HU_B371_R27_B367_GTO_ONLY_SALVAGE.md
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B371: authenticate completed B367 9s6h3d original GTO source; preserve 159/233, no unverified CERT'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118

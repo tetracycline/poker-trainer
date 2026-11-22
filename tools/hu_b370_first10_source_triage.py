@@ -101,7 +101,7 @@ def main():
     # then remaining nodes by descending factual frequency (ascending rank).
     def priority(x):
         n=x["true_paired_measured_NL2_hero_lock_flops"]
-        return (0 if n==2 else 1 if n>=3 else 2,x["frequency_rank"])
+        return (0 if n==2 else 1 if n>=3 else 2 if n==1 else 3,x["frequency_rank"])
     selected=sorted(triage,key=priority)[:10]
     assert len(selected)==10 and len({r["model_id"] for r in selected})==10
     report=dict(schema="NL2_HU_B370_SOURCE_GATED_FIRST10_PREFLIGHT_V1",
@@ -117,6 +117,7 @@ def main():
         no_generic_texture_cert=True,no_2026_actual_NL2_private_hand_data_claim=True,
         source_blind_selected_ten=selected,
         remaining_approx_model_count=233,
+        all_233_true_paired_flop_count_histogram=dict(collections.Counter(str(x["true_paired_measured_NL2_hero_lock_flops"]) for x in triage)),
         missing_true_flop_pairs_total_for_selected=sum(x["additional_distinct_true_flops_needed"] for x in selected))
     OUT.write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     lines=["# B370 — ten high-priority APPROX source checks",
