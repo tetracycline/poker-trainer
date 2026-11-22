@@ -1,0 +1,182 @@
+name: TASK-HYBRID B343 rank71 3 new different low and paired LMP 50%-only original 100bb Rust GTO NL2 OOP actor pairs V44 HU2475 (max29m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b343-r71-three-restricted-50-gto-nl2.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 21
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include:
+          - {spot: LMP_CO_BB, flop: 3s3h2d, version: gto}
+          - {spot: LMP_CO_BB, flop: 3s3h2d, version: exp_oop}
+          - {spot: LMP_CO_BB, flop: 3s4h5d, version: gto}
+          - {spot: LMP_CO_BB, flop: 3s4h5d, version: exp_oop}
+          - {spot: LMP_CO_BB, flop: 2s3h4d, version: gto}
+          - {spot: LMP_CO_BB, flop: 2s3h4d, version: exp_oop}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Python exact source syntax gate and pinned Rust CFR compile
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_multiboard_100bb.py trainer/tools/verify_hu_multiboard_100bb.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve authentic 100bb LMP named-flop b50-call GTO or hero-OOP lock in restricted tree
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver --spot "${{ matrix.spot }}" --flop "${{ matrix.flop }}" \
+            --version "${{ matrix.version }}" --flop-size-profile lmp-50-only \
+            --flop-line-policy oop-b50only --turn-count 1 \
+            --manifest "evidence/${{ matrix.spot }}-${{ matrix.flop }}-${{ matrix.version }}.json"
+      - name: Preserve immutable Rust source, even if solve fails or no legal combos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B343_LMP50_LEGAL-${{ matrix.spot }}-${{ matrix.flop }}-${{ matrix.version }}
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: ${{ needs.solve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - name: Fetch exactly 6 immutable original Rust solve artifacts, separately report zero-reach cases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir downloads
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d -name 'nl2-multiboard-B343_LMP50_LEGAL-*' | wc -l)" -eq 6
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver --run-id "$GITHUB_RUN_ID" \
+            --out trainer/data/solver_evidence/NL2_MULTIBOARD_B343_LMP50_LEGAL.json
+      - name: Freeze all 6 independent source jobs; do not claim CERT from unsupported card path
+        run: |
+          python3 - <<'PY'
+          import pathlib,gzip,json,hashlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B343_LMP50_LEGAL.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert not d['errors'] and len(d['artifacts'])==6
+          assert sum(x['version']=='gto' for x in d['artifacts'])==3
+          assert sum(x['version']=='exp_oop' for x in d['artifacts'])==3
+          assert d['exact_board_gto_sources']==3 and d['imputed_pool_locked_sources']==3
+          assert all(not x['errors'] and x['flop'] in ('3s3h2d','3s4h5d','2s3h4d') for x in d['artifacts'])
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          idx=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+              run_id=d['source_run_id'],batch='B343_LMP50_LEGAL',
+              actual_spot_flop_version_jobs=6,verified_cases=d['new_authentic_board_cases'],
+              gto_cases=d['exact_board_gto_sources'],locked_cases=d['imputed_pool_locked_sources'],
+              source_sha256=hashlib.sha256(raw).hexdigest(),
+              gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+              generic_model_certification=0,
+              exact_menu='Flop 50pct only: authentic restricted-game CFR under explicit assumed 169-class LMP ranges. NOT unrestricted NL2 GTO.')
+          p.with_suffix('.index.json').write_text(json.dumps(idx,indent=2,ensure_ascii=False)+'\n')
+          p.unlink()
+          print('PASS true restricted-tree LMP GTO+EXP source',idx)
+          PY
+      - name: Exact original restricted 50 flop b50 and per-street true NL2 actor full reach original GTO SHA and 40-70 source gate
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b343_rank71_three_new_50_only_gto_nl2_actor_gate.py
+          python3 tools/hu_b343_rank71_three_new_50_only_gto_nl2_actor_gate.py \
+            --downloads ../downloads --run "$GITHUB_RUN_ID" \
+            --out data/nl2_hu_b343_rank71_three_real_lmp50_GTO_NL2_actor_reach.json
+      - name: Full independent V44 156/236 all 597 exact original GTO and 689 true actor-NL2 lock sources 134 exact b50 research, HU2475 reachability
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json \
+            --out nl2-audit/b343-lock.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b343-lock.json'))
+          s=json.load(open('data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json'))
+          g=json.load(open('data/nl2_hu_b343_rank71_three_real_lmp50_GTO_NL2_actor_reach.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(156,236,0)
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(156,236,0,392)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],
+                  a['aggregate']['board_examples_with_b50_candidate'])==(597,689,134)
+          assert g['true_source_GTO_and_real_partial_NL2_jobs']==6
+          assert g['authenticated_independent_new_named_flops']==3
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B343 2475/2475")'
+      - name: Commit only independently verified six actual Rust source jobs and canonical BB-OOP legal reach after PASS
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          x=json.load(open('data/nl2_hu_b343_rank71_three_real_lmp50_GTO_NL2_actor_reach.json'))
+          pos=x['new_rank71_legal_genuine_GTO_NL2_pair_flops']
+          msg=['# B343 original restricted LMP 50%-only GTO and genuine NL2 BB-OOP sources',
+          '', '3 fresh non-isomorphic public flops: 3s3h2d / 3s4h5d / 2s3h4d. ',
+          'All six actual solver source jobs (three original GTO plus three partial NL2) from pinned 100bb Rust, identical restricted x/b50 game to historical B19/B26.',
+          'Each exact flop and turn/GTO+NL2 pair has SHA-verified raw CFR with canonical per-combo highest-frequency-or-40/70 FULL previous-street ancestry.',
+          'New positive rank71 exact actor and NL2 matched flops: '+(', '.join(pos) if pos else 'none')+'.',
+          'No automatic generic CERT: separately preregister exact 3 flop+NL2 pairing and model SPR proof. No unrestricted solver-tree claim.',
+          '169-class LMP preflop is ASSUMED; NL2 street/size pooled rate is not an observed per-private-card conditional villain rate.',
+          'Unchanged V44 156 CERT /236 APPROX /0 EST, 597 named GTO+NL2 proofs, 689 actor locks, full HU2475/2475, PR2 draft NEVER MERGE.']
+          pathlib.Path('docs/NL2_HU_B343_RANK71_3_NEW_LMP50_REAL_GTO_NL2_AND_REACH.md').write_text('\n\n'.join(msg)+'\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B343_LMP50_LEGAL.index.json data/solver_evidence/NL2_MULTIBOARD_B343_LMP50_LEGAL.json.gz \
+            data/nl2_hu_b343_rank71_three_real_lmp50_GTO_NL2_actor_reach.json docs/NL2_HU_B343_RANK71_3_NEW_LMP50_REAL_GTO_NL2_AND_REACH.md
+          git commit -m 'TASK-HYBRID B343: 3 original distinct LMP50 100bb GTO plus 3 true NL2 actor Rust sources exact canonical 40-70; V44 597 HU2475 PASS, no fake CERT'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B343-three-original-lmp50-GTO-and-NL2-actor-source-HU2475
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B343_LMP50_LEGAL.*
+            trainer/data/nl2_hu_b343_rank71_three_real_lmp50_GTO_NL2_actor_reach.json
+            trainer/docs/NL2_HU_B343_RANK71_3_NEW_LMP50_REAL_GTO_NL2_AND_REACH.md
+            trainer/nl2-audit/
+          retention-days: 30
