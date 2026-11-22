@@ -1,0 +1,142 @@
+name: NL2 B440 salvage B439 rank27 GTO-only exact source and strict-zero reach; preserve no CERT; full HU2475 audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b440-r27-b439-gto-negative-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  salvage-audit-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Recover only the completed B439 GTO artifact; never rerun cancelled EXP_OOP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b440
+          gh run download 45068014496 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B439_R27_LMPCOBB_B50_B75-LMP_CO_BB-As9h2d-gto' --dir /tmp/b440
+          python3 - <<'PY'
+          import sys,json,hashlib,pathlib,gzip
+          D=pathlib.Path('/tmp/b440')
+          sys.path.insert(0,str(pathlib.Path('tools').resolve()))
+          from hu_sequential_cfr_reach import game_reach
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          mp=D/'evidence/LMP_CO_BB-As9h2d-gto.json'
+          rp=D/'solver/postflop/out/LMP_CO_BB/gto/As9h2d_multiboard.json'
+          sp=D/'solver/postflop/out/LMP_CO_BB/gto/As9h2d_b50c_Kd.json'
+          solver_pin=(D/'evidence/poker-solver-pin.txt').read_text().strip()
+          rust_pin=(D/'evidence/rust-pin.txt').read_text().strip()
+          assert all(p.is_file() for p in (mp,rp,sp))
+          m=json.loads(mp.read_text());fr=json.loads(rp.read_text());sub=json.loads(sp.read_text())
+          assert (solver_pin,rust_pin)==('abe310c3aad02dd4a7c77fb2831801fd490cf51b','9d1509fe5077d019825f833eed04b16d342dfda1')
+          assert sha(mp)=='633af964d7e1afa37b620fa1573130b130ba8e1fc4d1963534597a0446e25078'
+          assert sha(rp)==m['file_flop_sha256']=='67c9f2c4faf58da55da9624d370a419fcaa55e5db670b3baa9d50fd2f4d19fee'
+          assert sha(sp)==m['cases'][0]['source_sha256']=='98377f820251e273540ccce5132b7a451a6018aff3d322dc2eb75496de6c5db6'
+          assert (m['schema'],m['spot'],m['version'],m['flop'])==('NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1','LMP_CO_BB','gto','As9h2d')
+          assert m['preflop_ranges']['source']=='ASSUMED_EXPLICIT_169CLASS'
+          assert m['flop_size_profile']=='full' and not m['restricted_tree_assumption']
+          assert m['selected_lines']==['b50 c'] and 'b33 c' in m['selected_turn_lines']
+          assert m['turns']==['Kd'] and m['solved_cases']==1 and not m['failures'] and not m['skipped']
+          assert (fr['flop'],fr['pot'],fr['stack'])==('As9h2d',250,9900)
+          assert (sub['flop'],sub['turn'],sub['line0'])==('As9h2d','Kd','b50 c')
+          assert sub['info']['gto_expl_pct'] is not None and sub['info']['gto_expl_pct']<=0.5
+          masks,stats=game_reach(fr,sub)
+          targets=[]
+          for n in sub['nodes']:
+              if n['line']=='b50 c/b33 c/' and n['player']==0 and len(n['board'])==10:
+                  k='|'.join((n['board'],n['line'],str(n['player'])))
+                  q=masks[k]
+                  targets.append(dict(public_board=n['board'],exact_line=n['line'],acting_seat='BB_OOP',
+                      source_actor_combos=sum(bool(x) for x in n['w'][0]),
+                      strict_full_street_reachable_combos=q['count'],
+                      prior_actor_decisions=q['parent_actor_decisions']))
+          assert len(targets)==2 and all(x['strict_full_street_reachable_combos']==0 for x in targets),targets
+          assert stats['source_actor_combo_nodes']>0 and stats['sequential_actor_combo_nodes']>0
+          status=json.loads(pathlib.Path('data/nl2_hu_multiboard_status_v50_b417_rank166.json').read_text())
+          mid='ln-iso-lmp_r_model-1aov4pd';row=status['records'][mid]
+          assert (status['CERT_MULTIBOARD'],status['APPROX'],status['EST'],status['TOTAL'],status['top_N_rank_cutoff'])==(163,229,0,392,24)
+          assert row['frequency_rank']==27 and row['label']=='APPROX' and row['high_frequency_preregistered'] is False
+          assert row['blocked_reason']=='LOWER_FREQUENCY_BELOW_PREREGISTERED_TOP24_CUTOFF'
+          payload=dict(schema='NL2_B440_B439_R27_GTO_ONLY_STRICT_ZERO_REACH_NEGATIVE_V1',
+              source_run_id=45068014496,source_artifact_id=14772553505,
+              source_artifact_name='nl2-multiboard-B439_R27_LMPCOBB_B50_B75-LMP_CO_BB-As9h2d-gto',
+              model_id=mid,rank=27,top_N_rank_cutoff=24,high_frequency_preregistered=False,
+              flop='As9h2d',turn='Kd',exact_line='b50 c/b33 c/',actor='BB_OOP',
+              original_GTO_manifest_sha256=sha(mp),original_GTO_root_sha256=sha(rp),
+              original_GTO_turn_source_sha256=sha(sp),source_solver_commit=solver_pin,source_rust_commit=rust_pin,
+              original_GTO_exploitability_pct=sub['info']['gto_expl_pct'],
+              exact_named_river_nodes=targets,sequential_reach_stats=dict(stats),
+              cross_street_rule='MAX_ACTION_OR_ALTERNATE_FREQ_GE_40PCT_AND_GE_70PCT_OF_MAX',
+              EXP_OOP_job='CANCELLED; no NL2 partial-lock artifact exists; not rerun',
+              source_is_original_GTO_only=True,preflop_range_is_assumed_169_class=True,
+              exact_target_nodes_have_zero_strict_reachable_BB_OOP_combos=True,
+              eligible_CERT_MULTIBOARD=False,no_texture_generalization=True,
+              reason='Both exact b50-call / b33-call river nodes have zero full-street strict hero combos; rank27 is outside preregistered top24.',
+              CERT_MULTIBOARD=163,APPROX=229,EST=0,counts_unchanged=True,
+              PR2_remains_draft_never_merge=True)
+          out=pathlib.Path('data/nl2_hu_b440_r27_b439_gto_only_strict_zero_reach.json')
+          out.write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\\n')
+          archive=dict(schema='NL2_B440_AUTHENTIC_B439_GTO_ONLY_RAW_SOURCE_V1',
+              manifest=m,root_flop=fr,turn_subgame=sub,
+              poker_solver_commit=solver_pin,rust_postflop_commit=rust_pin)
+          raw=json.dumps(archive,ensure_ascii=False,separators=(',',':')).encode()
+          ap=pathlib.Path('data/solver_evidence/NL2_B440_R27_B439_GTO_ONLY_AS9H2D.json.gz')
+          ap.parent.mkdir(parents=True,exist_ok=True)
+          ap.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          payload['raw_source_archive_sha256']=sha(ap)
+          out.write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\\n')
+          pathlib.Path('docs/NL2_HU_B440_R27_B439_GTO_ONLY_STRICT_ZERO_REACH.md').write_text(
+              '# B440 rank27 B439 GTO-only source: strict-zero reach negative\\n\\n'
+              'Recovered the already completed B439 original 100bb Rust GTO source for As9h2d/Kd; '
+              'no GTO solve was repeated. The exact BB-OOP river nodes on b50-call / b33-call have '
+              '**0 strict full-street reachable combos each** under the frozen max-action / 40%-and-70% policy. '
+              'B439 EXP_OOP was cancelled and has no authentic NL2 partial-lock artifact. '
+              'Rank27 is outside the preregistered top-24 high-frequency cutoff. '
+              '**No CERT promotion; 163 CERT / 229 APPROX / 0 EST unchanged.**\\n')
+          print('B440 PASS source SHA + strict reach negative; targets',targets,'stats',dict(stats))
+          PY
+      - name: Re-audit all 163 CERT boards, 618 exact boards, 710 NL2 lock variants, and V50 counts
+        run: |
+          set -euo pipefail
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v50_b417_rank166.json --out /tmp/b440-independent.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b440-independent.json'))
+          p=json.load(open('data/nl2_hu_b419_cert163_board618_lock710_medium_ledger.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(163,229,0)
+          assert (p['exact_named_boards'],p['hero_lock_source_variants'],p['unknown_remains'])==(618,710,0)
+          assert p['exact_nonpolarized_50pct_research_candidate_boards']+p['exact_50pct_unproven_boards']==618
+          assert p['disallow_50pct_bet_extrapolation_to_unproven_board_or_generic_handclass']
+          print('PASS B440 V50 163/229; B419 618 boards / 710 lock variants / UNKNOWN 0')
+          PY
+      - name: Full HU2475 river navigation, reach, model path, UI/cache and syntax audit
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b440-contract.json
+          node tools/link_audit.js --md /tmp/b440-link.md --json /tmp/b440-link.json
+          node tools/reach_verify.js --log /tmp/b440-reach.md --json /tmp/b440-reach.json
+          node tools/hu_model_path_audit.js /tmp/b440-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b440-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B440 HU2475/2475")'
+          git diff --check
+      - name: Commit verified negative source evidence and full-audit result to draft PR2; never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b440_r27_b439_gto_only_strict_zero_reach.json data/solver_evidence/NL2_B440_R27_B439_GTO_ONLY_AS9H2D.json.gz docs/NL2_HU_B440_R27_B439_GTO_ONLY_STRICT_ZERO_REACH.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'B440: preserve B439 rank27 GTO-only strict-zero reach; no false CERT; full audit'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
