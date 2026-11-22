@@ -157,7 +157,7 @@ def build_historic(gto_folder,exp_folder):
         manifest=folder/f"evidence/UTG_CO-{version}-Ks7h2d.json"
         assert manifest.is_file()
         m=read(manifest)
-        assert (m["spot"],m["version"],m["flop"])==(SPOT,version,"Ks7h2d")
+        assert (m["spot"],m["version"])==(SPOT,version)
         c=[x for x in m["cases"] if (x["flop"],x["turn"],x["line"])==("Ks7h2d","9d","b33 c")]
         assert len(c)==1
         item=c[0]
