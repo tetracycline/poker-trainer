@@ -1,0 +1,154 @@
+name: TASK-HYBRID B337 rank71 three actual GTO 0-target B332 B333 B336 per-combo root diagnostics, B335 cancelled, V44/HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b337-r71-b332-b333-b336-root-sha-v44.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  immutable-original-source-40-70-V44-full-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Require authentic original B332 B333 B336 GTO PASS and B335 cancelled, download genuine full GTO roots, never substitute any NL2 EXP or partial artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_rank71_gto_root_40_70_preflight.py tools/hu_sequential_cfr_reach.py
+          for run in 44962917535 44962920429 44963204885; do
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq .conclusion)" = success
+          done
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/44963201981" --jq .conclusion)" = cancelled
+          mkdir -p sources/B332 sources/B333 sources/B336
+          gh run download 44962917535 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B332_R71_LMP_7S5H2D-LMP_CO_BB-gto-7s5h2d' --dir sources/B332
+          gh run download 44962920429 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B333_R71_LMP_4S4H6D-LMP_CO_BB-gto-4s4h6d' --dir sources/B333
+          gh run download 44963204885 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B336_R71_LMP_7S5S3D-LMP_CO_BB-gto-7s5s3d' --dir sources/B336
+          test -s sources/B332/solver/postflop/out/LMP_CO_BB/gto/7s5h2d_multiboard.json
+          test -s sources/B333/solver/postflop/out/LMP_CO_BB/gto/4s4h6d_multiboard.json
+          test -s sources/B336/solver/postflop/out/LMP_CO_BB/gto/7s5s3d_multiboard.json
+      - name: Recompute original 100bb GTO flop action b50 legal 40/70 per hand, SHA compare root, job and manifest, and classify precise zero river paths
+        run: |
+          set -euo pipefail
+          python3 tools/hu_rank71_gto_root_40_70_preflight.py \
+            --case B332 7s5h2d 44962917535 sources/B332 \
+            --case B333 4s4h6d 44962920429 sources/B333 \
+            --case B336 7s5s3d 44963204885 sources/B336 \
+            --out data/nl2_hu_b337_rank71_three_verified_original_GTO_b50_root.json
+          python3 - <<'PY'
+          import pathlib,json,hashlib,gzip
+          d=pathlib.Path('data')
+          out=d/'nl2_hu_b337_rank71_three_verified_original_GTO_b50_root.json'
+          a=json.loads(out.read_text())
+          assert a['schema']=='NL2_HU_RANK71_SHA_PINNED_GTO_FLOP_B50_ROOT_40_70_PREFLIGHT_V1'
+          rs=a['exact_original_board_results']
+          assert [(z['batch'],z['flop'],z['source_run_id']) for z in rs]==[
+             ('B332','7s5h2d',44962917535),
+             ('B333','4s4h6d',44962920429),
+             ('B336','7s5s3d',44963204885)]
+          assert len({z['flop'] for z in rs})==3
+          for z in rs:
+            path=d/f"solver_evidence/NL2_MULTIBOARD_{z['batch']}_R71_{z['flop'].upper()}_GTO.json.gz"
+            idx=json.loads(path.with_name(path.name.replace('.json.gz','.index.json')).read_text())
+            pin=json.loads((d/f"nl2_hu_{z['batch'].lower()}_rank71_lmp_{z['flop']}_gto_parent_pin.json").read_text())
+            assert (idx['gto_cases'],idx['locked_cases'],idx['verified_cases'])==(1,0,1)
+            assert idx['source_sha256']==hashlib.sha256(gzip.decompress(path.read_bytes())).hexdigest()
+            assert idx['gzip_sha256']==hashlib.sha256(path.read_bytes()).hexdigest()
+            assert idx['exact_target_actor_OOP_strict_combos']==pin['target_exact_actor_OOP_strict_combos']==0
+            assert z['original_target_actor_OOP_strict_combos']==0
+            assert pin['target_exact_actor_OOP_river_nodes']==0
+            assert z['original_root_flop_active_combo_count']>0
+            assert z['strict_40_70_b50_flop_combo_count']>=0
+            assert z['not_new_GTO_solve'] and z['not_new_actor_NL2_lock']
+            assert z['not_observed_NL2_per_private_hand_action_rates']
+            assert len(z['source_gto_pin_sha256'])==64 and len(z['original_GTO_full_flop_root_sha256'])==64
+            z['zero_target_classification']=(
+               'FLOP_B50_ROOT_40_70_ZERO' if z['strict_40_70_b50_flop_combo_count']==0
+               else 'FLOP_B50_POSITIVE_BUT_EXACT_LATER_TURN_OR_RIVER_ZERO')
+            z['no_negative_extrapolation_to_other_flops_or_unverified_turns']=True
+          a['B335_source_run_id']=44963201981
+          a['B335_original_GTO_run_cancelled_not_source']=True
+          a['B335_no_NL2_partial_lock_or_CERT']=True
+          out.write_text(json.dumps(a,ensure_ascii=False,indent=2)+'\n')
+          print('PASS original GTO strict roots',[(z['flop'],z['strict_40_70_b50_flop_combo_count'],z['zero_target_classification']) for z in rs])
+          PY
+      - name: Independently full V44 156 CERT 236 APPROX 597 GTO+true actor-NL2 board proofs 689 locks and all 2475 river action paths
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json --out nl2-audit/b337-v44-lock-medium.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b337-v44-lock-medium.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'],a['models_total'])==(156,236,0,392)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'])==(597,689)
+          assert a['aggregate']['board_examples_with_b50_candidate']==134
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B337 V44 2475/2475")'
+      - name: Commit exact negative source/failclosed B335 report only after SHA verified true GTO plus full V44/HU2475 PASS
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json,hashlib
+          p=pathlib.Path('data/nl2_hu_b337_rank71_three_verified_original_GTO_b50_root.json')
+          a=json.loads(p.read_text());r=a['exact_original_board_results']
+          a.update(schema='NL2_HU_B337_RANK71_B332_B333_B336_GENUINE_GTO_B50_ROOT_V1',
+            V44_status_sha256=hashlib.sha256(pathlib.Path('data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json').read_bytes()).hexdigest(),
+            CERT_MULTIBOARD=156,APPROX=236,EST=0,TOTAL=392,
+            authenticated_cert_named_board_proofs=597,
+            genuine_actor_NL2_partial_lock_variants=689,
+            exact_board_b50_research_only=134,
+            HU_river_paths_verified='2475/2475',
+            rank71_still_APPROX=True,
+            rank71_existing_two_true_GTO_and_NL2_actor_flops=['4s4h2d','7s5h3d'],
+            all_three_new_GTO_only_not_actor_NL2_locked=True,
+            no_false_3rd_flop_or_private_card_rate_imputation=True,
+            PR2_Draft_NEVER_MERGE=True)
+          p.write_text(json.dumps(a,ensure_ascii=False,indent=2)+'\n')
+          lines=['# B337 original full GTO 100bb rank71 B332 B333 B336, B335 cancelled','',
+            'SHA-verified original Rust full flop, manifest, job, archive, and canonical 40%/70% BB-OOP reach policy independently audited.']
+          for x in r:
+            lines.append('- '+x['batch']+' '+x['flop']+'/'+x['turn']+
+              ': 40/70 BB flop b50 strict combos '+str(x['strict_40_70_b50_flop_combo_count'])+
+              ', exact later BB-OOP river strict combos '+str(x['original_target_actor_OOP_strict_combos'])+
+              '. '+x['zero_target_classification'])
+          lines.extend(['','B335 two-tone 4s4h2s original Rust source workflow cancelled; never treat cancelled job as positive source or CERT.',
+            'Reject only exact zero parent/branch, not other unverified turns, flops, game trees or NL2 frequencies.',
+            'Unchanged 156 CERT /236 APPROX /0 EST, 597 authentic named GTO+NL2 lock boards, 689 actor lock variants and 134 exact-board b50 research flags; full HU 2475/2475 PASS.',
+            'PR2 Draft/Open; NEVER merge, force push or overstate per-private-card observed NL2 pool decisions.'])
+          pathlib.Path('docs/NL2_HU_B337_R71_B332_B333_B336_GTO_ROOT_AND_B335_CANCELLED.md').write_text('\n'.join(lines)+'\n')
+          print('PASS B337 exact source closeout and entire V44 audit')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b337_rank71_three_verified_original_GTO_b50_root.json docs/NL2_HU_B337_R71_B332_B333_B336_GTO_ROOT_AND_B335_CANCELLED.md
+          git commit -m 'TASK-HYBRID B337: B332/B333/B336 true GTO root BB-OOP 40/70 SHA + cancelled B335; V44 597/689 HU2475 PASS CERT156 APPROX236'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-HU-B337-three-original-GTO-root-sha-B335-cancelled-V44-HU2475
+          path: |
+            data/nl2_hu_b337_rank71_three_verified_original_GTO_b50_root.json
+            docs/NL2_HU_B337_R71_B332_B333_B336_GTO_ROOT_AND_B335_CANCELLED.md
+            nl2-audit/
+          retention-days: 30
