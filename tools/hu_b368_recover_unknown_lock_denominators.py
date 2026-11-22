@@ -4,7 +4,7 @@ Fail closed: only update a source variant if (run, raw subgame SHA, original
 root SHA, exact driver lock list, pinned solver commit) all match. Otherwise
 leave UNKNOWN. No inferred per-hole-card opponent frequencies.
 """
-import collections,copy,hashlib,importlib,json,pathlib,re,subprocess,sys
+import collections,copy,hashlib,importlib,json,pathlib,re,subprocess,sys,types
 D=pathlib.Path("data")
 SOLVER=pathlib.Path("../solver")
 DOWNLOADS=pathlib.Path("downloads")
@@ -72,25 +72,45 @@ def setup_solver():
     pool=read(SOLVER/"inputs/pool_stats.json")["NL2"]
     return pipeline,ranges,LK,pool,base_spots
 def load_historical_helper(run_id,head_sha):
-    # The trainer-side make_fallbacks changed across B2/B3/B19/B26.
-    # Load the exact helper modules from the original Actions run commit.
+    # Stage2 runs predate solve_hu_multiboard_100bb.py and use pipeline.lock_list
+    # directly. Later Stage3/B19+ runs add the historical make_fallbacks wrapper.
     temp=pathlib.Path("/tmp")/f"b368-historical-tools-{run_id}"
     temp.mkdir(parents=True,exist_ok=True)
+    found={}
     for rel in ("tools/solve_hu_multiboard_100bb.py",
                 "tools/solve_hu_assumed_pots.py",
                 "tools/solve_hu_missing_branches.py"):
-        content=subprocess.check_output(["git","show",f"{head_sha}:{rel}"],text=True)
-        (temp/pathlib.Path(rel).name).write_text(content)
+        try:
+            content=subprocess.check_output(["git","show",f"{head_sha}:{rel}"],
+                text=True,stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            continue
+        name=pathlib.Path(rel).name
+        (temp/name).write_text(content)
+        found[name]=True
+    if "solve_hu_missing_branches.py" not in found:
+        raise RuntimeError("historical source run lacks solve_hu_missing_branches.py")
     for name in ("solve_hu_multiboard_100bb","solve_hu_assumed_pots","solve_hu_missing_branches"):
         sys.modules.pop(name,None)
     p=str(temp)
     sys.path.insert(0,p)
     try:
-        helper=importlib.import_module("solve_hu_multiboard_100bb")
+        missing=importlib.import_module("solve_hu_missing_branches")
+        if "solve_hu_multiboard_100bb.py" in found:
+            helper=importlib.import_module("solve_hu_multiboard_100bb")
+            if not hasattr(helper,"make_fallbacks"):
+                raise RuntimeError("historical Stage3 helper has no make_fallbacks")
+        else:
+            # Authentic Stage2 behaviour: no synthetic fallback layer; replay
+            # the pinned solver's original pipeline.lock_list exactly.
+            def make_fallbacks(spot,version,pool,original_lock_list,flop):
+                return original_lock_list(spot,version,flop)
+            helper=types.SimpleNamespace(EXTRA_SPOTS=missing.EXTRA_SPOTS,
+                make_fallbacks=make_fallbacks)
     finally:
         while p in sys.path:sys.path.remove(p)
-    if not hasattr(helper,"make_fallbacks") or not hasattr(helper,"EXTRA_SPOTS"):
-        raise RuntimeError("historical helper is missing make_fallbacks/EXTRA_SPOTS")
+    if not hasattr(helper,"EXTRA_SPOTS"):
+        raise RuntimeError("historical helper is missing EXTRA_SPOTS")
     helper._b368_source_head_sha=head_sha
     return helper
 def expected_locks(spot,version,flop,ctx,helper):
