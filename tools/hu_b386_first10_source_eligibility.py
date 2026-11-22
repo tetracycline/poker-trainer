@@ -29,7 +29,7 @@ def main():
  assert (source_audit['cert_multiboard'],source_audit['approx'],source_audit['EST'])==(159,233,0)
  assert len(matrix['models'])==159
  b368=read(D/'nl2_hu_b368_lock_denominator_recovery.json')
- assert (b368['recovered_lock_variants'],b368['remaining_unknown_variants'])==(334,0)
+ assert (b368['unknown_before'],b368['recovered_variants'],b368['unknown_after'])==(334,334,0)
  historical_unknown=sum(1 for b in matrix['boards'] for l in b['hero_lock_proofs']
     if l['node_rate_data_status']=='HISTORICAL_POOL_MARGINAL_SOURCE_COUNTS_UNKNOWN')
  assert historical_unknown==0

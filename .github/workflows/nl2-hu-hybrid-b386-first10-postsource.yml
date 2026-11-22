@@ -31,7 +31,7 @@ jobs:
           assert (d['CERT_MULTIBOARD'],d['APPROX'],d['EST'],d['TOTAL'])==(159,233,0,392)
           assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
           assert len(d['first10_frozen_candidate_models'])==10
-          assert d['B368_lock_denominators_original']==d['B368_lock_denominators_recovered']==334 if 'B368_lock_denominators_recovered' in d else (d['B368_lock_denominators_original']==d['recovered']==334)
+          assert (d['B368_lock_denominators_original'],d['recovered'],d['unknown_remaining'])==(334,334,0)
           assert d['unknown_remaining']==0
           assert d['selected_next_for_original_GTO_first']['NL2_EXP_ONLY_AFTER_AUTHENTIC_GTO_STRICT_POSITIVE']
           print('PASS B386 first10 frozen source-only 159/233; historical UNKNOWN=0')
