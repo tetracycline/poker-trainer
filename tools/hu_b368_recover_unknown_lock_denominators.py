@@ -182,46 +182,54 @@ def recover_one(board,lock,ctx,run_dir,helper,run_head_sha):
             size=x.get("size"),street=x.get("street")))
     if len(patterns)!=len(job["locks"]):
         return None,"PATTERN_METADATA_COUNT_MISMATCH"
-    source_diagnostics=diagnostic_partitions(board,c,root,read(found["sub"]),patterns)
+    sub=read(found["sub"])
+    if not isinstance(sub.get("nodes"),list):return None,"SOURCE_SUBGAME_NODES_MISSING"
+    source_diagnostics=diagnostic_partitions(board,c,root,sub,patterns)
     villain=1 if version=="exp_oop" else 0
     observed=assumed=unmatched=0
     candidate_nodes=0
     matched_patterns=collections.Counter()
-    for n in root["nodes"]:
+    for n in sub["nodes"]:
         if n.get("player")!=villain or len(n.get("acts",[]))<2:continue
         w=n.get("w")
         if not isinstance(w,list) or len(w)<=villain:continue
         if not any(float(x)>1e-4 for x in w[villain]):continue
         candidate_nodes+=1
-        hits=[x for x in patterns if re.search(x["pat"],n.get("line",""))]
+        line=n.get("line","")
+        street=line.count("/")+1
+        hits=[(i,x) for i,x in enumerate(patterns)
+            if (x.get("street") is None or int(x["street"])==street)
+            and re.search(x["pat"],line)]
         if not hits:
             unmatched+=1;continue
-        p=hits[0];matched_patterns[p["pat"]]+=1
-        if str(p.get("scope","")).startswith("ASSUMED") or p["n"]<500:
+        pattern_index,pattern=hits[0]
+        matched_patterns[pattern_index]+=1
+        if str(pattern.get("scope","")).startswith("ASSUMED") or pattern["n"]<500:
             assumed+=1
         else:
             observed+=1
     if observed+assumed+unmatched!=candidate_nodes:
-        return None,"NODE_PARTITION_MISMATCH"
+        return None,"SOURCE_SUBGAME_NODE_PARTITION_MISMATCH"
     if candidate_nodes==0:
-        return None,"NO_VILLAIN_DECISION_NODES"
-    # All lock patterns and empirical denominators are recovered from the exact
-    # pinned original pool_stats + original job's byte-equivalent lock list.
+        return None,"NO_REACHABLE_VILLAIN_SUBGAME_DECISION_NODES"
+    # Counts are reachable source-subgame decision-node occurrences; river
+    # boards remain distinct and street-specific marginal patterns stay separate.
     denom=[dict(pat=x["pat"],n=x["n"],source=x["source"],scope=x["scope"],
-        matched_source_nodes=matched_patterns.get(x["pat"],0)) for x in patterns]
+        street=x.get("street"),matched_source_nodes=matched_patterns.get(i,0))
+        for i,x in enumerate(patterns)]
     return dict(run_id=run,source_sha256=target,spot=spot,flop=flop,version=version,
         original_manifest_schema=m.get("schema"),original_trainer_head_sha=run_head_sha,original_turn=c.get("turn"),
         original_action_line=c.get("line") or c.get("flop_line"),
         original_subgame_sha256=found["sub_sha256"],original_root_sha256=found["root_sha256"],
         original_root_job_sha256=sha(found["job"]),poker_solver_pin=PIN,
-        lock_pattern_count=len(patterns),candidate_villain_decision_nodes=candidate_nodes,
+        lock_pattern_count=len(patterns),candidate_villain_decision_nodes=candidate_nodes,\n        count_scope="EXACT_SOURCE_SUBGAME_REACHABLE_VILLAIN_DECISION_NODE_OCCURRENCES",
         observed_marginal=observed,assumed_default=assumed,unmatched_unlocked=unmatched,
         observed_fraction_pct=round(100*observed/candidate_nodes,3),
         pattern_sample_denominators=denom,
         board_exact_action_line=board.get("exact_action_line"),
         board_actor_seat=board.get("actor_seat"),
         source_diagnostic_partitions=source_diagnostics,
-        recovery_method="REPLAY_PINNED_LOCKS_BUILD_AND_EXACT_ORIGINAL_ROOT_JOB",
+        recovery_method="REPLAY_PINNED_LOCKS_BUILD_AND_EXACT_ORIGINAL_ROOT_JOB_AND_SOURCE_SUBGAME",
         no_private_hand_conditional_NL2_rates_observed=True),None
 def main():
     status=read(STATUS);matrix=read(MATRIX)
