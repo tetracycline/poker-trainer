@@ -1,0 +1,125 @@
+name: TASK-HYBRID B369 rank27 source-blind three-flop promotion; V48 node-lock/medium/HU2475 audit (max8m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b369-r27-promote.yml'
+      - 'tools/hu_b369_rank27_source_blind_promote.py'
+      - 'tools/hu_cert_lock_medium_audit.py'
+      - 'data/nl2_hu_b365_rank27_two_new_true_source_proofs.json'
+      - 'data/nl2_hu_b367_rank27_two_new_true_source_proofs.json'
+      - 'nl2-multiboard.js'
+      - 'nl2_hu_multiboard_ui.js'
+      - 'nl2.html'
+      - 'nl2-multiboard.html'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  promote-audit-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Wait for both B365 and B367 original source proofs; never promote a partial pair
+        id: sources
+        run: |
+          set -euo pipefail
+          if [ ! -f data/nl2_hu_b365_rank27_two_new_true_source_proofs.json ] || \
+             [ ! -f data/nl2_hu_b367_rank27_two_new_true_source_proofs.json ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Waiting for both source-proof commits; no status change."
+            exit 0
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+      - name: Build rank27 V48 only from three distinct exact GTO plus real NL2 OOP paired flops
+        if: steps.sources.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b369_rank27_source_blind_promote.py
+          python3 tools/hu_b369_rank27_source_blind_promote.py
+      - name: Independent V48 source, node-lock, medium-size and schema audit
+        if: steps.sources.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py \
+            --source data/nl2_hu_multiboard_status_v48_b369_rank27.json \
+            --out nl2-audit/b369-V48-source.json
+          python3 - <<'PY'
+          import json,pathlib,re
+          s=json.load(open('data/nl2_hu_multiboard_status_v48_b369_rank27.json'))
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v48_b369.json'))
+          a=json.load(open('nl2-audit/b369-V48-source.json'))
+          p=json.load(open('data/nl2_hu_b369_rank27_three_new_true_original_GTO_NL2_OOP_source_gate.json'))
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(160,232,0,392)
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(160,232,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'])==(609,701)
+          assert m['source_unknown_variants_after']==0 and p['B368_remaining_UNKNOWN']==0
+          assert p['three_distinct_paired_flops'] and p['preflop_range_assumed_169_class_not_observed_NL2']
+          assert p['source_blind_expansion_preregistered'] and not p['original_top24_high_frequency_preregistered']
+          assert s['records']['ln-iso-lmp_r_model-1aov4pd']['label']=='CERT-MULTIBOARD'
+          assert s['records']['ln-iso-lmp_r_model-1aov4pd']['proven_exact_board_count']==3
+          assert len(s['records']['ln-iso-lmp_r_model-1aov4pd']['certified_3_to_5_exact_flop_boards'])==3
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          for name in ('nl2-multiboard.js','nl2_hu_multiboard_ui.js'):
+              x=pathlib.Path(name).read_text()
+              validated=set(re.findall(r"schema!=='([^']+)'",x))
+              q=re.search(r"if\\(!\\[(.*?)\\]\\.includes\\(d\\.schema\\)",x,re.S)
+              assert q,name
+              allowed=set(re.findall(r"'([^']+)'",q.group(1)))
+              assert not validated-allowed,(name,sorted(validated-allowed))
+              assert 'NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B369_RANK27' in allowed
+              assert 'data/nl2_hu_multiboard_status_v48_b369_rank27.json' in x
+          x=pathlib.Path('nl2-multiboard.js').read_text()
+          assert 'data/nl2_hu_cert_lock_medium_matrix_v48_b369.json' in x
+          assert 'nl2_hu_multiboard_ui.js?v=task-hybrid-b369-v48-20261122' in pathlib.Path('nl2.html').read_text()
+          assert 'nl2-multiboard.js?v=task-hybrid-b369-v48-20261122' in pathlib.Path('nl2-multiboard.html').read_text()
+          print('PASS V48: 160 CERT / 232 APPROX / 0 EST; 609 boards / 701 partial locks; UNKNOWN=0')
+          PY
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node --check nl2-exploit.js
+          git diff --check
+      - name: Full HU2475 river navigation, reach and model path audit
+        if: steps.sources.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          node tools/hu_line_contract.js > nl2-audit/b369-hu-contract.json
+          node tools/link_audit.js --md nl2-audit/b369-link-report.md --json nl2-audit/b369-link.json
+          node tools/reach_verify.js --log nl2-audit/b369-reach-report.md --json nl2-audit/b369-reach.json
+          node tools/hu_model_path_audit.js nl2-audit/b369-model-path.json
+          node -e 'const c=require("./nl2-audit/b369-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B369 HU2475/2475")'
+      - name: Commit and push V48 source promotion, node-lock matrix, medium evidence and full audit; never merge PR2
+        if: steps.sources.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v48_b369_rank27.json \
+            data/nl2_hu_cert_lock_medium_matrix_v48_b369.json \
+            data/nl2_hu_b369_rank27_three_new_true_original_GTO_NL2_OOP_source_gate.json \
+            data/nl2_hu_cert_lock_medium_audit_v48_b369.json \
+            tools/hu_b369_rank27_source_blind_promote.py \
+            tools/hu_cert_lock_medium_audit.py \
+            nl2-multiboard.js nl2_hu_multiboard_ui.js nl2.html nl2-multiboard.html \
+            .github/workflows/nl2-hu-hybrid-b369-r27-promote.yml \
+            docs/NL2_HU_B369_RANK27_THREE_TRUE_GTO_NL2_OOP_CERT.md \
+            nl2-audit/b369-*
+          git diff --cached --check
+          git diff --cached --quiet && exit 1
+          git commit -m 'TASK-HYBRID B369: promote preregistered rank27 after three exact original GTO and NL2 OOP flops; V48 node-lock/medium/HU2475 PASS'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
