@@ -104,7 +104,7 @@ def main():
     a.add_argument('--turn-count',type=int,default=1)
     a.add_argument('--flop-size-profile',choices=('full','lmp-50-only'),default='full',
         help='Only LMP: predeclared flop single 50pct menu; genuine restricted-game CFR, not unrestricted GTO')
-    a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','oop-b75only','oop-b75raisecall','oop-b33only','checked-b50only','checked-b100only','checkcheck'),default='all',
+    a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','oop-b75only','oop-b75raisecall','oop-b33only','checked-b50only','checked-b100only','checked-b50b100only','checkcheck'),default='all',
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
     a.add_argument('--turn-line-policy',choices=('default','b100only'),default='default',
         help='Extract only exact b100-call river continuations; never alter the full underlying solved tree')
@@ -138,6 +138,9 @@ def main():
     if args.turn_size_menu=='exact-b50-only':
         if args.spot!='LMP_CO_BB' or args.flop_line_policy!='oop-b33only' or args.flop_size_profile!='full':
             a.error('Exact b50 turn solve requires LMP_CO_BB b33-call with full flop menu')
+    if args.flop_line_policy=='checked-b50b100only':
+        if args.spot!='CO_BB' or args.flop_size_profile!='full' or args.turn_size_menu!='default':
+            a.error('Dual checked-b50/b100 original solve only for full-size CO_BB SRP with default turn menu')
     if args.flop_size_profile=='lmp-50-only':
         if args.spot!='LMP_CO_BB' or args.flop_line_policy!='oop-b50only':
             a.error('Restricted flop 50pct policy requires LMP_CO_BB with exact b50 c line')
@@ -224,6 +227,7 @@ def main():
            else ['b75 c'] if args.flop_line_policy=='oop-b75only'
            else ['b75 r c'] if args.flop_line_policy=='oop-b75raisecall'
            else ['b33 c'] if args.flop_line_policy=='oop-b33only'
+           else ['x b50 c','x b100 c'] if args.flop_line_policy=='checked-b50b100only'
            else ['x b50 c'] if args.flop_line_policy=='checked-b50only'
            else ['x b100 c'] if args.flop_line_policy=='checked-b100only'
             else ['x x'] if args.flop_line_policy=='checkcheck'
