@@ -1,0 +1,102 @@
+name: NL2 B388 rank107 QsJh4d true Rust NL2 IP locked paired original GTO (<=29m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b388-r107-true-ip-qsj.yml'
+      - 'tools/hu_b388_rank107_qsjh4d_pair.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Actually solve 100bb BTN IP NL2 partial-lock original Rust flop-turn-river, no GTO reuse claim
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+          cd ../../..
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver --spot BTN_BB --flop QsJh4d --version exp_ip \
+            --flop-size-profile full --flop-line-policy oop-b33only --turn-count 1 \
+            --manifest evidence/BTN_BB-QsJh4d-exp_ip.json
+      - name: Preserve original solver GTO/EXP proof and job even on negative/timeout
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B388_R107-BTN_BB-QsJh4d-exp_ip
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Independently authenticate frozen original B387 GTO plus new Rust EXP_IP partial lock, 40-70 full-street
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b388-gto /tmp/b388-exp
+          gh run download 45023132316 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B387_R107_GTO_FIRST-BTN_BB-QsJh4d-gto --dir /tmp/b388-gto
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B388_R107-BTN_BB-QsJh4d-exp_ip --dir /tmp/b388-exp || true
+          python3 -m py_compile tools/hu_b388_rank107_qsjh4d_pair.py tools/hu_sequential_cfr_reach.py
+          python3 tools/hu_b388_rank107_qsjh4d_pair.py --original-gto /tmp/b388-gto --new-exp /tmp/b388-exp --run-id "$GITHUB_RUN_ID"
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b388-source-audit.json
+      - name: Full 2475/2475 HU paths, source gate, node-lock and JS integrity
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b388-contract.json
+          node tools/link_audit.js --md /tmp/b388-link.md --json /tmp/b388-link.json
+          node tools/reach_verify.js --log /tmp/b388-reach.md --json /tmp/b388-reach.json
+          node tools/hu_model_path_audit.js /tmp/b388-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b388-source-audit.json'))
+          x=json.load(open('data/nl2_hu_b388_rank107_qsjh4d_real_gto_nl2_ip_pair.json'))
+          l=json.load(open('/tmp/b388-link.json'))['counts']
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert (l['continuing'],l['reachRiver'],l['riverShare'])==(2475,2475,100)
+          assert x['no_promote_before_independent_three_flop_source_gate']
+          assert x['source_run_B387_GTO']==45023132316
+          print('PASS B388 actual source board pairs, HU2475/2475, no fake CERT')
+          PY
+          git diff --check
+      - name: Commit and push B388 real source proof to draft PR2, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b388_rank107_qsjh4d_real_gto_nl2_ip_pair.json docs/NL2_HU_B388_RANK107_QSJH4D_TRUE_NL2_PAIR.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'B388: SHA-authentic rank107 QsJh4d original GTO plus real NL2 IP full-tree partial lock, strict 40-70; no early CERT'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
