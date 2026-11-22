@@ -1,0 +1,137 @@
+name: TASK-HYBRID B368 recover 334 historical UNKNOWN NL2 node-lock denominators from exact pinned original artifacts; preserve V47 159/233 and HU2475 (max25m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b368-recover-historical-lock-denominators.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  recover-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Download only the historical source runs referenced by the 334 UNKNOWN denominator lock variants
+        working-directory: trainer
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v47_b364.json'))
+          ids=sorted({int(l['source_run_id']) for b in m['boards'] for l in b['hero_lock_proofs']
+            if all(l['source_node_counts'][k] is None for k in ('observed_marginal','assumed_default','unmatched_unlocked'))})
+          assert len(ids)==22,ids
+          pathlib.Path('/tmp/b368-run-ids.txt').write_text('\n'.join(map(str,ids))+'\n')
+          print('B368 exact original source runs:',len(ids))
+          PY
+          mkdir -p downloads
+          while read -r id; do
+            mkdir -p "downloads/$id"
+            if gh run download "$id" --repo "$GITHUB_REPOSITORY" --dir "downloads/$id"; then
+              echo "DOWNLOADED $id"
+            else
+              echo "UNAVAILABLE_OR_EXPIRED $id"
+            fi
+          done < /tmp/b368-run-ids.txt
+      - name: Reconstruct denominators only when raw subgame SHA, original full flop root SHA, pinned pool solver and exact original lock list all match; calibrate against known stored counts
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          python3 -m py_compile tools/hu_b368_recover_unknown_lock_denominators.py \
+            tools/hu_cert_lock_medium_audit.py tools/hu_cert_lock_medium_coverage_matrix.py
+          python3 tools/hu_b368_recover_unknown_lock_denominators.py
+          python3 - <<'PY'
+          import json,pathlib
+          s=json.load(open('data/nl2_hu_multiboard_status_v47_b364_rank96.json'))
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v47_b364.json'))
+          r=json.load(open('data/nl2_hu_b368_lock_denominator_recovery.json'))
+          q=s['B368_lock_denominator_recovery']
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(159,233,0,392)
+          assert q['source_unknown_variants']==334 and q['recovered_lock_variants']>0
+          assert q['remaining_unknown_variants']+q['recovered_lock_variants']==334
+          assert m['strict_aggregate']['hero_lock_variants']==698
+          assert m['strict_aggregate']['named_board_proofs']==606
+          assert m['strict_aggregate']['b50_research_candidate_boards']==135
+          assert r['no_private_hand_conditional_NL2_frequencies']
+          print('B368 recovery:',q['recovered_lock_variants'],'of 334; still UNKNOWN:',q['remaining_unknown_variants'])
+          PY
+      - name: Independent V47 source audit after recovered denominators and static frontend JavaScript checks
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out nl2-audit/b368-V47-source.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b368-V47-source.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'])==(606,698)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node --check nl2-exploit.js
+          git diff --check
+      - name: Full HU2475 river navigation/reach and model path audit
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B368 HU2475/2475")'
+      - name: Bust frontend cache to B368 and commit recovered source denominators, matrix, provenance and audit only after all gates PASS; never merge PR2
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          for name,old,new in [
+            ('nl2.html','nl2_hu_multiboard_ui.js?v=task-hybrid-b364-v47-20261122','nl2_hu_multiboard_ui.js?v=task-hybrid-b368-v47-20261122'),
+            ('nl2-multiboard.html','nl2-multiboard.js?v=task-hybrid-b364-v47-20261122','nl2-multiboard.js?v=task-hybrid-b368-v47-20261122')]:
+            p=Path(name);s=p.read_text()
+            assert old in s,name
+            p.write_text(s.replace(old,new))
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v47_b364_rank96.json \
+            data/nl2_hu_cert_lock_medium_matrix_v47_b364.json \
+            data/nl2_hu_b364_v47_rank96_three_new_full_100bb_GTO_NL2_OOP_source_gate.json \
+            data/nl2_hu_b368_lock_denominator_recovery.json \
+            data/nl2_hu_b368_lock_denominator_recovery.csv \
+            docs/NL2_HU_B368_LOCK_DENOMINATOR_RECOVERY.md \
+            nl2.html nl2-multiboard.html
+          git diff --cached --quiet && exit 1
+          git commit -m 'TASK-HYBRID B368: recover historical NL2 node-lock denominators only from exact pinned raw source and original lock list; V47 159/233 HU2475 audit PASS'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-B368-historical-lock-denominator-recovery-V47-HU2475
+          path: |
+            trainer/data/nl2_hu_b368_lock_denominator_recovery.json
+            trainer/data/nl2_hu_b368_lock_denominator_recovery.csv
+            trainer/data/nl2_hu_cert_lock_medium_matrix_v47_b364.json
+            trainer/data/nl2_hu_multiboard_status_v47_b364_rank96.json
+            trainer/docs/NL2_HU_B368_LOCK_DENOMINATOR_RECOVERY.md
+            trainer/nl2-audit/
+          retention-days: 30
