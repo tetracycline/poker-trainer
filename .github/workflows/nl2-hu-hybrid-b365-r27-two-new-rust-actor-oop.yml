@@ -47,7 +47,7 @@ jobs:
           python3 trainer/tools/solve_hu_multiboard_100bb.py \
             --solver-root solver --spot "${{ matrix.spot }}" --flop "${{ matrix.flop }}" \
             --version "${{ matrix.version }}" --flop-size-profile full \
-            --flop-line-policy oop-b33only --turn-count 1 \
+            --flop-line-policy oop-b33only --turn-count 1 --turn-size-menu exact-b50-only \
             --manifest "evidence/${{ matrix.spot }}-${{ matrix.flop }}-${{ matrix.version }}.json"
           solve_code=$?
           set -e
@@ -104,6 +104,7 @@ jobs:
               assert (m['spot'],m['flop'],m['version'])==('LMP_CO_BB',flop,version)
               assert m['preflop_ranges']['source']=='ASSUMED_EXPLICIT_169CLASS'
               assert m['flop_size_profile']=='full' and not m['restricted_tree_assumption']
+              assert m['turn_subgame_sizing']['oop']=='50%' and m['turn_subgame_sizing']['ip']=='50%'
               assert not m['failures']
               source=dict(flop=flop,version=version,manifest_sha256=hashlib.sha256(manifest.read_bytes()).hexdigest(),
                  solved_cases=m['solved_cases'],skipped=m.get('skipped',[]),failures=m['failures'])
@@ -174,6 +175,7 @@ jobs:
               assert sub.is_file() and sha(sub)==case['source_sha256']
               child=json.loads(sub.read_text())
               assert (child['line0'],child['turn'])==('b33 c',turn)
+              assert child['turn_subgame_sizing']['oop']=='50%' and child['turn_subgame_sizing']['ip']=='50%'
               assert child['info']['gto_expl_pct']<=.5
               if version=='exp_oop':assert child['info']['hero_gap_pct']<=.5
               overlay,reach=game_reach(fr,child)

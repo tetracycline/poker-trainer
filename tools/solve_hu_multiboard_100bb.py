@@ -108,7 +108,7 @@ def main():
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
     a.add_argument('--turn-line-policy',choices=('default','b100only'),default='default',
         help='Extract only exact b100-call river continuations; never alter the full underlying solved tree')
-    a.add_argument('--turn-size-menu',choices=('default','river-gaps','exact-b66-only'),default='default',
+    a.add_argument('--turn-size-menu',choices=('default','river-gaps','exact-b66-only','exact-b50-only'),default='default',
         help='river-gaps: predeclared 33/66/75pct turn size tree for x x / turn bet-call river MODEL proofs')
     a.add_argument('--manifest',required=True,type=pathlib.Path)
     args=a.parse_args()
@@ -116,6 +116,9 @@ def main():
     if args.turn_size_menu=='exact-b66-only':
         if args.spot!='SB_BB' or args.version!='gto' or args.flop_line_policy!='checkcheck' or args.flop_size_profile!='full':
             a.error('Exact b66 GTO solve requires SB_BB x-x with full flop menu')
+    if args.turn_size_menu=='exact-b50-only':
+        if args.spot!='LMP_CO_BB' or args.flop_line_policy!='oop-b33only' or args.flop_size_profile!='full':
+            a.error('Exact b50 turn solve requires LMP_CO_BB b33-call with full flop menu')
     if args.flop_size_profile=='lmp-50-only':
         if args.spot!='LMP_CO_BB' or args.flop_line_policy!='oop-b50only':
             a.error('Restricted flop 50pct policy requires LMP_CO_BB with exact b50 c line')
@@ -187,6 +190,11 @@ def main():
         # tree_config.merging_threshold=0.1. Remove 75; do not relabel.
         pipeline.SUB.update(turn_oop='66%',turn_ip='66%')
         pipeline.TURN_LINES=['b66 c']
+    elif args.turn_size_menu=='exact-b50-only':
+        # Exact target branch for rank27 b33-call / b50-turn-call.
+        # Keep the 50% action explicit; never relabel default 66% as b50.
+        pipeline.SUB.update(turn_oop='50%',turn_ip='50%')
+        pipeline.TURN_LINES=['b50 c']
     if args.turn_line_policy=='b100only':
         if args.turn_size_menu!='default':
             a.error('b100only requires default turn size menu (50/100)')
