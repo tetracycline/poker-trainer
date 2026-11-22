@@ -1,0 +1,107 @@
+name: NL2 B393 five CO_BB APPROX GTO-first three original full100bb flops, HU2475 <=29m
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b393-cobb-five-gto-first.yml'
+      - 'tools/hu_b393_cobb_five_three_gto_first.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    strategy:
+      max-parallel: 3
+      fail-fast: false
+      matrix:
+        flop: [As9h2d, KsQh4d, Js9h5d]
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: True pinned original Rust full-100bb GTO, both CO IP x-b50 and x-b100 histories, no fabricated source
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+          cd ../../..
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver --spot CO_BB --flop "${{ matrix.flop }}" --version gto \
+            --flop-size-profile full --flop-line-policy checked-b50b100only --turn-count 1 \
+            --manifest "evidence/CO_BB-${{ matrix.flop }}-gto.json"
+      - name: Preserve every original Rust GTO source, root job, turn job, zero combos and error manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B393_COBB_FIVE_GTO_FIRST-CO_BB-${{ matrix.flop }}-gto
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Independently verify 3 original SHA, correct CO-IP actor, exact both bet sizes and full street 40-70
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b393-original
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir /tmp/b393-original
+          python3 -m py_compile tools/hu_b393_cobb_five_three_gto_first.py
+          python3 tools/hu_b393_cobb_five_three_gto_first.py --downloads /tmp/b393-original --run-id "$GITHUB_RUN_ID"
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b393-cert-source.json
+      - name: Full HU2475 river reach paths, five MODEL action lines, frontend and source gate
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b393-contract.json
+          node tools/link_audit.js --md /tmp/b393-link.md --json /tmp/b393-link.json
+          node tools/reach_verify.js --log /tmp/b393-reach.md --json /tmp/b393-reach.json
+          node tools/hu_model_path_audit.js /tmp/b393-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b393-cert-source.json'))
+          p=json.load(open('data/nl2_hu_b393_five_cobb_gto_first_three_flops.json'))
+          c=json.load(open('/tmp/b393-link.json'))['counts']
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert len(p['real_original_GTO_only_solve_sources'])==3
+          assert len(p['models'])==5
+          assert (c['continuing'],c['reachRiver'],c['riverShare'])==(2475,2475,100)
+          assert p['only_GTO_positive_flops_eligible_for_future_real_NL2_IP_partial_lock']
+          print('PASS B393 original five GTO-only model source screening, 159/233, HU2475')
+          PY
+          git diff --check
+      - name: Commit and push actual original GTO source or negative proof, never fake CERT or merge PR2
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b393_five_cobb_gto_first_three_flops.json docs/NL2_HU_B393_FIVE_COBB_GTO_FIRST_SOURCES.md
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B393: true original GTO-first three CO_BB flops for five APPROX, source SHA/40-70, HU2475'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
