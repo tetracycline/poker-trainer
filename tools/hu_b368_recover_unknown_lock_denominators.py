@@ -103,6 +103,64 @@ def expected_locks(spot,version,flop,ctx,helper):
     # Original solve_hu_multiboard_100bb.py wrapped pipeline.lock_list for
     # every spot, not only assumed-pots spots.
     return helper.make_fallbacks(spot,version,pool,pipeline.lock_list,flop)
+def diagnostic_partitions(board,case,root,sub,patterns):
+    # Report multiple candidate source-node scopes without changing any counts.
+    # This is diagnostic only; recovery remains blocked until one method
+    # reproduces the historical known counts exactly.
+    flop_line=(case.get("line") or case.get("flop_line") or "").strip().rstrip("/")
+    target=(board.get("exact_action_line") or "").strip().rstrip("/")
+    def reachable(n,actor):
+        if n.get("player")!=actor or len(n.get("acts",[]))<2:return False
+        w=n.get("w")
+        return isinstance(w,list) and len(w)>actor and any(float(v)>1e-4 for v in w[actor])
+    def uniq(nodes,actor,prefix=None):
+        out={}
+        for n in nodes:
+            if not reachable(n,actor):continue
+            line=n.get("line","")
+            if prefix is not None and not (line==prefix or line.startswith(prefix+" ") or line.startswith(prefix+"/")):continue
+            out[line]=n
+        return out
+    toks=flop_line.split()
+    prefixes=[""]+[" ".join(toks[:i]) for i in range(1,len(toks)+1)]
+    root_nodes=root.get("nodes",[])
+    sub_nodes=sub.get("nodes",[])
+    reports=[]
+    for actor in (0,1):
+        ancestors={}
+        for n in root_nodes:
+            if reachable(n,actor) and n.get("line","").rstrip("/") in prefixes:
+                ancestors[n.get("line","")]=n
+            if reachable(n,actor) and n.get("line","")==flop_line+"/":
+                ancestors[n.get("line","")]=n
+        all_sub=uniq(sub_nodes,actor)
+        target_sub=uniq(sub_nodes,actor,target) if target else all_sub
+        for mode,selected in (("ROOT_ANCESTORS_PLUS_ALL_SUBGAME",all_sub),
+                              ("ROOT_ANCESTORS_PLUS_EXACT_ACTION_SUBTREE",target_sub)):
+            nodes=dict(ancestors);nodes.update(selected)
+            observed=set();assumed=set();unmatched=set()
+            for line in nodes:
+                street=line.count("/")+1
+                hits=[]
+                for x in patterns:
+                    if x.get("street") is not None and int(x["street"])!=street:continue
+                    if re.search(x["pat"],line):hits.append(x)
+                if not hits:
+                    unmatched.add(line);continue
+                empirical=[x for x in hits if not str(x.get("scope","")).startswith("ASSUMED") and int(x.get("n") or 0)>=500]
+                if empirical:
+                    observed.add(line)
+                else:
+                    x=hits[0]
+                    assumed.add((x["pat"],x.get("scope",""),x.get("source","")))
+            reports.append(dict(actor_index=actor,mode=mode,flop_line=flop_line,
+                exact_action_line=target,root_ancestor_lines=sorted(ancestors),
+                subgame_unique_actor_lines=len(selected),total_unique_lines=len(nodes),
+                observed_unique_lines=len(observed),assumed_unique_patterns=len(assumed),
+                unmatched_unique_lines=len(unmatched),
+                unmatched_examples=sorted(unmatched)[:12]))
+    return reports
+
 def recover_one(board,lock,ctx,run_dir,helper,run_head_sha):
     spot,flop=board["spot"],board["flop"]
     version=lock["version"];run=int(lock["source_run_id"]);target=lock["source_sha256"]
@@ -124,6 +182,7 @@ def recover_one(board,lock,ctx,run_dir,helper,run_head_sha):
             size=x.get("size"),street=x.get("street")))
     if len(patterns)!=len(job["locks"]):
         return None,"PATTERN_METADATA_COUNT_MISMATCH"
+    source_diagnostics=diagnostic_partitions(board,c,root,read(found["sub"]),patterns)
     villain=1 if version=="exp_oop" else 0
     observed=assumed=unmatched=0
     candidate_nodes=0
@@ -159,6 +218,9 @@ def recover_one(board,lock,ctx,run_dir,helper,run_head_sha):
         observed_marginal=observed,assumed_default=assumed,unmatched_unlocked=unmatched,
         observed_fraction_pct=round(100*observed/candidate_nodes,3),
         pattern_sample_denominators=denom,
+        board_exact_action_line=board.get("exact_action_line"),
+        board_actor_seat=board.get("actor_seat"),
+        source_diagnostic_partitions=source_diagnostics,
         recovery_method="REPLAY_PINNED_LOCKS_BUILD_AND_EXACT_ORIGINAL_ROOT_JOB",
         no_private_hand_conditional_NL2_rates_observed=True),None
 def main():
@@ -214,7 +276,11 @@ def main():
                     spot=x["spot"],version=x["version"],counts=actual))
             else:
                 known_mismatches.append(dict(run_id=x["run_id"],head_sha=run_heads[run_id],sha=x["source_sha256"],
-                    spot=x["spot"],version=x["version"],actual=actual,expected=expected))
+                    spot=x["spot"],flop=x["flop"],version=x["version"],
+                    board_exact_action_line=x.get("board_exact_action_line"),
+                    board_actor_seat=x.get("board_actor_seat"),
+                    manifest_line=x.get("original_action_line"),actual=actual,expected=expected,
+                    source_diagnostic_partitions=x.get("source_diagnostic_partitions")))
             if len(known_checks)>=3 and len({z["spot"] for z in known_checks})>=2 and len({(z["run_id"],z["sha"]) for z in known_checks})>=3:break
         if len(known_checks)>=3 and len({z["spot"] for z in known_checks})>=2 and len({(z["run_id"],z["sha"]) for z in known_checks})>=3:break
     if len(known_checks)<3 or len({z["spot"] for z in known_checks})<2 or len({(z["run_id"],z["sha"]) for z in known_checks})<3:
