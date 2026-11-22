@@ -1,0 +1,3 @@
+# B345 V45 genuine restricted LMP50 three-flop rank71 certificate
+
+Exact public boards: 4s4h2d/8s, 7s5h3d/6c, 3s3h2d/7d. Only these named boards have true 100bb LMP-50-only original GTO plus actor-correct real NL2 Rust partially locked source with source SHA and >=40%/70% prior actions, SPR9.916 +-5%, two textures. Explicit assumed 169-class preflop, pooled street-size NL2 marginal rates NOT measured per-private-card conditional villain data, no unrestricted/full-tree generic GTO. V45 157 CERT /235 APPROX /0 EST, 600 authenticated named board proofs, 692 genuine actor partial locks. Full HU 2475/2475 independent audit required before push; PR2 Draft NEVER MERGE.
