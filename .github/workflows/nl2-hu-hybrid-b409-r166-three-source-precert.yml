@@ -1,0 +1,91 @@
+name: NL2 B409 rank166 authentic 3 original GTO+NL2 CO-IP source pre-cert, HU2475 (max9m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b409-r166-three-source-precert.yml'
+      - 'tools/hu_b409_rank166_three_true_source_pre_cert.py'
+      - 'data/nl2_hu_b407_r166_two_real_nl2_ip_original_pairs.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  source-pre-cert-verify-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Compile and fail closed until two actual B407 authentic GTO/NL2 IP paired source flops exist
+        id: ready
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b409_rank166_three_true_source_pre_cert.py
+          if [ ! -s data/nl2_hu_b407_r166_two_real_nl2_ip_original_pairs.json ]; then
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo 'No genuine B407 proof yet, no false rank166 CERT'
+            exit 0
+          fi
+          python3 - <<'PY'
+          import json,os
+          p=json.load(open('data/nl2_hu_b407_r166_two_real_nl2_ip_original_pairs.json'))
+          flops=p.get('new_distinct_qualifying_flops_by_rank',{}).get('166',[])
+          rows=p.get('positive_40_70_named_river_pairs_by_rank',{}).get('166',[])
+          good=p.get('schema')=='NL2_B407_RANK166_TWO_NEW_ACTUAL_RUST_GTO_NL2_IP_PAIRS_V1'
+          good=good and p.get('original_GTO_run')==45028060598 and p.get('new_NL2_IP_run')==45029267778
+          good=good and set(flops)=={'KcJh7d','QhTc5d'}
+          good=good and all(q['GTO_strict_40_70_combos']>0 and q['actual_NL2_IP_strict_40_70_combos']>0
+              and q['actor']=='CO_IP' and q['exact_history']=='x b100 c/x x/x'
+              for q in rows)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('ready='+('true' if good else 'false')+'\n')
+          print('B409 genuine CO-IP rank166 full source ready:',good,'new flops',flops,'pairs',len(rows))
+          PY
+      - name: Independent historical+two new Rust actual fullstreet SHA and actor-IP 40-70 source prereg
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b409_rank166_three_true_source_pre_cert.py
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v49_b405_rank214_219.json --out /tmp/b409-source-audit.json
+          python3 - <<'PY'
+          import json
+          p=json.load(open('data/nl2_hu_b409_rank166_three_true_source_flops_pre_cert.json'))\n          assert p['source_blind_first10_preregistered'] and len(p['original_paired_source_pins'])==3\n          print('PASS B409 source-only prereg 3 exact flops')
+          PY
+      - name: Independently check source proof and full HU2475 river/action/JS model lines
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          p=json.load(open('data/nl2_hu_b409_rank166_three_true_source_flops_pre_cert.json'))
+          a=json.load(open('/tmp/b409-source-audit.json'))
+          assert p['source_blind_first10_preregistered']
+          assert p['no_premature_Cert_upgrade']
+          assert len(p['original_paired_source_pins'])==3
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(162,230,0)
+          assert all(x['genuine_GTO_strict_40_70_combos']>0 and x['actual_NL2_IP_strict_40_70_combos']>0
+                 for x in p['original_paired_source_pins'])
+          print('PASS B409 rank166 three source pins, no early CERT')
+          PY
+          node tools/hu_line_contract.js > /tmp/b409-contract.json
+          node tools/link_audit.js --md /tmp/b409-link.md --json /tmp/b409-link.json
+          node tools/reach_verify.js --log /tmp/b409-reach.md --json /tmp/b409-reach.json
+          node tools/hu_model_path_audit.js /tmp/b409-model.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b409-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B409 HU2475/2475")'
+          git diff --check
+      - name: Commit and push only true B409 rank166 three-flop pre-cert evidence, PR2 never merge
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b409_rank166_three_true_source_flops_pre_cert.json docs/NL2_HU_B409_R166_THREE_TRUE_SOURCE_PRECERT.md
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B409: independent rank166 original 100bb three actual GTO+NL2 IP source flops, 40-70, HU2475'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
