@@ -105,7 +105,35 @@ function schedule(){if(!pending){pending=true;queueMicrotask(render)}}
 new MutationObserver(schedule).observe(app,{childList:true,subtree:true});
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
- const v44=d=>{
+ const v45=d=>{
+ const q=d.B345_rank71_true_3_flop_GTO_NL2_OOP_evidence;
+ const b=d.records?.['ln-iso-lmp_r_model-vlgh2t'];
+ if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V45_B345_RANK71'||
+    d.CERT_MULTIBOARD!==157||d.APPROX!==235||d.EST!==0||d.TOTAL!==392||
+    d.parent_v44_sha256?.length!==64||
+    q?.third_flop!=='3s3h2d'||q?.third_turn!=='7d'||
+    q?.flops?.join(',')!=='4s4h2d,7s5h3d,3s3h2d'||
+    q?.textures?.length<2||!['PAIRED','LOW'].every(t=>q.textures.includes(t))||
+    q?.source_tree!=='RESTRICTED_LMP_50_ONLY_100BB_ASSUMED_PREFLOP'||
+    q?.never_claim_unrestricted_game_or_private_hand_NL2_observation!==true||
+    q?.original_archive_provenance?.length!==3||
+    q.original_archive_provenance.some(p=>
+       p.original_GTO_run<=0||p.original_gto_case_sha256?.length!==64||
+       p.real_NL2_actor_partial_case_sha256?.length!==64||
+       p.index_sha256?.length!==64||p.archive_sha256?.length!==64)||
+    b?.label!=='CERT-MULTIBOARD'||b?.proven_exact_board_count!==3||
+    b.certified_3_to_5_exact_flop_boards?.length!==3||
+    b.certified_3_to_5_exact_flop_boards.some(p=>
+       p.acting_seat!==0||p.actual_exact_action_line!=='b50 c/x b50 c/'||
+       p.relative_spr_error_pct>5||p.strict_full_street_combo_reachable<=0||
+       p.nl2_locked_variants?.[0]?.version!=='exp_oop')||
+    d.records?.['ln-ipfr-t_model-hxdit']?.label!=='CERT-MULTIBOARD'||
+    d.no_generic_texture_GTO!==true||d.no_observed_private_card_NL2_rates!==true||
+    d.PR2_remains_draft_never_merge!==true||Object.keys(d.records||{}).length!==392)
+      throw Error('V45 rank71 3 genuine 100bb original restricted LMP50 GTO and real NL2 actor BB OOP SHA source failclosed');
+ return d;
+};
+const v44=d=>{
  const q=d.B331_rank60_four_true_GTO_NL2_actor_lock_boards;
  const f=q?.fourth_original_GTO_and_NL2_source;
  if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V44_B331_RANK60_FOUR'||
@@ -786,7 +814,8 @@ const v42=d=>{
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json',{cache:'no-store'}).then(open).then(v44)
+ return fetch('data/nl2_hu_multiboard_status_v45_b345_rank71.json',{cache:'no-store'}).then(open).then(v45)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json',{cache:'no-store'}).then(open).then(v44))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v43_b319_rank60.json',{cache:'no-store'}).then(open).then(v43))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v42_b289_rank46.json',{cache:'no-store'}).then(open).then(v42))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v41_b271_rank61.json',{cache:'no-store'}).then(open).then(v41))
