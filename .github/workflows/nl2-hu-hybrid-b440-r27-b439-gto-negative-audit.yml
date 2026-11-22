@@ -84,7 +84,7 @@ jobs:
               CERT_MULTIBOARD=163,APPROX=229,EST=0,counts_unchanged=True,
               PR2_remains_draft_never_merge=True)
           out=pathlib.Path('data/nl2_hu_b440_r27_b439_gto_only_strict_zero_reach.json')
-          out.write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\\n')
+          out.write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n')
           archive=dict(schema='NL2_B440_AUTHENTIC_B439_GTO_ONLY_RAW_SOURCE_V1',
               manifest=m,root_flop=fr,turn_subgame=sub,
               poker_solver_commit=solver_pin,rust_postflop_commit=rust_pin)
@@ -93,15 +93,15 @@ jobs:
           ap.parent.mkdir(parents=True,exist_ok=True)
           ap.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
           payload['raw_source_archive_sha256']=sha(ap)
-          out.write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\\n')
+          out.write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n')
           pathlib.Path('docs/NL2_HU_B440_R27_B439_GTO_ONLY_STRICT_ZERO_REACH.md').write_text(
-              '# B440 rank27 B439 GTO-only source: strict-zero reach negative\\n\\n'
+              '# B440 rank27 B439 GTO-only source: strict-zero reach negative\n\n'
               'Recovered the already completed B439 original 100bb Rust GTO source for As9h2d/Kd; '
               'no GTO solve was repeated. The exact BB-OOP river nodes on b50-call / b33-call have '
               '**0 strict full-street reachable combos each** under the frozen max-action / 40%-and-70% policy. '
               'B439 EXP_OOP was cancelled and has no authentic NL2 partial-lock artifact. '
               'Rank27 is outside the preregistered top-24 high-frequency cutoff. '
-              '**No CERT promotion; 163 CERT / 229 APPROX / 0 EST unchanged.**\\n')
+              '**No CERT promotion; 163 CERT / 229 APPROX / 0 EST unchanged.**\n')
           print('B440 PASS source SHA + strict reach negative; targets',targets,'stats',dict(stats))
           PY
       - name: Re-audit all 163 CERT boards, 618 exact boards, 710 NL2 lock variants, and V50 counts
