@@ -41,7 +41,7 @@ def main():
             strict_CO_IP_actor_40_70_legal_combos=nodes[0]['strictly_reachable_combos'],
             exact_spr=nodes[0]['node_spr'],source_GTO_gap_pct=c['gto_exploitability_pct'],
             source_pattern_lock_scope=c['villain_lock_scope'] if v=='exp_ip' else None,
-            100bb_full_size_original_preflop_CFR=True)
+            full_100bb_original_preflop_CFR=True)
     assert cases['gto']['actual_turn_public_board']==cases['exp_ip']['actual_turn_public_board']
     assert abs(cases['gto']['exact_spr']-cases['exp_ip']['exact_spr'])<.01
     v45=D/'nl2_hu_multiboard_status_v45_b345_rank71.json'
