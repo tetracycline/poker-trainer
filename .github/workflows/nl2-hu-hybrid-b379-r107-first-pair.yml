@@ -1,0 +1,62 @@
+name: NL2 B379 rank107 first full-street true GTO+NL2 IP 7s5h3d pair, SHA and HU2475
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b379-r107-first-pair.yml'
+      - 'tools/hu_b379_rank107_first_true_pair.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  authenticated-source-gate-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Retrieve only two actually completed original B374 Rust artifacts; no re-solve
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b379-sources
+          gh run download 45017142943 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B374_R107-BTN_BB-7s5h3d-gto' --dir /tmp/b379-sources/nl2-multiboard-B374_R107-BTN_BB-7s5h3d-gto
+          gh run download 45017142943 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B374_R107-BTN_BB-7s5h3d-exp_ip' --dir /tmp/b379-sources/nl2-multiboard-B374_R107-BTN_BB-7s5h3d-exp_ip
+          python3 -m py_compile tools/hu_b379_rank107_first_true_pair.py tools/hu_sequential_cfr_reach.py
+          python3 tools/hu_b379_rank107_first_true_pair.py /tmp/b379-sources
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b379-cert-source.json
+      - name: Full HU2475 original path/reach contract, frontend schema and true pair integrity
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b379-contract.json
+          node tools/link_audit.js --md /tmp/b379-link.md --json /tmp/b379-link.json
+          node tools/reach_verify.js --log /tmp/b379-reach.md --json /tmp/b379-reach.json
+          node tools/hu_model_path_audit.js /tmp/b379-model-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b379-cert-source.json'))
+          q=json.load(open('data/nl2_hu_b379_rank107_7s5h3d_6c_true_gto_nl2_ip_strict_pair.json'))
+          c=json.load(open('/tmp/b379-link.json'))['counts']
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert (c['continuing'],c['reachRiver'],c['riverShare'])==(2475,2475,100)
+          assert len(q['two_named_exact_river_board_pair_proofs'])==2
+          assert q['one_distinct_flop_not_three']
+          print('PASS B379 44/28 and 42/32 strict combo original true pairs, HU2475, no false CERT')
+          PY
+          git diff --check
+      - name: Commit and push independent true GTO+NL2 IP source proof; never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b379_rank107_7s5h3d_6c_true_gto_nl2_ip_strict_pair.json docs/NL2_HU_B379_RANK107_FIRST_TRUE_PAIR.md
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B379: verify SHA-pinned rank107 7s5h3d GTO+NL2 actor-IP strict 44/28,42/32; no early CERT'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
