@@ -53,13 +53,23 @@ def main():
    if ver=='exp_oop':assert child['info']['hero_gap_pct']<=.5
    overlay,stats=game_reach(fr,child)
    # OOP is hero on river after OOP flop33 bet/called and OOP turn50 bet/called.
+   case_turn=c['turn']
+   verified=[c for art in archive['artifacts'] if
+       (art['spot'],art['flop'],art['version'])==(SPOT,flop,ver)
+       for c in art['cases'] if (c['flop_line'],c['turn'])==('b33 c',case_turn)]
+   assert len(verified)==1
+   vc=verified[0]
+   assert vc['source_sha256']==sha(sub)
    rawnodes=[n for n in child['nodes'] if n['player']==0 and
      n['line']==LINE and len(n['board'])==10]
    legal={}
    for n in rawnodes:
     q=overlay.get('|'.join((n['board'],n['line'],'0')))
     assert q is not None
-    spr=(fr['stack']-max(n['bets']))/n['pot']
+    vn=[x for x in vc['nodes'] if
+       (x['exact_node_line'],x['public_board'],x['acting_seat'])==(LINE,n['board'],0)]
+    assert len(vn)==1 and vn[0]['strictly_reachable_combos']==q['count']
+    spr=vn[0]['node_spr']
     if abs(spr-SPR)/SPR<=.05 and q['count']>0:
      legal[n['board']]=dict(count=q['count'],SPR=spr,actions=n['acts'])
    pairs[ver]=dict(original_gto_or_independent_nl2=ver,
