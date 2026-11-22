@@ -1,0 +1,101 @@
+name: NL2 B384 rank200 two new true 100bb LMP GTO+NL2 IP partial flop solves <=29min
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b384-r200-two-new.yml','tools/hu_b384_rank200_source_gate.py']
+  workflow_dispatch:
+permissions: {contents: write, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    strategy:
+      max-parallel: 4
+      fail-fast: false
+      matrix:
+        include:
+          - {flop: 7s5h3d, version: gto}
+          - {flop: 7s5h3d, version: exp_ip}
+          - {flop: 9s6h3d, version: gto}
+          - {flop: 9s6h3d, version: exp_ip}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: True original full 100bb flop Rust GTO or NL2 partial actor-IP lock; exact frozen checked-b50 line
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+          cd ../../..
+          python3 trainer/tools/solve_hu_multiboard_100bb.py --solver-root solver --spot LMP_CO_BB --flop "${{ matrix.flop }}" --version "${{ matrix.version }}" --flop-size-profile full --flop-line-policy checked-b50only --turn-count 1 --manifest "evidence/LMP_CO_BB-${{ matrix.flop }}-${{ matrix.version }}.json"
+      - name: Preserve verbatim original Rust solve sources including any authentic negatives
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B384_R200-LMP_CO_BB-${{ matrix.flop }}-${{ matrix.version }}
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Independently verify source SHA, correct CO-IP actor, SPR and true 40-70 full street combo reach
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b384-original
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir /tmp/b384-original
+          python3 -m py_compile tools/hu_b384_rank200_source_gate.py
+          python3 tools/hu_b384_rank200_source_gate.py --downloads /tmp/b384-original --run-id "$GITHUB_RUN_ID"
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b384-audit.json
+      - name: Full HU2475 link, reach, actor model path and frontend integrity gate
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b384-contract.json
+          node tools/link_audit.js --md /tmp/b384-link.md --json /tmp/b384-link.json
+          node tools/reach_verify.js --log /tmp/b384-reach.md --json /tmp/b384-reach.json
+          node tools/hu_model_path_audit.js /tmp/b384-model-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b384-audit.json'))
+          c=json.load(open('/tmp/b384-link.json'))['counts']
+          p=json.load(open('data/nl2_hu_b384_rank200_two_new_true_source_strict_pairs.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert (c['continuing'],c['reachRiver'],c['riverShare'])==(2475,2475,100)
+          assert p['no_cert_before_independent_three_distinct_flop_source_gate']
+          print('PASS B384 genuine strict source-only, CERT159 APPROX233 HU2475')
+          PY
+          git diff --check
+      - name: Commit actual original GTO and partial NL2 source pairs/negatives, never merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b384_rank200_two_new_true_source_strict_pairs.json docs/NL2_HU_B384_RANK200_TWO_FLOP_SOURCE.md
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B384: source-audited rank200 two new genuine GTO+NL2 IP 40-70 flop pairs; no early CERT'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
