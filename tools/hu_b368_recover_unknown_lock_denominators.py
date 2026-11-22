@@ -59,7 +59,6 @@ def locate_source(run_dir,spot,flop,version,target_sha):
                           artifact_root/"evidence"/"poker-solver-pin.txt"]
                 pins=[x.read_text().strip() for x in pinfiles if x.is_file()]
                 if not pins or any(x!=PIN for x in pins):continue
-                if board_turn:=None:pass
                 return dict(manifest=m,case=c,manifest_path=mf,artifact_root=artifact_root,
                     sub=sub,root=root,job=job,root_sha256=sha(root),sub_sha256=sha(sub))
             except Exception:continue
@@ -173,14 +172,16 @@ def main():
             if actual==expected:
                 known_checks.append(dict(run_id=x["run_id"],sha=x["source_sha256"],counts=actual))
             else:
-                known_mismatches.append(dict(run_id=x["run_id"],sha=x["source_sha256"],actual=actual,expected=expected))
+                known_mismatches.append(dict(run_id=x["run_id"],sha=x["source_sha256"],spot=x["spot"],version=x["version"],actual=actual,expected=expected))
             if len(known_checks)>=3:break
         if len(known_checks)>=3:break
     # Any source family that fails its known-count calibration is excluded from
     # recovery; do not "correct" a known source with a different counting rule.
+    if not known_checks:
+        raise RuntimeError("No known historical source denominator could be reproduced; do not recover UNKNOWN from an uncalibrated method.")
     bad_types=set()
     for item in known_mismatches:
-        bad_types.add((item.get("spot"),item.get("version")))
+        bad_types.add((item["spot"],item["version"]))
     recovered={};skipped=collections.Counter();details=[]
     for b,l in unknown:
         if (b["spot"],l["version"]) in bad_types:
