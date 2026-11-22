@@ -52,6 +52,19 @@ def attach_source_paths(verified):
         case["source_path"] = matches[0]["source_path"]
     return verified
 
+def actual_combo_counts(pin, original, partial, groot, eroot):
+    gc = next(c for c in original["real_cases"] if c["source_sha256"] == pin["original_GTO_source_sha256"] and c["turn"] == pin["turn"])
+    ec = next(c for c in partial["real_cases"] if c["source_sha256"] == pin["NL2_IP_source_sha256"] and c["turn"] == pin["turn"])
+    gm, em = original["manifest"], partial["manifest"]
+    gd = read(groot / "solver/postflop" / gc["source_path"])
+    ed = read(eroot / "solver/postflop" / ec["source_path"])
+    gfr = read(groot / "solver/postflop" / gm["file_flop"])
+    efr = read(eroot / "solver/postflop" / em["file_flop"])
+    gmask, _ = b427.game_reach(gfr, gd)
+    emask, _ = b427.game_reach(efr, ed)
+    key = "|".join((pin["public_board"], LINE, "1"))
+    return gmask[key]["count"], emask[key]["count"]
+
 def pair_pin(x, proof_path):
     return dict(
         flop=x["flop"],
@@ -257,6 +270,9 @@ def main():
             g = loaded[(pinrow["flop"], "gto")]
             e = loaded[(pinrow["flop"], "exp_ip")]
             gr, er = roots[pinrow["flop"]]
+            actual = actual_combo_counts(pinrow, g, e, gr, er)
+            expected = (pinrow["GTO_legal_40_70_hero_IP_combos"], pinrow["NL2_IP_legal_40_70_hero_IP_combos"])
+            assert actual == expected, ("B433 exact sequential combo mismatch", rank, pinrow["flop"], pinrow["public_board"], expected, actual)
             sample, proof = b427.verify_pin(model, pinrow, g, e, gr, er, rank)
             selected.append(sample)
             proofs.append(proof)
