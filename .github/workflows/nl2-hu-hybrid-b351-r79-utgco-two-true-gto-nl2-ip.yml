@@ -1,0 +1,192 @@
+name: TASK-HYBRID B351 rank79 two true original 100bb UTGCO full GTO+NL2 CO IP source, 600 source HU2475 (max29m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b351-r79-utgco-two-true-gto-nl2-ip.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 21
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - {spot: UTG_CO, flop: 8s8h3d, version: gto}
+          - {spot: UTG_CO, flop: 8s8h3d, version: exp_ip}
+          - {spot: UTG_CO, flop: Js9h4d, version: gto}
+          - {spot: UTG_CO, flop: Js9h4d, version: exp_ip}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Python exact source syntax gate and pinned Rust CFR compile
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_multiboard_100bb.py trainer/tools/verify_hu_multiboard_100bb.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve genuine full 100bb UTGCO original GTO or real Rust NL2 CO IP lock 8s8h3d Js9h4d
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver --spot "${{ matrix.spot }}" --flop "${{ matrix.flop }}" \
+            --version "${{ matrix.version }}" --flop-size-profile full \
+            --flop-line-policy oop-b50only --turn-count 1 \
+            --manifest "evidence/${{ matrix.spot }}-${{ matrix.flop }}-${{ matrix.version }}.json"
+      - name: Preserve immutable Rust source, even if solve fails or no legal combos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B351_R79_UTGCO_TWO-${{ matrix.spot }}-${{ matrix.flop }}-${{ matrix.version }}
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: ${{ needs.solve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - name: Fetch exactly 6 immutable original Rust solve artifacts, separately report zero-reach cases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir downloads
+          test "$(find downloads -mindepth 1 -maxdepth 1 -type d -name 'nl2-multiboard-B351_R79_UTGCO_TWO-*' | wc -l)" -eq 4
+          mkdir -p trainer/data/solver_evidence
+          python3 trainer/tools/verify_hu_multiboard_100bb.py --downloads downloads --solver-root solver --run-id "$GITHUB_RUN_ID" \
+            --out trainer/data/solver_evidence/NL2_MULTIBOARD_B351_R79_UTGCO_TWO.json
+      - name: Freeze four independent source jobs; do not claim CERT from unsupported card path
+        run: |
+          python3 - <<'PY'
+          import pathlib,gzip,json,hashlib
+          p=pathlib.Path('trainer/data/solver_evidence/NL2_MULTIBOARD_B351_R79_UTGCO_TWO.json')
+          d=json.loads(p.read_text())
+          assert d['schema']=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'
+          assert not d['errors'] and len(d['artifacts'])==4
+          assert sum(x['version']=='gto' for x in d['artifacts'])==2
+          assert sum(x['version']=='exp_ip' for x in d['artifacts'])==2
+          assert 0<=d['exact_board_gto_sources']<=2 and 0<=d['imputed_pool_locked_sources']<=2
+          assert all(not x['errors'] and x['flop'] in ('8s8h3d','Js9h4d') for x in d['artifacts'])
+          raw=p.read_bytes();gz=p.with_suffix('.json.gz')
+          gz.write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+          idx=dict(schema='NL2_MULTIBOARD_VERIFIED_ARCHIVE_INDEX_V1',
+              run_id=d['source_run_id'],batch='B351_R79_UTGCO_TWO',
+              actual_spot_flop_version_jobs=4,verified_cases=d['new_authentic_board_cases'],
+              gto_cases=d['exact_board_gto_sources'],locked_cases=d['imputed_pool_locked_sources'],
+              source_sha256=hashlib.sha256(raw).hexdigest(),
+              gzip_sha256=hashlib.sha256(gz.read_bytes()).hexdigest(),
+              generic_model_certification=0,
+              exact_menu='Original full 100bb UTGCO preflop CFR fixed, four-size flop GTO plus separately true NL2 pooled-frequency partial actor COIP lock. No generic strategy.')
+          p.with_suffix('.index.json').write_text(json.dumps(idx,indent=2,ensure_ascii=False)+'\n')
+          p.unlink()
+          print('PASS four full original UTGCO GTO and genuine NL2 COIP Rust sources',idx)
+          PY
+      - name: Source authenticate actor CO IP UTGCO full-flop b50-call GTO and separate true NL2 partial lock with exact turn action line and SPR7 / 40-70
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b351_rank79_two_UTGCO_true_gto_nl2_ip_source_gate.py
+          python3 tools/hu_b351_rank79_two_UTGCO_true_gto_nl2_ip_source_gate.py \
+            --downloads ../downloads --run "$GITHUB_RUN_ID" \
+            --out data/nl2_hu_b351_rank79_two_full_GTO_real_NL2_COIP_source.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('data/nl2_hu_b351_rank79_two_full_GTO_real_NL2_COIP_source.json'))
+          assert x['schema']=='NL2_HU_B351_R79_UTGCO_TWO_ORIGINAL_100BB_GTO_AND_NL2_IP_ACTOR_SOURCE_V1'
+          assert (x['current_V45_CERT'],x['current_V45_APPROX'],x['current_EST'])==(157,235,0)
+          assert x['original_case_pairs']==4 and x['spot']=='UTG_CO' and x['actor']=='CO_IP'
+          assert [z['flop'] for z in x['fresh_original_and_real_NL2_exact_flops']]==['8s8h3d','Js9h4d']
+          assert x['original_existing_B2_Ks7h2d_required_for_any_promotion']
+          assert x['no_new_3flop_CERT_without_separate_exact_source_gate']
+          assert x['no_private_card_conditional_rates_observed']
+          PY
+      - name: Independent full V45 157 CERT/235 APPROX all600 named GTO and real NL2 actor lock692 medium50 research134 and 2475 HU river
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v45_b345_rank71.json --out nl2-audit/b351-source.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b351-source.json'))
+          x=json.load(open('data/nl2_hu_b351_rank79_two_full_GTO_real_NL2_COIP_source.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(157,235,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'],
+              a['aggregate']['board_examples_with_b50_candidate'])==(600,692,134)
+          assert x['no_new_3flop_CERT_without_separate_exact_source_gate']
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B351 HU 2475/2475")'
+      - name: Commit only real original four GTO and NL2 CO-IP Rust SHA sources and V45 HU2475 full PASS, no premature rank79 CERT
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          x=json.load(open('data/nl2_hu_b351_rank79_two_full_GTO_real_NL2_COIP_source.json'))
+          y=x['fresh_original_and_real_NL2_exact_flops']
+          rows=[z['flop']+': GTO '+str(z['genuine_original_GTO']['exact_CO_IP_7SPR_40_70_turn_combos'])+
+                ', NL2 '+str(z['genuine_NL2_Rust_partial_CO_IP_lock']['exact_CO_IP_7SPR_40_70_turn_combos']) for z in y]
+          pathlib.Path('docs/NL2_HU_B351_R79_TWO_REAL_UTGCO_GTO_NL2_COIP_SOURCE.md').write_text(
+             '# B351 rank79 two original full 100bb UTGCO GTO plus real NL2 CO-IP Rust paired sources\n\n'
+             'New frozen distinct exact flops: 8s8h3d (paired) and Js9h4d (JT-high). '
+             'Original real full 100bb pinned preflop CFR GTO, plus independently solved genuine NL2 CO IP partial action locks, never synthesized. '
+             'Target exact actor CO IP b50 c/x on turn with SPR7 +/-5%, and highest/40/70 previous-actor full chain. '
+             'Exact strict source counts: '+ '; '.join(rows)+'. '
+             'Only a nonzero matching GTO and NL2 source can join the historic B2 Ks7h2d genuine source for potential 3-flop certification, and only after a second independent model-level SHA gate. '
+             'NL2 pooled street-size marginal rates or explicit defaults are NOT observed private-hand conditionals. '
+             'V45 remains 157 CERT/235 APPROX/0 EST, 600 original certified named boards, 692 real actor lock variants, 134 medium50 research-only exact boards, all HU 2475/2475 PASS. '
+             'Draft PR2 never merge / force push.\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B351_R79_UTGCO_TWO.json.gz \
+            data/solver_evidence/NL2_MULTIBOARD_B351_R79_UTGCO_TWO.index.json \
+            data/nl2_hu_b351_rank79_two_full_GTO_real_NL2_COIP_source.json \
+            docs/NL2_HU_B351_R79_TWO_REAL_UTGCO_GTO_NL2_COIP_SOURCE.md
+          git commit -m 'TASK-HYBRID B351: rank79 2 original full UTGCO GTO plus true NL2 COIP Rust sources 40-70 SPR7 sha, V45 600/692 HU2475 PASS, no false CERT'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B351-rank79-two-UTGCO-genuine-GTO-and-NL2-COIP-HU2475
+          path: |
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B351_R79_UTGCO_TWO.*
+            trainer/data/nl2_hu_b351_rank79_two_full_GTO_real_NL2_COIP_source.json
+            trainer/docs/NL2_HU_B351_R79_TWO_REAL_UTGCO_GTO_NL2_COIP_SOURCE.md
+            trainer/nl2-audit/
+          retention-days: 30
