@@ -275,7 +275,7 @@ def main():
         schema="NL2_HU_B368_PINNED_POOL_LOCK_DENOMINATOR_RECOVERY_V1",
         source_matrix_sha256=sha(MATRIX),source_unknown_variants=before_unknown,
         unique_original_source_runs=run_ids,missing_run_artifact_dirs=missing,
-        known_source_calibration_checks=known_checks,known_source_calibration_mismatches=known_mismatches,\n        known_source_calibration_unique_sources=len(known_checks),
+        known_source_calibration_checks=known_checks,known_source_calibration_mismatches=known_mismatches,known_source_calibration_unique_sources=len(known_checks),
         known_source_rejection_reasons=dict(known_reasons),known_source_rejection_examples=known_reason_examples,
         source_run_head_shas={str(k):v for k,v in run_heads.items()},
         unique_raw_lock_sources=len(recovered),recovered_lock_variants=updated,
