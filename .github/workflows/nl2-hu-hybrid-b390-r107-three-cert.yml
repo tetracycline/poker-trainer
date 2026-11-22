@@ -36,6 +36,9 @@ jobs:
           import json,os
           x=json.load(open('data/nl2_hu_b389_rank107_three_true_flop_pre_cert_gate.json'))
           ready=x.get('provisional_ready_for_independent_V48_source_promotion') is True and x.get('distinct_verified_original_GTO_and_NL2_hero_lock_flops')==3
+          ready=ready and x.get('frozen_source_flops')==['Jh9d6s','7s5h3d','QsJh4d']
+          ready=ready and all(len(z.get('GTO_source_sha256',''))==64 and len(z.get('NL2_hero_lock_source_sha256',''))==64 for z in x['selected_exact_named_boards'])
+          ready=ready and x.get('correct_actor')=='BTN_IP' and x.get('correct_line')=='b33 c/x b50 c/x'
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('ready='+('true' if ready else 'false')+'\n')
           print('B390 raw source promotion gate ready:',ready)
           PY
