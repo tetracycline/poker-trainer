@@ -101,10 +101,25 @@ def load_historical_helper(run_id,head_sha):
             if not hasattr(helper,"make_fallbacks"):
                 raise RuntimeError("historical Stage3 helper has no make_fallbacks")
         else:
-            # Authentic Stage2 behaviour: no synthetic fallback layer; replay
-            # the pinned solver's original pipeline.lock_list exactly.
+            # Authentic Stage2 behaviour: replay the historical wrapper. B3-B5
+            # added one measured 34-55% (b50) lock when the manifest selected
+            # the 33/50/75 menu; B1-B2 used pipeline.lock_list without it.
             def make_fallbacks(spot,version,pool,original_lock_list,flop):
-                return original_lock_list(spot,version,flop)
+                dl,meta=original_lock_list(spot,version,flop)
+                if getattr(helper,"_b368_flop_bet_sizes","33%,75%")=="33%,50%,75%" and version!="gto":
+                    import pipeline,locks as LK
+                    sp=pipeline.SPOTS[spot]
+                    villain_pfr=(sp["pfr"]=="ip")!=(version=="exp_ip")
+                    if not villain_pfr and sp["kind"] in ("SRP","3BP"):
+                        P="IP" if sp["pfr"]=="ip" else "OOP"
+                        src=sp["kind"]+"_PFR_"+P+".vs_cbet_by_size[34-55%]"
+                        d=LK.PH[sp["kind"]+"_PFR_"+P]["vs_cbet_by_size"]["34-55%"]
+                        if int(d["n"])>=500:
+                            pat="^x b50$" if sp["pfr"]=="ip" else "^b50$"
+                            dl.append({"pat":pat,"fold":d["fold"]/100,"raise":d["raise"]/100})
+                            meta.append({"pat":pat,"n":d["n"],"src":src,
+                                "fold":d["fold"]/100,"raise_":d["raise"]/100})
+                return dl,meta
             helper=types.SimpleNamespace(EXTRA_SPOTS=missing.EXTRA_SPOTS,
                 make_fallbacks=make_fallbacks)
     finally:
@@ -190,6 +205,7 @@ def recover_one(board,lock,ctx,run_dir,helper,run_head_sha):
     if root.get("flop") not in (None,flop):return None,"ROOT_FLOP_MISMATCH"
     if not isinstance(root.get("nodes"),list):return None,"ROOT_NODES_MISSING"
     if not isinstance(job.get("locks"),list):return None,"ORIGINAL_JOB_LOCKS_MISSING"
+    helper._b368_flop_bet_sizes=m.get("flop_bet_sizes","33%,75%")
     driver,meta=expected_locks(spot,version,flop,ctx,helper)
     if canon(driver)!=canon(job["locks"]):
         return None,"PINNED_LOCK_LIST_NOT_BYTE_EQUIVALENT_TO_ORIGINAL_JOB"
