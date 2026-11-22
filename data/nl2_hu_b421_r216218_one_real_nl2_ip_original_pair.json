@@ -1,0 +1,712 @@
+{
+  "schema": "NL2_B421_RANK216_218_ONE_NEW_ACTUAL_RUST_GTO_NL2_IP_PAIR_V1",
+  "B393_frozen_original_GTO_source_sha256": "16d2fc58efd625710a75e1f13070054913436b5a934a10ebc2638f20408c32aa",
+  "original_GTO_run": 45026396521,
+  "new_NL2_IP_run": 45052841553,
+  "spot": "CO_BB",
+  "actor": "CO_IP",
+  "exact_line": "x b50 c/x b50 c/x",
+  "source_poker_solver_pin": "abe310c3aad02dd4a7c77fb2831801fd490cf51b",
+  "original_Rust_pin": "9d1509fe5077d019825f833eed04b16d342dfda1",
+  "source_evidence": [
+    {
+      "flop": "Js9h5d",
+      "original_GTO": {
+        "status": "GENUINE_RUST_EXACT_SOURCE",
+        "manifest_sha256": "2efc1d1f5463930ea36971ad27e52bdd4a4a7b9d3b1c7d5b82c508604bca4290",
+        "root_original_Rust_SHA256": "c0684c3b3983518cadb3f2c02ee9fe3f122a5ef48f47db6ac3594e1cae1b81f0",
+        "original_root_job_sha256": "6e8f53dbd146c7b48fd39b1d70d6f71d49fc392e62477234ca67496f11521abd",
+        "preflop_source_SHA256": "787f719c752165262807f79b91daec81e1db86a83d557a4ea645ef2649f532c7",
+        "pool_stats_SHA256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+        "manifest": {
+          "schema": "NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1",
+          "spot": "CO_BB",
+          "version": "gto",
+          "flop": "Js9h5d",
+          "pot_family": "SRP",
+          "root_pot_bb": 5.5,
+          "root_remaining_bb": 97.5,
+          "root_spr": 17.727273,
+          "preflop_ranges": {
+            "source": "PINNED_POKER_SOLVER_PREFLOP_CFR",
+            "spot": "CO_BB",
+            "full_sha256": "787f719c752165262807f79b91daec81e1db86a83d557a4ea645ef2649f532c7"
+          },
+          "n_NL2_hands": 2334487,
+          "pool_source_sha256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+          "solver_pin": "f0a173b3d9331c4ff8697359a838094f76babb35f16133e37bbd0bfb203b5253",
+          "solver_ranges_sha256": "f2a302b483c79995ed90031b62e65a202ae7a1fdc8695f8940fe3e8291fb2bba",
+          "flop_action_sizes": [
+            "33%",
+            "50%",
+            "75%",
+            "100%"
+          ],
+          "flop_size_profile": "full",
+          "restricted_tree_assumption": false,
+          "allow_OOP_flop_leads": true,
+          "turn_sizing_mode": "default",
+          "turn_subgame_sizing": {
+            "oop": "50%,100%",
+            "ip": "50%,100%"
+          },
+          "selected_lines": [
+            "x b50 c",
+            "x b100 c"
+          ],
+          "flop_line_policy": "checked-b50b100only",
+          "selected_turn_lines": [
+            "x b50 c",
+            "x b100 c",
+            "x x",
+            "b50 c",
+            "b100 c"
+          ],
+          "turn_line_policy": "default",
+          "turns": [
+            "Ah"
+          ],
+          "locks": [],
+          "unknown_action_frequency_policy": "Use observed NL2 street/size marginals where available; fallback checked-to bet 45% with 33:35%,50:35%,75:20%,100:10%. No observed private-card behavior.",
+          "no_generic_certification": true,
+          "not_observed_exact_NL2_hero_EV": true,
+          "file_flop": "out/CO_BB/gto/Js9h5d_multiboard.json",
+          "file_flop_sha256": "c0684c3b3983518cadb3f2c02ee9fe3f122a5ef48f47db6ac3594e1cae1b81f0",
+          "cases": [
+            {
+              "line": "x b50 c",
+              "turn": "Ah",
+              "source_path": "out/CO_BB/gto/Js9h5d_xb50c_Ah.json",
+              "source_sha256": "9e88266a8e4ee9967c2fe1387eb0d7ceb7f86a5fa19ed260e8605f86a8a5b35e",
+              "real_flop_parent_spr": 8.613636,
+              "flop_parent_pot_bb": 11.0,
+              "flop_parent_effective_remaining_bb": 94.75,
+              "true_river_nodes": 52,
+              "source_node_count": 58,
+              "gto_gap_pct": 0.49644121527671814,
+              "hero_gap_pct": null,
+              "lock_stats": {},
+              "status": "GTO_EXACT_ONLY"
+            },
+            {
+              "line": "x b100 c",
+              "turn": "Ah",
+              "source_path": "out/CO_BB/gto/Js9h5d_xb100c_Ah.json",
+              "source_sha256": "e8c8274ceb12cd56847b726d3a8b9df7ec144a2f6ffa11da6916ac479898c25a",
+              "real_flop_parent_spr": 5.575758,
+              "flop_parent_pot_bb": 16.5,
+              "flop_parent_effective_remaining_bb": 92.0,
+              "true_river_nodes": 52,
+              "source_node_count": 58,
+              "gto_gap_pct": 0.47509855031967163,
+              "hero_gap_pct": null,
+              "lock_stats": {},
+              "status": "GTO_EXACT_ONLY"
+            }
+          ],
+          "failures": [],
+          "skipped": [],
+          "elapsed_seconds": 224.24,
+          "solved_cases": 2
+        },
+        "real_cases": [
+          {
+            "line": "x b50 c",
+            "turn": "Ah",
+            "source_sha256": "9e88266a8e4ee9967c2fe1387eb0d7ceb7f86a5fa19ed260e8605f86a8a5b35e",
+            "original_GTO_gap_pct": 0.49644121527671814,
+            "original_hero_gap_pct": null,
+            "actor_IP_target_nodes": {
+              "5d9hJsAh8h": {
+                "public_board": "5d9hJsAh8h",
+                "strict_40_70_IP_hero_combos": 6,
+                "exact_SPR": 4.056818,
+                "parent_actor_decisions": 2
+              },
+              "5d9hJsAh5c": {
+                "public_board": "5d9hJsAh5c",
+                "strict_40_70_IP_hero_combos": 6,
+                "exact_SPR": 4.056818,
+                "parent_actor_decisions": 2
+              }
+            },
+            "strict_fullstreet_reach_stats": {
+              "nodes": 58,
+              "source_actor_combo_nodes": 8222,
+              "sequential_actor_combo_nodes": 2747,
+              "removed_by_parent_action_policy": 5475
+            }
+          },
+          {
+            "line": "x b100 c",
+            "turn": "Ah",
+            "source_sha256": "e8c8274ceb12cd56847b726d3a8b9df7ec144a2f6ffa11da6916ac479898c25a",
+            "original_GTO_gap_pct": 0.47509855031967163,
+            "original_hero_gap_pct": null,
+            "actor_IP_target_nodes": {},
+            "strict_fullstreet_reach_stats": {
+              "nodes": 58,
+              "source_actor_combo_nodes": 6506,
+              "sequential_actor_combo_nodes": 2932,
+              "removed_by_parent_action_policy": 3574
+            }
+          }
+        ]
+      },
+      "actual_partial_NL2_IP": {
+        "status": "GENUINE_RUST_EXACT_SOURCE",
+        "manifest_sha256": "4a37fae5e2bed18f046fbdf29d5ccb688000a2c97939c3572dbef3e9d162e4fa",
+        "root_original_Rust_SHA256": "fc6018f33714e4df21ffca04253a5e67f855c28fb28818f883e43ba969b7b171",
+        "original_root_job_sha256": "a6ef4e999ec9040626f42d402fe597020e53bc4ca58e4ae5b4889becbb322207",
+        "preflop_source_SHA256": "787f719c752165262807f79b91daec81e1db86a83d557a4ea645ef2649f532c7",
+        "pool_stats_SHA256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+        "manifest": {
+          "schema": "NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1",
+          "spot": "CO_BB",
+          "version": "exp_ip",
+          "flop": "Js9h5d",
+          "pot_family": "SRP",
+          "root_pot_bb": 5.5,
+          "root_remaining_bb": 97.5,
+          "root_spr": 17.727273,
+          "preflop_ranges": {
+            "source": "PINNED_POKER_SOLVER_PREFLOP_CFR",
+            "spot": "CO_BB",
+            "full_sha256": "787f719c752165262807f79b91daec81e1db86a83d557a4ea645ef2649f532c7"
+          },
+          "n_NL2_hands": 2334487,
+          "pool_source_sha256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+          "solver_pin": "f0a173b3d9331c4ff8697359a838094f76babb35f16133e37bbd0bfb203b5253",
+          "solver_ranges_sha256": "f2a302b483c79995ed90031b62e65a202ae7a1fdc8695f8940fe3e8291fb2bba",
+          "flop_action_sizes": [
+            "33%",
+            "50%",
+            "75%",
+            "100%"
+          ],
+          "flop_size_profile": "full",
+          "restricted_tree_assumption": false,
+          "allow_OOP_flop_leads": true,
+          "turn_sizing_mode": "default",
+          "turn_subgame_sizing": {
+            "oop": "50%,100%",
+            "ip": "50%,100%"
+          },
+          "selected_lines": [
+            "x b50 c",
+            "x b100 c"
+          ],
+          "flop_line_policy": "checked-b50b100only",
+          "selected_turn_lines": [
+            "x b50 c",
+            "x b100 c",
+            "x x",
+            "b50 c",
+            "b100 c"
+          ],
+          "turn_line_policy": "default",
+          "turns": [
+            "Ah"
+          ],
+          "locks": [
+            {
+              "pat": "^x b33$",
+              "scope": "PINNED_MEASURED_NL2_SOURCE",
+              "source": "SRP_PFR_IP.vs_cbet_by_size[≤33%] + texture IP|rainbow|unpaired|J/T高 (n=14417)",
+              "n": 44459
+            },
+            {
+              "pat": "^x b75$",
+              "scope": "PINNED_MEASURED_NL2_SOURCE",
+              "source": "SRP_PFR_IP.vs_cbet_by_size[56-80%] + texture IP|rainbow|unpaired|J/T高 (n=14417)",
+              "n": 48596
+            },
+            {
+              "pat": "^x b\\d+ c/x b66$",
+              "scope": "PINNED_MEASURED_NL2_SOURCE",
+              "source": "SRP_PFR_IP.vs_turn_barrel_by_size[56-80%]",
+              "n": 17914
+            },
+            {
+              "pat": "^x b\\d+ c/x b50$",
+              "scope": "PINNED_MEASURED_NL2_SOURCE",
+              "source": "SRP_PFR_IP.vs_turn_barrel_by_size[34-55%]",
+              "n": 15700
+            },
+            {
+              "pat": "^x b\\d+ c/x b100$",
+              "scope": "PINNED_MEASURED_NL2_SOURCE",
+              "source": "SRP_PFR_IP.vs_turn_barrel_by_size[81-110%]",
+              "n": 4480
+            },
+            {
+              "pat": "^x x/$",
+              "scope": "PINNED_MEASURED_NL2_SOURCE",
+              "source": "SRP_probe",
+              "n": 133319
+            },
+            {
+              "pat": "^x x/x b\\d+$",
+              "scope": "PINNED_MEASURED_NL2_SOURCE",
+              "source": "SRP_PFR_IP.vs_delayed_cbet",
+              "n": 32036
+            },
+            {
+              "pat": "^x b\\d+ c/x b\\d+ c/x b75$",
+              "scope": "PINNED_MEASURED_NL2_SOURCE",
+              "source": "SRP_PFR_IP.vs_river_barrel_by_size[56-80%]",
+              "n": 2706
+            },
+            {
+              "pat": "^x b\\d+ c/x b\\d+ c/x b50$",
+              "scope": "PINNED_MEASURED_NL2_SOURCE",
+              "source": "SRP_PFR_IP.vs_river_barrel_by_size[34-55%]",
+              "n": 2052
+            },
+            {
+              "pat": "^x b\\d+ c/x b\\d+ c/x b100$",
+              "scope": "PINNED_MEASURED_NL2_SOURCE",
+              "source": "SRP_PFR_IP.vs_river_barrel_by_size[81-110%]",
+              "n": 1555
+            },
+            {
+              "pat": "^x b\\d+ c/x b\\d+ c/x a$",
+              "scope": "PINNED_MEASURED_NL2_SOURCE",
+              "source": "SRP_PFR_IP.vs_river_barrel_by_size[>110%]",
+              "n": 1185
+            },
+            {
+              "pat": "(?:^|[ /])b33$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+              "source": "NL2.HU_facing_bet[1].by_size[≤33%]",
+              "n": 134321
+            },
+            {
+              "pat": "(?:^|[ /])b50$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+              "source": "NL2.HU_facing_bet[1].by_size[34-55%]",
+              "n": 275923
+            },
+            {
+              "pat": "(?:^|[ /])b75$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+              "source": "NL2.HU_facing_bet[1].by_size[56-80%]",
+              "n": 130318
+            },
+            {
+              "pat": "(?:^|[ /])b100$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+              "source": "NL2.HU_facing_bet[1].by_size[81-110%]",
+              "n": 55927
+            },
+            {
+              "pat": "(?:^|[ /])r$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_RAISE_MARGINAL",
+              "source": "NL2.HU_facing_bet[1].bettor_vs_raise",
+              "n": 56113
+            },
+            {
+              "pat": "(?:^|[ /])b33$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+              "source": "NL2.HU_facing_bet[2].by_size[≤33%]",
+              "n": 71741
+            },
+            {
+              "pat": "(?:^|[ /])b50$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+              "source": "NL2.HU_facing_bet[2].by_size[34-55%]",
+              "n": 144567
+            },
+            {
+              "pat": "(?:^|[ /])b75$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+              "source": "NL2.HU_facing_bet[2].by_size[56-80%]",
+              "n": 112817
+            },
+            {
+              "pat": "(?:^|[ /])b100$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+              "source": "NL2.HU_facing_bet[2].by_size[81-110%]",
+              "n": 43254
+            },
+            {
+              "pat": "(?:^|[ /])r$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_RAISE_MARGINAL",
+              "source": "NL2.HU_facing_bet[2].bettor_vs_raise",
+              "n": 32933
+            },
+            {
+              "pat": "(?:^|[ /])b33$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+              "source": "NL2.HU_facing_bet[3].by_size[≤33%]",
+              "n": 46891
+            },
+            {
+              "pat": "(?:^|[ /])b50$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+              "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+              "n": 64272
+            },
+            {
+              "pat": "(?:^|[ /])b75$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+              "source": "NL2.HU_facing_bet[3].by_size[56-80%]",
+              "n": 58736
+            },
+            {
+              "pat": "(?:^|[ /])b100$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+              "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+              "n": 43634
+            },
+            {
+              "pat": "(?:^|[ /])r$",
+              "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_RAISE_MARGINAL",
+              "source": "NL2.HU_facing_bet[3].bettor_vs_raise",
+              "n": 20265
+            },
+            {
+              "pat": "^$",
+              "scope": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT",
+              "source": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT; NL2_OBSERVED_PFR_CBET_SIZE_AGGREGATE_NOT_EXACT_NODE",
+              "n": 343183
+            },
+            {
+              "pat": "^x$",
+              "scope": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT",
+              "source": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT; NL2_OBSERVED_PFR_CBET_SIZE_AGGREGATE_NOT_EXACT_NODE",
+              "n": 343183
+            },
+            {
+              "pat": ".*/x$",
+              "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+              "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+              "n": 0
+            },
+            {
+              "pat": ".*/$",
+              "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+              "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+              "n": 0
+            }
+          ],
+          "unknown_action_frequency_policy": "Use observed NL2 street/size marginals where available; fallback checked-to bet 45% with 33:35%,50:35%,75:20%,100:10%. No observed private-card behavior.",
+          "no_generic_certification": true,
+          "not_observed_exact_NL2_hero_EV": true,
+          "file_flop": "out/CO_BB/exp_ip/Js9h5d_multiboard.json",
+          "file_flop_sha256": "fc6018f33714e4df21ffca04253a5e67f855c28fb28818f883e43ba969b7b171",
+          "cases": [
+            {
+              "line": "x b50 c",
+              "turn": "Ah",
+              "source_path": "out/CO_BB/exp_ip/Js9h5d_xb50c_Ah.json",
+              "source_sha256": "b522369ec2a718379d3711a24671fe99344968abbd65cb1c967ab65bb2420cda",
+              "real_flop_parent_spr": 8.613636,
+              "flop_parent_pot_bb": 11.0,
+              "flop_parent_effective_remaining_bb": 94.75,
+              "true_river_nodes": 52,
+              "source_node_count": 58,
+              "gto_gap_pct": 0.4929746985435486,
+              "hero_gap_pct": 0.42281273007392883,
+              "lock_stats": {
+                "(?:^|[ /])b100$": {
+                  "agg": 0.07099998501982177,
+                  "fold": 0.5889999644047978,
+                  "nodes": 48
+                },
+                "(?:^|[ /])b50$": {
+                  "agg": 0.08899997991155117,
+                  "fold": 0.4280000167386196,
+                  "nodes": 48
+                },
+                ".*/$": {
+                  "agg": 0.22776283878098635,
+                  "fold": 0.0,
+                  "nodes": 145
+                },
+                "^x b\\d+ c/x b100$": {
+                  "agg": 0.08999998509329817,
+                  "fold": 0.49799999401504735,
+                  "nodes": 1
+                },
+                "^x b\\d+ c/x b50$": {
+                  "agg": 0.10199997523274072,
+                  "fold": 0.35600003801957447,
+                  "nodes": 1
+                },
+                "^x b\\d+ c/x b\\d+ c/x a$": {
+                  "agg": 0.0,
+                  "fold": 0.6469999675764518,
+                  "nodes": 96
+                },
+                "^x b\\d+ c/x b\\d+ c/x b100$": {
+                  "agg": 0.051999988612524514,
+                  "fold": 0.5669999397622184,
+                  "nodes": 96
+                },
+                "^x b\\d+ c/x b\\d+ c/x b50$": {
+                  "agg": 0.09099997643878041,
+                  "fold": 0.4309999936879157,
+                  "nodes": 96
+                }
+              },
+              "status": "NL2_IMPUTED_MARGINAL_LOCKED_EXPERIMENT"
+            },
+            {
+              "line": "x b100 c",
+              "turn": "Ah",
+              "source_path": "out/CO_BB/exp_ip/Js9h5d_xb100c_Ah.json",
+              "source_sha256": "e29745149f43d28582421ac6ad647b188b8c89b6ab28bd9b4fb076e1bd7b5f7a",
+              "real_flop_parent_spr": 5.575758,
+              "flop_parent_pot_bb": 16.5,
+              "flop_parent_effective_remaining_bb": 92.0,
+              "true_river_nodes": 52,
+              "source_node_count": 58,
+              "gto_gap_pct": 0.39131858944892883,
+              "hero_gap_pct": 0.43889084458351135,
+              "lock_stats": {
+                "(?:^|[ /])b100$": {
+                  "agg": 0.07099998479970887,
+                  "fold": 0.5889999379040503,
+                  "nodes": 48
+                },
+                "(?:^|[ /])b50$": {
+                  "agg": 0.08899997913101285,
+                  "fold": 0.427999995952688,
+                  "nodes": 48
+                },
+                ".*/$": {
+                  "agg": 0.227762839061504,
+                  "fold": 0.0,
+                  "nodes": 145
+                },
+                "^x b\\d+ c/x b100$": {
+                  "agg": 0.08999997929540715,
+                  "fold": 0.4979999666032246,
+                  "nodes": 1
+                },
+                "^x b\\d+ c/x b50$": {
+                  "agg": 0.1019999710480832,
+                  "fold": 0.35600001160655376,
+                  "nodes": 1
+                },
+                "^x b\\d+ c/x b\\d+ c/x a$": {
+                  "agg": 0.0,
+                  "fold": 0.646999944821063,
+                  "nodes": 96
+                },
+                "^x b\\d+ c/x b\\d+ c/x b100$": {
+                  "agg": 0.051999988527222825,
+                  "fold": 0.5669999240403109,
+                  "nodes": 96
+                },
+                "^x b\\d+ c/x b\\d+ c/x b50$": {
+                  "agg": 0.09099997465090694,
+                  "fold": 0.43099998379606635,
+                  "nodes": 96
+                }
+              },
+              "status": "NL2_IMPUTED_MARGINAL_LOCKED_EXPERIMENT"
+            }
+          ],
+          "failures": [],
+          "skipped": [],
+          "elapsed_seconds": 487.85,
+          "solved_cases": 2
+        },
+        "real_cases": [
+          {
+            "line": "x b50 c",
+            "turn": "Ah",
+            "source_sha256": "b522369ec2a718379d3711a24671fe99344968abbd65cb1c967ab65bb2420cda",
+            "original_GTO_gap_pct": 0.4929746985435486,
+            "original_hero_gap_pct": 0.42281273007392883,
+            "actor_IP_target_nodes": {
+              "5d9hJsAh8h": {
+                "public_board": "5d9hJsAh8h",
+                "strict_40_70_IP_hero_combos": 11,
+                "exact_SPR": 4.056818,
+                "parent_actor_decisions": 2
+              },
+              "5d9hJsAh5c": {
+                "public_board": "5d9hJsAh5c",
+                "strict_40_70_IP_hero_combos": 10,
+                "exact_SPR": 4.056818,
+                "parent_actor_decisions": 2
+              }
+            },
+            "strict_fullstreet_reach_stats": {
+              "nodes": 58,
+              "source_actor_combo_nodes": 3886,
+              "sequential_actor_combo_nodes": 2466,
+              "removed_by_parent_action_policy": 1420
+            }
+          },
+          {
+            "line": "x b100 c",
+            "turn": "Ah",
+            "source_sha256": "e29745149f43d28582421ac6ad647b188b8c89b6ab28bd9b4fb076e1bd7b5f7a",
+            "original_GTO_gap_pct": 0.39131858944892883,
+            "original_hero_gap_pct": 0.43889084458351135,
+            "actor_IP_target_nodes": {},
+            "strict_fullstreet_reach_stats": {
+              "nodes": 58,
+              "source_actor_combo_nodes": 6281,
+              "sequential_actor_combo_nodes": 1718,
+              "removed_by_parent_action_policy": 4563
+            }
+          }
+        ]
+      },
+      "exact_GTO_NL2_IP_positive_named_river_nodes": [
+        {
+          "rank": 216,
+          "flop": "Js9h5d",
+          "turn": "Ah",
+          "exact_public_board": "5d9hJsAh8h",
+          "actor": "CO_IP",
+          "exact_history": "x b50 c/x b50 c/x",
+          "actual_SPR": 4.056818,
+          "GTO_strict_40_70_combos": 6,
+          "actual_NL2_IP_strict_40_70_combos": 11,
+          "original_GTO_source_run": 45026396521,
+          "original_GTO_sha256": "9e88266a8e4ee9967c2fe1387eb0d7ceb7f86a5fa19ed260e8605f86a8a5b35e",
+          "new_NL2_IP_source_run": 45052841553,
+          "new_NL2_IP_sha256": "b522369ec2a718379d3711a24671fe99344968abbd65cb1c967ab65bb2420cda"
+        },
+        {
+          "rank": 216,
+          "flop": "Js9h5d",
+          "turn": "Ah",
+          "exact_public_board": "5d9hJsAh5c",
+          "actor": "CO_IP",
+          "exact_history": "x b50 c/x b50 c/x",
+          "actual_SPR": 4.056818,
+          "GTO_strict_40_70_combos": 6,
+          "actual_NL2_IP_strict_40_70_combos": 10,
+          "original_GTO_source_run": 45026396521,
+          "original_GTO_sha256": "9e88266a8e4ee9967c2fe1387eb0d7ceb7f86a5fa19ed260e8605f86a8a5b35e",
+          "new_NL2_IP_source_run": 45052841553,
+          "new_NL2_IP_sha256": "b522369ec2a718379d3711a24671fe99344968abbd65cb1c967ab65bb2420cda"
+        },
+        {
+          "rank": 218,
+          "flop": "Js9h5d",
+          "turn": "Ah",
+          "exact_public_board": "5d9hJsAh8h",
+          "actor": "CO_IP",
+          "exact_history": "x b50 c/x b50 c/x",
+          "actual_SPR": 4.056818,
+          "GTO_strict_40_70_combos": 6,
+          "actual_NL2_IP_strict_40_70_combos": 11,
+          "original_GTO_source_run": 45026396521,
+          "original_GTO_sha256": "9e88266a8e4ee9967c2fe1387eb0d7ceb7f86a5fa19ed260e8605f86a8a5b35e",
+          "new_NL2_IP_source_run": 45052841553,
+          "new_NL2_IP_sha256": "b522369ec2a718379d3711a24671fe99344968abbd65cb1c967ab65bb2420cda"
+        },
+        {
+          "rank": 218,
+          "flop": "Js9h5d",
+          "turn": "Ah",
+          "exact_public_board": "5d9hJsAh5c",
+          "actor": "CO_IP",
+          "exact_history": "x b50 c/x b50 c/x",
+          "actual_SPR": 4.056818,
+          "GTO_strict_40_70_combos": 6,
+          "actual_NL2_IP_strict_40_70_combos": 10,
+          "original_GTO_source_run": 45026396521,
+          "original_GTO_sha256": "9e88266a8e4ee9967c2fe1387eb0d7ceb7f86a5fa19ed260e8605f86a8a5b35e",
+          "new_NL2_IP_source_run": 45052841553,
+          "new_NL2_IP_sha256": "b522369ec2a718379d3711a24671fe99344968abbd65cb1c967ab65bb2420cda"
+        }
+      ],
+      "distinct_matched_true_source_flops": [
+        "Js9h5d"
+      ],
+      "original_GTO_artifact": "nl2-multiboard-B393_COBB_FIVE_GTO_FIRST-CO_BB-Js9h5d-gto",
+      "new_NL2_IP_artifact": "nl2-multiboard-B421_R216218_NL2_IP-CO_BB-Js9h5d-exp_ip"
+    }
+  ],
+  "positive_40_70_named_river_pairs_by_rank": {
+    "216": [
+      {
+        "rank": 216,
+        "flop": "Js9h5d",
+        "turn": "Ah",
+        "exact_public_board": "5d9hJsAh8h",
+        "actor": "CO_IP",
+        "exact_history": "x b50 c/x b50 c/x",
+        "actual_SPR": 4.056818,
+        "GTO_strict_40_70_combos": 6,
+        "actual_NL2_IP_strict_40_70_combos": 11,
+        "original_GTO_source_run": 45026396521,
+        "original_GTO_sha256": "9e88266a8e4ee9967c2fe1387eb0d7ceb7f86a5fa19ed260e8605f86a8a5b35e",
+        "new_NL2_IP_source_run": 45052841553,
+        "new_NL2_IP_sha256": "b522369ec2a718379d3711a24671fe99344968abbd65cb1c967ab65bb2420cda"
+      },
+      {
+        "rank": 216,
+        "flop": "Js9h5d",
+        "turn": "Ah",
+        "exact_public_board": "5d9hJsAh5c",
+        "actor": "CO_IP",
+        "exact_history": "x b50 c/x b50 c/x",
+        "actual_SPR": 4.056818,
+        "GTO_strict_40_70_combos": 6,
+        "actual_NL2_IP_strict_40_70_combos": 10,
+        "original_GTO_source_run": 45026396521,
+        "original_GTO_sha256": "9e88266a8e4ee9967c2fe1387eb0d7ceb7f86a5fa19ed260e8605f86a8a5b35e",
+        "new_NL2_IP_source_run": 45052841553,
+        "new_NL2_IP_sha256": "b522369ec2a718379d3711a24671fe99344968abbd65cb1c967ab65bb2420cda"
+      }
+    ],
+    "218": [
+      {
+        "rank": 218,
+        "flop": "Js9h5d",
+        "turn": "Ah",
+        "exact_public_board": "5d9hJsAh8h",
+        "actor": "CO_IP",
+        "exact_history": "x b50 c/x b50 c/x",
+        "actual_SPR": 4.056818,
+        "GTO_strict_40_70_combos": 6,
+        "actual_NL2_IP_strict_40_70_combos": 11,
+        "original_GTO_source_run": 45026396521,
+        "original_GTO_sha256": "9e88266a8e4ee9967c2fe1387eb0d7ceb7f86a5fa19ed260e8605f86a8a5b35e",
+        "new_NL2_IP_source_run": 45052841553,
+        "new_NL2_IP_sha256": "b522369ec2a718379d3711a24671fe99344968abbd65cb1c967ab65bb2420cda"
+      },
+      {
+        "rank": 218,
+        "flop": "Js9h5d",
+        "turn": "Ah",
+        "exact_public_board": "5d9hJsAh5c",
+        "actor": "CO_IP",
+        "exact_history": "x b50 c/x b50 c/x",
+        "actual_SPR": 4.056818,
+        "GTO_strict_40_70_combos": 6,
+        "actual_NL2_IP_strict_40_70_combos": 10,
+        "original_GTO_source_run": 45026396521,
+        "original_GTO_sha256": "9e88266a8e4ee9967c2fe1387eb0d7ceb7f86a5fa19ed260e8605f86a8a5b35e",
+        "new_NL2_IP_source_run": 45052841553,
+        "new_NL2_IP_sha256": "b522369ec2a718379d3711a24671fe99344968abbd65cb1c967ab65bb2420cda"
+      }
+    ]
+  },
+  "new_distinct_qualifying_flops_by_rank": {
+    "216": [
+      "Js9h5d"
+    ],
+    "218": [
+      "Js9h5d"
+    ]
+  },
+  "original_preflop_CFR_not_NL2_observed_private_actions": true,
+  "opponent_NL2_is_pool_marginal_proxy_not_exact_private_hand": true,
+  "no_automatic_CERT_while_no_three_independent_original_sources": true,
+  "no_2026_private_hand_NL2_observations_used": true,
+  "CERT_MULTIBOARD": 162,
+  "APPROX": 230,
+  "EST": 0,
+  "PR2_remains_draft_unmerged": true
+}
