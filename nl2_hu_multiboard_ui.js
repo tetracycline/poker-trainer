@@ -105,11 +105,56 @@ function schedule(){if(!pending){pending=true;queueMicrotask(render)}}
 new MutationObserver(schedule).observe(app,{childList:true,subtree:true});
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
- const v47=d=>{
+ const v48=d=>{
+ const q=d.B369_rank27_three_new_true_original_GTO_NL2_OOP_flops;
+ const r=d.records?.['ln-iso-lmp_r_model-1aov4pd'];
+ const pins=q?.genuine_sources||[];
+ if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B369_RANK27'||
+    d.CERT_MULTIBOARD!==160||d.APPROX!==232||d.EST!==0||d.TOTAL!==392||
+    d.parent_v47_sha256?.length!==64||
+    q?.rank!==27||q?.model_id!=='ln-iso-lmp_r_model-1aov4pd'||
+    q?.spot!=='LMP_CO_BB'||q?.actor!=='BB_OOP'||q?.exact_line!=='b33 c/b50 c/'||
+    q?.model_SPR!==11.53||
+    q?.flops?.join(',')!=='KsQh4d,7s5h3d,9s6h3d'||
+    q?.textures?.length<2||new Set(q.textures).size<2||
+    q?.original_flop_size_menu_all_33_50_75_100!==true||
+    q?.preflop_169_class_assumed_not_observed_NL2!==true||
+    q?.source_blind_expansion_preregistered!==true||
+    q?.original_top24_high_frequency_preregistered!==false||
+    q?.no_observed_private_combo_NL2_frequencies!==true||
+    q?.exact_named_boards_only_no_texture_generalization!==true||
+    pins.length!==3||pins.some(p=>p.run_id<=0||
+      p.original_GTO_turn_sha256?.length!==64||p.true_NL2_OOP_turn_sha256?.length!==64||
+      p.strict_GTO_actor_combos<=0||p.strict_NL2_OOP_actor_combos<=0||
+      p.observed_marginal_source_nodes<=0||
+      p.pin?.archive_index_sha256?.length!==64||p.pin?.archive_gzip_sha256?.length!==64||
+      p.pin?.source_proof_sha256?.length!==64||p.pin?.solve_partition_sha256?.length!==64)||
+    r?.label!=='CERT-MULTIBOARD'||r?.frequency_rank!==27||r?.solver_profile!=='LMP_CO_BB'||
+    r?.proven_exact_board_count!==3||r?.high_frequency_preregistered!==true||
+    r?.source_blind_expansion_rank!==27||r?.original_top24_high_frequency_preregistered!==false||
+    r.certified_3_to_5_exact_flop_boards?.length!==3||
+    r.certified_3_to_5_exact_flop_boards.some(p=>
+      p.acting_seat!==0||p.actual_exact_action_line!=='b33 c/b50 c/'||
+      p.strict_full_street_combo_reachable<=0||p.relative_spr_error_pct>5||
+      p.genuine_gto_exploitability_pct>.5||p.assumed_preflop_ranges!==true||
+      !p.source_kind?.startsWith('ASSUMED')||
+      p.nl2_locked_variants?.[0]?.version!=='exp_oop'||
+      p.nl2_locked_variants?.[0]?.sha256?.length!==64||
+      p.nl2_locked_variants?.[0]?.observed_marginal_source_nodes<=0||
+      !Number.isInteger(p.nl2_locked_variants?.[0]?.assumed_default_source_nodes)||
+      !Number.isInteger(p.nl2_locked_variants?.[0]?.unlocked_source_nodes))||
+    d.source_blind_expansion_ranks?.includes(27)!==true||
+    d.supplementary_cert_count!==136||d.original_top24_cutoff_unchanged!==true||
+    d.no_generic_texture_GTO!==true||d.no_observed_private_card_NL2_rates!==true||
+    d.PR2_remains_draft_never_merge!==true||Object.keys(d.records||{}).length!==392)
+   throw Error('V48 rank27 source-blind three original 100bb GTO + NL2 OOP paired flops failclosed');
+ return d;
+};
+const v47=d=>{
  const q=d.B364_rank96_three_true_original_GTO_NL2_OOP_flops;
  const r=d.records?.['ln-opfr-r_model-18g2rvt'];
  const pins=q?.genuine_sources||[];
- if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V47_B364_RANK96'||
+ if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V47_B364_RANK96','NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B369_RANK27'||
     d.CERT_MULTIBOARD!==159||d.APPROX!==233||d.EST!==0||d.TOTAL!==392||
     d.parent_v46_sha256?.length!==64||
     q?.rank!==96||q?.model_id!=='ln-opfr-r_model-18g2rvt'||
@@ -878,7 +923,7 @@ const v42=d=>{
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v47_b364_rank96.json',{cache:'no-store'}).then(open).then(v47)
+ return fetch('data/nl2_hu_multiboard_status_v48_b369_rank27.json',{cache:'no-store'}).then(open).then(v48)\n   .catch(()=>fetch('data/nl2_hu_multiboard_status_v47_b364_rank96.json',{cache:'no-store'}).then(open).then(v47))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v46_b354_rank79.json',{cache:'no-store'}).then(open).then(v46))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v45_b345_rank71.json',{cache:'no-store'}).then(open).then(v45))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json',{cache:'no-store'}).then(open).then(v44))
