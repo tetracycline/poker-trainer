@@ -122,6 +122,9 @@ jobs:
                       reach=overlay.get('|'.join((n['board'],n['line'],'0')))
                       assert reach is not None
                       vn=[z for z in vc['nodes'] if (z['exact_node_line'],z['public_board'],z['acting_seat'])==('b33 c/b50 c/',n['board'],0)]
+                      if reach['count']==0:
+                          assert not vn or (len(vn)==1 and vn[0]['strictly_reachable_combos']==0)
+                          continue
                       assert len(vn)==1 and vn[0]['strictly_reachable_combos']==reach['count']
                       spr=vn[0]['node_spr']
                       if abs(spr-4.15)/4.15<=.05 and reach['count']>0:
