@@ -55,8 +55,11 @@ def locate_source(run_dir,spot,flop,version,target_sha):
             if c.get("flop_sha256") and sha(root)!=c["flop_sha256"]:continue
             if m.get("file_flop_sha256") and sha(root)!=m["file_flop_sha256"]:continue
             try:
-                pinfile=artifact_root/"evidence"/"poker-solver-commit.txt"
-                if pinfile.is_file() and pinfile.read_text().strip()!=PIN:continue
+                pinfiles=[artifact_root/"evidence"/"poker-solver-commit.txt",
+                          artifact_root/"evidence"/"poker-solver-pin.txt"]
+                pins=[x.read_text().strip() for x in pinfiles if x.is_file()]
+                if not pins or any(x!=PIN for x in pins):continue
+                if board_turn:=None:pass
                 return dict(manifest=m,case=c,manifest_path=mf,artifact_root=artifact_root,
                     sub=sub,root=root,job=job,root_sha256=sha(root),sub_sha256=sha(sub))
             except Exception:continue
@@ -154,13 +157,42 @@ def main():
     assert len(unknown)==334,("unexpected historical UNKNOWN count",len(unknown))
     run_ids=sorted({int(l["source_run_id"]) for b,l in unknown})
     missing=[r for r in run_ids if not (DOWNLOADS/str(r)).exists()]
-    if missing:raise RuntimeError("Missing downloaded source run dirs: "+str(missing))
     ctx=setup_solver()
+    # Calibrate the exact reconstruction against a previously recorded,
+    # non-UNKNOWN LMP source in the same downloaded source-run cohort.
+    known_checks=[];known_mismatches=[]
+    for b in matrix["boards"]:
+        for l in b["hero_lock_proofs"]:
+            if l["node_rate_data_status"]=="HISTORICAL_POOL_MARGINAL_SOURCE_COUNTS_UNKNOWN":continue
+            if int(l["source_run_id"]) not in run_ids:continue
+            x,reason=recover_one(b,l,ctx,DOWNLOADS/str(l["source_run_id"]))
+            if not x:continue
+            c=l["source_node_counts"]
+            actual=(x["observed_marginal"],x["assumed_default"],x["unmatched_unlocked"])
+            expected=(c["observed_marginal"],c["assumed_default"],c["unmatched_unlocked"])
+            if actual==expected:
+                known_checks.append(dict(run_id=x["run_id"],sha=x["source_sha256"],counts=actual))
+            else:
+                known_mismatches.append(dict(run_id=x["run_id"],sha=x["source_sha256"],actual=actual,expected=expected))
+            if len(known_checks)>=3:break
+        if len(known_checks)>=3:break
+    # Any source family that fails its known-count calibration is excluded from
+    # recovery; do not "correct" a known source with a different counting rule.
+    bad_types=set()
+    for item in known_mismatches:
+        bad_types.add((item.get("spot"),item.get("version")))
     recovered={};skipped=collections.Counter();details=[]
     for b,l in unknown:
+        if (b["spot"],l["version"]) in bad_types:
+            skipped["KNOWN_SOURCE_CALIBRATION_MISMATCH"]+=1
+            continue
         key=f'{l["source_run_id"]}:{l["source_sha256"]}'
         if key in recovered:continue
-        result,reason=recover_one(b,l,ctx,DOWNLOADS/str(l["source_run_id"]))
+        run_dir=DOWNLOADS/str(l["source_run_id"])
+        if not run_dir.exists():
+            skipped["SOURCE_RUN_ARTIFACTS_UNAVAILABLE"]+=1
+            continue
+        result,reason=recover_one(b,l,ctx,run_dir)
         if result:
             recovered[key]=result
         else:
@@ -190,11 +222,14 @@ def main():
         v["source_node_counts_recovery_method"]=x["recovery_method"]
         updated+=1
     assert updated==sum(1 for b,l in unknown if f'{l["source_run_id"]}:{l["source_sha256"]}' in recovered)
+    if updated==0:
+        raise RuntimeError("No exact original lock denominators recovered; leave all 334 UNKNOWN unchanged.")
     before_unknown=len(unknown)
     status["B368_lock_denominator_recovery"]=dict(
         schema="NL2_HU_B368_PINNED_POOL_LOCK_DENOMINATOR_RECOVERY_V1",
         source_matrix_sha256=sha(MATRIX),source_unknown_variants=before_unknown,
-        unique_original_source_runs=run_ids,
+        unique_original_source_runs=run_ids,missing_run_artifact_dirs=missing,
+        known_source_calibration_checks=known_checks,known_source_calibration_mismatches=known_mismatches,
         unique_raw_lock_sources=len(recovered),recovered_lock_variants=updated,
         remaining_unknown_variants=before_unknown-updated,
         recovery_method="Pinned poker-solver locks.build/pool_stats and exact original job/root raw source SHA; exact lock-list equivalence required.",
@@ -224,7 +259,7 @@ def main():
         PR2_Draft_NEVER_MERGE=True)
     MATRIX.write_text(json.dumps(new_matrix,ensure_ascii=False,indent=2)+"\n")
     overlay=dict(schema="NL2_HU_B368_RECOVERED_LOCK_SOURCE_NODE_COUNTS_V1",
-        source_matrix_sha256=sha(MATRIX),source_status_sha256=sha(STATUS),
+        source_matrix_pre_overlay_sha256=sha(MATRIX),source_status_sha256=sha(STATUS),
         unknown_before=before_unknown,recovered_variants=updated,
         unknown_after=new_unknown,recovered_sources=list(recovered.values()),
         skipped_reason_counts=dict(skipped),unresolved_sources=details,
@@ -255,6 +290,7 @@ def main():
       "Only the 135 exact named boards keep the 50% research tag; no general 50% sizing policy. "
       "Full 392-model and HU2475/2475 audits required. PR #2 remains draft; never merge.\n")
     print(json.dumps(dict(before_unknown=before_unknown,recovered=updated,remaining_unknown=new_unknown,
-      unique_runs=len(run_ids),unique_sources=len(recovered),skipped=dict(skipped),
+      unique_runs=len(run_ids),unique_sources=len(recovered),known_calibration_checks=len(known_checks),
+      known_calibration_mismatches=len(known_mismatches),skipped=dict(skipped),
       CERT=159,APPROX=233,boards=606,locks=698,b50_candidates=new_matrix["strict_aggregate"]["b50_research_candidate_boards"]),ensure_ascii=False))
 if __name__=="__main__":main()
