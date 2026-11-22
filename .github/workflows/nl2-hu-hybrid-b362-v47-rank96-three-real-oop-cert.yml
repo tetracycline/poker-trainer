@@ -1,0 +1,110 @@
+name: TASK-HYBRID B362 V47 rank96 three SHA authentic 100bb real GTO and NL2 UTG OOP, 159/233 HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b362-v47-rank96-three-real-oop-cert.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  certify-three-original-flops:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Require historical source + B359 + B361 original full verified run success; re-download genuine Stage2 Ks7h2d GTO and NL2 UTG OOP raw Rust evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b362_v47_rank96_three_real_oop_cert.py tools/hu_multiboard_promote.py tools/hu_cert_lock_medium_audit.py tools/hu_cert_lock_medium_coverage_matrix.py tools/hu_sequential_cfr_reach.py
+          for run in 44654973894 44976462678 44977743690; do
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq .conclusion)" = success
+          done
+          mkdir -p downloads/historic-gto downloads/historic-exp-oop
+          gh run download 44654973894 --repo "$GITHUB_REPOSITORY" --name 'nl2-stage2-UTG_CO-gto-Ks7h2d' --dir downloads/historic-gto
+          gh run download 44654973894 --repo "$GITHUB_REPOSITORY" --name 'nl2-stage2-UTG_CO-exp_oop-Ks7h2d' --dir downloads/historic-exp-oop
+          test -s downloads/historic-gto/evidence/UTG_CO-gto-Ks7h2d.json
+          test -s downloads/historic-exp-oop/evidence/UTG_CO-exp_oop-Ks7h2d.json
+          test -s downloads/historic-gto/solver/postflop/out/UTG_CO/gto/Ks7h2d_b33c_9d.json
+          test -s downloads/historic-exp-oop/solver/postflop/out/UTG_CO/exp_oop/Ks7h2d_b33c_9d.json
+      - name: Independently replay original Stage2 two actors full street 40/70 SHA, plus B359/B361 exact signed source proof, create V47 rank96 CERT only after all three genuinely match
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b362_v47_rank96_three_real_oop_cert.py \
+            --historic-gto downloads/historic-gto \
+            --historic-exp-oop downloads/historic-exp-oop
+          python3 -m py_compile tools/hu_cert_lock_medium_audit.py
+      - name: Independently prove complete V47 159 CERT 233 APPROX, all 606 original named GTO+true actor NL2 locks and no false medium/unknown denominators
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b362_rank96.json --out nl2-audit/b362-V47-source.json
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          d=pathlib.Path('data')
+          p=lambda name:json.loads((d/name).read_text())
+          s=p('nl2_hu_multiboard_status_v47_b362_rank96.json')
+          m=p('nl2_hu_cert_lock_medium_matrix_v47_b362.json')
+          g=p('nl2_hu_b362_v47_rank96_3_original_GTO_real_NL2_OOP_source_gate.json')
+          a=json.loads(pathlib.Path('nl2-audit/b362-V47-source.json').read_text())
+          sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(159,233,0,392)
+          assert s['parent_v46_sha256']==sha(d/'nl2_hu_multiboard_status_v46_b354_rank79.json')
+          assert g['V47_status_sha256']==sha(d/'nl2_hu_multiboard_status_v47_b362_rank96.json')
+          assert g['V47_matrix_sha256']==sha(d/'nl2_hu_cert_lock_medium_matrix_v47_b362.json')
+          assert m['parent_v47_status_sha256']==g['V47_status_sha256']
+          assert (len(m['boards']),len(m['models']))==(606,159)
+          assert (m['strict_aggregate']['named_board_proofs'],m['strict_aggregate']['hero_lock_variants'])==(606,698)
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'])==(606,698)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          assert g['three_distinct_flops']==['Ks7h2d','As9h2d','Qs8h2d']
+          assert len(g['two_plus_textures'])>=2
+          assert g['historical_source_flop_menu_33_50_75_not_full_four']
+          assert s['records']['ln-opfr-r_model-18g2rvt']['label']=='CERT-MULTIBOARD'
+          print('PASS B362 V47 159 CERT/233 APPROX 606 boards 698 true OOP/IP locks')
+          PY
+      - name: Full independent 2475 HU river navigation/reach and V46 frontend backward-compatibility (no silent link or page break)
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B362 full HU 2475/2475")'
+      - name: Commit verified V47 rank96 3 true 100bb GTO and NL2 actor sources and independent source-auditor schema update; fast-forward PR2 only no merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/hu_cert_lock_medium_audit.py \
+            data/nl2_hu_multiboard_status_v47_b362_rank96.json \
+            data/nl2_hu_cert_lock_medium_matrix_v47_b362.json \
+            data/nl2_hu_b362_v47_rank96_3_original_GTO_real_NL2_OOP_source_gate.json \
+            docs/NL2_HU_B362_V47_RANK96_THREE_REAL_GTO_NL2_OOP_CERT.md
+          git diff --cached --quiet && exit 1
+          git commit -m 'TASK-HYBRID B362: V47 rank96 3 genuine 100bb GTO/NL2 UTG OOP sources, 159/233 606 boards 698 locks HU2475 audited'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-B362-V47-rank96-original-stage2-and-B359-B361-3-GTO-true-OOP-CERT-159-233-HU2475
+          path: |
+            data/nl2_hu_multiboard_status_v47_b362_rank96.json
+            data/nl2_hu_cert_lock_medium_matrix_v47_b362.json
+            data/nl2_hu_b362_v47_rank96_3_original_GTO_real_NL2_OOP_source_gate.json
+            docs/NL2_HU_B362_V47_RANK96_THREE_REAL_GTO_NL2_OOP_CERT.md
+            nl2-audit/
+          retention-days: 30
