@@ -1,0 +1,157 @@
+name: B443 complete B439 As9h2d EXP_OOP via exact GTO-parent turn/river partial lock
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b443-as9h2d-exp-oop-turn-only.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: b443-as9h2d-exp-oop-turn-only
+  cancel-in-progress: false
+jobs:
+  solve-exp-oop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: \${{ github.sha }}
+          path: trainer
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned original Rust CFR
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_multiboard_100bb.py trainer/tools/verify_b443_as9h2d_exp_oop.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Download only the already completed B439 original GTO root
+        working-directory: trainer
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b439-gto
+          gh run download 45068014496 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-multiboard-B439_R27_LMPCOBB_B50_B75-LMP_CO_BB-As9h2d-gto' \
+            --dir /tmp/b439-gto
+          test -s /tmp/b439-gto/evidence/LMP_CO_BB-As9h2d-gto.json
+          test -s /tmp/b439-gto/solver/postflop/out/LMP_CO_BB/gto/As9h2d_multiboard.json
+      - name: Solve exact downstream EXP_OOP turn/river subgame; keep original GTO flop byte-identical
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C ../solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C ../solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          python3 tools/solve_hu_multiboard_100bb.py \
+            --solver-root ../solver --spot LMP_CO_BB --flop As9h2d --version exp_oop \
+            --flop-size-profile full --flop-line-policy oop-b50only \
+            --turn-size-menu river-gaps --turn-count 1 \
+            --authenticated-original-gto-flop /tmp/b439-gto/solver/postflop/out/LMP_CO_BB/gto/As9h2d_multiboard.json \
+            --authenticated-original-gto-manifest /tmp/b439-gto/evidence/LMP_CO_BB-As9h2d-gto.json \
+            --authenticated-original-gto-sha256 67c9f2c4faf58da55da9624d370a419fcaa55e5db670b3baa9d50fd2f4d19fee \
+            --manifest evidence/LMP_CO_BB-As9h2d-exp_oop.json
+          python3 - <<'PY'
+          import json,pathlib
+          m=json.loads(pathlib.Path('evidence/LMP_CO_BB-As9h2d-exp_oop.json').read_text())
+          assert (m['spot'],m['version'],m['flop'],m['solved_cases'])==('LMP_CO_BB','exp_oop','As9h2d',1)
+          assert not m['failures'] and not m['skipped']
+          assert m['cases'][0]['line']=='b50 c' and m['cases'][0]['turn']=='Kd'
+          assert m['cases'][0]['gto_gap_pct']<=0.5 and m['cases'][0]['hero_gap_pct']<=0.5
+          assert m['gto_parent_source_run_id']==45068014496
+          print('PASS B443 exact GTO parent + true EXP_OOP turn/river subgame')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NL2-B443-As9h2d-EXP_OOP-turn-only
+          path: |
+            trainer/evidence
+            solver/postflop/out/LMP_CO_BB/exp_oop
+          retention-days: 30
+          if-no-files-found: error
+  verify-audit-commit:
+    needs: solve-exp-oop
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: \${{ github.sha }}
+          path: trainer
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download preserved original GTO source and current EXP_OOP source
+        working-directory: trainer
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p ../downloads/gto ../downloads/exp_oop
+          gh run download 45068014496 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-multiboard-B439_R27_LMPCOBB_B50_B75-LMP_CO_BB-As9h2d-gto' \
+            --dir ../downloads/gto
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name 'NL2-B443-As9h2d-EXP_OOP-turn-only' --dir ../downloads/exp_oop
+      - name: Independent source SHA, Rust EXP_OOP, lock, and strict-reach audit
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/verify_b443_as9h2d_exp_oop.py --downloads-root ../downloads --run-id "$GITHUB_RUN_ID"
+      - name: Full V50 source/medium audit and HU2475 navigation/reach/UI audit
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_cert_lock_medium_audit.py \
+            --source data/nl2_hu_multiboard_status_v50_b417_rank166.json --out /tmp/b443-v50.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b443-v50.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'],a['models_total'])==(163,229,0,392)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'])==(618,710)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > /tmp/b443-contract.json
+          node tools/link_audit.js --md /tmp/b443-link.md --json /tmp/b443-link.json
+          node tools/reach_verify.js --log /tmp/b443-reach.md --json /tmp/b443-reach.json
+          node tools/hu_model_path_audit.js /tmp/b443-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b443-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B443 HU2475/2475")'
+          git diff --check
+      - name: Commit exact partial source proof to PR2; never merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b443_as9h2d_exp_oop_partial_source_proof.json \
+            data/solver_evidence/NL2_B443_R27_R29_AS9H2D_EXP_OOP_TURN_ONLY.json.gz \
+            data/solver_evidence/NL2_B443_R27_R29_AS9H2D_EXP_OOP_TURN_ONLY.index.json \
+            docs/NL2_HU_B443_AS9H2D_EXP_OOP_PARTIAL_SOURCE.md
+          git diff --cached --quiet && exit 1
+          git commit -m 'B443: preserve authentic As9h2d EXP_OOP turn/river partial lock from B439 GTO parent'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1

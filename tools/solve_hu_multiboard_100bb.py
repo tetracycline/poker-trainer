@@ -119,6 +119,7 @@ def main():
     a.add_argument('--manifest',required=True,type=pathlib.Path)
     args=a.parse_args()
     if not 1<=args.turn_count<=3:a.error('turn-count 1..3')
+    authenticated_profile=None
     using_authenticated_parent=any((args.authenticated_original_gto_flop,
                                     args.authenticated_original_gto_manifest,
                                     args.authenticated_original_gto_sha256))
@@ -126,10 +127,14 @@ def main():
         if not all((args.authenticated_original_gto_flop,args.authenticated_original_gto_manifest,
                     args.authenticated_original_gto_sha256)):
             a.error('Original GTO parent needs both exact files and a SHA256')
-        if (args.spot,args.version,args.flop,args.flop_size_profile,
-                args.flop_line_policy,args.turn_size_menu,args.turn_count)!=(
-                'LMP_CO_BB','exp_oop','9s6h3d','full','oop-b33only','exact-b50-only',1):
-            a.error('Authenticated reuse is restricted to B372 genuine LMP 9s6h3d exp_oop turn-only')
+        auth_tuple=(args.spot,args.version,args.flop,args.flop_size_profile,
+                    args.flop_line_policy,args.turn_size_menu,args.turn_count)
+        if auth_tuple==('LMP_CO_BB','exp_oop','9s6h3d','full','oop-b33only','exact-b50-only',1):
+            authenticated_profile='B372'
+        elif auth_tuple==('LMP_CO_BB','exp_oop','As9h2d','full','oop-b50only','river-gaps',1):
+            authenticated_profile='B439'
+        else:
+            a.error('Authenticated reuse is restricted to individually SHA-pinned B372 or B439 LMP turn-only sources')
         if not re.fullmatch('[0-9a-f]{64}',args.authenticated_original_gto_sha256):
             a.error('Invalid authenticated original GTO root SHA256')
     if args.turn_size_menu=='exact-b66-only':
@@ -272,6 +277,11 @@ def main():
             authm=json.loads(args.authenticated_original_gto_manifest.read_text())
             authpath=args.authenticated_original_gto_flop
             authsha=sha(authpath)
+            authmanifest_sha=sha(args.authenticated_original_gto_manifest)
+            authjob=authpath.with_suffix('.job.json')
+            if not authjob.is_file():
+                raise FileNotFoundError('Missing original GTO root job file')
+            authjob_sha=sha(authjob)
             if authsha!=args.authenticated_original_gto_sha256:
                 raise ValueError('Original GTO flop source SHA mismatch; no fallback allowed')
             if (authm['schema'],authm['spot'],authm['version'],authm['flop'])!=(
@@ -286,20 +296,46 @@ def main():
                 raise ValueError('Original GTO exact line/turn mismatch')
             if authm['solver_pin']!=sha(pf/'py/pipeline.py') or authm['solver_ranges_sha256']!=sha(pf/'py/ranges.py'):
                 raise ValueError('Original GTO code pin mismatch')
+            if authenticated_profile=='B439':
+                if (authmanifest_sha,authjob_sha)!=(
+                    '633af964d7e1afa37b620fa1573130b130ba8e1fc4d1963534597a0446e25078',
+                    '4e3c4af303d9962768284a269f8c146192a700b14579c98f6d86683d6f9c5323'):
+                    raise ValueError('B439 original GTO manifest/job SHA mismatch')
+                if (authm['turn_sizing_mode'],authm['flop_line_policy'],authm['turn_line_policy'],
+                    authm['selected_turn_lines'],authm['cases'][0]['source_sha256'])!=(
+                    'river-gaps','oop-b50only','default',
+                    ['x b33 c','x b66 c','x b75 c','x x','b33 c','b66 c','b75 c'],
+                    '98377f820251e273540ccce5132b7a451a6018aff3d322dc2eb75496de6c5db6'):
+                    raise ValueError('B439 original GTO exact turn tree/source mismatch')
+                parent_run_id,parent_artifact_id=45068014496,14772553505
+            else:
+                parent_run_id,parent_artifact_id=45013144124,14751218545
             fr=json.loads(authpath.read_text())
             if (fr['flop'],fr['pot'],fr['stack'])!=(flop,250,9900):
                 raise ValueError('Original GTO tree pot/stack/flop mismatch')
             if fr['info'].get('gto_expl_pct') is None or fr['info']['gto_expl_pct']>.5:
                 raise ValueError('Original GTO flop did not converge within 0.5%')
             path.write_bytes(authpath.read_bytes())
-            info['authenticated_original_gto_parent']=dict(
-                original_run_id=45013144124,original_artifact_id=14751218545,
-                original_GTO_root_sha256=authsha,
-                original_GTO_manifest_sha256=sha(args.authenticated_original_gto_manifest),
+            jpath.write_bytes(authjob.read_bytes())
+            parent_meta=dict(
+                original_run_id=parent_run_id,original_artifact_id=parent_artifact_id,
+                original_GTO_root_sha256=authsha,original_GTO_job_sha256=authjob_sha,
+                original_GTO_manifest_sha256=authmanifest_sha,
                 original_GTO_flop_gap_pct=fr['info']['gto_expl_pct'],
                 genuine_NL2_partial_lock_only_on_downstream_turn_and_river=True,
                 flop_is_original_unlocked_GTO_not_fully_hero_NL2_locked=True,
                 original_source_flop_line_and_turn_pinned=True)
+            info['authenticated_original_gto_parent']=parent_meta
+            info.update(
+                flop_parent_mode='PINNED_GTO_FLOP_PARENT_TURN_ONLY_LOCK',
+                gto_parent_source_run_id=parent_run_id,
+                gto_parent_source_sha256=authsha,
+                gto_parent_source_manifest_sha256=authmanifest_sha,
+                flop_root_jobfile_sha256=authjob_sha,
+                original_full_GTO_flop_byte_identical_not_recomputed=True,
+                NL2_hero_lock_scope=('TURN_RIVER_ONLY_FROM_SHA_PINNED_B439_TRUE_GTO'
+                                     if authenticated_profile=='B439'
+                                     else 'TURN_RIVER_ONLY_FROM_SHA_PINNED_B372_TRUE_GTO'))
         else:
             job.run(job_input,str(jpath))
             pathlib.Path(str(path)+'.tmp').rename(path)
