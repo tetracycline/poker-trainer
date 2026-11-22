@@ -32,7 +32,7 @@ jobs:
           assert (p['exact_named_boards'],p['hero_lock_source_variants'],p['unknown_remains'])==(609,701,0)
           assert p['exact_nonpolarized_50pct_research_candidate_boards']+p['exact_50pct_unproven_boards']==609
           assert p['disallow_50pct_bet_extrapolation_to_unproven_board_or_generic_handclass']
-          print('PASS B402 160/232 + every named board's measured/assumed/unlocked NL2 source and 50%-research-only')
+          print("PASS B402 160/232 + every named board's measured/assumed/unlocked NL2 source and 50%-research-only")
           PY
       - name: Full HU2475 exact river action reach, per-board source label, old and new front end and cache
         run: |
