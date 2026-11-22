@@ -38,6 +38,20 @@ def read(p):
 def sha(p):
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
+def attach_source_paths(verified):
+    # The shared verifier consumes the source path as well as the SHA; recover it from
+    # the authenticated manifest rather than assuming every historical adapter emits it.
+    for case in verified["real_cases"]:
+        matches = [
+            row for row in verified["manifest"]["cases"]
+            if row["source_sha256"] == case["source_sha256"]
+            and row["turn"] == case["turn"]
+            and row["line"] == case["line"]
+        ]
+        assert len(matches) == 1, (case["source_sha256"], case["turn"], len(matches))
+        case["source_path"] = matches[0]["source_path"]
+    return verified
+
 def pair_pin(x, proof_path):
     return dict(
         flop=x["flop"],
@@ -124,13 +138,13 @@ def main():
     for version, root in (("gto", a.historical_gto), ("exp_ip", a.historical_exp)):
         row = next(x for x in triage["source_blind_selected_ten"] if x["frequency_rank"] == 216)["strictly_measured_pairs"][0]
         expected = row["gto_source_sha256"] if version == "gto" else row["nl2_hero_lock_sha256"]
-        loaded[("Js9h4d", version)] = b427.legacy_b2_check(root, "Js9h4d", version, expected)
+        loaded[("Js9h4d", version)] = attach_source_paths(b427.legacy_b2_check(root, "Js9h4d", version, expected))
 
     # B412/B421 are existing authentic original Rust GTO + actual NL2-IP source pairs.
-    G412 = source_check(a.td_gto, "Td8h3c", "gto", None)
-    E412 = source_check(a.td_exp, "Td8h3c", "exp_ip", None)
-    G421 = source_check(a.js_gto, "Js9h5d", "gto", None)
-    E421 = source_check(a.js_exp, "Js9h5d", "exp_ip", None)
+    G412 = attach_source_paths(source_check(a.td_gto, "Td8h3c", "gto", None))
+    E412 = attach_source_paths(source_check(a.td_exp, "Td8h3c", "exp_ip", None))
+    G421 = attach_source_paths(source_check(a.js_gto, "Js9h5d", "gto", None))
+    E421 = attach_source_paths(source_check(a.js_exp, "Js9h5d", "exp_ip", None))
     for z in (G412, E412, G421, E421):
         assert z and z["status"] == "GENUINE_RUST_EXACT_SOURCE"
     row412 = b412["source_evidence"][0]
@@ -149,8 +163,8 @@ def main():
     loaded[("Js9h5d", "exp_ip")] = E421
 
     # B429/B431 add a fourth, distinct exact flop with both original GTO and real NL2-IP source.
-    G429 = b431.check(a.low_gto, "gto", 45055601616)
-    E431 = b431.check(a.low_exp, "exp_ip", 45056914556)
+    G429 = attach_source_paths(b431.check(a.low_gto, "gto", 45055601616))
+    E431 = attach_source_paths(b431.check(a.low_exp, "exp_ip", 45056914556))
     assert G429["status"] == E431["status"] == "GENUINE_RUST_EXACT_SOURCE"
     low_source = b431proof["source_evidence"][0]
     assert G429["manifest_sha256"] == low_source["original_GTO"]["manifest_sha256"]
