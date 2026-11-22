@@ -28,6 +28,6 @@ for(const filename of ['nl2_hu_multiboard_ui.js','nl2-multiboard.js']){
 }
 for(const filename of ['nl2.html','nl2-multiboard.html']){
  const h=fs.readFileSync(filename,'utf8');
- assert.ok(h.includes('task-hybrid-b378-v47-loaderfix-20261122'),filename+' cache not invalidated');
+ assert.ok(/task-hybrid-b(?:378-v47-loaderfix|390-v48|392-persistent-r107)-20261122/.test(h),filename+' cache marker missing for verified source version');
 }
 console.log('PASS B378 authentic V47 159/233 actual runtime validator, corrupt/mislabeled source rejected in both loaders');
