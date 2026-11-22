@@ -63,7 +63,7 @@ def main():
     old_fetch="return fetch('data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json',{cache:'no-store'}).then(open).then(v44)"
     new_fetch=("return fetch('data/nl2_hu_multiboard_status_v45_b345_rank71.json',{cache:'no-store'}).then(open).then(v45)\n"
       "   .catch(()=>fetch('data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json',{cache:'no-store'}).then(open).then(v44))")
-    lookup="""  if(chosenBoard.source_kind?.includes('OFFICIAL')&&!hasVerifiedBatch){"""
+    lookup=""" if(chosenBoard.source_kind?.includes('OFFICIAL')&&!hasVerifiedBatch){"""
     extra="""  if(chosenModel?.model_id==='ln-iso-lmp_r_model-vlgh2t'&&
      chosenBoard?.actual_exact_action_line==='b50 c/x b50 c/'&&
      sourceSha(source)?.length===64){
