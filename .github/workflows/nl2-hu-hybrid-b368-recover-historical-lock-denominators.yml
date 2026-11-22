@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer, fetch-depth: 0}
       - uses: actions/checkout@v4
         with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
       - uses: actions/setup-python@v5
@@ -36,7 +36,11 @@ jobs:
           print('B368 exact original source runs:',len(ids))
           PY
           mkdir -p downloads
+          : > downloads/run-heads.tsv
           while read -r id; do
+            run_head=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id" --jq '.head_sha')
+            printf '%s\t%s\n' "$id" "$run_head" >> downloads/run-heads.tsv
+            echo "SOURCE_RUN_HEAD $id $run_head"
             mkdir -p "downloads/$id"
             if gh run download "$id" --repo "$GITHUB_REPOSITORY" --dir "downloads/$id"; then
               echo "DOWNLOADED $id"

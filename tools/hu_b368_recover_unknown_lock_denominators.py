@@ -4,7 +4,7 @@ Fail closed: only update a source variant if (run, raw subgame SHA, original
 root SHA, exact driver lock list, pinned solver commit) all match. Otherwise
 leave UNKNOWN. No inferred per-hole-card opponent frequencies.
 """
-import collections,copy,hashlib,importlib,json,pathlib,re,sys
+import collections,copy,hashlib,importlib,json,pathlib,re,subprocess,sys
 D=pathlib.Path("data")
 SOLVER=pathlib.Path("../solver")
 DOWNLOADS=pathlib.Path("downloads")
@@ -68,23 +68,42 @@ def setup_solver():
     sys.path.insert(0,str(SOLVER/"postflop"/"py"))
     sys.path.insert(0,str(pathlib.Path("tools").resolve()))
     import pipeline,ranges,locks as LK
-    from solve_hu_missing_branches import EXTRA_SPOTS
-    for name,profile in EXTRA_SPOTS.items():
-        ranges.SPOTS[name]=profile
-        pipeline.SPOTS[name]=profile
-    from solve_hu_multiboard_100bb import make_fallbacks,RULES
+    base_spots=copy.deepcopy(pipeline.SPOTS)
     pool=read(SOLVER/"inputs/pool_stats.json")["NL2"]
-    return pipeline,ranges,LK,make_fallbacks,RULES,pool
-def expected_locks(spot,version,flop,ctx):
-    pipeline,ranges,LK,make_fallbacks,RULES,pool=ctx
-    if spot in RULES:
-        driver,meta=make_fallbacks(spot,version,pool,pipeline.lock_list,flop)
-        return driver,meta
-    if spot not in pipeline.SPOTS:
-        raise KeyError("spot absent from pinned pipeline: "+spot)
-    driver,meta=pipeline.lock_list(spot,version,flop)
-    return driver,meta
-def recover_one(board,lock,ctx,run_dir):
+    return pipeline,ranges,LK,pool,base_spots
+def load_historical_helper(run_id,head_sha):
+    # The trainer-side make_fallbacks changed across B2/B3/B19/B26.
+    # Load the exact helper modules from the original Actions run commit.
+    temp=pathlib.Path("/tmp")/f"b368-historical-tools-{run_id}"
+    temp.mkdir(parents=True,exist_ok=True)
+    for rel in ("tools/solve_hu_multiboard_100bb.py",
+                "tools/solve_hu_assumed_pots.py",
+                "tools/solve_hu_missing_branches.py"):
+        content=subprocess.check_output(["git","show",f"{head_sha}:{rel}"],text=True)
+        (temp/pathlib.Path(rel).name).write_text(content)
+    for name in ("solve_hu_multiboard_100bb","solve_hu_assumed_pots","solve_hu_missing_branches"):
+        sys.modules.pop(name,None)
+    p=str(temp)
+    sys.path.insert(0,p)
+    try:
+        helper=importlib.import_module("solve_hu_multiboard_100bb")
+    finally:
+        while p in sys.path:sys.path.remove(p)
+    if not hasattr(helper,"make_fallbacks") or not hasattr(helper,"EXTRA_SPOTS"):
+        raise RuntimeError("historical helper is missing make_fallbacks/EXTRA_SPOTS")
+    helper._b368_source_head_sha=head_sha
+    return helper
+def expected_locks(spot,version,flop,ctx,helper):
+    pipeline,ranges,LK,pool,base_spots=ctx
+    # Recreate the original runner's pre-fallback spot registry, then apply
+    # the EXTRA_SPOTS definitions from that exact historical trainer commit.
+    pipeline.SPOTS.clear()
+    pipeline.SPOTS.update(copy.deepcopy(base_spots))
+    pipeline.SPOTS.update(copy.deepcopy(helper.EXTRA_SPOTS))
+    # Original solve_hu_multiboard_100bb.py wrapped pipeline.lock_list for
+    # every spot, not only assumed-pots spots.
+    return helper.make_fallbacks(spot,version,pool,pipeline.lock_list,flop)
+def recover_one(board,lock,ctx,run_dir,helper,run_head_sha):
     spot,flop=board["spot"],board["flop"]
     version=lock["version"];run=int(lock["source_run_id"]);target=lock["source_sha256"]
     found=locate_source(run_dir,spot,flop,version,target)
@@ -93,7 +112,7 @@ def recover_one(board,lock,ctx,run_dir):
     if root.get("flop") not in (None,flop):return None,"ROOT_FLOP_MISMATCH"
     if not isinstance(root.get("nodes"),list):return None,"ROOT_NODES_MISSING"
     if not isinstance(job.get("locks"),list):return None,"ORIGINAL_JOB_LOCKS_MISSING"
-    driver,meta=expected_locks(spot,version,flop,ctx)
+    driver,meta=expected_locks(spot,version,flop,ctx,helper)
     if canon(driver)!=canon(job["locks"]):
         return None,"PINNED_LOCK_LIST_NOT_BYTE_EQUIVALENT_TO_ORIGINAL_JOB"
     patterns=[]
@@ -132,7 +151,7 @@ def recover_one(board,lock,ctx,run_dir):
     denom=[dict(pat=x["pat"],n=x["n"],source=x["source"],scope=x["scope"],
         matched_source_nodes=matched_patterns.get(x["pat"],0)) for x in patterns]
     return dict(run_id=run,source_sha256=target,spot=spot,flop=flop,version=version,
-        original_manifest_schema=m.get("schema"),original_turn=c.get("turn"),
+        original_manifest_schema=m.get("schema"),original_trainer_head_sha=run_head_sha,original_turn=c.get("turn"),
         original_action_line=c.get("line") or c.get("flop_line"),
         original_subgame_sha256=found["sub_sha256"],original_root_sha256=found["root_sha256"],
         original_root_job_sha256=sha(found["job"]),poker_solver_pin=PIN,
@@ -158,28 +177,49 @@ def main():
     run_ids=sorted({int(l["source_run_id"]) for b,l in unknown})
     missing=[r for r in run_ids if not (DOWNLOADS/str(r)).exists()]
     ctx=setup_solver()
-    # Calibrate the exact reconstruction against a previously recorded,
-    # non-UNKNOWN LMP source in the same downloaded source-run cohort.
-    known_checks=[];known_mismatches=[]
+    run_heads={}
+    for line in (DOWNLOADS/"run-heads.tsv").read_text().splitlines():
+        parts=line.split()
+        if len(parts)==2:run_heads[int(parts[0])]=parts[1]
+    if not set(run_ids).issubset(run_heads):
+        raise RuntimeError("Missing original trainer head SHA for source runs: "+str(sorted(set(run_ids)-set(run_heads))))
+    helper_cache={}
+    def helper_for(run_id):
+        if run_id not in helper_cache:
+            helper_cache[run_id]=load_historical_helper(run_id,run_heads[run_id])
+        return helper_cache[run_id]
+    # Calibrate against stored non-UNKNOWN counts using each run's exact
+    # trainer helper commit as well as the pinned poker-solver commit.
+    known_checks=[];known_mismatches=[];known_reasons=collections.Counter();known_reason_examples=[]
     for b in matrix["boards"]:
         for l in b["hero_lock_proofs"]:
             if l["node_rate_data_status"]=="HISTORICAL_POOL_MARGINAL_SOURCE_COUNTS_UNKNOWN":continue
-            if int(l["source_run_id"]) not in run_ids:continue
-            x,reason=recover_one(b,l,ctx,DOWNLOADS/str(l["source_run_id"]))
-            if not x:continue
+            run_id=int(l["source_run_id"])
+            if run_id not in run_ids:continue
+            helper=helper_for(run_id)
+            x,reason=recover_one(b,l,ctx,DOWNLOADS/str(run_id),helper,run_heads[run_id])
+            if not x:
+                known_reasons[reason]+=1
+                if len(known_reason_examples)<10:
+                    known_reason_examples.append(dict(run_id=run_id,spot=b["spot"],flop=b["flop"],version=l["version"],reason=reason))
+                continue
             c=l["source_node_counts"]
             actual=(x["observed_marginal"],x["assumed_default"],x["unmatched_unlocked"])
             expected=(c["observed_marginal"],c["assumed_default"],c["unmatched_unlocked"])
             if actual==expected:
-                known_checks.append(dict(run_id=x["run_id"],sha=x["source_sha256"],counts=actual))
+                known_checks.append(dict(run_id=x["run_id"],head_sha=run_heads[run_id],sha=x["source_sha256"],
+                    spot=x["spot"],version=x["version"],counts=actual))
             else:
-                known_mismatches.append(dict(run_id=x["run_id"],sha=x["source_sha256"],spot=x["spot"],version=x["version"],actual=actual,expected=expected))
-            if len(known_checks)>=3:break
-        if len(known_checks)>=3:break
-    # Any source family that fails its known-count calibration is excluded from
-    # recovery; do not "correct" a known source with a different counting rule.
-    if not known_checks:
-        raise RuntimeError("No known historical source denominator could be reproduced; do not recover UNKNOWN from an uncalibrated method.")
+                known_mismatches.append(dict(run_id=x["run_id"],head_sha=run_heads[run_id],sha=x["source_sha256"],
+                    spot=x["spot"],version=x["version"],actual=actual,expected=expected))
+            if len(known_checks)>=3 and len({z["spot"] for z in known_checks})>=2:break
+        if len(known_checks)>=3 and len({z["spot"] for z in known_checks})>=2:break
+    if len(known_checks)<3 or len({z["spot"] for z in known_checks})<2:
+        print(json.dumps(dict(known_source_rejection_reasons=dict(known_reasons),
+            known_source_rejection_examples=known_reason_examples,
+            known_source_calibration_checks=known_checks,
+            known_source_calibration_mismatches=known_mismatches),ensure_ascii=False))
+        raise RuntimeError("Insufficient exact historical calibrations across at least two spots; leave UNKNOWN unchanged.")
     bad_types=set()
     for item in known_mismatches:
         bad_types.add((item["spot"],item["version"]))
@@ -194,7 +234,8 @@ def main():
         if not run_dir.exists():
             skipped["SOURCE_RUN_ARTIFACTS_UNAVAILABLE"]+=1
             continue
-        result,reason=recover_one(b,l,ctx,run_dir)
+        helper=helper_for(run)
+        result,reason=recover_one(b,l,ctx,run_dir,helper,run_heads[run])
         if result:
             recovered[key]=result
         else:
@@ -231,10 +272,10 @@ def main():
         schema="NL2_HU_B368_PINNED_POOL_LOCK_DENOMINATOR_RECOVERY_V1",
         source_matrix_sha256=sha(MATRIX),source_unknown_variants=before_unknown,
         unique_original_source_runs=run_ids,missing_run_artifact_dirs=missing,
-        known_source_calibration_checks=known_checks,known_source_calibration_mismatches=known_mismatches,
+        known_source_calibration_checks=known_checks,known_source_calibration_mismatches=known_mismatches,\n        known_source_rejection_reasons=dict(known_reasons),known_source_rejection_examples=known_reason_examples,\n        source_run_head_shas={str(k):v for k,v in run_heads.items()},
         unique_raw_lock_sources=len(recovered),recovered_lock_variants=updated,
         remaining_unknown_variants=before_unknown-updated,
-        recovery_method="Pinned poker-solver locks.build/pool_stats and exact original job/root raw source SHA; exact lock-list equivalence required.",
+        recovery_method="Pinned poker-solver locks.build/pool_stats plus each original Actions run head SHA helper and exact original job/root raw source SHA; exact lock-list equivalence required.",
         empirical_sample_denominators_recovered=True,
         exact_source_node_partitions_recovered=True,
         no_private_hand_conditional_NL2_frequencies=True,
@@ -256,7 +297,7 @@ def main():
         B368_lock_denominator_recovery_sha256=None,
         source_unknown_variants_before=before_unknown,
         source_unknown_variants_after=new_unknown,
-        source_denominator_recovery_method="PINNED_POOL_STATS_AND_EXACT_ORIGINAL_JOB_LOCKS",
+        source_denominator_recovery_method="PINNED_POOL_STATS_AND_PER_RUN_HISTORICAL_HELPER_HEAD_SHA",
         no_inferred_or_fabricated_counts=True,
         PR2_Draft_NEVER_MERGE=True)
     MATRIX.write_text(json.dumps(new_matrix,ensure_ascii=False,indent=2)+"\n")
@@ -287,12 +328,13 @@ def main():
               json.dumps(x["pattern_sample_denominators"],ensure_ascii=False,separators=(",",":"))])
     DOC.write_text("# B368: historical node-lock denominators recovered only from exact original sources\n\n"
       f"Original historical UNKNOWN lock variants: **{before_unknown}**. Recovered exact source variants: **{updated}**. Remaining UNKNOWN: **{new_unknown}**.\n\n"
-      "Recovery required all of: original run artifact available, exact raw subgame SHA match, exact original root SHA, pinned poker-solver commit, exact original job lock-list equivalence to regenerated pinned pool_stats patterns, and full root villain decision-node partition into observed / assumed / unmatched. Unmatched nodes remain explicitly unlocked. No counts were imputed from board rank or neighboring models. No opponent private-card-conditional NL2 frequencies are claimed.\n\n"
+      "Recovery required all of: original run artifact available, exact raw subgame SHA match, exact original root SHA, pinned poker-solver commit, exact trainer helper code from that source run head SHA, exact original job lock-list equivalence to regenerated pinned pool_stats patterns, and full root villain decision-node partition into observed / assumed / unmatched. Unmatched nodes remain explicitly unlocked. No counts were imputed from board rank or neighboring models. No opponent private-card-conditional NL2 frequencies are claimed.\n\n"
       f"V47 remains **159 CERT /233 APPROX /0 EST**; named boards 606, partial actor locks 698, exact-board b50 nonpolarized research candidates 135. "
       "Only the 135 exact named boards keep the 50% research tag; no general 50% sizing policy. "
       "Full 392-model and HU2475/2475 audits required. PR #2 remains draft; never merge.\n")
     print(json.dumps(dict(before_unknown=before_unknown,recovered=updated,remaining_unknown=new_unknown,
       unique_runs=len(run_ids),unique_sources=len(recovered),known_calibration_checks=len(known_checks),
-      known_calibration_mismatches=len(known_mismatches),skipped=dict(skipped),
+      known_calibration_mismatches=len(known_mismatches),known_calibration_spots=sorted({x["spot"] for x in known_checks}),
+      known_source_rejection_reasons=dict(known_reasons),skipped=dict(skipped),
       CERT=159,APPROX=233,boards=606,locks=698,b50_candidates=new_matrix["strict_aggregate"]["b50_research_candidate_boards"]),ensure_ascii=False))
 if __name__=="__main__":main()
