@@ -1,0 +1,106 @@
+name: NL2 B391 ranks115/116 genuine full100bb LMP GTO-first three source-blind flops <=29m
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b391-lmp-r115116-gto-first.yml'
+      - 'tools/hu_b391_lmp_r115116_three_gto_first.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    strategy:
+      max-parallel: 3
+      fail-fast: false
+      matrix:
+        flop: [As9h2d, Js9h4d, QsJh4d]
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: True original 100bb Rust GTO full flop, no fabricated NL2 observed private-card ranges
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+          cd ../../..
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver --spot LMP_CO_BB --flop "${{ matrix.flop }}" --version gto \
+            --flop-size-profile full --flop-line-policy oop-b33only --turn-count 1 \
+            --manifest "evidence/LMP_CO_BB-${{ matrix.flop }}-gto.json"
+      - name: Preserve exact original Rust GTO file, job, SHA and all legitimate zero-reach negatives
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B391_R115116_GTO_FIRST-LMP_CO_BB-${{ matrix.flop }}-gto
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Independent true original GTO source SHA, LMP assumptions, exact actor-IP and 40-70 gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b391-original
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir /tmp/b391-original
+          python3 -m py_compile tools/hu_b391_lmp_r115116_three_gto_first.py
+          python3 tools/hu_b391_lmp_r115116_three_gto_first.py --downloads /tmp/b391-original --run-id "$GITHUB_RUN_ID"
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b391-source.json
+      - name: Full HU2475 original river navigation reach model JS and no-fake-CERT test
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b391-contract.json
+          node tools/link_audit.js --md /tmp/b391-link.md --json /tmp/b391-link.json
+          node tools/reach_verify.js --log /tmp/b391-reach.md --json /tmp/b391-reach.json
+          node tools/hu_model_path_audit.js /tmp/b391-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b391-source.json'))
+          p=json.load(open('data/nl2_hu_b391_r115_116_three_frozen_gto_first_flops.json'))
+          l=json.load(open('/tmp/b391-link.json'))['counts']
+          assert len(p['original_true_Rust_GTO_only_sources'])==3
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert (l['continuing'],l['reachRiver'],l['riverShare'])==(2475,2475,100)
+          assert p['NL2_partial_lock_only_after_GTO_strict_actor_positive']
+          print('PASS B391 true GTO-only source triage, HU2475; no fake CERT')
+          PY
+          git diff --check
+      - name: Commit and push only authentic B391 GTO source/negative proofs to draft PR2
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b391_r115_116_three_frozen_gto_first_flops.json docs/NL2_HU_B391_R115_116_THREE_GTO_FIRST_SOURCES.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'B391: source-gate three genuine rank115/116 LMP GTO-first flops; 159/233, no unsupported CERT'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
