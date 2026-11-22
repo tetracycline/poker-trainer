@@ -1,0 +1,61 @@
+name: NL2 B370 first ten APPROX exact-source preflight and HU2475 no-fake-CERT audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b370-first10-preflight.yml'
+      - 'tools/hu_b370_first10_source_triage.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  source-preflight-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Rank exactly ten APPROX targets using authentic source gaps, never invent a CERT
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b370_first10_source_triage.py
+          python3 tools/hu_b370_first10_source_triage.py
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b370-cert-source.json
+          python3 - <<'PY'
+          import json
+          p=json.load(open('data/nl2_hu_b370_first10_approx_source_triage.json'))
+          a=json.load(open('/tmp/b370-cert-source.json'))
+          assert len(p['source_blind_selected_ten'])==10
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert all(r['label_unchanged']=='APPROX' for r in p['source_blind_selected_ten'])
+          print('PASS source preflight: 10 targets, 159/233, unknown locks not treated as measured')
+          PY
+      - name: Full HU2475 river-navigation, link, reach and path integrity
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b370-hu-contract.json
+          node tools/link_audit.js --md /tmp/b370-link-report.md --json /tmp/b370-link.json
+          node tools/reach_verify.js --log /tmp/b370-reach-report.md --json /tmp/b370-reach.json
+          node tools/hu_model_path_audit.js /tmp/b370-model-path.json
+          node -e 'const c=require("/tmp/b370-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B370 HU2475/2475")'
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          git diff --check
+      - name: Commit and push B370 source-only first-ten evidence, never merge or alter CERT without proof
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b370_first10_approx_source_triage.json docs/NL2_HU_B370_FIRST10_APPROX_SOURCE_TRIAGE.md
+          if git diff --cached --quiet; then
+            echo 'Evidence already committed'
+            exit 0
+          fi
+          git commit -m 'B370: source-gated first ten APPROX shortfall; preserve 159 CERT / 233 APPROX and HU2475'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
