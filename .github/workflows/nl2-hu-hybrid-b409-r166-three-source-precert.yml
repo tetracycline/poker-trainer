@@ -42,6 +42,7 @@ jobs:
               for q in rows)
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('ready='+('true' if good else 'false')+'\n')
           print('B409 genuine CO-IP rank166 full source ready:',good,'new flops',flops,'pairs',len(rows))
+          assert good,'B407 actually complete source triples must not be skipped as green'
           PY
       - name: Independent historical+two new Rust actual fullstreet SHA and actor-IP 40-70 source prereg
         if: steps.ready.outputs.ready == 'true'
@@ -51,7 +52,9 @@ jobs:
           python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v49_b405_rank214_219.json --out /tmp/b409-source-audit.json
           python3 - <<'PY'
           import json
-          p=json.load(open('data/nl2_hu_b409_rank166_three_true_source_flops_pre_cert.json'))\n          assert p['source_blind_first10_preregistered'] and len(p['original_paired_source_pins'])==3\n          print('PASS B409 source-only prereg 3 exact flops')
+          p=json.load(open('data/nl2_hu_b409_rank166_three_true_source_flops_pre_cert.json'))
+          assert p['source_blind_first10_preregistered'] and len(p['original_paired_source_pins'])==3
+          print('PASS B409 source-only prereg 3 exact flops')
           PY
       - name: Independently check source proof and full HU2475 river/action/JS model lines
         if: steps.ready.outputs.ready == 'true'
