@@ -83,6 +83,12 @@ async function getProof(run){
    const code=verifiedOriginalRuns[run];
    if(code)batch=[code,{run_id:run,status:'VERIFIED'}];
  }
+ if(!batch && ['ln-ipfr-r_model-1t7q0mn','ln-ipfr-r_model-kp19if'].includes(chosenModel?.model_id) &&
+   status?.schema==='NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219'){
+   const verifiedOriginalRuns={45026396521:'B414_COBB_B393',45027557999:'B414_COBB_B396'};
+   const code=verifiedOriginalRuns[run];
+   if(code)batch=[code,{run_id:run,status:'VERIFIED'}];
+ }
  if(!batch)return null;
  const code=batch[0];
  if(proofCache[code])return proofCache[code];
