@@ -1,0 +1,132 @@
+name: NL2 B417 original three exact GTO+NL2 IP rank166 CERT163/APPROX229, HU2475 <=12m
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b417-r166-true-cert.yml'
+      - 'tools/hu_b417_rank166_three_true_sources_promote.py'
+      - 'data/nl2_hu_b409_rank166_three_true_source_flops_pre_cert.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  independently-verify-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Prereg exact three distinct true rank166 fullstreet GTO+NL2 40-70 source gate
+        id: ready
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b417_rank166_three_true_sources_promote.py
+          if [ ! -s data/nl2_hu_b409_rank166_three_true_source_flops_pre_cert.json ];then
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo 'Absent three actual original source flops: CERT must stay 162.'
+            exit 0
+          fi
+          python3 - <<'PY'
+          import json,os
+          x=json.load(open('data/nl2_hu_b409_rank166_three_true_source_flops_pre_cert.json'))
+          good=x.get('schema')=='NL2_B409_RANK166_THREE_TRUE_GTO_NL2_IP_SOURCE_READY_V1'
+          good=good and x.get('genuine_distinct_original_flops')==['Js9h4d','KcJh7d','QhTc5d']
+          good=good and x.get('frequency_rank')==166 and x.get('spot')=='CO_BB' and x.get('actor')=='CO_IP'
+          ps=x.get('original_paired_source_pins') or []
+          good=good and len(ps)==3 and all(z['genuine_GTO_strict_40_70_combos']>0
+              and z['actual_NL2_IP_strict_40_70_combos']>0
+              and len(z['genuine_GTO_sha256'])==64 and len(z['actual_NL2_IP_sha256'])==64 for z in ps)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('ready='+('true' if good else 'false')+'\n')
+          assert good,'Rank166 original sources incomplete: never claim CERT'
+          print('PASS B417 genuine source 3-flop GTO+NL2 CO-IP ready')
+          PY
+      - name: Fetch four complete original 100bb Rust solver source archives, no solver reruns
+        if: steps.ready.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b417-gto /tmp/b417-exp
+          for flop in KcJh7d QhTc5d; do
+            gh run download 45028060598 --repo "$GITHUB_REPOSITORY" \
+              --name "nl2-multiboard-B400_COBB_FIVE_GTO_FIRST-CO_BB-${flop}-gto" \
+              --dir "/tmp/b417-gto/nl2-multiboard-B400_COBB_FIVE_GTO_FIRST-CO_BB-${flop}-gto"
+            gh run download 45029267778 --repo "$GITHUB_REPOSITORY" \
+              --name "nl2-multiboard-B407_R166_NL2_IP-CO_BB-${flop}-exp_ip" \
+              --dir "/tmp/b417-exp/nl2-multiboard-B407_R166_NL2_IP-CO_BB-${flop}-exp_ip"
+          done
+      - name: Independently inspect original GTO and NL2 Rust SHA and action mask; build V50 rank166, source lock/medium matrix
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b417_rank166_three_true_sources_promote.py --gto-root /tmp/b417-gto --exp-root /tmp/b417-exp
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v50_b417_rank166.json --out /tmp/b417-audit.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status_v50_b417_rank166.json'))
+          a=json.load(open('/tmp/b417-audit.json'))
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v50_b417.json'))
+          p=json.load(open('data/nl2_hu_b417_rank166_three_true_source_cert_proof.json'))
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(163,229,0,392)
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(163,229,0)
+          assert (len(m['models']),len(m['boards']))==(163,618)
+          assert p['hero_lock_variants_after']==710 and p['unknown_lock_denominators_after']==0
+          assert [z['flop'] for z in p['source_pins']]==['Js9h4d','KcJh7d','QhTc5d']
+          print('PASS B417 raw authenticated rank166 163 CERT / 229 APPROX, 618 boards, 710 NL2 locks')
+          PY
+      - name: Original V50 UI actual validator, old V49 fallback, wrong and zero-reach source rejected
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node - <<'JS'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const status=JSON.parse(fs.readFileSync('data/nl2_hu_multiboard_status_v50_b417_rank166.json','utf8'));
+          for(const file of ['nl2_hu_multiboard_ui.js','nl2-multiboard.js']){
+            const src=fs.readFileSync(file,'utf8');
+            const a=src.indexOf('const v50b417=d=>{'),b=src.indexOf('const v49b405=d=>{',a);
+            assert.ok(a>0&&b>a,file+' lacks new V50 original source failclosed validator');
+            const fn=new Function(src.slice(a,b)+';return v50b417;')();
+            assert.equal(fn(status),status);
+            const forged=structuredClone(status);forged.CERT_MULTIBOARD=162;
+            assert.throws(()=>fn(forged),/failclosed/);
+            const missing=structuredClone(status);
+            missing.records['ln-ipfr-r_model-1spq1ko'].certified_3_to_5_exact_flop_boards[1].strict_full_street_combo_reachable=0;
+            assert.throws(()=>fn(missing),/failclosed/);
+            assert.ok(src.includes('data/nl2_hu_multiboard_status_v50_b417_rank166.json'));
+            assert.ok(src.includes('data/nl2_hu_multiboard_status_v49_b405_rank214_219.json'));
+          }
+          console.log('PASS B417 exact named board original source V50 frontend');
+          JS
+      - name: Complete HU2475 river paths, original source and model line audits, JS and whitespace
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b417-contract.json
+          node tools/link_audit.js --md /tmp/b417-link.md --json /tmp/b417-link.json
+          node tools/reach_verify.js --log /tmp/b417-reach.md --json /tmp/b417-reach.json
+          node tools/hu_model_path_audit.js /tmp/b417-model.json
+          node -e 'const c=require("/tmp/b417-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B417 HU2475/2475")'
+          git diff --check
+      - name: Commit + push real rank166 V50 163/229, node lock/medium provenance and UI, PR2 DRAFT NEVER MERGE
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v50_b417_rank166.json \
+            data/nl2_hu_cert_lock_medium_matrix_v50_b417.json \
+            data/nl2_hu_cert_lock_medium_audit_v50_b417.json \
+            data/nl2_hu_b417_rank166_three_true_source_cert_proof.json \
+            docs/NL2_HU_B417_R166_THREE_ORIGINAL_TRUE_CERT.md \
+            tools/hu_cert_lock_medium_audit.py tools/hu_b378_v47_loader_runtime_test.cjs \
+            nl2_hu_multiboard_ui.js nl2-multiboard.js nl2.html nl2-multiboard.html
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B417: original 3 CO_BB rank166 GTO+NL2 IP source flops CERT, V50 163/229, full HU2475'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
