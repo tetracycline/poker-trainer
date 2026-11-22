@@ -1,0 +1,87 @@
+{
+  "schema": "NL2_HU_B384_RANK200_TWO_ACTUAL_GTO_NL2_IP_STRICT_SOURCE_V1",
+  "run_id": 45019299927,
+  "model_id": "ln-iso-lmp_r_model-68efr6",
+  "rank": 200,
+  "actor": "CO_IP",
+  "exact_line": "x b50 c/x b50 c/x",
+  "source_spot": "LMP_CO_BB",
+  "source_flops": [
+    "7s5h3d",
+    "9s6h3d"
+  ],
+  "solver_pin": "abe310c3aad02dd4a7c77fb2831801fd490cf51b",
+  "rust_pin": "9d1509fe5077d019825f833eed04b16d342dfda1",
+  "true_original_Rust_source_evidence": [
+    {
+      "flop": "7s5h3d",
+      "version": "gto",
+      "source_artifact": "nl2-multiboard-B384_R200-LMP_CO_BB-7s5h3d-gto",
+      "manifest_present": false,
+      "cases": [],
+      "excluded_reason": "NO_ORIGINAL_RUST_MANIFEST_NOT_CERT"
+    },
+    {
+      "flop": "7s5h3d",
+      "version": "exp_ip",
+      "source_artifact": "nl2-multiboard-B384_R200-LMP_CO_BB-7s5h3d-exp_ip",
+      "manifest_present": false,
+      "cases": [],
+      "excluded_reason": "NO_ORIGINAL_RUST_MANIFEST_NOT_CERT"
+    },
+    {
+      "flop": "9s6h3d",
+      "version": "gto",
+      "source_artifact": "nl2-multiboard-B384_R200-LMP_CO_BB-9s6h3d-gto",
+      "manifest_present": true,
+      "cases": [
+        {
+          "turn": "Ts",
+          "source_sha256": "046dfa905b97956ebd9b5e47b2a14c6e297b6528821a99895efd4836004fafe0",
+          "gto_gap_pct": 0.47188642621040344,
+          "locked_hero_gap_pct": null,
+          "strict_full_street_summary": {
+            "nodes": 58,
+            "source_actor_combo_nodes": 22410,
+            "sequential_actor_combo_nodes": 9005,
+            "removed_by_parent_action_policy": 13405
+          },
+          "exact_actor_IP_target_line_runouts": [
+            {
+              "public_board": "3d6h9sTsJs",
+              "strict_actor_IP_combos": 0,
+              "exact_source_spr": 9.525
+            },
+            {
+              "public_board": "3d6h9sTs7c",
+              "strict_actor_IP_combos": 0,
+              "exact_source_spr": 9.525
+            }
+          ]
+        }
+      ],
+      "manifest_sha256": "3863ea3d984cb451d3bbc80be1564f8fc502106fdef13f05c0f333f1bd673131",
+      "original_flop_sha256": "8eada784686770ae5803f1cb80f58a0d980fb4d5b48dfa1bf79969d2eaf68f4e",
+      "original_flop_job_sha256": "b9c54f80a366b1bfd2504834c88b85796ce95f619da5d28e1193aa6190592d98",
+      "original_solve_errors": [],
+      "actual_solved_cases": 1
+    },
+    {
+      "flop": "9s6h3d",
+      "version": "exp_ip",
+      "source_artifact": "nl2-multiboard-B384_R200-LMP_CO_BB-9s6h3d-exp_ip",
+      "manifest_present": false,
+      "cases": [],
+      "excluded_reason": "NO_ORIGINAL_RUST_MANIFEST_NOT_CERT"
+    }
+  ],
+  "same_exact_public_board_full_street_40_70_source_pairs": [],
+  "distinct_new_flops_with_true_positive_pairs": [],
+  "first_preexisting_source_8s8h3d_from_V47_not_reused_as_new": true,
+  "preflop_LMP_169class_assumed_not_NL2_observed_private_cards": true,
+  "no_cert_before_independent_three_distinct_flop_source_gate": true,
+  "CERT_MULTIBOARD": 159,
+  "APPROX": 233,
+  "EST": 0,
+  "PR2_draft_never_merge": true
+}
