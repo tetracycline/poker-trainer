@@ -73,6 +73,16 @@ async function getProof(run){
      ?.find(x=>x.run_id===run);
    if(rank96)batch=[`B${rank96.pin.batch}_R96_VERIFIED`,{run_id:run,status:'VERIFIED'}];
  }
+ if(!batch && chosenModel?.model_id==='ln-ipfr-r_model-ujl14x' &&
+    status?.schema==='NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B390_RANK107'){
+   const verifiedOriginalRuns={
+     45017142943:'B392_R107_B374',
+     45023132316:'B392_R107_B387',
+     45025076333:'B392_R107_B388'
+   };
+   const code=verifiedOriginalRuns[run];
+   if(code)batch=[code,{run_id:run,status:'VERIFIED'}];
+ }
  if(!batch)return null;
  const code=batch[0];
  if(proofCache[code])return proofCache[code];

@@ -1,0 +1,3 @@
+# B392 persistent real original rank107 per-combo GTO/NL2 source viewer
+
+All four newly certified Rust CFR cases in 3 independent SHA/reach-verified gzip batches from Actions B374, B387 and B388 are now retained in the PR, rather than relying only on expiring artifacts. Original historical Jh9d6s remains in V47 verified source files. The viewer matches exact source run, SHA, flop, turn, actor, position and pot family. CFR solver GTO and partially NL2-locked opponent pool assumptions are never treated as observed private-card conditional opponent actions. 160 CERT / 232 APPROX, no additional model promotion. PR remains draft.
