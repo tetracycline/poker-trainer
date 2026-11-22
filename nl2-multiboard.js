@@ -198,6 +198,21 @@ async function selectVersion(){
       el('details').appendChild(link);el('combo-rows').replaceChildren();return;
     }
   }
+ if(chosenModel?.model_id==='ln-ipc-t_model-1cla93g'&&
+    chosenBoard?.actual_exact_action_line==='b50 c/x'&&sourceSha(source)?.length===64){
+   const p=status?.B354_rank79_three_true_original_GTO_NL2_CO_IP_flops?.
+      source_run_shas?.find(x=>x.flop===chosenBoard.flop&&x.turn===chosenBoard.turn);
+   if(p&&run===p.run&&((version==='gto'&&digest===p.GTO_SHA)||
+      (version!=='gto'&&digest===p.NL2_SHA))){
+      setMessage(version==='gto'
+       ?'此具名公牌有原始 100bb UTGCO Rust GTO，CO-IP b50 c/x 嚴格前街 40%／70% 及 SPR 已查核；不能推廣到其他牌面。'
+       :'此具名公牌有獨立真正 Rust NL2 CO-IP 局部鎖頻來源；只有街別及下注尺寸玩家池邊際頻率，不是逐私牌條件式實測策略。');
+      const link=document.createElement('a');link.href=sourceUrl(run);
+      link.target='_blank';link.rel='noopener';
+      link.textContent='檢視 rank79 精確具名牌面原始 GTO／NL2 Rust Actions '+run;
+      el('details').appendChild(link);el('combo-rows').replaceChildren();return;
+   }
+ }
  if(chosenBoard.source_kind?.includes('OFFICIAL')&&!hasVerifiedBatch){
    const link=document.createElement('a');
    link.href='nl2-cfr.html?spot='+encodeURIComponent(chosenModel.solver_profile)
@@ -319,7 +334,33 @@ el('node').addEventListener('change',selectNode);
 el('all-combos').addEventListener('change',fillCombos);
 function fetchCertifiedRegistry(){
  const open=r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();};
- const v45=d=>{
+ const v46=d=>{
+ const q=d.B354_rank79_three_true_original_GTO_NL2_CO_IP_flops;
+ const r=d.records?.['ln-ipc-t_model-1cla93g'];
+ if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V46_B354_RANK79'||
+    d.CERT_MULTIBOARD!==158||d.APPROX!==234||d.EST!==0||d.TOTAL!==392||
+    d.parent_v45_sha256?.length!==64||
+    q?.rank!==79||q?.model_id!=='ln-ipc-t_model-1cla93g'||
+    q?.actor!=='CO_IP'||q?.spot!=='UTG_CO'||q?.exact_line!=='b50 c/x'||q?.SPR!==7||
+    q?.flops?.join(',')!=='Ks7h2d,8s8h3d,Js9h4d'||
+    q?.textures?.length<2||new Set(q.textures).size<2||
+    q?.source_run_shas?.length!==3||q?.historic_source_original_run!==44654973894||
+    q?.genuine_source_GTO_3_and_actor_NL2_3!==true||
+    q?.no_observed_private_card_conditional_NL2_villain_rates!==true||
+    q.source_run_shas.some(p=>p.run<=0||p.GTO_SHA?.length!==64||p.NL2_SHA?.length!==64)||
+    r?.label!=='CERT-MULTIBOARD'||r?.proven_exact_board_count!==3||
+    r.certified_3_to_5_exact_flop_boards?.length!==3||
+    r.certified_3_to_5_exact_flop_boards.some(p=>
+       p.acting_seat!==1||p.actual_exact_action_line!=='b50 c/x'||
+       p.strict_full_street_combo_reachable<=0||p.relative_spr_error_pct>5||
+       p.nl2_locked_variants?.[0]?.version!=='exp_ip')||
+    d.records?.['ln-iso-lmp_r_model-vlgh2t']?.label!=='CERT-MULTIBOARD'||
+    d.no_generic_texture_GTO!==true||d.no_observed_private_card_NL2_rates!==true||
+    d.PR2_remains_draft_never_merge!==true||Object.keys(d.records||{}).length!==392)
+      throw Error('V46 rank79 3 real UTGCO original GTO plus genuine NL2 COIP actor source SHA failclosed');
+ return d;
+};
+const v45=d=>{
  const q=d.B345_rank71_true_3_flop_GTO_NL2_OOP_evidence;
  const b=d.records?.['ln-iso-lmp_r_model-vlgh2t'];
  if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V45_B345_RANK71'||
@@ -1028,7 +1069,8 @@ const v42=d=>{
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v45_b345_rank71.json',{cache:'no-store'}).then(open).then(v45)
+ return fetch('data/nl2_hu_multiboard_status_v46_b354_rank79.json',{cache:'no-store'}).then(open).then(v46)
+   .catch(()=>fetch('data/nl2_hu_multiboard_status_v45_b345_rank71.json',{cache:'no-store'}).then(open).then(v45))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json',{cache:'no-store'}).then(open).then(v44))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v43_b319_rank60.json',{cache:'no-store'}).then(open).then(v43))
    .catch(()=>fetch('data/nl2_hu_multiboard_status_v42_b289_rank46.json',{cache:'no-store'}).then(open).then(v42))
