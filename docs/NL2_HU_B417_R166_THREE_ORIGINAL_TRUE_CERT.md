@@ -1,0 +1,3 @@
+# B417 rank166: independent full100bb GTO and NL2-IP exact 3-flop source certification
+
+Only named Js9h4d, KcJh7d and QhTc5d exact original public boards, CO IP x b100 c/x x/x action history, full-street strict hero combo reach and GTO gap <=0.5%, plus actual partially NL2 pool-marginal locked Rust sources on identical boards. Opponent pool marginals are NOT individual private-hand conditional decisions. 50%-pot depolarized research only for exact named boards with verified eligibility; no generic texture extrapolation. **163 CERT /229 APPROX /0 EST**, 618 named boards, 710 NL2 locked source variants, UNKNOWN=0. Independent full 2475 HU routes and UI Actions must PASS. PR2 draft/unmerged.
