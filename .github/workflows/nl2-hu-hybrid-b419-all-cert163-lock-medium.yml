@@ -1,0 +1,59 @@
+name: NL2 B419 all CERT named-board NL2 lock empirical-vs-default and 50pct depolarization proof, HU2475 (max9m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b419-all-cert163-lock-medium.yml'
+      - 'tools/hu_b419_all_cert163_lock_medium.py'
+      - 'data/nl2_hu_b417_rank166_three_true_source_cert_proof.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  audit-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: All 163 CERT original named public boards, 710 original NL2 partial lock source node denominators and b50 research only
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b419_all_cert163_lock_medium.py
+          python3 tools/hu_b419_all_cert163_lock_medium.py
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v50_b417_rank166.json --out /tmp/b419-independent.json
+          python3 - <<'PY'
+          import json
+          p=json.load(open('data/nl2_hu_b419_cert163_board618_lock710_medium_ledger.json'))
+          a=json.load(open('/tmp/b419-independent.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(163,229,0)
+          assert (p['exact_named_boards'],p['hero_lock_source_variants'],p['unknown_remains'])==(618,710,0)
+          assert p['exact_nonpolarized_50pct_research_candidate_boards']+p['exact_50pct_unproven_boards']==618
+          assert p['disallow_50pct_bet_extrapolation_to_unproven_board_or_generic_handclass']
+          print("PASS B419 163/229 + every named board's measured/assumed/unlocked NL2 source and 50%-research-only")
+          PY
+      - name: Full HU2475 exact river action reach, per-board source label, old and new front end and cache
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b419-contract.json
+          node tools/link_audit.js --md /tmp/b419-link.md --json /tmp/b419-link.json
+          node tools/reach_verify.js --log /tmp/b419-reach.md --json /tmp/b419-reach.json
+          node tools/hu_model_path_audit.js /tmp/b419-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b419-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B419 HU2475/2475")'
+          git diff --check
+      - name: Commit and push 618 board-by-board source / measured default node lock and depolarization evidence, PR2 draft
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b419_cert163_board618_lock710_medium_ledger.json docs/NL2_HU_B419_ALL_CERT_LOCK_DEPOL_163_618.md
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B419: audit 163 CERT 618 authentic boards, 710 actual NL2 partial locks, measured/default/unmatched and exact b50'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
