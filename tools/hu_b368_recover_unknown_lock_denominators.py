@@ -42,7 +42,7 @@ def locate_source(run_dir,spot,flop,version,target_sha):
             if cf not in (None,flop):continue
             shas=[c.get(k) for k in ("sub_sha256","source_sha256","turn_river_sha256")]
             if target_sha not in shas:continue
-            subrel=c.get("sub_json") or c.get("source_path")
+            subrel=c.get("sub_json") or c.get("source_path") or c.get("original_Rust_exp_subgame_path")
             if not subrel:continue
             sub=pf_path(artifact_root,subrel)
             if not sub.is_file() or sha(sub)!=target_sha:continue
@@ -56,6 +56,7 @@ def locate_source(run_dir,spot,flop,version,target_sha):
             if m.get("file_flop_sha256") and sha(root)!=m["file_flop_sha256"]:continue
             try:
                 pinfiles=[artifact_root/"evidence"/"poker-solver-pinned-SHA.txt",
+                          artifact_root/"evidence"/"poker-solver-SHA.txt",
                           artifact_root/"evidence"/"poker-solver-commit.txt",
                           artifact_root/"evidence"/"poker-solver-pin.txt"]
                 pins=[x.read_text().strip() for x in pinfiles if x.is_file()]
