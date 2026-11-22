@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: \${{ github.sha }}
+          ref: ${{ github.sha }}
           path: trainer
           fetch-depth: 0
       - uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
       - name: Download only the already completed B439 original GTO root
         working-directory: trainer
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mkdir -p /tmp/b439-gto
@@ -92,7 +92,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: \${{ github.sha }}
+          ref: ${{ github.sha }}
           path: trainer
           fetch-depth: 0
       - uses: actions/setup-python@v5
@@ -101,7 +101,7 @@ jobs:
       - name: Download preserved original GTO source and current EXP_OOP source
         working-directory: trainer
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mkdir -p ../downloads/gto ../downloads/exp_oop
