@@ -103,7 +103,11 @@ def patch_ui_v52(path):
          "new Set(r.certified_3_to_5_exact_flop_boards.map(x=>x.flop)).size!==4"),
     ]
     for old, new in replacements:
-        assert old in s, (path.name, "missing UI patch anchor", old)
+        if old not in s:
+            # The compact viewer has no medium-matrix fetch; only nl2-multiboard.js owns it.
+            if path.name == "nl2_hu_multiboard_ui.js" and old.startswith("data/nl2_hu_cert_lock_medium_matrix_"):
+                continue
+            raise AssertionError((path.name, "missing UI patch anchor", old))
         s = s.replace(old, new)
     path.write_text(s, encoding="utf-8")
 
