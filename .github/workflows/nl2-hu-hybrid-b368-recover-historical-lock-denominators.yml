@@ -48,6 +48,31 @@ jobs:
               echo "UNAVAILABLE_OR_EXPIRED $id"
             fi
           done < /tmp/b368-run-ids.txt
+          python3 - <<'PY' > /tmp/b368-parent-run-ids.txt
+          import json,pathlib
+          parents=set()
+          for mf in pathlib.Path('downloads').glob('*/**/evidence/*.json'):
+              try:m=json.loads(mf.read_text())
+              except Exception:continue
+              for k in ('original_GTO_source_run_id','original_GTO_source_run',
+                        'original_B235_GTO_source_run_id','original_B240_GTO_source_run_id',
+                        'original_B243_GTO_source_run_id','original_GTO_parent_source_run_id'):
+                  v=m.get(k)
+                  if v:
+                      try:parents.add(int(v))
+                      except (TypeError,ValueError):pass
+          for v in sorted(parents):print(v)
+          PY
+          while read -r parent_id; do
+            [ -n "$parent_id" ] || continue
+            [ -d "downloads/$parent_id" ] && continue
+            mkdir -p "downloads/$parent_id"
+            if gh run download "$parent_id" --repo "$GITHUB_REPOSITORY" --dir "downloads/$parent_id"; then
+              echo "DOWNLOADED_EXACT_GTO_PARENT $parent_id"
+            else
+              echo "UNAVAILABLE_EXACT_GTO_PARENT $parent_id"
+            fi
+          done < /tmp/b368-parent-run-ids.txt
       - name: Reconstruct denominators only when raw subgame SHA, original full flop root SHA, pinned pool solver and exact original lock list all match; calibrate against known stored counts
         working-directory: trainer
         run: |

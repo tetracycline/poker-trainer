@@ -32,6 +32,11 @@ def pf_path(root,rel):
     if p.parts[:1]==("postflop",):return root/"solver"/p
     return root/"solver"/"postflop"/p
 def locate_source(run_dir,spot,flop,version,target_sha):
+    def first(obj,keys):
+        for key in keys:
+            value=obj.get(key) if isinstance(obj,dict) else None
+            if value not in (None,""):return value
+        return None
     for mf in run_dir.rglob("evidence/*.json"):
         try:m=read(mf)
         except Exception:continue
@@ -46,12 +51,43 @@ def locate_source(run_dir,spot,flop,version,target_sha):
             if not subrel:continue
             sub=pf_path(artifact_root,subrel)
             if not sub.is_file() or sha(sub)!=target_sha:continue
+            expected_root=first(m,("original_GTO_root_sha256","original_GTO_flop_root_sha256",
+                "original_parent_GTO_root_SHA256","original_gto_root_sha256"))
+            expected_job=first(m,("original_GTO_job_sha256","original_GTO_flop_job_sha256",
+                "original_parent_GTO_job_SHA256","original_gto_job_sha256"))
+            expected_root=expected_root or first(c,("flop_sha256","original_GTO_root_sha256"))
             rootrel=c.get("flop_json") or m.get("file_flop")
-            if not rootrel:
-                rootrel=f"out/{spot}/{version}/{flop}_multiboard.json"
-            root=pf_path(artifact_root,rootrel)
-            job=root.with_suffix(".job.json")
-            if not root.is_file() or not job.is_file():continue
+            root=None
+            if rootrel:
+                candidate=pf_path(artifact_root,rootrel)
+                if candidate.is_file():root=candidate
+            if root is None:
+                candidate=pf_path(artifact_root,f"out/{spot}/{version}/{flop}_multiboard.json")
+                if candidate.is_file():root=candidate
+            root_job=None
+            if root is not None:
+                candidate=root.with_suffix(".job.json")
+                if candidate.is_file():root_job=candidate
+            # Some authentic turn-lock runs store the unchanged GTO root in a
+            # separate parent run. Resolve only by the explicit parent run ID
+            # and exact root/job SHA values in the child manifest.
+            if root is None or (expected_root and sha(root)!=expected_root):
+                parent_id=first(m,("original_GTO_source_run_id","original_GTO_source_run",
+                    "original_B235_GTO_source_run_id","original_B240_GTO_source_run_id",
+                    "original_B243_GTO_source_run_id","original_GTO_parent_source_run_id"))
+                if parent_id:
+                    parent_dir=DOWNLOADS/str(parent_id)
+                    for candidate in parent_dir.rglob(f"{flop}_multiboard.json"):
+                        if spot not in candidate.parts or "gto" not in candidate.parts:continue
+                        candidate_job=candidate.with_suffix(".job.json")
+                        if not candidate_job.is_file():continue
+                        if expected_root and sha(candidate)!=expected_root:continue
+                        if expected_job and sha(candidate_job)!=expected_job:continue
+                        root,root_job=candidate,candidate_job
+                        break
+            if root is None or root_job is None:continue
+            if expected_root and sha(root)!=expected_root:continue
+            if expected_job and sha(root_job)!=expected_job:continue
             if c.get("flop_sha256") and sha(root)!=c["flop_sha256"]:continue
             if m.get("file_flop_sha256") and sha(root)!=m["file_flop_sha256"]:continue
             try:
@@ -61,8 +97,16 @@ def locate_source(run_dir,spot,flop,version,target_sha):
                           artifact_root/"evidence"/"poker-solver-pin.txt"]
                 pins=[x.read_text().strip() for x in pinfiles if x.is_file()]
                 if not pins or any(x!=PIN for x in pins):continue
+                # The original full-flop job is normally unlocked; the exact
+                # partial actor-lock list lives in the turn-subgame job.
+                lock_job=root_job
+                if not isinstance(read(root_job).get("locks"),list):
+                    sub_job=sub.with_suffix(".job.json")
+                    if sub_job.is_file() and isinstance(read(sub_job).get("locks"),list):
+                        lock_job=sub_job
                 return dict(manifest=m,case=c,manifest_path=mf,artifact_root=artifact_root,
-                    sub=sub,root=root,job=job,root_sha256=sha(root),sub_sha256=sha(sub))
+                    sub=sub,root=root,job=lock_job,root_job=root_job,
+                    root_sha256=sha(root),sub_sha256=sha(sub))
             except Exception:continue
     return None
 def setup_solver():
@@ -258,7 +302,7 @@ def recover_one(board,lock,ctx,run_dir,helper,run_head_sha):
         original_manifest_schema=m.get("schema"),original_trainer_head_sha=run_head_sha,original_turn=c.get("turn"),
         original_action_line=c.get("line") or c.get("flop_line"),
         original_subgame_sha256=found["sub_sha256"],original_root_sha256=found["root_sha256"],
-        original_root_job_sha256=sha(found["job"]),poker_solver_pin=PIN,
+        original_root_job_sha256=sha(found["root_job"]),\n        original_lock_job_sha256=sha(found["job"]),poker_solver_pin=PIN,
         lock_pattern_count=len(patterns),candidate_villain_decision_nodes=candidate_nodes,
         count_scope="EXACT_SOURCE_SUBGAME_REACHABLE_VILLAIN_DECISION_NODE_OCCURRENCES",
         observed_marginal=observed,assumed_default=assumed,unmatched_unlocked=unmatched,
