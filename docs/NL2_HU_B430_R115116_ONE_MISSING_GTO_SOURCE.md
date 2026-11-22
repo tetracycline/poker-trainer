@@ -1,0 +1,3 @@
+# B430 ranks 115/116: two previously cancelled original LMP GTO-only full100bb flops
+
+Re-run only previously cancelled candidate QsJh4d; As9h2d and Js9h4d were authenticated zero-target negatives were selected before seeing their Rust CFR results, with exact b33-call / x-b50-call / x CO-IP node, 40/70 sequential legal combos and source SPR within 5%. Only flops with genuine positive actor-IP GTO root may be scheduled for real partial NL2 lock, not converted into CERT by texture inference. rank115: 0 eligible distinct flops; rank116: 0 eligible distinct flops. Preflop 169-class limped ranges ASSUMED, not observed NL2. 163 CERT / 229 APPROX /0 EST unchanged.
