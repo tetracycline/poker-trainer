@@ -30,7 +30,7 @@ jobs:
           status=d/'nl2_hu_multiboard_status_v46_b354_rank79.json'
           matrix=d/'nl2_hu_cert_lock_medium_matrix_v46_b354.json'
           a=json.loads(status.read_text()); m=json.loads(matrix.read_text())
-          assert a['schema']=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V46_B354_RANK71'
+          assert a['schema']=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V46_B354_RANK79'
           assert (a['CERT_MULTIBOARD'],a['APPROX'],a['EST'],a['TOTAL'])==(158,234,0,392)
           assert m['parent_v46_status_sha256']==sh(status)
           regen=create(a)
