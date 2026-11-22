@@ -31,8 +31,7 @@ jobs:
           test -s downloads/gto/evidence/UTG_CO-gto-Ks7h2d.json
           test -s downloads/exp_ip/evidence/UTG_CO-exp_ip-Ks7h2d.json
           python3 -m py_compile tools/hu_b353_rank79_B2_historic_real_UTGCO_gto_nl2_ip.py
-          python3 tools/hu_b353_rank79_B2_historic_real_UTGCO_gto_nl2_ip.py --downloads downloads \\
-            --out data/nl2_hu_b353_rank79_historic_stage2_original_gto_real_nl2_ip_source.json
+          python3 tools/hu_b353_rank79_B2_historic_real_UTGCO_gto_nl2_ip.py --downloads downloads --out data/nl2_hu_b353_rank79_historic_stage2_original_gto_real_nl2_ip_source.json
           python3 - <<'PY'
           import json,hashlib,pathlib
           d=pathlib.Path('data')
