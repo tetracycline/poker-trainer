@@ -81,34 +81,68 @@ def pair_pin(x, proof_path):
     )
 
 def patch_ui_v52(path):
-    # Reuse the independently-tested V50->V51 loader migration, then strengthen it to V52/four boards.
-    b427.patch_ui(path)
+    def rep(s, old, new, expected=1):
+        assert s.count(old) == expected, (path.name, "patch count", old, s.count(old))
+        return s.replace(old, new)
+
+    if path.name == "nl2_hu_multiboard_ui.js":
+        # Compact UI has no medium-matrix fetch path.
+        b427.patch_ui(path)
+        s = path.read_text(encoding="utf-8")
+        replacements = [
+            ("NL2_HU_392_MULTIBOARD_CERT_STATUS_V51_B427_R216_R218", V52),
+            ("v51b427", "v52b433"),
+            ("data/nl2_hu_multiboard_status_v51_b427_rank216_218.json",
+             "data/nl2_hu_multiboard_status_v52_b433_rank216_218.json"),
+            ("const q=d.B427_r216218_three_true_original_GTO_NL2_IP_flops;",
+             "const q=d.B433_r216218_four_true_original_GTO_NL2_IP_flops;"),
+            ("q.flops?.join(',')!=='Js9h4d,Td8h3c,Js9h5d'",
+             "q.flops?.join(',')!=='Js9h4d,Td8h3c,Js9h5d,7c6h5d'"),
+            ("x.pins?.length!==3", "x.pins?.length!==4"),
+            ("r.proven_exact_board_count!==3", "r.proven_exact_board_count!==4"),
+            ("r.certified_3_to_5_exact_flop_boards?.length!==3",
+             "r.certified_3_to_5_exact_flop_boards?.length!==4"),
+            ("new Set(r.certified_3_to_5_exact_flop_boards.map(x=>x.flop)).size!==3",
+             "new Set(r.certified_3_to_5_exact_flop_boards.map(x=>x.flop)).size!==4"),
+        ]
+        for old, new in replacements:
+            assert old in s, (path.name, "missing compact UI patch anchor", old)
+            s = s.replace(old, new)
+        path.write_text(s, encoding="utf-8")
+        return
+
+    # Main multiboard page: copy the already-patched fail-closed validator from the compact UI,
+    # then add the V52 status/matrix paths and preserve proof lookup for prior V48/V49/V50 batches.
+    compact = pathlib.Path("nl2_hu_multiboard_ui.js").read_text(encoding="utf-8")
+    va = compact.index("const v52b433=d=>{")
+    vb = compact.index("const v49b405=d=>{", va)
+    validator = compact[va:vb]
     s = path.read_text(encoding="utf-8")
-    replacements = [
-        ("NL2_HU_392_MULTIBOARD_CERT_STATUS_V51_B427_R216_R218", V52),
-        ("v51b427", "v52b433"),
-        ("data/nl2_hu_multiboard_status_v51_b427_rank216_218.json",
-         "data/nl2_hu_multiboard_status_v52_b433_rank216_218.json"),
-        ("data/nl2_hu_cert_lock_medium_matrix_v51_b427.json",
-         "data/nl2_hu_cert_lock_medium_matrix_v52_b433.json"),
-        ("const q=d.B427_r216218_three_true_original_GTO_NL2_IP_flops;",
-         "const q=d.B433_r216218_four_true_original_GTO_NL2_IP_flops;"),
-        ("q.flops?.join(',')!=='Js9h4d,Td8h3c,Js9h5d'",
-         "q.flops?.join(',')!=='Js9h4d,Td8h3c,Js9h5d,7c6h5d'"),
-        ("x.pins?.length!==3", "x.pins?.length!==4"),
-        ("r.proven_exact_board_count!==3", "r.proven_exact_board_count!==4"),
-        ("r.certified_3_to_5_exact_flop_boards?.length!==3",
-         "r.certified_3_to_5_exact_flop_boards?.length!==4"),
-        ("new Set(r.certified_3_to_5_exact_flop_boards.map(x=>x.flop)).size!==3",
-         "new Set(r.certified_3_to_5_exact_flop_boards.map(x=>x.flop)).size!==4"),
-    ]
-    for old, new in replacements:
-        if old not in s:
-            # The compact viewer has no medium-matrix fetch; only nl2-multiboard.js owns it.
-            if path.name == "nl2_hu_multiboard_ui.js" and old.startswith("data/nl2_hu_cert_lock_medium_matrix_"):
-                continue
-            raise AssertionError((path.name, "missing UI patch anchor", old))
-        s = s.replace(old, new)
+    old = "if(d.schema!=='NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'||"
+    new = "if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166','" + V52 + "'].includes(d.schema)||"
+    s = rep(s, old, new)
+    old = "d.CERT_MULTIBOARD!==163||d.APPROX!==229||d.EST!==0||d.TOTAL!==392||"
+    new = "d.CERT_MULTIBOARD!==(d.schema==='NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'?163:165)||d.APPROX!==(d.schema==='NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'?229:227)||d.EST!==0||d.TOTAL!==392||"
+    s = rep(s, old, new)
+    marker = "const v49b405=d=>{"
+    s = rep(s, marker, validator + marker)
+    old = "return fetch('data/nl2_hu_multiboard_status_v50_b417_rank166.json',{cache:'no-store'}).then(open).then(v50b417)"
+    new = "return fetch('data/nl2_hu_multiboard_status_v52_b433_rank216_218.json',{cache:'no-store'}).then(open).then(v52b433)\\n    .catch(()=>fetch('data/nl2_hu_multiboard_status_v50_b417_rank166.json',{cache:'no-store'}).then(open).then(v50b417))"
+    s = rep(s, old, new)
+    old = "'NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166','NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219'"
+    new = "'" + V52 + "'," + old
+    s = rep(s, old, new)
+    # Existing B2/B400/B393 proof lookup lists must continue to work under the new V52 registry.
+    allow1 = "'NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B390_RANK107','NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219','NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'"
+    allow2 = "'NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219','NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'"
+    s = rep(s, allow1, "'" + V52 + "'," + allow1)
+    s = rep(s, allow2, "'" + V52 + "'," + allow2)
+    old = "status?.schema==='NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'"
+    new = "['NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166','" + V52 + "'].includes(status?.schema)"
+    s = rep(s, old, new)
+    old = "fetch('data/nl2_hu_cert_lock_medium_matrix_v50_b417.json',{cache:'no-store'}).catch"
+    new = "fetch('data/nl2_hu_cert_lock_medium_matrix_v52_b433.json',{cache:'no-store'}).catch(()=>fetch('data/nl2_hu_cert_lock_medium_matrix_v50_b417.json',{cache:'no-store'})).catch"
+    s = rep(s, old, new)
     path.write_text(s, encoding="utf-8")
 
 def main():
