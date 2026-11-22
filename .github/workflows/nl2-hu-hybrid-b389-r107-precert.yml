@@ -1,0 +1,78 @@
+name: NL2 B389 gated rank107 three exact GTO+NL2 source pre-cert, HU2475 and provenance (max9m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b389-r107-precert.yml'
+      - 'tools/hu_b389_r107_three_source_pre_cert.py'
+      - 'data/nl2_hu_b388_rank107_qsjh4d_real_gto_nl2_ip_pair.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  source-verify-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Gate on actually completed B388 true source with positive actor-IP sequential legal combos
+        id: source
+        run: |
+          set -euo pipefail
+          if [ ! -s data/nl2_hu_b388_rank107_qsjh4d_real_gto_nl2_ip_pair.json ]; then
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo 'Source B388 not yet committed; no false V48 registry or CERT'
+            exit 0
+          fi
+          python3 - <<'PY'
+          import json,os
+          d=json.load(open('data/nl2_hu_b388_rank107_qsjh4d_real_gto_nl2_ip_pair.json'))
+          pairs=d.get('exact_paired_legal_river_nodes') or []
+          good=bool(pairs and d.get('real_NL2_partial_source') and d['real_NL2_partial_source'].get('genuine_Rust_solved_cases')==1)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('ready='+('true' if good else 'false')+'\n')
+          print('B389 independent three-flop pre-cert ready:',good,'new true source pairs:',len(pairs))
+          PY
+      - name: Independent immutable V47 first-ten historical and two new true original Rust source SHA/SPR/40-70 gate
+        if: steps.source.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b389_r107_three_source_pre_cert.py
+          python3 tools/hu_b389_r107_three_source_pre_cert.py
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b389-source.json
+          python3 - <<'PY'
+          import json
+          p=json.load(open('data/nl2_hu_b389_rank107_three_true_flop_pre_cert_gate.json'))
+          a=json.load(open('/tmp/b389-source.json'))
+          assert p['provisional_ready_for_independent_V48_source_promotion']
+          assert p['distinct_verified_original_GTO_and_NL2_hero_lock_flops']==3
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          print('PASS B389 source-only pre-cert 159/233, no unsupported model up-label')
+          PY
+      - name: Full HU2475 reach, action-line, source medium and UI gate
+        if: steps.source.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b389-contract.json
+          node tools/link_audit.js --md /tmp/b389-link.md --json /tmp/b389-link.json
+          node tools/reach_verify.js --log /tmp/b389-reach.md --json /tmp/b389-reach.json
+          node tools/hu_model_path_audit.js /tmp/b389-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b389-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B389 HU2475/2475")'
+          git diff --check
+      - name: Commit true three-flop source-only prereg gate, never merge PR2
+        if: steps.source.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b389_rank107_three_true_flop_pre_cert_gate.json docs/NL2_HU_B389_RANK107_THREE_SOURCE_PRE_CERT.md
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B389: independently source-gate rank107 three exact original GTO+NL2 IP boards; no early CERT'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
