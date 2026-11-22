@@ -1,0 +1,112 @@
+name: NL2 B396 rank214/219 two true CO-IP NL2 partial-locked source flops <=29m
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b396-r214219-nl2-source.yml'
+      - 'tools/hu_b396_rank214_219_true_co_ip_pairs.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        flop: [KsQh4d, Js9h5d]
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Genuine original 100bb CO-IP partially NL2-locked Rust fullflop and turn for B393-positive two flops
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+          cd ../../..
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver --spot CO_BB --flop "${{ matrix.flop }}" --version exp_ip \
+            --flop-size-profile full --flop-line-policy checked-b50b100only --turn-count 1 \
+            --manifest "evidence/CO_BB-${{ matrix.flop }}-exp_ip.json"
+      - name: Preserve real solve manifest and exact original SHA even on no actor reach
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B396_R214219_NL2_IP-CO_BB-${{ matrix.flop }}-exp_ip
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Genuine B393 GTO pinned original + B396 new EXP SHA and fullstreet 40-70 actor-IP proof
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b396-gto /tmp/b396-exp
+          for flop in KsQh4d Js9h5d; do
+            gh run download 45026396521 --repo "$GITHUB_REPOSITORY" --name "nl2-multiboard-B393_COBB_FIVE_GTO_FIRST-CO_BB-${flop}-gto" \
+              --dir "/tmp/b396-gto/nl2-multiboard-B393_COBB_FIVE_GTO_FIRST-CO_BB-${flop}-gto"
+            gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "nl2-multiboard-B396_R214219_NL2_IP-CO_BB-${flop}-exp_ip" \
+              --dir "/tmp/b396-exp/nl2-multiboard-B396_R214219_NL2_IP-CO_BB-${flop}-exp_ip" || true
+          done
+          python3 -m py_compile tools/hu_b396_rank214_219_true_co_ip_pairs.py
+          python3 tools/hu_b396_rank214_219_true_co_ip_pairs.py \
+            --gto-root /tmp/b396-gto --exp-root /tmp/b396-exp --run-id "$GITHUB_RUN_ID"
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b396-lockaudit.json
+      - name: Full HU 2475/2475 action river routes, per board labels and JS/model paths
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b396-contract.json
+          node tools/link_audit.js --md /tmp/b396-link.md --json /tmp/b396-link.json
+          node tools/reach_verify.js --log /tmp/b396-reach.md --json /tmp/b396-reach.json
+          node tools/hu_model_path_audit.js /tmp/b396-model.json
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          python3 - <<'PY'
+          import json
+          c=json.load(open('/tmp/b396-link.json'))['counts']
+          x=json.load(open('data/nl2_hu_b396_r214_219_two_real_nl2_ip_original_pairs.json'))
+          a=json.load(open('/tmp/b396-lockaudit.json'))
+          assert (c['continuing'],c['reachRiver'],c['riverShare'])==(2475,2475,100)
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert x['no_automatic_CERT_while_no_three_independent_original_sources']
+          assert len(x['source_evidence'])==2
+          print('PASS B396 real source-only GTO/NL2 IP pairs, 159/233, HU2475/2475')
+          PY
+          git diff --check
+      - name: Commit and push B396 source proof, no fake CERT, NEVER MERGE PR2
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b396_r214_219_two_real_nl2_ip_original_pairs.json docs/NL2_HU_B396_R214_219_TWO_TRUE_IP_LOCKS.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'B396: genuine CO_BB ranks214/219 two GTO+NL2 IP source flop pairs, strict combo/SPR, HU2475'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
