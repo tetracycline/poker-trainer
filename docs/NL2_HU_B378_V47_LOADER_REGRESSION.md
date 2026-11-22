@@ -1,0 +1,3 @@
+# B378 V47 loader regression fix
+
+Both NL2 UI loaders used a JavaScript comma operator in their V47 schema guard: `schema !== 'V47','V48' || ...`. The nonempty V48 string made the condition unconditionally truthy, so the genuine current V47 159/233 registry could not load and fell back to older counts. Fix uses `schema !== 'V47' || ...`, preserves fail-closed V48 behavior, adds V48 to the independent schema allowlist, and cache-busts both HTML entry points. New Node regression executes the actual two V47 validators against original V47 source, an intentionally corrupted count, and a forged V48 schema. This changes no CERT source evidence, does not create a fake GTO model, and PR #2 remains draft/unmerged.

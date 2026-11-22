@@ -1,0 +1,47 @@
+name: NL2 B378 actual V47 UI loader fallback runtime regression, source and HU2475 audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b378-v47-ui-loader-regression.yml'
+      - 'tools/hu_b378_v47_loader_runtime_test.cjs'
+      - 'nl2_hu_multiboard_ui.js'
+      - 'nl2-multiboard.js'
+      - 'nl2.html'
+      - 'nl2-multiboard.html'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  strict-full-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Execute V47 authentic 159/233 runtime validator in both JS loaders and negative-forgery cases
+        run: |
+          set -euo pipefail
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b378-source.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b378-source.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert a['not_generalized_handclass_GTO']
+          print('PASS authentic V47 CERT159/APPROX233 labels, no generalized textures')
+          PY
+      - name: Full HU2475 river reach, six-row contracts, links and models
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b378-contract.json
+          node tools/link_audit.js --md /tmp/b378-link.md --json /tmp/b378-link.json
+          node tools/reach_verify.js --log /tmp/b378-reach.md --json /tmp/b378-reach.json
+          node tools/hu_model_path_audit.js /tmp/b378-model-path.json
+          node -e 'const c=require("/tmp/b378-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B378 HU2475/2475")'
+          git diff --check
