@@ -190,12 +190,15 @@ def main():
         return helper_cache[run_id]
     # Calibrate against stored non-UNKNOWN counts using each run's exact
     # trainer helper commit as well as the pinned poker-solver commit.
-    known_checks=[];known_mismatches=[];known_reasons=collections.Counter();known_reason_examples=[]
+    known_checks=[];known_mismatches=[];known_reasons=collections.Counter();known_reason_examples=[];known_seen=set()
     for b in matrix["boards"]:
         for l in b["hero_lock_proofs"]:
             if l["node_rate_data_status"]=="HISTORICAL_POOL_MARGINAL_SOURCE_COUNTS_UNKNOWN":continue
             run_id=int(l["source_run_id"])
             if run_id not in run_ids:continue
+            source_key=f'{run_id}:{l["source_sha256"]}'
+            if source_key in known_seen:continue
+            known_seen.add(source_key)
             helper=helper_for(run_id)
             x,reason=recover_one(b,l,ctx,DOWNLOADS/str(run_id),helper,run_heads[run_id])
             if not x:
@@ -212,9 +215,9 @@ def main():
             else:
                 known_mismatches.append(dict(run_id=x["run_id"],head_sha=run_heads[run_id],sha=x["source_sha256"],
                     spot=x["spot"],version=x["version"],actual=actual,expected=expected))
-            if len(known_checks)>=3 and len({z["spot"] for z in known_checks})>=2:break
-        if len(known_checks)>=3 and len({z["spot"] for z in known_checks})>=2:break
-    if len(known_checks)<3 or len({z["spot"] for z in known_checks})<2:
+            if len(known_checks)>=3 and len({z["spot"] for z in known_checks})>=2 and len({(z["run_id"],z["sha"]) for z in known_checks})>=3:break
+        if len(known_checks)>=3 and len({z["spot"] for z in known_checks})>=2 and len({(z["run_id"],z["sha"]) for z in known_checks})>=3:break
+    if len(known_checks)<3 or len({z["spot"] for z in known_checks})<2 or len({(z["run_id"],z["sha"]) for z in known_checks})<3:
         print(json.dumps(dict(known_source_rejection_reasons=dict(known_reasons),
             known_source_rejection_examples=known_reason_examples,
             known_source_calibration_checks=known_checks,
@@ -272,8 +275,9 @@ def main():
         schema="NL2_HU_B368_PINNED_POOL_LOCK_DENOMINATOR_RECOVERY_V1",
         source_matrix_sha256=sha(MATRIX),source_unknown_variants=before_unknown,
         unique_original_source_runs=run_ids,missing_run_artifact_dirs=missing,
-        known_source_calibration_checks=known_checks,known_source_calibration_mismatches=known_mismatches,
-        known_source_rejection_reasons=dict(known_reasons),known_source_rejection_examples=known_reason_examples,\n        source_run_head_shas={str(k):v for k,v in run_heads.items()},
+        known_source_calibration_checks=known_checks,known_source_calibration_mismatches=known_mismatches,\n        known_source_calibration_unique_sources=len(known_checks),
+        known_source_rejection_reasons=dict(known_reasons),known_source_rejection_examples=known_reason_examples,
+        source_run_head_shas={str(k):v for k,v in run_heads.items()},
         unique_raw_lock_sources=len(recovered),recovered_lock_variants=updated,
         remaining_unknown_variants=before_unknown-updated,
         recovery_method="Pinned poker-solver locks.build/pool_stats plus each original Actions run head SHA helper and exact original job/root raw source SHA; exact lock-list equivalence required.",
