@@ -1,0 +1,99 @@
+name: NL2 B381 rank107 third-flop 9s6h3d actual GTO and NL2 IP Rust solves, strict 40-70
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b381-r107-third-flop.yml'
+      - 'tools/hu_b381_r107_third_flop_strict_source.py'
+  workflow_dispatch:
+permissions: {contents: write, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    strategy:
+      max-parallel: 2
+      fail-fast: false
+      matrix:
+        version: [gto, exp_ip]
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Original real Rust 100bb GTO or partial NL2 IP flop-turn-river source, never simulate
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+          cd ../../..
+          python3 trainer/tools/solve_hu_multiboard_100bb.py --solver-root solver --spot BTN_BB --flop 9s6h3d --version "${{ matrix.version }}" --flop-size-profile full --flop-line-policy oop-b33only --turn-count 1 --manifest "evidence/BTN_BB-9s6h3d-${{ matrix.version }}.json"
+      - name: Preserve exact original Rust output including zero-reach or legitimate failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B381_R107-BTN_BB-9s6h3d-${{ matrix.version }}
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Independently check both genuine Rust sources, SHA, pot, actor and 40-70 strict reach
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b381-original
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir /tmp/b381-original
+          python3 -m py_compile tools/hu_b381_r107_third_flop_strict_source.py
+          python3 tools/hu_b381_r107_third_flop_strict_source.py --downloads /tmp/b381-original --run-id "$GITHUB_RUN_ID"
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b381-cert.json
+      - name: Complete HU2475 model, link, reach, source and UI Actions gate
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b381-contract.json
+          node tools/link_audit.js --md /tmp/b381-link.md --json /tmp/b381-link.json
+          node tools/reach_verify.js --log /tmp/b381-reach.md --json /tmp/b381-reach.json
+          node tools/hu_model_path_audit.js /tmp/b381-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b381-cert.json'))
+          c=json.load(open('/tmp/b381-link.json'))['counts']
+          p=json.load(open('data/nl2_hu_b381_rank107_9s6h3d_true_solve_strict_source.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert (c['continuing'],c['reachRiver'],c['riverShare'])==(2475,2475,100)
+          assert p['no_early_certification']
+          print('PASS B381 strict sources, CERT 159 / APPROX 233, HU 2475/2475')
+          PY
+          git diff --check
+      - name: Commit and push only actual exact source proof or true negatives, never merge PR2
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b381_rank107_9s6h3d_true_solve_strict_source.json docs/NL2_HU_B381_RANK107_THIRD_TRUE_FLOP_SOURCE.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'B381: genuine rank107 third 9s6h3d original GTO/NL2 IP 40-70 source gate; no premature CERT'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
