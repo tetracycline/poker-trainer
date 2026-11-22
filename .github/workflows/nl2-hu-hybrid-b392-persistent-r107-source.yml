@@ -1,0 +1,123 @@
+name: NL2 B392 durable original Rust CFR source archives and rank107 viewer, full HU2475 (max10m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b392-persistent-r107-source.yml'
+      - 'tools/hu_b392_rank107_persistent_sources.py'
+      - 'data/nl2_hu_b390_rank107_three_true_GTO_NL2_IP_cert_proof.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  preserve-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Wait for actual independently certified source-gated V48 rank107; no archives from unverified cases
+        id: ready
+        run: |
+          set -euo pipefail
+          if [ ! -s data/nl2_hu_b390_rank107_three_true_GTO_NL2_IP_cert_proof.json ];then
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo 'No B390 original GTO+NL2 certification; skip all source changes.'
+            exit 0
+          fi
+          python3 - <<'PY'
+          import os,json
+          x=json.load(open('data/nl2_hu_b390_rank107_three_true_GTO_NL2_IP_cert_proof.json'))
+          ok=x.get('CERT_after')==160 and x.get('APPROX_after')==232
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('ready='+('true' if ok else 'false')+'\n')
+          print('B392 original-source preservation ready:',ok)
+          PY
+      - name: Re-download only original GTO and true NL2 Rust artifacts for all certified exact new sources
+        if: steps.ready.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b392-b374 /tmp/b392-b387 /tmp/b392-b388
+          gh run download 45017142943 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B374_R107-BTN_BB-7s5h3d-gto --dir /tmp/b392-b374/nl2-multiboard-B374_R107-BTN_BB-7s5h3d-gto
+          gh run download 45017142943 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B374_R107-BTN_BB-7s5h3d-exp_ip --dir /tmp/b392-b374/nl2-multiboard-B374_R107-BTN_BB-7s5h3d-exp_ip
+          gh run download 45023132316 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B387_R107_GTO_FIRST-BTN_BB-QsJh4d-gto --dir /tmp/b392-b387/nl2-multiboard-B387_R107_GTO_FIRST-BTN_BB-QsJh4d-gto
+          gh run download 45025076333 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B388_R107-BTN_BB-QsJh4d-exp_ip --dir /tmp/b392-b388/nl2-multiboard-B388_R107-BTN_BB-QsJh4d-exp_ip
+      - name: Independent Rust original raw source verification and immutable gzip per-combo archival
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b392_rank107_persistent_sources.py
+          python3 tools/hu_b392_rank107_persistent_sources.py --solver-root solver --b374 /tmp/b392-b374 --b387 /tmp/b392-b387 --b388 /tmp/b392-b388
+      - name: Link rank107 exact source run IDs to independently verified durable CFR batches
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          p=pathlib.Path('nl2-multiboard.js')
+          x=p.read_text()
+          marker="if(!batch)return null;"
+          assert x.count(marker)==1
+          addon="""if(!batch && chosenModel?.model_id==='ln-ipfr-r_model-ujl14x' &&
+              status?.schema==='NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B390_RANK107'){
+             const verifiedOriginalRuns={
+               45017142943:'B392_R107_B374',
+               45023132316:'B392_R107_B387',
+               45025076333:'B392_R107_B388'
+             };
+             const code=verifiedOriginalRuns[run];
+             if(code)batch=[code,{run_id:run,status:'VERIFIED'}];
+           }
+           """
+          x=x.replace(marker,addon+marker)
+          p.write_text(x)
+          html=pathlib.Path('nl2-multiboard.html')
+          t=html.read_text()
+          assert t.count('task-hybrid-b390-v48-20261122')==1
+          html.write_text(t.replace('task-hybrid-b390-v48-20261122','task-hybrid-b392-persistent-r107-20261122'))
+          PY
+          node --check nl2-multiboard.js
+      - name: All original HU2475 navigation, source SHA, actor/reach, medium and frontend contracts
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v48_b390_rank107.json --out /tmp/b392-audit.json
+          node tools/hu_line_contract.js > /tmp/b392-contract.json
+          node tools/link_audit.js --md /tmp/b392-link.md --json /tmp/b392-link.json
+          node tools/reach_verify.js --log /tmp/b392-reach.md --json /tmp/b392-reach.json
+          node tools/hu_model_path_audit.js /tmp/b392-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node -e 'const c=require("/tmp/b392-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B392 HU2475/2475")'
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b392-audit.json'))
+          x=json.load(open('data/nl2_hu_b392_rank107_persistent_original_source_archive_index.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(160,232,0)
+          assert len(x['verified_archives'])==3
+          assert x['genuine_GTO_and_NL2_partial_source_SHA_matches_160_CERT']
+          print('PASS B392 original source per-combo archives, 160/232 and all HU paths')
+          PY
+          git diff --check
+      - name: Commit gzip exact original CFR artifacts and source viewer to PR2, NEVER MERGE
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/NL2_MULTIBOARD_B392_R107_B374.json.gz \
+            data/solver_evidence/NL2_MULTIBOARD_B392_R107_B387.json.gz \
+            data/solver_evidence/NL2_MULTIBOARD_B392_R107_B388.json.gz \
+            data/nl2_hu_b392_rank107_persistent_original_source_archive_index.json \
+            docs/NL2_HU_B392_RANK107_PERSISTENT_SOURCE_VIEWER.md \
+            nl2-multiboard.js nl2-multiboard.html
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B392: independently preserve original exact GTO/NL2 IP Rust CFR combo sources and rank107 viewer, HU2475'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
