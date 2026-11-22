@@ -57,7 +57,7 @@ def validate_batch(name,cfg):
  assert archive["source_poker_solver_pin"]==SOLVER_PIN and archive["authentic_rust_engine_pin"]==RUST_PIN
  assert part["original_run_id"]==proof["source_run_id"] and part["positive_solved_jobs"]
  assert len(part["positive_solved_jobs"])+len(part["explicit_zero_case_negative_jobs"])==(4 if name=="B365" else 2)
- assert proof.get("preflop_range_assumed_169_class_not_observed") is True
+ # The verified per-case empirical_scope is checked as ASSUMED_PREFLOP_RANGES in case_for().
  assert proof.get("rank27_remains_APPROX_pending_independent_3_board_gate",
                   proof.get("rank27_remains_APPROX_until_three_distinct_flop_pairs")) is True
  assert len(proof.get("raw_jobs_partitions_sha256",""))==64
