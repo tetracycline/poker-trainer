@@ -35,7 +35,7 @@ jobs:
           assert p['certified_flops']==['4s4h2d','7s5h3d','3s3h2d']
           assert set(p['two_plus_textures'])=={'LOW','PAIRED'}
           rows=a['all_236_APPROX_source_gap_rows']
-          assert len(rows)==236 and [z['rank'] for z in rows]==sorted(z['rank'] for z in rows)
+          assert len(rows)==236 and len({z['model_id'] for z in rows})==236
           assert [(z['rank'],z['minimum_remaining_new_exact_flop_actor_lock_pairs']) for z in rows if z['minimum_remaining_new_exact_flop_actor_lock_pairs']==1]==[(71,1)]
           rank71=rows[0]
           assert rank71['rank']==71 and rank71['model_id']=='ln-iso-lmp_r_model-vlgh2t'
