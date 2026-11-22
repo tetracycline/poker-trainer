@@ -1,0 +1,115 @@
+name: TASK-HYBRID B345 V45 rank71 3 real original 100bb GTO+NL2 BB-OOP flops 2 textures certify 157/235 HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b345-v45-rank71-three-true-lmp50-cert.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  certify-three-actual-SHA-pinned-board-source-pairs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Source hard gate - six real B343 Rust solver jobs/one positive pair, historical B19/B26 original archive SHA; no generic solver- or handclass-rate substitution
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b345_v45_rank71_3_true_restricted_lmp50_cert.py tools/hu_cert_lock_medium_coverage_matrix.py tools/hu_cert_lock_medium_audit.py
+          python3 - <<'PY'
+          import json,pathlib,gzip,hashlib
+          d=pathlib.Path('data')
+          f=d/'nl2_hu_b343_rank71_three_real_lmp50_GTO_NL2_actor_reach.json'
+          a=json.loads(f.read_text())
+          assert a['schema']=='NL2_HU_B343_ORIGINAL_RESTRICTED_50_GTO_PLUS_REAL_NL2_BB_OOP_V1'
+          assert a['original_GTO_run_id'] in (44966872522,44966926752)
+          assert a['true_source_GTO_and_real_partial_NL2_jobs']==6
+          assert a['original_restricted_game_tree_identical_to_B19_B26']
+          assert a['new_rank71_legal_genuine_GTO_NL2_pair_flops']==['3s3h2d']
+          assert [z['flop'] for z in a['tested']]==['3s3h2d','3s4h5d','2s3h4d']
+          assert all(z['GTO']['turn']==z['authentic_partial_NL2_OOP_lock']['turn'] for z in a['tested'])
+          t=a['tested'][0]
+          assert t['GTO']['flop_b50_original_strict_combo_count']==270
+          assert t['GTO']['rank71_exact_river_actor_OOP_strict_combos']>0
+          assert t['authentic_partial_NL2_OOP_lock']['rank71_exact_river_actor_OOP_strict_combos']>0
+          for batch,run in [('B19_LMP50_RESTRICTED',44762388523),('B26_LMP_NONPAIRED',44769773770),('B343_LMP50_LEGAL',a['original_GTO_run_id'])]:
+            i=json.loads((d/f'solver_evidence/NL2_MULTIBOARD_{batch}.index.json').read_text())
+            gz=(d/f'solver_evidence/NL2_MULTIBOARD_{batch}.json.gz').read_bytes()
+            assert i['run_id']==run
+            assert i['gzip_sha256']==hashlib.sha256(gz).hexdigest()
+            assert i['source_sha256']==hashlib.sha256(gzip.decompress(gz)).hexdigest()
+          print('PASS original B19/B26/B343 exact six Rust source jobs SHA, B343 3s3h2d genuine actor OOP matching river >0')
+          PY
+      - name: Generate V45 precisely rank71 original restricted LMP50 three genuine GTO plus true actor NL2 pairs, SPR and 40-70, 157 CERT/235 APPROX, 600 exact named board source
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b345_v45_rank71_3_true_restricted_lmp50_cert.py
+          python3 - <<'PY'
+          import json,pathlib,hashlib
+          d=pathlib.Path('data')
+          s=json.loads((d/'nl2_hu_multiboard_status_v45_b345_rank71.json').read_text())
+          m=json.loads((d/'nl2_hu_cert_lock_medium_matrix_v45_b345.json').read_text())
+          p=json.loads((d/'nl2_hu_b345_v45_rank71_three_gto_nl2_source_gate.json').read_text())
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(157,235,0,392)
+          assert (len(m['boards']),len(m['models']))==(600,157)
+          assert m['strict_aggregate']['hero_lock_variants']==692
+          assert m['parent_v45_status_sha256']==hashlib.sha256((d/'nl2_hu_multiboard_status_v45_b345_rank71.json').read_bytes()).hexdigest()
+          assert [z['flop'] for z in s['records']['ln-iso-lmp_r_model-vlgh2t']['certified_3_to_5_exact_flop_boards']]==['4s4h2d','7s5h3d','3s3h2d']
+          assert len(p['two_plus_textures'])>=2
+          assert p['source_is_real_restricted_LMP50_not_unrestricted']
+          assert p['no_observed_private_hand_NL2_rates']
+          print('PASS B345 V45 rank71 3 exact positive GTO/true NL2 OOP, 2 textures 157/235, 600 board source/692 lock')
+          PY
+      - name: Independent V45 source provenance medium 50% exact only, 392 cells actor NL2 pooled unknown flag plus 2475/2475 river and previous-street contract
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v45_b345_rank71.json --out nl2-audit/b345-v45-lock.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b345-v45-lock.json'))
+          s=json.load(open('data/nl2_hu_multiboard_status_v45_b345_rank71.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(157,235,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'])==(600,692)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          assert s['records']['ln-iso-lmp_r_model-vlgh2t']['label']=='CERT-MULTIBOARD'
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B345 full HU 2475/2475")'
+      - name: Commit only full 392/600/692 and HU2475 independently audited V45 source, draft PR2 without merge or force push
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v45_b345_rank71.json \
+            data/nl2_hu_cert_lock_medium_matrix_v45_b345.json \
+            data/nl2_hu_b345_v45_rank71_three_gto_nl2_source_gate.json \
+            docs/NL2_HU_B345_V45_RANK71_THREE_REAL_GTO_NL2_CERT.md
+          git commit -m 'TASK-HYBRID B345 V45: rank71 3 genuine LMP50 100bb GTO plus actor NL2 real Rust SHA pairs, 2 textures 40-70 SPR; CERT157 APPROX235 600/692 HU2475 PASS'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B345-V45-rank71-three-original-GTO-real-NL2-actor-CERT157-235-HU2475
+          path: |
+            data/nl2_hu_multiboard_status_v45_b345_rank71.json
+            data/nl2_hu_cert_lock_medium_matrix_v45_b345.json
+            data/nl2_hu_b345_v45_rank71_three_gto_nl2_source_gate.json
+            docs/NL2_HU_B345_V45_RANK71_THREE_REAL_GTO_NL2_CERT.md
+            nl2-audit/
+          retention-days: 30
