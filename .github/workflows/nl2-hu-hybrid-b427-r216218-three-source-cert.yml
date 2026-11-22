@@ -1,0 +1,110 @@
+name: NL2 B427 promote ranks216/218 three original GTO+NL2-IP flops each, V51 165/227, HU2475 <=16m
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b427-r216218-three-source-cert.yml'
+      - 'tools/hu_b427_rank216218_three_true_sources_promote.py'
+      - 'data/nl2_hu_b412_r216218_one_real_nl2_ip_original_pair.json'
+      - 'data/nl2_hu_b421_r216218_one_real_nl2_ip_original_pair.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  independently-verify-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download exact original B2, B400, B412, B393 and B421 artifacts (no reruns)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b427-historical-gto /tmp/b427-historical-exp /tmp/b427-td-gto /tmp/b427-td-exp /tmp/b427-js-gto /tmp/b427-js-exp
+          gh run download 44666290556 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B2-CO_BB-gto-Js9h4d --dir /tmp/b427-historical-gto
+          gh run download 44666290556 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B2-CO_BB-exp_ip-Js9h4d --dir /tmp/b427-historical-exp
+          gh run download 45028060598 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B400_COBB_FIVE_GTO_FIRST-CO_BB-Td8h3c-gto --dir /tmp/b427-td-gto
+          gh run download 45029736915 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B412_R216218_NL2_IP-CO_BB-Td8h3c-exp_ip --dir /tmp/b427-td-exp
+          gh run download 45026396521 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B393_COBB_FIVE_GTO_FIRST-CO_BB-Js9h5d-gto --dir /tmp/b427-js-gto
+          gh run download 45052841553 --repo "$GITHUB_REPOSITORY" --name nl2-multiboard-B421_R216218_NL2_IP-CO_BB-Js9h5d-exp_ip --dir /tmp/b427-js-exp
+      - name: Independently authenticate all 6 original artifacts, 3 distinct flops per rank, same actor/line/SPR and strict combo masks
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b427_rank216218_three_true_sources_promote.py
+          python3 tools/hu_b427_rank216218_three_true_sources_promote.py \
+            --historical-gto /tmp/b427-historical-gto \
+            --historical-exp /tmp/b427-historical-exp \
+            --td-gto /tmp/b427-td-gto \
+            --td-exp /tmp/b427-td-exp \
+            --js-gto /tmp/b427-js-gto \
+            --js-exp /tmp/b427-js-exp
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v51_b427_rank216_218.json --out /tmp/b427-audit.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('data/nl2_hu_multiboard_status_v51_b427_rank216_218.json'))
+          a=json.load(open('/tmp/b427-audit.json'))
+          m=json.load(open('data/nl2_hu_cert_lock_medium_matrix_v51_b427.json'))
+          p=json.load(open('data/nl2_hu_b427_rank216218_three_true_source_cert_proof.json'))
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(165,227,0,392)
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(165,227,0)
+          assert (len(m['models']),len(m['boards']))==(165,624)
+          assert (p['named_boards_after'],p['locked_hero_variants_after'],p['unknown_lock_denominators_after'])==(624,716,0)
+          assert [x['flop'] for x in p['model_source_pins'][0]['pins']]==['Js9h4d','Td8h3c','Js9h5d']
+          print('PASS B427 V51 165/227; 624 exact boards; 716 NL2 lock variants; UNKNOWN=0')
+          PY
+      - name: Frontend V51 fail-closed validators, old V50 fallback, no fake rank/board or zero combo
+        run: |
+          set -euo pipefail
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node - <<'JS'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const status=JSON.parse(fs.readFileSync('data/nl2_hu_multiboard_status_v51_b427_rank216_218.json','utf8'));
+          for(const file of ['nl2_hu_multiboard_ui.js','nl2-multiboard.js']){
+            const src=fs.readFileSync(file,'utf8');
+            const a=src.indexOf('const v50b417=d=>{'),b=src.indexOf('const v49b405=d=>{',a);
+            assert.ok(a>=0&&b>a,file+' missing V50/V51 validators');
+            const fn=new Function(src.slice(a,b)+';return v51b427;')();
+            assert.equal(fn(status),status);
+            const forged=structuredClone(status);forged.CERT_MULTIBOARD=164;
+            assert.throws(()=>fn(forged),/failclosed/);
+            const missing=structuredClone(status);
+            missing.records['ln-ipfr-r_model-7kv23r'].certified_3_to_5_exact_flop_boards[1].strict_full_street_combo_reachable=0;
+            assert.throws(()=>fn(missing),/failclosed/);
+            assert.ok(src.includes('data/nl2_hu_multiboard_status_v51_b427_rank216_218.json'));
+            assert.ok(src.includes('data/nl2_hu_multiboard_status_v50_b417_rank166.json'));
+          }
+          console.log('PASS B427 V51 frontend exact-source validator and negative cases');
+          JS
+      - name: Full HU2475 original river routes, sequential reach, model paths, JS and whitespace audit
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b427-contract.json
+          node tools/link_audit.js --md /tmp/b427-link.md --json /tmp/b427-link.json
+          node tools/reach_verify.js --log /tmp/b427-reach.md --json /tmp/b427-reach.json
+          node tools/hu_model_path_audit.js /tmp/b427-model.json
+          node -e 'const c=require("/tmp/b427-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B427 HU2475/2475")'
+          git diff --check
+      - name: Commit V51, exact per-board NL2 lock/medium matrix, UI and source audit to draft PR2 only
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+users.noreply.github.com'
+          git add data/nl2_hu_b427_r216218_three_true_source_pre_cert_gate.json \
+            data/nl2_hu_multiboard_status_v51_b427_rank216_218.json \
+            data/nl2_hu_cert_lock_medium_matrix_v51_b427.json \
+            data/nl2_hu_cert_lock_medium_audit_v51_b427.json \
+            data/nl2_hu_b427_rank216218_three_true_source_cert_proof.json \
+            docs/NL2_HU_B427_R216218_THREE_TRUE_SOURCE_CERT.md \
+            tools/hu_cert_lock_medium_audit.py tools/hu_b378_v47_loader_runtime_test.cjs \
+            nl2_hu_multiboard_ui.js nl2-multiboard.js nl2.html nl2-multiboard.html
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B427: rank216/218 authentic three-flop GTO+NL2-IP CERT, V51 165/227, 624 boards 716 locks'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
