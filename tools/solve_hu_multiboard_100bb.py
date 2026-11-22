@@ -110,9 +110,28 @@ def main():
         help='Extract only exact b100-call river continuations; never alter the full underlying solved tree')
     a.add_argument('--turn-size-menu',choices=('default','river-gaps','exact-b66-only','exact-b50-only'),default='default',
         help='river-gaps: predeclared 33/66/75pct turn size tree for x x / turn bet-call river MODEL proofs')
+    a.add_argument('--authenticated-original-gto-flop',type=pathlib.Path,
+        help='Use a byte-verified authentic original GTO flop root; EXP is then ONLY a genuine partially locked turn/river solve, NOT full-tree NL2')
+    a.add_argument('--authenticated-original-gto-manifest',type=pathlib.Path,
+        help='Original authenticated GTO manifest for the reused flop root')
+    a.add_argument('--authenticated-original-gto-sha256',type=str,
+        help='Expected predeclared SHA256 of the original GTO flop root')
     a.add_argument('--manifest',required=True,type=pathlib.Path)
     args=a.parse_args()
     if not 1<=args.turn_count<=3:a.error('turn-count 1..3')
+    using_authenticated_parent=any((args.authenticated_original_gto_flop,
+                                    args.authenticated_original_gto_manifest,
+                                    args.authenticated_original_gto_sha256))
+    if using_authenticated_parent:
+        if not all((args.authenticated_original_gto_flop,args.authenticated_original_gto_manifest,
+                    args.authenticated_original_gto_sha256)):
+            a.error('Original GTO parent needs both exact files and a SHA256')
+        if (args.spot,args.version,args.flop,args.flop_size_profile,
+                args.flop_line_policy,args.turn_size_menu,args.turn_count)!=(
+                'LMP_CO_BB','exp_oop','9s6h3d','full','oop-b33only','exact-b50-only',1):
+            a.error('Authenticated reuse is restricted to B372 genuine LMP 9s6h3d exp_oop turn-only')
+        if not re.fullmatch('[0-9a-f]{64}',args.authenticated_original_gto_sha256):
+            a.error('Invalid authenticated original GTO root SHA256')
     if args.turn_size_menu=='exact-b66-only':
         if args.spot!='SB_BB' or args.version!='gto' or args.flop_line_policy!='checkcheck' or args.flop_size_profile!='full':
             a.error('Exact b66 GTO solve requires SB_BB x-x with full flop menu')
@@ -244,11 +263,45 @@ def main():
       cases=[],failures=[],skipped=[],elapsed_seconds=0)
     t0=time.monotonic()
     try:
-        job.run(job_input,str(jpath))
-        pathlib.Path(str(path)+'.tmp').rename(path)
-        fr=json.loads(path.read_text())
+        if using_authenticated_parent:
+            authm=json.loads(args.authenticated_original_gto_manifest.read_text())
+            authpath=args.authenticated_original_gto_flop
+            authsha=sha(authpath)
+            if authsha!=args.authenticated_original_gto_sha256:
+                raise ValueError('Original GTO flop source SHA mismatch; no fallback allowed')
+            if (authm['schema'],authm['spot'],authm['version'],authm['flop'])!=(
+                    'NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1',args.spot,'gto',flop):
+                raise ValueError('Wrong original GTO model identity')
+            if authm['file_flop_sha256']!=authsha or authm['solved_cases']!=1 or authm['failures']:
+                raise ValueError('Original GTO manifest lacks an authenticated completed source')
+            if (authm['preflop_ranges']['source'],authm['flop_size_profile'],
+                    authm['restricted_tree_assumption'])!=('ASSUMED_EXPLICIT_169CLASS','full',False):
+                raise ValueError('Original GTO root has incompatible or undisclosed range/tree')
+            if authm['selected_lines']!=lines or authm['turns']!=turns:
+                raise ValueError('Original GTO exact line/turn mismatch')
+            if authm['solver_pin']!=sha(pf/'py/pipeline.py') or authm['solver_ranges_sha256']!=sha(pf/'py/ranges.py'):
+                raise ValueError('Original GTO code pin mismatch')
+            fr=json.loads(authpath.read_text())
+            if (fr['flop'],fr['pot'],fr['stack'])!=(flop,250,9900):
+                raise ValueError('Original GTO tree pot/stack/flop mismatch')
+            if fr['info'].get('gto_expl_pct') is None or fr['info']['gto_expl_pct']>.5:
+                raise ValueError('Original GTO flop did not converge within 0.5%')
+            path.write_bytes(authpath.read_bytes())
+            info['authenticated_original_gto_parent']=dict(
+                original_run_id=45013144124,original_artifact_id=14751218545,
+                original_GTO_root_sha256=authsha,
+                original_GTO_manifest_sha256=sha(args.authenticated_original_gto_manifest),
+                original_GTO_flop_gap_pct=fr['info']['gto_expl_pct'],
+                genuine_NL2_partial_lock_only_on_downstream_turn_and_river=True,
+                flop_is_original_unlocked_GTO_not_fully_hero_NL2_locked=True,
+                original_source_flop_line_and_turn_pinned=True)
+        else:
+            job.run(job_input,str(jpath))
+            pathlib.Path(str(path)+'.tmp').rename(path)
+            fr=json.loads(path.read_text())
         fr['turns']=turns
-        path.write_text(json.dumps(fr,separators=(',',':')))
+        if not using_authenticated_parent:
+            path.write_text(json.dumps(fr,separators=(',',':')))
         info['file_flop_sha256']=sha(path)
         for line in lines:
             for turn in turns:

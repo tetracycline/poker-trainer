@@ -1,0 +1,128 @@
+name: NL2 B372 genuine rank27 9s6h3d original-GTO-root plus Rust NL2 OOP partially locked turn
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b372-r27-auth-gto-nl2-turn.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  authentic-nl2-turn-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer, fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Independently retrieve original completed GTO; no root re-solve
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p original
+          gh run download 45013144124 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B367_R27_LMPCOBB_THIRD-LMP_CO_BB-9s6h3d-gto' --dir original
+          test -s original/evidence/LMP_CO_BB-9s6h3d-gto.json
+          test "$(cat original/evidence/poker-solver-pin.txt)" = 'abe310c3aad02dd4a7c77fb2831801fd490cf51b'
+          test "$(cat original/evidence/rust-pin.txt)" = '9d1509fe5077d019825f833eed04b16d342dfda1'
+          python3 -m py_compile trainer/tools/solve_hu_multiboard_100bb.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Actually solve pinned 100bb turn-river NL2 OOP partial lock from real GTO flop tree
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver --spot LMP_CO_BB --flop 9s6h3d \
+            --version exp_oop --flop-size-profile full \
+            --flop-line-policy oop-b33only --turn-count 1 --turn-size-menu exact-b50-only \
+            --authenticated-original-gto-flop original/solver/postflop/out/LMP_CO_BB/gto/9s6h3d_multiboard.json \
+            --authenticated-original-gto-manifest original/evidence/LMP_CO_BB-9s6h3d-gto.json \
+            --authenticated-original-gto-sha256 b2aeb59fe69c73c42c4c848eed27df9c055f65a7503bd9d4ee07ab07b3c89822 \
+            --manifest evidence/LMP_CO_BB-9s6h3d-exp_oop-turn-only.json
+      - name: Verify SHA, exact actor/history, real lock source; no premature CERT
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib,pathlib
+          P=pathlib.Path
+          sha=lambda p:hashlib.sha256(P(p).read_bytes()).hexdigest()
+          m=json.load(open('evidence/LMP_CO_BB-9s6h3d-exp_oop-turn-only.json'))
+          assert m['solved_cases']==1 and len(m['cases'])==1 and not m['failures']
+          assert m['version']=='exp_oop' and m['spot']=='LMP_CO_BB'
+          g=m['authenticated_original_gto_parent']
+          assert g['original_GTO_root_sha256']=='b2aeb59fe69c73c42c4c848eed27df9c055f65a7503bd9d4ee07ab07b3c89822'
+          assert g['genuine_NL2_partial_lock_only_on_downstream_turn_and_river']
+          assert m['file_flop_sha256']==g['original_GTO_root_sha256']
+          c=m['cases'][0]
+          assert c['line']=='b33 c' and c['turn']=='Ts' and c['source_sha256']
+          assert c['gto_gap_pct'] is not None and c['gto_gap_pct']<=.5
+          assert c['hero_gap_pct'] is not None and c['hero_gap_pct']<=.5
+          src=P('solver/postflop')/c['source_path'];assert src.is_file() and sha(src)==c['source_sha256']
+          ns=json.loads(src.read_text())['nodes']
+          nodes=[n for n in ns if n['line']=='b33 c/b50 c/' and n['player']==0 and len(n['board'])==10]
+          assert nodes
+          measured=[q for q in m['locks'] if q.get('scope')=='PINNED_MEASURED_NL2_SOURCE' and isinstance(q.get('n'),int) and q['n']>0]
+          assert measured,'Real measured NL2 pool-marginal lock proof absent'
+          s=json.load(open('trainer/data/nl2_hu_multiboard_status_v47_b364_rank96.json'))
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'])==(159,233,0)
+          o=dict(schema='NL2_B372_GENUINE_GTO_FLOP_PLUS_TRUE_PARTIAL_NL2_TURN_ONLY_SOURCE_V1',
+             model='ln-iso-lmp_r_model-1aov4pd',source_artifact_B367_run=45013144124,
+             original_GTO_parent_sha256=g['original_GTO_root_sha256'],
+             original_GTO_manifest_sha256=g['original_GTO_manifest_sha256'],
+             NL2_partial_turn_original_sha256=c['source_sha256'],
+             source_version='exp_oop',flop='9s6h3d',turn='Ts',actor='BB_OOP',
+             exact_line='b33 c/b50 c/',original_Rust_pin='9d1509fe5077d019825f833eed04b16d342dfda1',
+             source_public_boards=sorted(n['board'] for n in nodes),
+             gto_gap_pct=c['gto_gap_pct'],hero_gap_pct=c['hero_gap_pct'],
+             real_measured_source_pool_marginal_lock_patterns=len(measured),
+             assumed_preflop_ranges_not_observed_hole_card_NL2=True,
+             genuine_original_GTO_flop=True,genuine_partial_NL2_turn_lock=True,
+             not_a_full_tree_NL2_flop_solve=True,
+             strict_sequential_combo_reach_separate_gate_required=True,
+             eligible_CERT=False,reason='ONLY_ONE_DISTINCT_FLOP_AND_STRICT_SEQUENTIAL_REACH_PENDING',
+             cert_count_unchanged=159,approx_count_unchanged=233,PR2_remains_draft_never_merge=True)
+          P('trainer/data/nl2_hu_b372_r27_9s6h3d_gto_parent_true_partial_nl2_turn.json').write_text(json.dumps(o,ensure_ascii=False,indent=2)+'\n')
+          P('trainer/docs/NL2_HU_B372_R27_TRUE_PARTIAL_NL2_TURN_ONLY.md').write_text(
+             '# B372 exact original GTO flop + true NL2 OOP partial turn lock\n\n'
+             'Authentic 100bb GTO-root and genuine Rust NL2 partially locked turn/river on 9s6h3d/Ts. '
+             'Only one distinct flop; strict sequential combo proof remains pending. No CERT upgrade, no full-tree NL2 claim.\n')
+          print('B372 true Rust NL2 partial lock only; 159 CERT / 233 APPROX.')
+          PY
+          cd trainer
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b372-source.json
+          node tools/hu_line_contract.js > /tmp/b372-hu.json
+          node tools/link_audit.js --md /tmp/b372-link.md --json /tmp/b372-link.json
+          node tools/reach_verify.js --log /tmp/b372-reach.md --json /tmp/b372-reach.json
+          node tools/hu_model_path_audit.js /tmp/b372-path.json
+          node -e 'const c=require("/tmp/b372-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1)'
+          git diff --check
+      - name: Commit true source proof to draft PR2 without false certification or merge
+        run: |
+          set -euo pipefail
+          cd trainer
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b372_r27_9s6h3d_gto_parent_true_partial_nl2_turn.json docs/NL2_HU_B372_R27_TRUE_PARTIAL_NL2_TURN_ONLY.md
+          git commit -m 'B372: genuine 9s6h3d 100bb GTO-root NL2-OOP locked turn source; preserve 159/233'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
+      - name: Keep original Rust sources for independent replay
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-B372-rank27-9s6h3d-GTO-root-true-NL2-OOP-turn
+          path: |
+            evidence
+            solver/postflop/out
+            original/evidence
+          retention-days: 30
+          if-no-files-found: warn
