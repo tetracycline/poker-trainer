@@ -71,7 +71,7 @@ def main():
     assert (er["flop"],er["pot"],er["stack"])==("As9h2d",250,9900)
     assert (es["flop"],es["turn"],es["line0"])==("As9h2d","Kd","b50 c")
     assert em["cases"][0]["line"]=="b50 c" and em["cases"][0]["turn"]=="Kd"
-    assert em["cases"][0]["source_sha256"]==sha(es)
+    assert em["cases"][0]["source_sha256"]==sha(espath)
     assert em["cases"][0]["gto_gap_pct"]<=.5 and em["cases"][0]["hero_gap_pct"]<=.5
     assert es["info"]["gto_expl_pct"]<=.5 and es["info"]["hero_gap_pct"]<=.5
     assert esj["hero"]==0 and esj.get("locks")
@@ -102,7 +102,7 @@ def main():
       not_full_tree_NL2_lock=True,original_flop_root_is_unlocked_GTO=True,
       preflop_ranges="ASSUMED_EXPLICIT_169CLASS_NOT_OBSERVED_NL2",
       GTO_root_sha256=GTO_ROOT_SHA,GTO_root_job_sha256=GTO_JOB_SHA,GTO_manifest_sha256=GTO_MANIFEST_SHA,
-      GTO_turn_sha256=GTO_TURN_SHA,EXP_OOP_turn_sha256=sha(es),EXP_OOP_turn_job_sha256=sha(espath.with_suffix(".job.json")),
+      GTO_turn_sha256=GTO_TURN_SHA,EXP_OOP_turn_sha256=sha(espath),EXP_OOP_turn_job_sha256=sha(espath.with_suffix(".job.json")),
       GTO_gap_pct=gs["info"]["gto_expl_pct"],EXP_OOP_hero_gap_pct=es["info"]["hero_gap_pct"],
       NL2_lock_patterns=em["locks"],NL2_lock_stats=es["info"].get("lock_stats",{}),
       rank27_GTO_targets=r27g,rank27_EXP_OOP_targets=r27e,rank29_GTO_targets=r29g,rank29_EXP_OOP_targets=r29e,
@@ -113,7 +113,7 @@ def main():
     pp=D/"nl2_hu_b443_as9h2d_exp_oop_partial_source_proof.json"
     pp.write_text(json.dumps(proof,ensure_ascii=False,indent=2)+"\n")
     ix=dict(schema="NL2_B443_AS9H2D_EXP_OOP_PARTIAL_INDEX_V1",proof_sha256=sha(pp),archive_sha256=sha(gz),
-      gto_root_sha256=GTO_ROOT_SHA,exp_turn_sha256=sha(es),run_id=a.run_id,no_cert_promotion=True)
+      gto_root_sha256=GTO_ROOT_SHA,exp_turn_sha256=sha(espath),run_id=a.run_id,no_cert_promotion=True)
     (gz.parent/"NL2_B443_R27_R29_AS9H2D_EXP_OOP_TURN_ONLY.index.json").write_text(json.dumps(ix,indent=2)+"\n")
     (repo/"docs/NL2_HU_B443_AS9H2D_EXP_OOP_PARTIAL_SOURCE.md").write_text(
       "# B443 As9h2d authentic EXP_OOP turn/river partial lock\n\n"
