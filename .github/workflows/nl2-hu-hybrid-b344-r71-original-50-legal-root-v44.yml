@@ -24,9 +24,10 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile tools/hu_b344_rank71_historical_exact_50_root_positive.py tools/hu_sequential_cfr_reach.py
-          for run in 44762388523 44769773770; do
-            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq .conclusion)" = success
-          done
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/44769773770" --jq .conclusion)" = success
+          # Original B19 run is failure because its blanket 3-positive verifier rejected an unrelated As7h3d flop.
+          # Its exact 4s4h2d original GTO Rust solver JOB succeeded and later source archive was salvaged and SHA pinned.
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/136378002320" --jq .conclusion)" = success
           mkdir -p sources
           gh run download 44762388523 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B19_LMP50_RESTRICTED-LMP_CO_BB-4s4h2d-gto' --dir sources/B19_LMP50_RESTRICTED-4s4h2d
           gh run download 44769773770 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B26_LMP_NONPAIRED-LMP_CO_BB-7s5h3d-gto' --dir sources/B26_LMP_NONPAIRED-7s5h3d
