@@ -36,7 +36,7 @@ def get_case(source,flop,turn,version):
     c=matches[0]
     assert (c['flop_root_pot_bb'],c['flop_root_stack_bb'])==(6.5,97.5)
     assert c['empirical_scope']=='PINNED_PREFLOP_CFR'
-    assert c['gto_exploitability_pct']<=.5 and abs(c['real_flop_parent_spr']-SPR)/SPR<=.05
+    assert c['gto_exploitability_pct']<=.5 and abs(c['turn_spr']-SPR)/SPR<=.05
     assert len(c['source_sha256'])==64
     return c
 def actor_nodes(c):
