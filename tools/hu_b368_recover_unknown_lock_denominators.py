@@ -52,9 +52,9 @@ def locate_source(run_dir,spot,flop,version,target_sha):
             sub=pf_path(artifact_root,subrel)
             if not sub.is_file() or sha(sub)!=target_sha:continue
             expected_root=first(m,("original_GTO_root_sha256","original_GTO_flop_root_sha256",
-                "original_parent_GTO_root_SHA256","original_gto_root_sha256"))
+                "original_parent_GTO_root_SHA256","original_gto_root_sha256","file_flop_sha256"))
             expected_job=first(m,("original_GTO_job_sha256","original_GTO_flop_job_sha256",
-                "original_parent_GTO_job_SHA256","original_gto_job_sha256"))
+                "original_parent_GTO_job_SHA256","original_gto_job_sha256","flop_root_jobfile_sha256"))
             expected_root=expected_root or first(c,("flop_sha256","original_GTO_root_sha256"))
             rootrel=c.get("flop_json") or m.get("file_flop")
             root=None
@@ -74,7 +74,8 @@ def locate_source(run_dir,spot,flop,version,target_sha):
             if root is None or (expected_root and sha(root)!=expected_root):
                 parent_id=first(m,("original_GTO_source_run_id","original_GTO_source_run",
                     "original_B235_GTO_source_run_id","original_B240_GTO_source_run_id",
-                    "original_B243_GTO_source_run_id","original_GTO_parent_source_run_id"))
+                    "original_B243_GTO_source_run_id","original_GTO_parent_source_run_id",
+                    "gto_parent_source_run_id","gto_parent_source_run"))
                 if parent_id:
                     parent_dir=DOWNLOADS/str(parent_id)
                     for candidate in parent_dir.rglob(f"{flop}_multiboard.json"):

@@ -56,7 +56,8 @@ jobs:
               except Exception:continue
               for k in ('original_GTO_source_run_id','original_GTO_source_run',
                         'original_B235_GTO_source_run_id','original_B240_GTO_source_run_id',
-                        'original_B243_GTO_source_run_id','original_GTO_parent_source_run_id'):
+                        'original_B243_GTO_source_run_id','original_GTO_parent_source_run_id',
+                        'gto_parent_source_run_id','gto_parent_source_run'):
                   v=m.get(k)
                   if v:
                       try:parents.add(int(v))
