@@ -23,7 +23,7 @@ jobs:
       - name: Download only the historical source runs referenced by the 334 UNKNOWN denominator lock variants
         working-directory: trainer
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           python3 - <<'PY'

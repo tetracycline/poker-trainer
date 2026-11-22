@@ -6,7 +6,7 @@ leave UNKNOWN. No inferred per-hole-card opponent frequencies.
 """
 import collections,copy,hashlib,importlib,json,pathlib,re,sys
 D=pathlib.Path("data")
-SOLVER=pathlib.Path("solver")
+SOLVER=pathlib.Path("../solver")
 DOWNLOADS=pathlib.Path("downloads")
 STATUS=D/"nl2_hu_multiboard_status_v47_b364_rank96.json"
 MATRIX=D/"nl2_hu_cert_lock_medium_matrix_v47_b364.json"
