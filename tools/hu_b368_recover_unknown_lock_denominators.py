@@ -55,7 +55,8 @@ def locate_source(run_dir,spot,flop,version,target_sha):
             if c.get("flop_sha256") and sha(root)!=c["flop_sha256"]:continue
             if m.get("file_flop_sha256") and sha(root)!=m["file_flop_sha256"]:continue
             try:
-                pinfiles=[artifact_root/"evidence"/"poker-solver-commit.txt",
+                pinfiles=[artifact_root/"evidence"/"poker-solver-pinned-SHA.txt",
+                          artifact_root/"evidence"/"poker-solver-commit.txt",
                           artifact_root/"evidence"/"poker-solver-pin.txt"]
                 pins=[x.read_text().strip() for x in pinfiles if x.is_file()]
                 if not pins or any(x!=PIN for x in pins):continue

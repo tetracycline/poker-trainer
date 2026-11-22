@@ -82,6 +82,26 @@ jobs:
           PY
           node --check nl2_hu_multiboard_ui.js
           node --check nl2-multiboard.js
+          python3 - <<'PY'
+          import pathlib,re
+          expected=["NL2_HU_392_MULTIBOARD_CERT_STATUS_V27_B123_R41_236","NL2_HU_392_MULTIBOARD_CERT_STATUS_V28_B133_RANK69","NL2_HU_392_MULTIBOARD_CERT_STATUS_V29_B142_RANK88","NL2_HU_392_MULTIBOARD_CERT_STATUS_V30_B145_RANK47","NL2_HU_392_MULTIBOARD_CERT_STATUS_V31_B161_RANK150","NL2_HU_392_MULTIBOARD_CERT_STATUS_V32_B168_RANK80","NL2_HU_392_MULTIBOARD_CERT_STATUS_V33_B179_RANK138","NL2_HU_392_MULTIBOARD_CERT_STATUS_V34_B190_RANK199_202","NL2_HU_392_MULTIBOARD_CERT_STATUS_V35_B193_RANK201","NL2_HU_392_MULTIBOARD_CERT_STATUS_V36_B201_RANK159","NL2_HU_392_MULTIBOARD_CERT_STATUS_V37_B205_RANK188","NL2_HU_392_MULTIBOARD_CERT_STATUS_V38_B206_RANK190","NL2_HU_392_MULTIBOARD_CERT_STATUS_V39_B247_RANK30","NL2_HU_392_MULTIBOARD_CERT_STATUS_V40_B265_RANK313","NL2_HU_392_MULTIBOARD_CERT_STATUS_V41_B271_RANK61","NL2_HU_392_MULTIBOARD_CERT_STATUS_V42_B289_RANK46","NL2_HU_392_MULTIBOARD_CERT_STATUS_V43_B319_RANK60","NL2_HU_392_MULTIBOARD_CERT_STATUS_V44_B331_RANK60_FOUR","NL2_HU_392_MULTIBOARD_CERT_STATUS_V45_B345_RANK71","NL2_HU_392_MULTIBOARD_CERT_STATUS_V46_B354_RANK79","NL2_HU_392_MULTIBOARD_CERT_STATUS_V47_B364_RANK96"]
+          for name in ('nl2-multiboard.js','nl2_hu_multiboard_ui.js'):
+              s=pathlib.Path(name).read_text()
+              m=re.search(r"if\(!\[(.*?)\]\.includes\(d\.schema\)",s,re.S)
+              assert m, f'{name}: schema allowlist missing'
+              allowed=set(re.findall(r"'([^']+)'",m.group(1)))
+              missing=[x for x in expected if x not in allowed]
+              assert not missing, f'{name}: missing schemas {missing}'
+              assert "data/nl2_hu_multiboard_status_v47_b364_rank96.json" in s
+              assert "source_run_id" in s and "source_sha256" in s
+          s=pathlib.Path('nl2-multiboard.js').read_text()
+          assert "data/nl2_hu_cert_lock_medium_matrix_v47_b364.json" in s
+          for name,needle in [('nl2.html','nl2_hu_multiboard_ui.js?v=task-hybrid-b364-v47-20261122'),('nl2-multiboard.html','nl2-multiboard.js?v=task-hybrid-b364-v47-20261122')]:
+              assert needle in pathlib.Path(name).read_text(), name
+          print('PASS V47 frontend loader, 47-schema allowlists, source refs and pre-cache-bust HTML links')
+          PY
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
           node --check nl2-exploit.js
           git diff --check
       - name: Full HU2475 river navigation/reach and model path audit
