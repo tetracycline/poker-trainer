@@ -1,0 +1,92 @@
+name: TASK-HYBRID B362 negative old rank96 Ks7h2d NL2 OOP full 40/70 disproves old CERT candidate; preserve V46 158/234 HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b362-r96-historic-strict-negative.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  authenticated-historic-negative:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Require original successful source runs, and re-fetch exact historic 100bb GTO and actual OOP NL2 Rust original artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b362_rank96_historic_stage2_negative.py tools/hu_sequential_cfr_reach.py
+          for r in 44654973894 44976462678 44977743690; do
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$r" --jq .conclusion)" = success
+          done
+          mkdir -p downloads/historic-gto downloads/historic-exp-oop
+          gh run download 44654973894 --repo "$GITHUB_REPOSITORY" --name 'nl2-stage2-UTG_CO-gto-Ks7h2d' --dir downloads/historic-gto
+          gh run download 44654973894 --repo "$GITHUB_REPOSITORY" --name 'nl2-stage2-UTG_CO-exp_oop-Ks7h2d' --dir downloads/historic-exp-oop
+          test -s downloads/historic-gto/evidence/UTG_CO-gto-Ks7h2d.json
+          test -s downloads/historic-exp-oop/evidence/UTG_CO-exp_oop-Ks7h2d.json
+      - name: Authenticate original SHA, actor 0 and exact public river, full flop-turn-river 40/70; enforce STRICT NEGATIVE and preserve 158/234
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b362_rank96_historic_stage2_negative.py \
+            --historic-gto downloads/historic-gto --historic-exp-oop downloads/historic-exp-oop
+          python3 - <<'PY'
+          import json,pathlib
+          f=pathlib.Path('data/nl2_hu_b362_rank96_historic_stage2_strict_40_70_negative.json')
+          q=json.loads(f.read_text())
+          assert q['schema']=='NL2_HU_B362_HISTORIC_R96_LEGACY_SOURCE_40_70_TRUE_NEGATIVE_V1'
+          assert q['historical_NL2_OOP_has_zero_strict_positive']
+          assert q['rerun_actual_NL2_OOP']['strict_positive_actor_combo_rows']==0
+          assert q['historic_Ks7h2d_CANNOT_COUNT_AS_CERT_FLOP']
+          assert [x['flop'] for x in q['authenticated_new_exact_paired_distinct_flops']]==['As9h2d','Qs8h2d']
+          assert (q['CERT'],q['APPROX'],q['EST'],q['TOTAL'])==(158,234,0,392)
+          print('PASS old source cannot CERT, two genuinely paired new rank96 flops remain')
+          PY
+      - name: Full independent V46 all 158 CERT 234 APPROX and no fabricated node-lock or 50pct medium evidence, plus all 2475 HU river links
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v46_b354_rank79.json --out nl2-audit/b362-negative-source.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('nl2-audit/b362-negative-source.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(158,234,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'])==(603,695)
+          assert a['not_actual_NL2_earnings'] and a['not_generalized_handclass_GTO']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B362 negative HU 2475/2475")'
+      - name: Commit source-authentic negative as fail-closed evidence; NEVER update CERT, NEVER merge PR2
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b362_rank96_historic_stage2_strict_40_70_negative.json \
+            docs/NL2_HU_B362_RANK96_HISTORIC_STAGE2_OOP_STRICT_NEGATIVE.md
+          git diff --cached --quiet && exit 1
+          git commit -m 'TASK-HYBRID B362 NEGATIVE: original Stage2 UTGCO OOP lock has zero strict 40-70 combo reach; no false rank96 CERT, V46 158/234 HU2475 PASS'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-B362-historic-Ks7h2d-GTO-positive-NL2-OOP-40-70-ZERO-unpromoted-HU2475
+          path: |
+            data/nl2_hu_b362_rank96_historic_stage2_strict_40_70_negative.json
+            docs/NL2_HU_B362_RANK96_HISTORIC_STAGE2_OOP_STRICT_NEGATIVE.md
+            nl2-audit/
+          retention-days: 30
