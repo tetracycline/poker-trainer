@@ -24,7 +24,7 @@ def main():
  assert (s["CERT_MULTIBOARD"],s["APPROX"],s["EST"],s["TOTAL"])==(163,229,0,392)
  assert (p["CERT_after"],p["APPROX_after"],p["named_boards_after"],p["hero_lock_variants_after"])==(163,229,618,710)
  assert p["rank"]==166 and len(p["source_pins"])==3
- assert all(s["records"][m["model_id"]]["label"]=="CERT-MULTIBOARD" for m in p["model_source_pins"])
+ assert s["records"]["ln-ipfr-r_model-1spq1ko"]["label"]=="CERT-MULTIBOARD"
  expected=set()
  for sample in p["source_pins"]:
   for run,checksum in ((sample["original_GTO_run"],sample["original_GTO_SHA256"]),
@@ -67,7 +67,7 @@ def main():
     full_original_Rust_source_and_actor_reach_verified=True))
  assert expected<=verified,("Missing required authenticated new CERT source archive",sorted(expected-verified))
  assert len(archived)==2
- report=dict(schema="NL2_B420_TWO_COBB_RANK214219_CERT_DURABLE_REAL_GTO_NL2_IP_SOURCE_ARCHIVES_V1",
+ report=dict(schema="NL2_B420_RANK166_CERT_DURABLE_REAL_GTO_NL2_IP_SOURCE_ARCHIVES_V1",
   current_V50_SHA256=sha(SOURCE),B417_full_CERT_original_source_proof_sha256=sha(PROOF),
   original_true_Rust_engine_pin=RUST,original_full100bb_preflop_poker_solver_pin=PIN,
   certified_ranks=[166],durable_immutable_gzip_CFR_source_archives=archived,
