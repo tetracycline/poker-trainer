@@ -332,8 +332,9 @@ def main():
         if not run_dir.exists():
             skipped["SOURCE_RUN_ARTIFACTS_UNAVAILABLE"]+=1
             continue
-        helper=helper_for(run)
-        result,reason=recover_one(b,l,ctx,run_dir,helper,run_heads[run])
+        run_id=int(l["source_run_id"])
+        helper=helper_for(run_id)
+        result,reason=recover_one(b,l,ctx,run_dir,helper,run_heads[run_id])
         if result:
             recovered[key]=result
         else:
