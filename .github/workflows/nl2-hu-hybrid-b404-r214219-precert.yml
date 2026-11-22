@@ -1,0 +1,83 @@
+name: NL2 B404 independent rank214/219 three original true CO-IP flops prereg, HU2475 (max9m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b404-r214219-precert.yml'
+      - 'tools/hu_b404_r214219_three_source_pre_cert.py'
+      - 'data/nl2_hu_b396_r214_219_two_real_nl2_ip_original_pairs.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-source-pre-cert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Ensure B396 completed with two genuinely paired new CO-IP flops per model, never infer CERT
+        id: ready
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b404_r214219_three_source_pre_cert.py
+          if [ ! -s data/nl2_hu_b396_r214_219_two_real_nl2_ip_original_pairs.json ];then
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo 'B396 actual original Rust NL2 source not yet verified; no CERT.'
+            exit 0
+          fi
+          python3 - <<'PY'
+          import os,json
+          p=json.load(open('data/nl2_hu_b396_r214_219_two_real_nl2_ip_original_pairs.json'))
+          ready=p.get('schema')=='NL2_B396_RANK214_219_TWO_NEW_ACTUAL_RUST_GTO_NL2_IP_PAIRS_V1'
+          for rank in ('214','219'):
+            xs=p.get('new_distinct_qualifying_flops_by_rank',{}).get(rank,[])
+            ready=ready and set(xs)=={'KsQh4d','Js9h5d'}
+            rows=p.get('positive_40_70_named_river_pairs_by_rank',{}).get(rank,[])
+            ready=ready and all(x['GTO_strict_40_70_combos']>0 and x['actual_NL2_IP_strict_40_70_combos']>0 for x in rows)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('ready='+('true' if ready else 'false')+'\n')
+          print('B404 authentic two new CO-IP source readiness:',ready)
+          PY
+      - name: Independent V48 rank214/219 historic plus two genuine SHA-pinned original GTO/NL2 fullstreet 40-70 pre-cert
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b404_r214219_three_source_pre_cert.py
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v48_b390_rank107.json --out /tmp/b404-source.json
+          python3 - <<'PY'
+          import json
+          p=json.load(open('data/nl2_hu_b404_r214219_three_true_flop_pre_cert_gate.json'))
+          s=json.load(open('/tmp/b404-source.json'))
+          assert p['ranks_with_three_full_street_40_70_positive_flops']==[214,219]
+          assert len(p['eligible_rank_source_triples'])==2
+          assert all(len(v['three_authentic_distinct_flop_sources'])==3 for v in p['eligible_rank_source_triples'].values())
+          assert (s['cert_multiboard'],s['approx'],s['EST'])==(160,232,0)
+          print('PASS B404 two CO_BB authentic 3-flop source readiness; not yet promoted')
+          PY
+      - name: Full HU2475 river paths, reach, actor, model, V48 JS and original source guard
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b404-contract.json
+          node tools/link_audit.js --md /tmp/b404-link.md --json /tmp/b404-link.json
+          node tools/reach_verify.js --log /tmp/b404-reach.md --json /tmp/b404-reach.json
+          node tools/hu_model_path_audit.js /tmp/b404-model.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b404-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B404 HU2475/2475")'
+          git diff --check
+      - name: Commit and push exact original GTO+NL2 actor source pre-cert only, no false CERT or merge
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b404_r214219_three_true_flop_pre_cert_gate.json docs/NL2_HU_B404_R214219_THREE_SOURCE_PRE_CERT.md
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B404: independently source-gate CO_BB rank214/219 three distinct exact GTO/NL2 IP flops, HU2475'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
