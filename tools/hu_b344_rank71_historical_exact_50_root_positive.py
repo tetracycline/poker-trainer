@@ -27,13 +27,13 @@ def main():
   assert not proof['errors'] and proof['source_run_id']==run
   art=next(x for x in proof['artifacts'] if x['flop']==flop and x['version']=='gto')
   assert not art['errors'] and art['cases']
-  case=next(x for x in art['cases'] if x['line']=='b50 c')
+  case=next(x for x in art['cases'] if x['flop_line']=='b50 c')
   folder=q.download_root/f'{batch}-{flop}'
   root=folder/f'solver/postflop/out/LMP_CO_BB/gto/{flop}_multiboard.json'
-  sub=folder/'solver/postflop'/case['sub_json']
+  sub=folder/'solver/postflop'/json.loads(manifest.read_text())['cases'][0]['source_path']
   manifest=folder/f'evidence/LMP_CO_BB-{flop}-gto.json'
   assert all(x.is_file() for x in (root,sub,manifest))
-  assert case['flop_sha256']==sha(root) and case['sub_sha256']==sha(sub)
+  assert case['flop_source_sha256']==sha(root) and case['source_sha256']==sha(sub)
   mf=json.loads(manifest.read_text()); fr=json.loads(root.read_text());su=json.loads(sub.read_text())
   assert mf['flop']==flop and mf['version']=='gto'
   assert (mf['flop_size_profile'],mf['restricted_tree_assumption'])==('lmp-50-only',True)
