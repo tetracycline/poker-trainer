@@ -1,0 +1,111 @@
+name: TASK-HYBRID B364 V47 rank96 3 NEW full 100bb original GTO + genuine NL2 UTG OOP, 159/233 HU2475 gated (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b364-v47-rank96-three-new-full100bb-cert.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  certify-three-new-full-real-actor-flops:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Require three original real Rust 100bb source jobs plus B362 negative independent audit, all PASS before certification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b364_v47_rank96_3_new_full_100bb_cert.py \
+            tools/hu_b362_v47_rank96_three_real_oop_cert.py tools/hu_cert_lock_medium_audit.py \
+            tools/hu_cert_lock_medium_coverage_matrix.py tools/hu_sequential_cfr_reach.py
+          for run in 44976462678 44977743690 44978936529 44978756578; do
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq .conclusion)" = success
+          done
+          test -s data/nl2_hu_b362_rank96_historic_stage2_strict_40_70_negative.json
+          test -s data/solver_evidence/NL2_MULTIBOARD_B359_R96_VERIFIED.json.gz
+          test -s data/solver_evidence/NL2_MULTIBOARD_B361_R96_VERIFIED.json.gz
+          test -s data/solver_evidence/NL2_MULTIBOARD_B363_R96_VERIFIED.json.gz
+      - name: Re-verify original three NEW B359/B361/B363 full GTO+actual NL2 OOP with SHA, exact public board and 40/70 full ancestry then create V47
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b364_v47_rank96_3_new_full_100bb_cert.py
+          python3 -m py_compile tools/hu_cert_lock_medium_audit.py
+      - name: Independently audit all V47 159 CERT and 233 APPROX, original 606 named boards, 698 true actor partial lock variants and source UNKNOWN or real marginal only
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out nl2-audit/b364-V47-source.json
+          python3 - <<'PY'
+          import json,pathlib,hashlib
+          root=pathlib.Path('data')
+          read=lambda f:json.loads((root/f).read_text())
+          sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+          v=read('nl2_hu_multiboard_status_v47_b364_rank96.json')
+          m=read('nl2_hu_cert_lock_medium_matrix_v47_b364.json')
+          p=read('nl2_hu_b364_v47_rank96_three_new_full_100bb_GTO_NL2_OOP_source_gate.json')
+          a=json.loads(pathlib.Path('nl2-audit/b364-V47-source.json').read_text())
+          assert (v['CERT_MULTIBOARD'],v['APPROX'],v['EST'],v['TOTAL'])==(159,233,0,392)
+          assert v['parent_v46_sha256']==sha(root/'nl2_hu_multiboard_status_v46_b354_rank79.json')
+          assert p['V47_status_sha256']==sha(root/'nl2_hu_multiboard_status_v47_b364_rank96.json')
+          assert p['V47_matrix_sha256']==sha(root/'nl2_hu_cert_lock_medium_matrix_v47_b364.json')
+          assert p['independent_auditor_sha256']==sha(pathlib.Path('tools/hu_cert_lock_medium_audit.py'))
+          assert m['parent_v47_status_sha256']==p['V47_status_sha256']
+          assert (len(m['boards']),len(m['models']))==(606,159)
+          assert (m['strict_aggregate']['named_board_proofs'],m['strict_aggregate']['hero_lock_variants'])==(606,698)
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'])==(606,698)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          assert p['three_new_distinct_flops']==['As9h2d','Qs8h2d','Qs7h3d']
+          assert len(p['two_plus_textures'])>=2
+          assert p['all_flop_trees_full_33_50_75_100_original_100bb']
+          assert v['records']['ln-opfr-r_model-18g2rvt']['label']=='CERT-MULTIBOARD'
+          assert [x['flop'] for x in v['records']['ln-opfr-r_model-18g2rvt']['certified_3_to_5_exact_flop_boards']]==p['three_new_distinct_flops']
+          assert 'Ks7h2d' not in p['three_new_distinct_flops']
+          assert p['historical_B362_negative_sha256']==sha(root/'nl2_hu_b362_rank96_historic_stage2_strict_40_70_negative.json')
+          print('PASS B364 3 new ORIGINAL 100bb true GTO+NL2 OOP exact actor 40/70 source, 159/233, 606/698')
+          PY
+      - name: Full independent HU2475 2475/2475 river route, link and reach audit; V46 frontend backward compatibility preserved
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B364 full HU 2475/2475")'
+      - name: Commit only certified V47 evidence, source matrix, independent auditor allowed schema and docs after PASS; push PR #2 fast-forward, NEVER MERGE
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/hu_cert_lock_medium_audit.py \
+            data/nl2_hu_multiboard_status_v47_b364_rank96.json \
+            data/nl2_hu_cert_lock_medium_matrix_v47_b364.json \
+            data/nl2_hu_b364_v47_rank96_three_new_full_100bb_GTO_NL2_OOP_source_gate.json \
+            docs/NL2_HU_B364_V47_RANK96_THREE_NEW_ORIGINAL_GTO_NL2_OOP_CERT.md
+          git diff --cached --quiet && exit 1
+          git commit -m 'TASK-HYBRID B364: V47 rank96 3 NEW genuine 100bb GTO NL2 OOP flop cert, 159/233 606 exact boards 698 partial locks HU2475 audit PASS'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL2-B364-V47-rank96-three-NEW-full100bb-GTO-NL2-actor-OOP-CERT-159-233-HU2475
+          path: |
+            data/nl2_hu_multiboard_status_v47_b364_rank96.json
+            data/nl2_hu_cert_lock_medium_matrix_v47_b364.json
+            data/nl2_hu_b364_v47_rank96_three_new_full_100bb_GTO_NL2_OOP_source_gate.json
+            docs/NL2_HU_B364_V47_RANK96_THREE_NEW_ORIGINAL_GTO_NL2_OOP_CERT.md
+            nl2-audit/
+          retention-days: 30
