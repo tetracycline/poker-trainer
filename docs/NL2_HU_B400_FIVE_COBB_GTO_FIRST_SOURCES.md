@@ -1,0 +1,3 @@
+# B400 five CO_BB APPROX models: true 100bb GTO-only source-first batch
+
+Three frozen public flops As9h2d, KsQh4d, Js9h5d, with actual Rust full flop 50% or 100% CO-IP bet histories, exact actor/SPR and 40/70 legal full-street combo gate. Only positive GTO exact-board results authorize actual partial NL2 hero-IP follow-on solves. rank166: 2 distinct GTO-positive flops; rank214: 0 distinct GTO-positive flops; rank216: 1 distinct GTO-positive flops; rank218: 1 distinct GTO-positive flops; rank219: 0 distinct GTO-positive flops. No CERT from a GTO-only run or generic textures; 159 CERT /233 APPROX unchanged.
