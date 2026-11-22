@@ -1,0 +1,434 @@
+{
+  "schema": "NL2_HU_B351_R79_UTGCO_TWO_ORIGINAL_100BB_GTO_AND_NL2_IP_ACTOR_SOURCE_V1",
+  "source_run_id": 44971994483,
+  "source_index_sha256": "dfb0bd8da8f7e8973c67f05aa5ca15572609fb4bf8dc82e0e611361a79541f4d",
+  "source_archive_sha256": "b2e52ef2f1d68cc0e7a96134e32997819b0433fd570c1087ffa77f03c7713586",
+  "frozen_target_rank": 79,
+  "model_id": "ln-ipc-t_model-1cla93g",
+  "actor": "CO_IP",
+  "spot": "UTG_CO",
+  "exact_line": "b50 c/x",
+  "model_SPR": 7.0,
+  "original_case_pairs": 4,
+  "fresh_original_and_real_NL2_exact_flops": [
+    {
+      "flop": "8s8h3d",
+      "turn": "5s",
+      "genuine_original_GTO": {
+        "flop": "8s8h3d",
+        "turn": "5s",
+        "version": "gto",
+        "original_flop_five_action_menu_full": true,
+        "original_flop_OOP_b50_legal_root_combos": 0,
+        "exact_CO_IP_7SPR_40_70_turn_combos": 31,
+        "exact_CO_IP_turn_legal_nodes": 1,
+        "source_manifest_sha256": "b462ae108375cc67d026b06878c9b888b07d3fee4650fca4c194663d75877b36",
+        "source_flop_root_sha256": "23449234a2f831533d2ca54d1658ac5692ec09b4c4d6b36774e1d06f8e1a5963",
+        "source_job_sha256": "73efc02a4745734e11635dcd5e671266a9faeb338fc7419d941d04e732fa0ff2",
+        "source_turn_river_sha256": "ace2180b441eadfc5b93ddfcba33455a6107b1e20af44c00b700076cfa42ff9e",
+        "original_source_preflop_pin_sha256": "787f719c752165262807f79b91daec81e1db86a83d557a4ea645ef2649f532c7",
+        "exact_reach_source_node_totals": {
+          "nodes": 110,
+          "source_actor_combo_nodes": 4735,
+          "sequential_actor_combo_nodes": 614,
+          "removed_by_parent_action_policy": 4121
+        },
+        "original_NL2_pool_source_hand_count": 2334487,
+        "aggregate_lock_patterns": [],
+        "no_observed_conditional_per_private_card_NL2": true
+      },
+      "genuine_NL2_Rust_partial_CO_IP_lock": {
+        "flop": "8s8h3d",
+        "turn": "5s",
+        "version": "exp_ip",
+        "original_flop_five_action_menu_full": true,
+        "original_flop_OOP_b50_legal_root_combos": 107,
+        "exact_CO_IP_7SPR_40_70_turn_combos": 96,
+        "exact_CO_IP_turn_legal_nodes": 1,
+        "source_manifest_sha256": "b7d01e2df943565a9b519a3dee6f8aedb66644c1fad1287f77ff1bc14b6bfed7",
+        "source_flop_root_sha256": "a389d9dfb208fd27e6fcbbcbb25af37140b7a879015ba769f39ec8a6f330a8ff",
+        "source_job_sha256": "7b56efe7c1e20866543e555fb4378ce768fc089919115a5ec2271b96f13336dc",
+        "source_turn_river_sha256": "25ba7ef48cf6b2b46904924a196057f9ec01ce7e2138a40cdca7a1854b545085",
+        "original_source_preflop_pin_sha256": "787f719c752165262807f79b91daec81e1db86a83d557a4ea645ef2649f532c7",
+        "exact_reach_source_node_totals": {
+          "nodes": 110,
+          "source_actor_combo_nodes": 5429,
+          "sequential_actor_combo_nodes": 3159,
+          "removed_by_parent_action_policy": 2270
+        },
+        "original_NL2_pool_source_hand_count": 2334487,
+        "aggregate_lock_patterns": [
+          {
+            "pat": "^$",
+            "scope": "PINNED_MEASURED_NL2_SOURCE",
+            "source": "cbet_by_texture_SRP[OOP|rainbow|paired|9以下]",
+            "n": 7295
+          },
+          {
+            "pat": "^b\\d+ r$",
+            "scope": "PINNED_MEASURED_NL2_SOURCE",
+            "source": "SRP_PFR_OOP.vs_cbet_raise_resp",
+            "n": 11667
+          },
+          {
+            "pat": "^x b\\d+$",
+            "scope": "PINNED_MEASURED_NL2_SOURCE",
+            "source": "SRP_PFR_OOP.vs_ip_float_bet",
+            "n": 43420
+          },
+          {
+            "pat": "^b\\d+ c/$",
+            "scope": "PINNED_MEASURED_NL2_SOURCE",
+            "source": "SRP_PFR_OOP.turn_barrel",
+            "n": 57427
+          },
+          {
+            "pat": "^x x/$",
+            "scope": "PINNED_MEASURED_NL2_SOURCE",
+            "source": "SRP_PFR_OOP.delayed_cbet",
+            "n": 65192
+          },
+          {
+            "pat": "^b\\d+ c/b\\d+ c/$",
+            "scope": "PINNED_MEASURED_NL2_SOURCE",
+            "source": "SRP_PFR_OOP.river_barrel",
+            "n": 16689
+          },
+          {
+            "pat": "(?:^|[ /])b33$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[1].by_size[≤33%]",
+            "n": 134321
+          },
+          {
+            "pat": "(?:^|[ /])b50$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[1].by_size[34-55%]",
+            "n": 275923
+          },
+          {
+            "pat": "(?:^|[ /])b75$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[1].by_size[56-80%]",
+            "n": 130318
+          },
+          {
+            "pat": "(?:^|[ /])b100$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[1].by_size[81-110%]",
+            "n": 55927
+          },
+          {
+            "pat": "(?:^|[ /])r$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_RAISE_MARGINAL",
+            "source": "NL2.HU_facing_bet[1].bettor_vs_raise",
+            "n": 56113
+          },
+          {
+            "pat": "(?:^|[ /])b33$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[2].by_size[≤33%]",
+            "n": 71741
+          },
+          {
+            "pat": "(?:^|[ /])b50$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[2].by_size[34-55%]",
+            "n": 144567
+          },
+          {
+            "pat": "(?:^|[ /])b75$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[2].by_size[56-80%]",
+            "n": 112817
+          },
+          {
+            "pat": "(?:^|[ /])b100$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[2].by_size[81-110%]",
+            "n": 43254
+          },
+          {
+            "pat": "(?:^|[ /])r$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_RAISE_MARGINAL",
+            "source": "NL2.HU_facing_bet[2].bettor_vs_raise",
+            "n": 32933
+          },
+          {
+            "pat": "(?:^|[ /])b33$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[3].by_size[≤33%]",
+            "n": 46891
+          },
+          {
+            "pat": "(?:^|[ /])b50$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+            "n": 64272
+          },
+          {
+            "pat": "(?:^|[ /])b75$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[3].by_size[56-80%]",
+            "n": 58736
+          },
+          {
+            "pat": "(?:^|[ /])b100$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+            "n": 43634
+          },
+          {
+            "pat": "(?:^|[ /])r$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_RAISE_MARGINAL",
+            "source": "NL2.HU_facing_bet[3].bettor_vs_raise",
+            "n": 20265
+          },
+          {
+            "pat": "^$",
+            "scope": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT",
+            "source": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT; NL2_OBSERVED_PFR_CBET_SIZE_AGGREGATE_NOT_EXACT_NODE",
+            "n": 224106
+          },
+          {
+            "pat": "^x$",
+            "scope": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT",
+            "source": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT; NL2_OBSERVED_PFR_CBET_SIZE_AGGREGATE_NOT_EXACT_NODE",
+            "n": 224106
+          },
+          {
+            "pat": ".*/x$",
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "n": 0
+          },
+          {
+            "pat": ".*/$",
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+            "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "n": 0
+          }
+        ],
+        "no_observed_conditional_per_private_card_NL2": true
+      },
+      "positive_actor_matching_40_70_GTO_and_NL2": true,
+      "no_new_CERT_without_historic_B2_parent_and_two_textures": true
+    },
+    {
+      "flop": "Js9h4d",
+      "turn": "Ts",
+      "genuine_original_GTO": {
+        "flop": "Js9h4d",
+        "turn": "Ts",
+        "version": "gto",
+        "original_flop_five_action_menu_full": true,
+        "original_flop_OOP_b50_legal_root_combos": 1,
+        "exact_CO_IP_7SPR_40_70_turn_combos": 56,
+        "exact_CO_IP_turn_legal_nodes": 1,
+        "source_manifest_sha256": "73e4fa42bb34a78e821bf90a6bac238dcf90e7337aba1272643780b7f71e01ce",
+        "source_flop_root_sha256": "820bb823fdd2a5e3c37184266254bef9689fb7bb4d6e8530dd49e4fa7c0ccf01",
+        "source_job_sha256": "f079f44244dcfdfd3a800537c145bee20d982a2a0614fcd3758e227fff71e62a",
+        "source_turn_river_sha256": "2cfb2c7874516b6453ecce7b0602f9c2a0b05f9ad685acf65731ae36a07882fd",
+        "original_source_preflop_pin_sha256": "787f719c752165262807f79b91daec81e1db86a83d557a4ea645ef2649f532c7",
+        "exact_reach_source_node_totals": {
+          "nodes": 110,
+          "source_actor_combo_nodes": 7043,
+          "sequential_actor_combo_nodes": 1133,
+          "removed_by_parent_action_policy": 5910
+        },
+        "original_NL2_pool_source_hand_count": 2334487,
+        "aggregate_lock_patterns": [],
+        "no_observed_conditional_per_private_card_NL2": true
+      },
+      "genuine_NL2_Rust_partial_CO_IP_lock": {
+        "flop": "Js9h4d",
+        "turn": "Ts",
+        "version": "exp_ip",
+        "original_flop_five_action_menu_full": true,
+        "original_flop_OOP_b50_legal_root_combos": 119,
+        "exact_CO_IP_7SPR_40_70_turn_combos": 92,
+        "exact_CO_IP_turn_legal_nodes": 1,
+        "source_manifest_sha256": "eb51a3bc0bdfabd10b0e0a60ad8e249a4c6d96fc2d35f02fc4449d556818f704",
+        "source_flop_root_sha256": "0d6732870b5f16a037a3dd001b6aef71cb87db183d5370fcc7649128620f9b51",
+        "source_job_sha256": "1b8c682d998ab2ae393bdacf306cc4d3e6795da9370843454e621d09bc30b540",
+        "source_turn_river_sha256": "075602ad0fea780fa33c7fd2107b225a7270f4ab6ccec434d5a16c1c8c0a777e",
+        "original_source_preflop_pin_sha256": "787f719c752165262807f79b91daec81e1db86a83d557a4ea645ef2649f532c7",
+        "exact_reach_source_node_totals": {
+          "nodes": 110,
+          "source_actor_combo_nodes": 5271,
+          "sequential_actor_combo_nodes": 3053,
+          "removed_by_parent_action_policy": 2218
+        },
+        "original_NL2_pool_source_hand_count": 2334487,
+        "aggregate_lock_patterns": [
+          {
+            "pat": "^$",
+            "scope": "PINNED_MEASURED_NL2_SOURCE",
+            "source": "cbet_by_texture_SRP[OOP|rainbow|unpaired|J/T高]",
+            "n": 15908
+          },
+          {
+            "pat": "^b\\d+ r$",
+            "scope": "PINNED_MEASURED_NL2_SOURCE",
+            "source": "SRP_PFR_OOP.vs_cbet_raise_resp",
+            "n": 11667
+          },
+          {
+            "pat": "^x b\\d+$",
+            "scope": "PINNED_MEASURED_NL2_SOURCE",
+            "source": "SRP_PFR_OOP.vs_ip_float_bet",
+            "n": 43420
+          },
+          {
+            "pat": "^b\\d+ c/$",
+            "scope": "PINNED_MEASURED_NL2_SOURCE",
+            "source": "SRP_PFR_OOP.turn_barrel",
+            "n": 57427
+          },
+          {
+            "pat": "^x x/$",
+            "scope": "PINNED_MEASURED_NL2_SOURCE",
+            "source": "SRP_PFR_OOP.delayed_cbet",
+            "n": 65192
+          },
+          {
+            "pat": "^b\\d+ c/b\\d+ c/$",
+            "scope": "PINNED_MEASURED_NL2_SOURCE",
+            "source": "SRP_PFR_OOP.river_barrel",
+            "n": 16689
+          },
+          {
+            "pat": "(?:^|[ /])b33$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[1].by_size[≤33%]",
+            "n": 134321
+          },
+          {
+            "pat": "(?:^|[ /])b50$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[1].by_size[34-55%]",
+            "n": 275923
+          },
+          {
+            "pat": "(?:^|[ /])b75$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[1].by_size[56-80%]",
+            "n": 130318
+          },
+          {
+            "pat": "(?:^|[ /])b100$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[1].by_size[81-110%]",
+            "n": 55927
+          },
+          {
+            "pat": "(?:^|[ /])r$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_RAISE_MARGINAL",
+            "source": "NL2.HU_facing_bet[1].bettor_vs_raise",
+            "n": 56113
+          },
+          {
+            "pat": "(?:^|[ /])b33$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[2].by_size[≤33%]",
+            "n": 71741
+          },
+          {
+            "pat": "(?:^|[ /])b50$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[2].by_size[34-55%]",
+            "n": 144567
+          },
+          {
+            "pat": "(?:^|[ /])b75$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[2].by_size[56-80%]",
+            "n": 112817
+          },
+          {
+            "pat": "(?:^|[ /])b100$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[2].by_size[81-110%]",
+            "n": 43254
+          },
+          {
+            "pat": "(?:^|[ /])r$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_RAISE_MARGINAL",
+            "source": "NL2.HU_facing_bet[2].bettor_vs_raise",
+            "n": 32933
+          },
+          {
+            "pat": "(?:^|[ /])b33$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[3].by_size[≤33%]",
+            "n": 46891
+          },
+          {
+            "pat": "(?:^|[ /])b50$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+            "n": 64272
+          },
+          {
+            "pat": "(?:^|[ /])b75$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[3].by_size[56-80%]",
+            "n": 58736
+          },
+          {
+            "pat": "(?:^|[ /])b100$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+            "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+            "n": 43634
+          },
+          {
+            "pat": "(?:^|[ /])r$",
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_RAISE_MARGINAL",
+            "source": "NL2.HU_facing_bet[3].bettor_vs_raise",
+            "n": 20265
+          },
+          {
+            "pat": "^$",
+            "scope": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT",
+            "source": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT; NL2_OBSERVED_PFR_CBET_SIZE_AGGREGATE_NOT_EXACT_NODE",
+            "n": 224106
+          },
+          {
+            "pat": "^x$",
+            "scope": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT",
+            "source": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT; NL2_OBSERVED_PFR_CBET_SIZE_AGGREGATE_NOT_EXACT_NODE",
+            "n": 224106
+          },
+          {
+            "pat": ".*/x$",
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "n": 0
+          },
+          {
+            "pat": ".*/$",
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+            "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "n": 0
+          }
+        ],
+        "no_observed_conditional_per_private_card_NL2": true
+      },
+      "positive_actor_matching_40_70_GTO_and_NL2": true,
+      "no_new_CERT_without_historic_B2_parent_and_two_textures": true
+    }
+  ],
+  "legal_rank79_exact_new_pair_flops": [
+    "8s8h3d",
+    "Js9h4d"
+  ],
+  "original_existing_B2_Ks7h2d_required_for_any_promotion": true,
+  "no_new_3flop_CERT_without_separate_exact_source_gate": true,
+  "source_Rust_full_flop_game_not_restricted_LMP50": true,
+  "NL2_measured_only_street_and_size_marginals": true,
+  "no_private_card_conditional_rates_observed": true,
+  "current_V45_CERT": 157,
+  "current_V45_APPROX": 235,
+  "current_EST": 0,
+  "PR2_Draft_NEVER_MERGE": true
+}
