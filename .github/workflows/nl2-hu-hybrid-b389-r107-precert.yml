@@ -37,6 +37,10 @@ jobs:
           d=json.load(open('data/nl2_hu_b388_rank107_qsjh4d_real_gto_nl2_ip_pair.json'))
           pairs=d.get('exact_paired_legal_river_nodes') or []
           good=bool(pairs and d.get('real_NL2_partial_source') and d['real_NL2_partial_source'].get('genuine_Rust_solved_cases')==1)
+          good=good and d.get('source_run_B388_EXP')==45025076333 and d.get('source_run_B387_GTO')==45023132316
+          good=good and all(x.get('GTO_strict_40_70_combos',0)>0 and x.get('NL2_IP_strict_40_70_combos',0)>0
+            and len(x.get('original_GTO_sha256',''))==64 and len(x.get('new_actual_partial_NL2_sha256',''))==64
+            and x.get('actor')=='BTN_IP' and x.get('exact_line')=='b33 c/x b50 c/x' for x in pairs)
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('ready='+('true' if good else 'false')+'\n')
           print('B389 independent three-flop pre-cert ready:',good,'new true source pairs:',len(pairs))
           PY
