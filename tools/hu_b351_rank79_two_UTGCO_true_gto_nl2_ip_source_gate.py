@@ -62,8 +62,9 @@ def main():
             nodes,stats=game_reach(fr,su)
             target=[z['count'] for k,z in nodes.items() if '|b50 c/x|1' in k]
             assert target,(flop,'missing exact turn IP actor in real Rust source')
-            pot=(fr['stack']-0)/fr['pot']
-            assert pot>0
+            assert abs(case['real_flop_parent_spr']-SPR)/SPR<=.05
+            assert abs(case['flop_parent_pot_bb']-13.0)<.01
+            assert abs(case['flop_parent_effective_remaining_bb']-94.25)<.01
             pair[v]=dict(flop=flop,turn=case['turn'],version=v,
                 original_flop_five_action_menu_full=True,
                 original_flop_OOP_b50_legal_root_combos=len(legal),
