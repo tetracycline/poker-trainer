@@ -1,0 +1,3 @@
+# B405 2 new CO_BB CERT models: rank214/219 exact three source flops each
+
+Rank214/219 matched historical Js9h4d and newly authenticated KsQh4d + Js9h5d. Each of the 6 named public boards has genuine original full-100bb GTO and true NL2-IP partly locked source SHA, exact CO-IP x b100 c/x b50 c/x, positive strict max/40%-70% hero combo reach, and <=5% SPR difference. Observed NL2 sources are pooled street/size marginals, not villain private-card conditional behavior. b50 depolarization applies only where the exact public-board source supports it, never to unsupported textures. **162 CERT /230 APPROX /0 EST**, 615 exact boards and 707 partial locked source variants; UNKNOWN=0, subject to full HU2475, frontend and source Actions gate. PR #2 DRAFT and never merge.
