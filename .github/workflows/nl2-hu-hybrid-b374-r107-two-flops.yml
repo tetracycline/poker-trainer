@@ -1,0 +1,109 @@
+name: NL2 B374 rank107 two new exact GTO + genuine NL2 IP partial-lock flops, <=29min batch
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b374-r107-two-flops.yml'
+      - 'tools/hu_b374_rank107_source_partition.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - {spot: BTN_BB, flop: KsQh4d, version: gto}
+          - {spot: BTN_BB, flop: KsQh4d, version: exp_ip}
+          - {spot: BTN_BB, flop: 7s5h3d, version: gto}
+          - {spot: BTN_BB, flop: 7s5h3d, version: exp_ip}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
+      - uses: actions/checkout@v4
+        with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Genuine 100bb original full flop CFR with restricted source selection only, no fake GTO
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          git -C solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+          cd ../../..
+          python3 trainer/tools/solve_hu_multiboard_100bb.py \
+            --solver-root solver --spot BTN_BB --flop "${{ matrix.flop }}" \
+            --version "${{ matrix.version }}" --flop-size-profile full \
+            --flop-line-policy oop-b33only --turn-count 1 \
+            --manifest "evidence/BTN_BB-${{ matrix.flop }}-${{ matrix.version }}.json"
+      - name: Preserve all actual original Rust jobs and manifests including any explicit negatives
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B374_R107-BTN_BB-${{ matrix.flop }}-${{ matrix.version }}
+          path: |
+            evidence
+            solver/postflop/out
+          retention-days: 30
+          if-no-files-found: warn
+  verify-commit:
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Independent B374 exact original source SHA and actor-IP paired flop analysis
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b374-sources
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir /tmp/b374-sources
+          python3 -m py_compile tools/hu_b374_rank107_source_partition.py
+          python3 tools/hu_b374_rank107_source_partition.py --download-dir /tmp/b374-sources
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b374-cert-source.json
+      - name: Full 2475/2475 HU navigation, legal paths, JS and source-gate
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b374-contract.json
+          node tools/link_audit.js --md /tmp/b374-link.md --json /tmp/b374-link.json
+          node tools/reach_verify.js --log /tmp/b374-reach.md --json /tmp/b374-reach.json
+          node tools/hu_model_path_audit.js /tmp/b374-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          python3 - <<'PY'
+          import json
+          s=json.load(open('/tmp/b374-cert-source.json'))
+          l=json.load(open('/tmp/b374-link.json'))['counts']
+          r=json.load(open('data/nl2_hu_b374_r107_two_new_fresh_true_gto_nl2_ip_source_manifest.json'))
+          assert (s['cert_multiboard'],s['approx'],s['EST'])==(159,233,0)
+          assert (l['continuing'],l['reachRiver'],l['riverShare'])==(2475,2475,100)
+          assert not r['no_generic_GTO_certification_awarded'] is False
+          print('PASS B374 2475/2475; cert remains 159/233; exact source triaged.')
+          PY
+          git diff --check
+      - name: Commit and push actual original solve sources, never mark fake CERT or merge PR2
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b374_r107_two_new_fresh_true_gto_nl2_ip_source_manifest.json docs/NL2_HU_B374_RANK107_TWO_NEW_FLOP_SOURCE_BATCH.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'B374: source-audited two fresh original GTO and partial NL2 rank107 flops; leave 159/233 until strict certification'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
