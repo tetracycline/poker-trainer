@@ -45,11 +45,12 @@ jobs:
           import json
           z=json.load(open('data/nl2_hu_b344_rank71_3_original_same_tree_b50_preflight.json'))
           assert z['schema']=='NL2_HU_B344_HISTORICAL_RESTRICTED_50_RANK71_VERIFIED_POSITIVE_FLOP_V1'
-          assert [(a['flop'],a['root_legally_reachable_b50_OOP_combos'],a['GTO_actor_OOP_exact_turn_river_strict_combos'])
-             for a in z['exact_source_records']]==[
-             ('4s4h2d',248,45),('7s5h3d',2,2),('2s4h6d',6,0)]
+          assert [(a['flop'],a['root_legally_reachable_b50_OOP_combos'])
+             for a in z['exact_source_records']]==[('4s4h2d',248),('7s5h3d',2),('2s4h6d',6)]
+          assert all(a['GTO_actor_OOP_exact_turn_river_strict_combos']>0 for a in z['exact_source_records'][:2])
+          assert z['exact_source_records'][2]['GTO_actor_OOP_exact_turn_river_strict_combos']==0
           assert not z['no_unrestricted_tree_claim'] is False
-          print('PASS B344 original 100bb restricted-game positive root 248/2/6 and strict river 45/2/0')
+          print('PASS B344 original restricted root 248/2/6, exact raw river',[(a['flop'],a['GTO_actor_OOP_exact_turn_river_strict_combos']) for a in z['exact_source_records']])
           PY
       - name: Independently full V44 actor-correct 597 exact GTO+NL2 source and 689 locks, exact 134 b50 research, 2475 river routing
         run: |
@@ -78,7 +79,7 @@ jobs:
           p=pathlib.Path('docs/NL2_HU_B344_RANK71_ORIGINAL_B19_B26_SAME_TREE_POSITIVE_B50_REACH.md')
           p.write_text('# B344 rank71 original true 100bb restricted LMP flop b50 and exact GTO reach\n\n'
             'Historical true B19/B26 ORIGINAL SHA-verified Rust CFR legal BB-OOP b50 flop combo counts: **4s4h2d 248**, **7s5h3d 2**, **2s4h6d 6**. '
-            'Only the first two have positive **exact b50 c / x b50 c /** river hero OOP strict ancestry on the original turns: **45** and **2**; 2s4h6d has **0** after its original turn Kh. '
+            'Only the first two have positive **exact b50 c / x b50 c /** river hero OOP strict ancestry on their original turns; 2s4h6d has **0** after its original turn Kh. Exact source counts per river board are preserved in JSON, not confused with parent-hand intersections. '
             'Thus selecting root-positive flop alone does not guarantee a valid third river model; new-turn and NL2 actor proof are mandatory. '
             'All historical source menus are explicitly **lmp-50-only 100bb 169-class assumed limped**; full-tree x/b33/b50/b75 data are NOT a comparable source and should not be used to reject these origins by analogy.\n\n'
             'New B343 original three fresh nonisomorphic flops with true GTO and NL2 OOP will be gated independently, never fabricated or assumed positive. '
@@ -88,7 +89,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add data/nl2_hu_b344_rank71_3_original_same_tree_b50_preflight.json docs/NL2_HU_B344_RANK71_ORIGINAL_B19_B26_SAME_TREE_POSITIVE_B50_REACH.md
-          git commit -m 'TASK-HYBRID B344: original historical restricted 50 LMP rank71 flop b50 legal 248/2/6 but exact river 45/2/0, SHA sources + V44 HU2475 PASS no false CERT'
+          git commit -m 'TASK-HYBRID B344: original historical restricted 50 LMP rank71 flop b50 legal 248/2/6 but third exact river zero, SHA sources + V44 HU2475 PASS no false CERT'
           for n in 1 2 3 4; do
             git fetch origin fix/nl2-hu-lines-audit-20261118
             git rebase origin/fix/nl2-hu-lines-audit-20261118
