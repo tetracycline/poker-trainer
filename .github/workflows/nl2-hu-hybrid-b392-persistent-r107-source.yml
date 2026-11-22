@@ -37,7 +37,7 @@ jobs:
           python3 - <<'PY'
           import os,json
           x=json.load(open('data/nl2_hu_b390_rank107_three_true_GTO_NL2_IP_cert_proof.json'))
-          ok=x.get('CERT_after')==160 and x.get('APPROX_after')==232
+          ok=x.get('CERT_after')==160 and x.get('APPROX_after')==232 and x.get('named_boards_after')==609 and x.get('hero_lock_variants_after')==701 and x.get('B368_unknown_after')==0
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('ready='+('true' if ok else 'false')+'\n')
           print('B392 original-source preservation ready:',ok)
           PY
