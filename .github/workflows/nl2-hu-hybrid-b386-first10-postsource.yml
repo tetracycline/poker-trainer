@@ -1,0 +1,60 @@
+name: NL2 B386 first-ten independent source eligibility / medium lock / full HU2475 audit (max9m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b386-first10-postsource.yml'
+      - 'tools/hu_b386_first10_source_eligibility.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  independently-audit-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Reconcile B379/B381/B382/B384/B385 genuine source outcomes, per-CERT node-lock provenance and exact b50 research
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b386_first10_source_eligibility.py
+          python3 tools/hu_b386_first10_source_eligibility.py
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v47_b364_rank96.json --out /tmp/b386-source.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('data/nl2_hu_b386_first10_postsource_frozen_audit.json'))
+          a=json.load(open('/tmp/b386-source.json'))
+          assert (d['CERT_MULTIBOARD'],d['APPROX'],d['EST'],d['TOTAL'])==(159,233,0,392)
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(159,233,0)
+          assert len(d['first10_frozen_candidate_models'])==10
+          assert d['B368_lock_denominators_original']==d['B368_lock_denominators_recovered']==334 if 'B368_lock_denominators_recovered' in d else (d['B368_lock_denominators_original']==d['recovered']==334)
+          assert d['unknown_remaining']==0
+          assert d['selected_next_for_original_GTO_first']['NL2_EXP_ONLY_AFTER_AUTHENTIC_GTO_STRICT_POSITIVE']
+          print('PASS B386 first10 frozen source-only 159/233; historical UNKNOWN=0')
+          PY
+      - name: Full HU2475 river navigation, sequential reach, source JS, model path and whitespace
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b386-contract.json
+          node tools/link_audit.js --md /tmp/b386-link.md --json /tmp/b386-link.json
+          node tools/reach_verify.js --log /tmp/b386-reach.md --json /tmp/b386-reach.json
+          node tools/hu_model_path_audit.js /tmp/b386-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b386-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B386 HU2475/2475")'
+          git diff --check
+      - name: Commit and push consolidated source audit evidence without merge or fake CERT
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b386_first10_postsource_frozen_audit.json docs/NL2_HU_B386_FIRST10_POSTSOURCE_ELIGIBILITY.md
+          if git diff --cached --quiet;then exit 0;fi
+          git commit -m 'B386: independently reconcile first10 original GTO/NL2 40-70 exclusions and 159 CERT/233 APPROX, HU2475'
+          git pull --rebase origin fix/nl2-hu-lines-audit-20261118
+          git push origin HEAD:fix/nl2-hu-lines-audit-20261118
