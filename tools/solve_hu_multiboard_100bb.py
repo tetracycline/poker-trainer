@@ -104,7 +104,7 @@ def main():
     a.add_argument('--turn-count',type=int,default=1)
     a.add_argument('--flop-size-profile',choices=('full','lmp-50-only'),default='full',
         help='Only LMP: predeclared flop single 50pct menu; genuine restricted-game CFR, not unrestricted GTO')
-    a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','oop-b75only','oop-b75raisecall','oop-b33only','checked-b50only','checked-b100only','checked-b50b100only','checkcheck'),default='all',
+    a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','oop-b75only','oop-b75raisecall','oop-b33only','checked-b33only','checked-b50only','checked-b100only','checked-b50b100only','checkcheck'),default='all',
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
     a.add_argument('--turn-line-policy',choices=('default','b100only'),default='default',
         help='Extract only exact b100-call river continuations; never alter the full underlying solved tree')
@@ -228,6 +228,7 @@ def main():
            else ['b75 r c'] if args.flop_line_policy=='oop-b75raisecall'
            else ['b33 c'] if args.flop_line_policy=='oop-b33only'
            else ['x b50 c','x b100 c'] if args.flop_line_policy=='checked-b50b100only'
+           else ['x b33 c'] if args.flop_line_policy=='checked-b33only'
            else ['x b50 c'] if args.flop_line_policy=='checked-b50only'
            else ['x b100 c'] if args.flop_line_policy=='checked-b100only'
             else ['x x'] if args.flop_line_policy=='checkcheck'
