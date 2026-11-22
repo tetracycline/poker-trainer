@@ -1,0 +1,98 @@
+name: TASK-HYBRID B355 V46 rank79 source gated 3 real GTO and NL2 COIP boards 603 695 original locks UI fallback V45 HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b355-v46-rank79-ui-603-proof.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  158-cert-and-234-approx-UI-failclosed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Authenticate V46 actual Stage2 plus B351 raw source SHA, set UI V46 primary and preserve immutable V45 V44 fallback
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b355_v46_rank79_ui_primary_failclosed.py
+          python3 tools/hu_b355_v46_rank79_ui_primary_failclosed.py
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+          python3 - <<'PY'
+          import json,pathlib,hashlib
+          d=pathlib.Path('data')
+          sh=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+          s=json.loads((d/'nl2_hu_multiboard_status_v46_b354_rank79.json').read_text())
+          p=json.loads((d/'nl2_hu_b354_v46_rank79_3_original_GTO_real_NL2_source_gate.json').read_text())
+          m=json.loads((d/'nl2_hu_cert_lock_medium_matrix_v46_b354.json').read_text())
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['EST'],s['TOTAL'])==(158,234,0,392)
+          assert p['V46_status_sha256']==sh(d/'nl2_hu_multiboard_status_v46_b354_rank79.json')
+          assert p['V46_matrix_sha256']==sh(d/'nl2_hu_cert_lock_medium_matrix_v46_b354.json')
+          assert m['parent_v46_status_sha256']==p['V46_status_sha256']
+          assert (len(m['boards']),len(m['models']),m['strict_aggregate']['hero_lock_variants'])==(603,158,695)
+          assert p['three_distinct_flops']==['Ks7h2d','8s8h3d','Js9h4d']
+          assert p['original_stage2_run_success'] and p['source_is_full_four_size_GTO']
+          for path in ('nl2-multiboard.js','nl2_hu_multiboard_ui.js'):
+            raw=pathlib.Path(path).read_text()
+            assert raw.count('const v46=d=>{')==1
+            assert "return fetch('data/nl2_hu_multiboard_status_v46_b354_rank79.json'" in raw
+            assert ".catch(()=>fetch('data/nl2_hu_multiboard_status_v45_b345_rank71.json'" in raw
+            assert 'd.CERT_MULTIBOARD!==158||d.APPROX!==234' in raw
+          print('PASS B355 158/234 V46 primary exact rank79 real3 GTO+true NL2 COIP actor boards, frozen V45/V44 failclosed fallback')
+          PY
+      - name: Independent V46 603 exact real Rust GTO plus actor NL2 partial locked board sources695 and full 2475 independent HU river previous-street reach/navigation
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v46_b354_rank79.json --out nl2-audit/b355-v46-lock.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('nl2-audit/b355-v46-lock.json'))
+          assert (x['cert_multiboard'],x['approx'],x['EST'])==(158,234,0)
+          assert (x['aggregate']['named_board_proofs'],x['aggregate']['paired_hero_locked_source_variants'])==(603,695)
+          assert x['not_generalized_handclass_GTO'] and x['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B355 HU 2475/2475")'
+      - name: Commit only V46 genuine actor UI after full 603 source and 2475 HU independent PASS, Draft PR2 without merge
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          pathlib.Path('docs/NL2_HU_B355_V46_RANK79_PRIMARY_UI_WITH_V45_FALLBACK.md').write_text(
+            '# B355 V46 rank79 three real original UTGCO GTO plus NL2 CO-IP actor UI\n\n'
+            'Primary UI V46 **158 CERT /234 APPROX /0 EST** from 603 genuine named original 100bb GTO+real NL2 actor partially locked public boards, 695 authentic lock variants. '
+            'Rank79 exactly Ks7h2d, 8s8h3d, Js9h4d with actual CO IP b50 c/x original Rust GTO, true NL2 partial source and run+SHA, full prior 40%-70% and model SPR7; no generic texture GTO. '
+            'Original Stage2 run44654973894 and later B351 original GTO+real NL2 sources are always distinguished from estimated per-card rates. '
+            'V45 and V44 and older fallbacks remain immutable and failclosed. '
+            '50%-pot nonpolarized bets are exact named-board research flags only, not universal recommendations. '
+            'Full 392 models, 603 boards, 695 genuine lock source and HU2475/2475 independent Actions PASS before commit; PR2 Draft NEVER merge/force-push.\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add nl2-multiboard.js nl2_hu_multiboard_ui.js docs/NL2_HU_B355_V46_RANK79_PRIMARY_UI_WITH_V45_FALLBACK.md
+          git commit -m 'TASK-HYBRID B355: activate V46 rank79 3 genuine UTGCO GTO+real NL2 COIP board source UI V45 fallback, CERT158 APPROX234 603/695 HU2475 PASS'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B355-V46-rank79-original-GTO-real-NL2-UI-158-234-603-695-HU2475
+          path: |
+            docs/NL2_HU_B355_V46_RANK79_PRIMARY_UI_WITH_V45_FALLBACK.md
+            nl2-audit/
+          retention-days: 30
