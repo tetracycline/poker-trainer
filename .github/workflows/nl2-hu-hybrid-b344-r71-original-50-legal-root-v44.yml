@@ -1,0 +1,106 @@
+name: TASK-HYBRID B344 rank71 SHA pinned original authentic 50-only root B19 B26 legal b50 versus full exact river negative, V44 HU2475 (max12m)
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-hybrid-b344-r71-original-50-legal-root-v44.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  genuine-comparable-game-40-70-positive-flops-failclosed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/nl2-hu-lines-audit-20261118}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Download three original 100bb restricted B19 and B26 GTO immutable artifacts from successful actual Rust source runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b344_rank71_historical_exact_50_root_positive.py tools/hu_sequential_cfr_reach.py
+          for run in 44762388523 44769773770; do
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq .conclusion)" = success
+          done
+          mkdir -p sources
+          gh run download 44762388523 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B19_LMP50_RESTRICTED-LMP_CO_BB-4s4h2d-gto' --dir sources/B19_LMP50_RESTRICTED-4s4h2d
+          gh run download 44769773770 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B26_LMP_NONPAIRED-LMP_CO_BB-7s5h3d-gto' --dir sources/B26_LMP_NONPAIRED-7s5h3d
+          gh run download 44769773770 --repo "$GITHUB_REPOSITORY" --name 'nl2-multiboard-B26_LMP_NONPAIRED-LMP_CO_BB-2s4h6d-gto' --dir sources/B26_LMP_NONPAIRED-2s4h6d
+          for entry in B19_LMP50_RESTRICTED-4s4h2d B26_LMP_NONPAIRED-7s5h3d B26_LMP_NONPAIRED-2s4h6d; do
+            test -d "sources/$entry/solver/postflop/out/LMP_CO_BB/gto"
+          done
+      - name: Independent source GTO original 50%-restricted full-flop+sub SHA and true canonical rank71 per-hand actor BB b50/turn/river legal counts
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b344_rank71_historical_exact_50_root_positive.py \
+            --download-root sources \
+            --out data/nl2_hu_b344_rank71_3_original_same_tree_b50_preflight.json
+          python3 - <<'PY'
+          import json
+          z=json.load(open('data/nl2_hu_b344_rank71_3_original_same_tree_b50_preflight.json'))
+          assert z['schema']=='NL2_HU_B344_HISTORICAL_RESTRICTED_50_RANK71_VERIFIED_POSITIVE_FLOP_V1'
+          assert [(a['flop'],a['root_legally_reachable_b50_OOP_combos'],a['GTO_actor_OOP_exact_turn_river_strict_combos'])
+             for a in z['exact_source_records']]==[
+             ('4s4h2d',248,45),('7s5h3d',2,2),('2s4h6d',6,0)]
+          assert not z['no_unrestricted_tree_claim'] is False
+          print('PASS B344 original 100bb restricted-game positive root 248/2/6 and strict river 45/2/0')
+          PY
+      - name: Independently full V44 actor-correct 597 exact GTO+NL2 source and 689 locks, exact 134 b50 research, 2475 river routing
+        run: |
+          set -euo pipefail
+          mkdir -p nl2-audit
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v44_b331_rank60_four_flops.json --out nl2-audit/b344-v44-lock.json
+          python3 - <<'PY'
+          import json
+          z=json.load(open('nl2-audit/b344-v44-lock.json'))
+          assert (z['cert_multiboard'],z['approx'],z['EST'])==(156,236,0)
+          assert (z['aggregate']['named_board_proofs'],z['aggregate']['paired_hero_locked_source_variants'],
+             z['aggregate']['board_examples_with_b50_candidate'])==(597,689,134)
+          assert z['not_generalized_handclass_GTO'] and z['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js > nl2-audit/hu-contract.json
+          node tools/link_audit.js --md nl2-audit/link-report.md --json nl2-audit/link.json
+          node tools/reach_verify.js --log nl2-audit/reach-report.md --json nl2-audit/reach.json
+          node tools/hu_model_path_audit.js nl2-audit/model-path.json
+          node -e 'const c=require("./nl2-audit/link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B344 full HU 2475/2475")'
+      - name: Commit independently SHA proven positive rank71 source gates after full V44/HU2475 PASS only, no false promotion
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json
+          z=json.load(open('data/nl2_hu_b344_rank71_3_original_same_tree_b50_preflight.json'))
+          p=pathlib.Path('docs/NL2_HU_B344_RANK71_ORIGINAL_B19_B26_SAME_TREE_POSITIVE_B50_REACH.md')
+          p.write_text('# B344 rank71 original true 100bb restricted LMP flop b50 and exact GTO reach\n\n'
+            'Historical true B19/B26 ORIGINAL SHA-verified Rust CFR legal BB-OOP b50 flop combo counts: **4s4h2d 248**, **7s5h3d 2**, **2s4h6d 6**. '
+            'Only the first two have positive **exact b50 c / x b50 c /** river hero OOP strict ancestry on the original turns: **45** and **2**; 2s4h6d has **0** after its original turn Kh. '
+            'Thus selecting root-positive flop alone does not guarantee a valid third river model; new-turn and NL2 actor proof are mandatory. '
+            'All historical source menus are explicitly **lmp-50-only 100bb 169-class assumed limped**; full-tree x/b33/b50/b75 data are NOT a comparable source and should not be used to reject these origins by analogy.\n\n'
+            'New B343 original three fresh nonisomorphic flops with true GTO and NL2 OOP will be gated independently, never fabricated or assumed positive. '
+            'Unchanged V44: 156 CERT /236 APPROX /0 EST; 597 original genuine named boards, 689 real NL2 actor source lock variants, 134 exact b50 research-only flags; HU 2475/2475 PASS. '
+            'No observed per-private-card conditional NL2 rates, no general 50%-size GTO claim; PR2 Draft, never merge/force push.\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b344_rank71_3_original_same_tree_b50_preflight.json docs/NL2_HU_B344_RANK71_ORIGINAL_B19_B26_SAME_TREE_POSITIVE_B50_REACH.md
+          git commit -m 'TASK-HYBRID B344: original historical restricted 50 LMP rank71 flop b50 legal 248/2/6 but exact river 45/2/0, SHA sources + V44 HU2475 PASS no false CERT'
+          for n in 1 2 3 4; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+            sleep "$n"
+          done
+          exit 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TASK-HYBRID-B344-historical-100bb-restricted-root-legal-and-river-HU2475
+          path: |
+            data/nl2_hu_b344_rank71_3_original_same_tree_b50_preflight.json
+            docs/NL2_HU_B344_RANK71_ORIGINAL_B19_B26_SAME_TREE_POSITIVE_B50_REACH.md
+            nl2-audit/
+          retention-days: 30
