@@ -10,10 +10,10 @@ permissions:
 jobs:
   solve:
     runs-on: ubuntu-latest
-    timeout-minutes: 21
+    timeout-minutes: 25
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 4
       matrix:
         include:
           - {spot: LMP_CO_BB, flop: KsQh4d, version: gto}
@@ -75,7 +75,7 @@ jobs:
     needs: solve
     if: always()
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
         with: {ref: fix/nl2-hu-lines-audit-20261118, path: trainer}
