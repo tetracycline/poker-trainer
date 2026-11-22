@@ -19,6 +19,10 @@ jobs:
         with: {ref: fix/nl2-hu-lines-audit-20261118, fetch-depth: 0}
       - uses: actions/setup-python@v5
         with: {python-version: '3.11'}
+      - name: Parse certified-source Python before any conditional approval or source archive step
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b390_r107_three_true_sources_promote.py
       - name: Wait for independent B389 true triple-source gate, never promote partial sources
         id: ready
         run: |

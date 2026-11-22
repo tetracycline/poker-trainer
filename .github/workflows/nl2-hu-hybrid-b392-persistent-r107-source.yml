@@ -21,6 +21,10 @@ jobs:
         with: {repository: tetracycline/poker-solver, ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b, path: solver, persist-credentials: false}
       - uses: actions/setup-python@v5
         with: {python-version: '3.11'}
+      - name: Parse certified-source Python before any conditional approval or source archive step
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b392_rank107_persistent_sources.py
       - name: Wait for actual independently certified source-gated V48 rank107; no archives from unverified cases
         id: ready
         run: |
