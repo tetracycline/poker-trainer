@@ -211,7 +211,7 @@ def main():
             original_GTO_source_sha256=h["gto_source_sha256"],
             NL2_IP_source_sha256=h["nl2_hero_lock_sha256"],
             GTO_legal_40_70_hero_IP_combos=h["strict_legal_combo_count"],
-            NL2_IP_legal_40_70_hero_IP_combos=h["strict_legal_combo_count"],
+            NL2_IP_legal_40_70_hero_IP_combos=loaded[("Js9h4d", "exp_ip")]["real_cases"][0]["actor_IP_target_nodes"][h["exact_public_board"]]["strict_40_70_IP_hero_combos"],
             actual_spr=h["actual_spr"],
             source_proof_sha256=sha(TRIAGE),
         )
