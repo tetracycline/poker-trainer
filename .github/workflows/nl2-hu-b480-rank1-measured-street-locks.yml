@@ -1,0 +1,129 @@
+name: B480 rank1 remaining three measured turn and river lock variants
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b480-rank1-measured-street-locks.yml'
+      - 'tools/hu_b480_rank1_street_locks.py'
+permissions:
+  actions: read
+  contents: read
+jobs:
+  solve:
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [2s4h6d, 7s5h3d, 8s8h3d]
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build pinned Rust driver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Authenticate GTO and original lock, solve fresh turn subgame, replay board-level result
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          source_dir="$RUNNER_TEMP/b480-original"
+          mkdir -p "$source_dir"
+          for id in $(python3 tools/hu_b480_rank1_street_locks.py --flop "$FLOP" --list-artifacts); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$source_dir/$id.zip"
+            unzip -q "$source_dir/$id.zip" -d "$source_dir/$id"
+          done
+          args=(--flop "$FLOP" --downloads "$source_dir" --pool ../solver/inputs/pool_stats.json --run "$GITHUB_RUN_ID")
+          python3 tools/hu_b480_rank1_street_locks.py "${args[@]}" --out-dir "$RUNNER_TEMP/b480-fresh" \
+            --driver ../solver/postflop/pfdriver/target/release/pfdriver
+          python3 tools/hu_b480_rank1_street_locks.py "${args[@]}" --out-dir "$RUNNER_TEMP/b480-replay" \
+            --replay "$RUNNER_TEMP"/b480-fresh/data/solver_evidence/NL2_B480_R1_*_STREET_LOCK.json.gz
+          diff -r "$RUNNER_TEMP/b480-fresh/data" "$RUNNER_TEMP/b480-replay/data"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NL2-B480-rank1-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b480-fresh/data
+          if-no-files-found: error
+          retention-days: 90
+
+  audit-and-publish:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: NL2-B480-rank1-*
+          path: ${{ runner.temp }}/b480-sources
+          merge-multiple: true
+      - name: Audit and publish each completed measured source on the current draft branch
+        env:
+          MATRIX_STATUS: ${{ needs.solve.result }}
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          src="$RUNNER_TEMP/b480-sources"
+          shopt -s nullglob
+          reports=("$src"/nl2_hu_b480_rank1_*.json)
+          (( ${#reports[@]} > 0 ))
+          if [[ "$MATRIX_STATUS" == success ]]; then (( ${#reports[@]} == 3 )); fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add --detach "$live" FETCH_HEAD
+            cp -a "$src/." "$live/data/"
+            (
+              cd "$live"
+              python3 tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b478_lock_variant_ui.cjs "$status"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              python3 - <<'PY'
+          import glob,json
+          reg=json.load(open('data/nl2_hu_multiboard_status_current.json'))
+          model=reg['records']['ln-iso-lmp_t_model-19hfq8v']
+          for f in glob.glob('data/nl2_hu_b480_rank1_*.json'):
+              r=json.load(open(f))
+              board,=(b for b in model['certified_3_to_5_exact_flop_boards'] if b['public_board']==r['public_board'])
+              matching=[v for v in board['nl2_locked_variants'] if v['sha256']==r['source_sha256'] and v['run_id']==r['run']]
+              assert len(matching)==int(r['measured_lock_registered'])
+              if matching:
+                  assert matching[0]['strictly_reachable_combos']==r['reach_comparison']['NL2_strict_combos']>0
+                  assert matching[0]['medium_50pct_eligible_combos']==r['fresh_medium50_evidence']['eligible']
+          PY
+              git add data/nl2_hu_b480_rank1_*.json data/solver_evidence/NL2_B480_R1_* \
+                data/solver_evidence/NL2_MULTIBOARD_B480_R1_* data/solver_evidence/lock_variants/rank1_b480_*.json \
+                "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              if ! git diff --cached --quiet; then
+                git commit -m 'B480: publish independently replayed rank1 street-specific locks and exact medium evidence'
+              fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
