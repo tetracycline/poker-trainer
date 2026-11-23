@@ -16656,8 +16656,21 @@
       "solver_profile": "ISO_BTN_CO",
       "model_root_spr": 10.105,
       "model_node_spr": 5.863,
-      "reference_count": 1,
+      "reference_count": 3,
       "references": [
+        {
+          "source_run_id": 45120208827,
+          "source_sha256": "3529886f4ca7fc7d32a7e7db5b511fb32e41a53af07fa1174bc72cb0b1004f8d",
+          "spot": "ISO_BTN_CO",
+          "family": "ISO",
+          "version": "gto",
+          "flop": "Kh8c5d",
+          "turn": "4s",
+          "exact_solver_node_line": "x b33 c/x",
+          "flop_line": "x b33 c",
+          "turn_spr": 5.884664,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
         {
           "source_run_id": 45120208827,
           "source_sha256": "3cd62a406085f9f7cef229a2f9cf693fcdf787883c78cf10a616e48509233c8c",
@@ -16669,7 +16682,20 @@
           "exact_solver_node_line": "x b33 c/x",
           "flop_line": "x b33 c",
           "turn_spr": 5.884664,
-          "reference_status": "REVERIFIED_SINGLE_NAMED_BOARD_GTO"
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
+        {
+          "source_run_id": 45120208827,
+          "source_sha256": "fd8d210ed32a53b64d25958092eb188ece7eef0613759350091b7c4b0f1ede48",
+          "spot": "ISO_BTN_CO",
+          "family": "ISO",
+          "version": "gto",
+          "flop": "8s5s3s",
+          "turn": "8c",
+          "exact_solver_node_line": "x b33 c/x",
+          "flop_line": "x b33 c",
+          "turn_spr": 5.884664,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
         }
       ],
       "status": "REFERENCE_ONLY_NOT_CERTIFIED",
@@ -16678,7 +16704,7 @@
         "MODEL_ACTION_AND_POT_HISTORY_NOT_MATCHED_TO_SOLVER",
         "MODEL_COMBO_REACH_NOT_DERIVED_FROM_EXACT_BOARD"
       ],
-      "note": "1 named flop(s) have a jointly playable rendered action. Three distinct flops are required for CERT-MULTIBOARD."
+      "note": "Exact GTO and separately solved hero lock on each named board. Generic texture rows remain approximate."
     },
     "ln-iso-iso_t_model-12mapd0": {
       "model_id": "ln-iso-iso_t_model-12mapd0",
