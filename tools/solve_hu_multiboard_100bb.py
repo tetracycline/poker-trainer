@@ -121,7 +121,7 @@ def main():
     a.add_argument('--measured-bb-flop-lead',action='store_true',
         help='Use the measured SRP caller lead rate and size distribution for the BB flop opening action')
     a.add_argument('--turn-count',type=int,default=1)
-    a.add_argument('--flop-size-profile',choices=('full','lmp-50-only','utg-50-only'),default='full',
+    a.add_argument('--flop-size-profile',choices=('full','lmp-50-only','utg-50-only','btn-50-only'),default='full',
         help='Predeclared 50% flop menu for the named spot; other streets retain their configured sizes')
     a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','checkcheck-and-oop-b50','oop-b75only','oop-b100only','oop-b75raisecall','oop-b33only','checked-b33only','checked-b50only','checked-b75only','checked-b100only','checked-b50b100only','iso-checked-b33b50','checkcheck'),default='all',
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
@@ -173,6 +173,9 @@ def main():
     if args.flop_line_policy=='checked-b50b100only':
         if args.spot!='CO_BB' or args.flop_size_profile!='full' or args.turn_size_menu!='default':
             a.error('Dual checked-b50/b100 original solve only for full-size CO_BB SRP with default turn menu')
+    if args.flop_size_profile=='btn-50-only':
+        if args.spot!='BTN_BB' or args.flop_line_policy!='checked-b50only':
+            a.error('Restricted BTN half-pot flop tree requires the checked BTN_BB half-pot bet-call line')
     if args.flop_size_profile=='utg-50-only':
         if args.spot!='UTG_CO' or args.flop_line_policy not in ('oop-b50only','checked-b50only'):
             a.error('Restricted UTG half-pot flop tree requires a UTG_CO half-pot bet-call line')

@@ -1,0 +1,172 @@
+name: B544 rank134 native turn and river locks on frozen GTO boundaries
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b544-rank134-conditional.yml'
+      - 'tools/hu_b544_rank134_conditional.py'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [Qc7c2c, Jd9d5d, Qs6s2s, Jc7c3c, Tc8c4c]
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned Rust solver
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib phevaluator==0.5.3.1
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          mkdir -p trainer/evidence
+          cp solver/inputs/pool_stats.json trainer/evidence/pool_stats.json
+          git -C solver rev-parse HEAD > trainer/evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > trainer/evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve fresh GTO at one fixed half-pot flop price
+        if: matrix.flop != 'Qc7c2c' && matrix.flop != 'Jd9d5d'
+        working-directory: trainer
+        env:
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          status=0
+          python tools/solve_hu_multiboard_100bb.py --solver-root ../solver --spot BTN_BB \
+            --flop "$FLOP" --version gto --flop-size-profile btn-50-only --flop-line-policy checked-b50only \
+            --turn-line-policy checkcheck --turn-count 1 --archive-empty-river-extraction --lock-marginals-by-street \
+            --manifest "evidence/$FLOP-gto.json" || status=$?
+          python - "$status" "evidence/$FLOP-gto.json" <<'PYGTO'
+          import json,sys
+          m=json.load(open(sys.argv[2]))
+          assert not m['failures'] and len(m['cases'])+len(m['skipped'])==1
+          assert int(sys.argv[1])==(0 if m['cases'] else 1)
+          PYGTO
+      - uses: actions/upload-artifact@v4
+        id: gto
+        if: matrix.flop != 'Qc7c2c' && matrix.flop != 'Jd9d5d'
+        with:
+          name: NL2-B544-${{ matrix.flop }}-gto
+          path: |
+            trainer/evidence
+            solver/postflop/out/BTN_BB/gto
+          if-no-files-found: error
+          retention-days: 90
+      - name: Verify original GTO hands then solve only that flop boundary's conditional counterpart
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PARENT: ${{ steps.gto.outputs.artifact-id }}
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          args=(--originals "$RUNNER_TEMP/parents" --flop "$FLOP" --run "$GITHUB_RUN_ID" --head "$GITHUB_SHA")
+          fetch=()
+          if test -n "$PARENT"; then fetch=(--artifact-id "$PARENT"); fi
+          python tools/hu_b544_rank134_conditional.py "${args[@]}" "${fetch[@]}" --fetch
+          python tools/hu_b544_rank134_conditional.py "${args[@]}" --solver ../solver --results "$RUNNER_TEMP/native" \
+            --driver ../solver/postflop/pfdriver/target/release/pfdriver
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B544-conditional-${{ matrix.flop }}
+          path: ${{ runner.temp }}/native/NL2_B544_*.json.gz
+          if-no-files-found: ignore
+          retention-days: 90
+
+  verify:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 'B544-conditional-*'
+          path: downloads
+      - run: python -m pip install phevaluator==0.5.3.1
+      - name: Verify source hands and both rendered predecessor actions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          args=(--originals "$RUNNER_TEMP/parents" --run "$GITHUB_RUN_ID" --head "$GITHUB_SHA")
+          python tools/hu_b544_rank134_conditional.py "${args[@]}" --fetch
+          python tools/hu_b544_rank134_conditional.py "${args[@]}" --solver pinned-solver --results downloads
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B544-rank134-verified-decisions
+          path: |
+            data/nl2_hu_b544_*.json
+            data/solver_evidence/reverified/rank134.json
+            data/solver_evidence/NL2_B544_*.json.gz
+            data/solver_evidence/NL2_B544_*.zip
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R134_*.json.gz
+          if-no-files-found: error
+          retention-days: 90
+      - name: Audit all current routes and register only verified paired boards
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          files=(data/nl2_hu_b544_rank134_conditional.json data/solver_evidence/NL2_B544_*.json.gz data/solver_evidence/NL2_B544_*.zip)
+          files+=(data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R134_*.json.gz)
+          if test -f data/nl2_hu_b544_locked_medium.json; then files+=(data/solver_evidence/reverified/rank134.json data/nl2_hu_b544_locked_medium.json); fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            for file in "${files[@]}"; do
+              if test -e "$live/$file"; then cmp "$file" "$live/$file"; fi
+            done
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              bash tools/hu_exact_batch_audit.sh "$status"
+              python -c 'import json; m=json.load(open("data/nl2_hu_b544_rank134_conditional.json")); r=json.load(open("data/nl2_hu_multiboard_status_current.json"))["records"][m["model_id"]]; assert m["qualified_distinct_flops"] < 3 or (r["label"]=="CERT-MULTIBOARD" and {b["source_sha256"] for b in m["verified_pairs"]["boards"]} <= {b["source_sha256"] for b in r["certified_3_to_5_exact_flop_boards"]})'
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B544: publish authenticated BTN monotone river reach and measured locks'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then
+              exit 0
+            fi
+            git worktree remove "$live"
+          done
+          exit 1
