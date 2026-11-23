@@ -14,12 +14,13 @@ for (const file of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js
 const rank=process.argv[2] || '124';
 const config={
   124:{section:'iso', id:'ln-iso-t_model-1gjwm8f',pot:9.5,stack:96,label:'下注 ½'},
-  133:{section:'ipc', id:'ln-ipc-t_model-day18r',pot:6.5,stack:97.5,label:'下注 1'}
+  133:{section:'ipc', id:'ln-ipc-t_model-day18r',pot:6.5,stack:97.5,label:'下注 1'},
+  198:{section:'3bp', id:'ln-3bp-3b_t_model-wsml7c',pot:16.5,stack:92.5,label:'過'}
 }[rank];
 assert.ok(config,'unknown turn study');
 context.__linesQA.render(config.section);
 const nodes = new Map(context.__HU_MODEL_LAST.nodes.map(n=>[n.id,n]));
-// Match a half-pot flop bet to the displayed turn decision.
+// Keep the exact parent action and the visible turn classes for this model.
 const targets = {[rank]:config.id};
 const classes = ['TPG','TPW','MID','DRAW','WDRAW'];
 function cells(id, texture) {

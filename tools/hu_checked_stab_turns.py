@@ -1,4 +1,4 @@
-"""Reproduce a called flop stab and compare the original GTO and locked turn decisions."""
+"""Verify native turn policies against their original flop action and range boundary."""
 import argparse
 from dataclasses import dataclass
 import base64
@@ -45,7 +45,7 @@ class TurnStudy:
 
     @property
     def bet(self):
-        return (self.root_pot * self.ip_bet_pct + 50) // 100
+        return 0 if self.flop_line == "x x" else (self.root_pot * self.ip_bet_pct + 50) // 100
 
     @property
     def pot(self):
@@ -57,7 +57,7 @@ class TurnStudy:
 
     @property
     def flop_line(self):
-        return f"x b{self.ip_bet_pct} c"
+        return self.root_branches[-1]
 
     @property
     def line(self):
@@ -82,8 +82,10 @@ def rendered_policy(study, source, reach, public, routes):
         hand = "".join(cardkey(hand))
         flop_class = hcls(hand, public[:6])
         turn_class = hcls(hand, public)
-        label = routes[board_row(public)]["decisions"].get(turn_class)
-        if not label or flop_class not in routes[board_row(public[:6])]["parents"]:
+        turn_route = routes.get(board_row(public), {})
+        flop_route = routes.get(board_row(public[:6]), {})
+        label = turn_route.get("decisions", {}).get(turn_class)
+        if not label or flop_class not in flop_route.get("parents", ()):
             continue
         weights = [max(0, node["strat"][j * len(hands) + i]) for j in range(len(actions))]
         total = sum(weights)
@@ -207,10 +209,11 @@ def main(study):
     template,=(src for src in doc["source_arrays"] if src["version"]=="gto")
     assert template["manifest"]["preflop_ranges"]["source"]==study.preflop_source
     assert template["manifest"]["spot"] == study.spot
-    if study.family=="SRP":
+    if study.preflop_source=="PINNED_POKER_SOLVER_PREFLOP_CFR":
         from hu_b483_locked_medium import PIPELINE, RANGES
         assert template["manifest"]["solver_pin"]==PIPELINE and template["manifest"]["solver_ranges_sha256"]==RANGES
         import ranges
+        ranges.SPOTS.update(EXTRA_SPOTS)
         assert (template["root_job"]["oop"],template["root_job"]["ip"]) == tuple(ranges.to_str(v) for v in ranges.ranges(study.spot,"gto"))
     routes=json.loads(subprocess.check_output(["node","tools/hu_b592_iso_turn_routes.cjs",str(study.rank)]))[str(study.rank)]
     model=json.loads((DATA/"nl2_hu_multiboard_status_current.json").read_bytes())["records"][study.model]

@@ -1,0 +1,88 @@
+name: B607 reproduce BTN turn decisions after a checked-through 3-bet flop
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b607-checked-3bet-turns.yml'
+      - 'tools/hu_b607_checked_3bet_turns.py'
+      - 'tools/hu_checked_stab_turns.py'
+      - 'tools/hu_b592_iso_turn_routes.cjs'
+      - 'data/nl2_hu_b607_checked_3bet_inputs.json'
+      - 'data/solver_evidence/NL2_B607_R198_*.zip'
+permissions: {contents: read}
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: ["JcTs6c", "JdTc5d", "JhTd7h", "Td9c6d", "Th9s4h"]
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the pinned native engine
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Re-solve the complete native flop and both turn policies
+        working-directory: trainer
+        run: python tools/hu_b607_checked_3bet_turns.py --solver ../solver --reproduce-flop ${{ matrix.flop }}
+  verify:
+    needs: reproduce
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Check shared private hands, branch prices and existing certifications
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          registry=data/nl2_hu_multiboard_status_current.json
+          cp "$registry" "$RUNNER_TEMP/before.json"
+          python tools/hu_b607_checked_3bet_turns.py --solver ../solver --run "$GITHUB_RUN_ID" --out "$RUNNER_TEMP/report.json"
+          cmp "$RUNNER_TEMP/report.json" data/nl2_hu_b607_checked_3bet_preview.json
+          python tools/hu_apply_cert_extensions.py --out "$registry"
+          python - "$RUNNER_TEMP/before.json" "$registry" <<'PY'
+          import json,sys
+          before,after=(json.load(open(p))['records'] for p in sys.argv[1:])
+          target='ln-3bp-3b_t_model-wsml7c'
+          assert before.keys()==after.keys() and all(after[k]==before[k] for k in before if k!=target)
+          assert after[target]['label']=='CERT-MULTIBOARD'
+          PY
+          node tools/hu_b558_river_policy_view.cjs data/solver_evidence/reverified/rank198.json
+          node tools/hu_extension_runtime_test.cjs "$registry"
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+          bash tools/hu_exact_batch_audit.sh "$registry"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B607-authenticated-rank198
+          if-no-files-found: error
+          path: |
+            trainer/data/nl2_hu_b607_locked_medium.json
+            trainer/data/solver_evidence/reverified/rank198.json
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B607_R198_*.json.gz
