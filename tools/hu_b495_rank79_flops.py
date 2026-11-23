@@ -14,15 +14,25 @@ from hu_reverified_board_pair import emit_board
 
 
 CANDIDATES={"QcJh5s":["Th","5c","7d"], "QdJc3s":["7h","6c","8h"], "KhQs8d":["Qh","4s","3h"]}
+TWO_TONE = {"KsQh4s":["5c","Kh","2h"], "QsJh4s":["2d","Qd","2s"], "KhQhJc":["Ks","6s","4s"]}
 VERSIONS=("gto","exp_ip")
 PRIOR=Path('data/nl2_hu_b489_rank79_attempts.json')
 PRIOR_SHA='80e152bb59c293deca5d99df9a77254570e690227c95b2be25f083f3e8d3aea1'
 REPORT=Path('data/nl2_hu_b495_rank79_flops.json')
-MEDIUM=Path('data/nl2_hu_b495_locked_medium.json')
 REPAIR=EVIDENCE/'reverified/rank79.json'
 
 
-def validate_choices(pipeline):
+def validate_choices(pipeline, batch="B495"):
+    if batch == "B503":
+        # Two-tone flops have a distinct flush-draw structure from the rainbow anchors.
+        earlier = read(REPORT)
+        assert earlier['candidates'] == CANDIDATES and len(earlier['model']['boards']) == 2
+        assert all(row['compatible_hole_card_pairs'] == 0 for row in earlier['observations'].values()
+                   if row['version'] == 'gto')
+        for flop, turns in TWO_TONE.items():
+            assert len(set(flop[1::2])) == 2 and len(set(flop[::2])) == 3
+            assert flop not in earlier['candidates'] and turns == pipeline.turns_for(flop)
+        return
     # Rank patterns from the complete 21 eligible archived native GTO subgames.
     prior_ranks={'442','753','883','A73','A92','J94','KQ6','KT4','KJ6','KQ5','KQ7','K72','KJ4','KQ3','KQ4','QJ6','QJ4','T95'}
     fresh=set()
@@ -75,6 +85,7 @@ def prior_boards(model):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--batch',choices=('B495','B503'),default='B495')
     p.add_argument('--artifacts',type=Path)
     p.add_argument('--solver',type=Path,required=True)
     p.add_argument('--run-id',type=int)
@@ -87,7 +98,11 @@ def main():
     sys.path.insert(0,str(solver/'postflop/py'))
     import pipeline, ranges
     ranges.SPOTS.update(EXTRA_SPOTS)
-    validate_choices(pipeline)
+    batch=args.batch
+    candidates=CANDIDATES if batch=='B495' else TWO_TONE
+    report=Path(f'data/nl2_hu_{batch.lower()}_rank79_flops.json')
+    medium=Path(f'data/nl2_hu_{batch.lower()}_locked_medium.json')
+    validate_choices(pipeline,batch)
     model=read(Path('data/nl2_hu_multiboard_status_current.json'))['records'][MODEL]
     assert (model['frequency_rank'],model['solver_profile'],model['family'],model['assumed_model_node_spr'])==(79,'UTG_CO','SRP',7)
     accepted=prior_boards(model)
@@ -97,10 +112,10 @@ def main():
     assert args.run_id and args.head and args.artifacts and not REPAIR.exists()
     infos={s['name']:s for s in read(args.artifacts/'list.json')['artifacts']}
     checked={};missing={};artifacts={}
-    for flop,turns in CANDIDATES.items():
+    for flop,turns in candidates.items():
         native={}
         for version in VERSIONS:
-            name=f'NL2-B495-{flop}-{version}'
+            name=f'NL2-{batch}-{flop}-{version}'
             if name not in infos:
                 missing[name]='NO_COMPLETED_SOURCE_ARTIFACT';continue
             info=infos[name];aid=info['id'];raw=args.artifacts/f'{aid}.zip';digest=sha(raw.read_bytes())
@@ -124,7 +139,7 @@ def main():
                     missing[f'{name} {turn}']=f'REJECTED_NATIVE_SOURCE: {type(err).__name__} {err}'
                     continue
                 source.update(artifact_id=aid,github_artifact_sha256=digest)
-                pack(source,flop,turn,batch='B495')
+                pack(source,flop,turn,batch=batch)
                 row=audit_node(source)
                 checked[f'{flop} {turn} {version}']=row
                 native[turn,version]=(source,row)
@@ -133,7 +148,7 @@ def main():
             (g,gr),(e,er)=[native[turn,v] for v in VERSIONS]
             assert gr['public_board']==er['public_board']
             if not min(gr['compatible_hole_card_pairs'],er['compatible_hole_card_pairs']):continue
-            b,pin=emit_board(model,g,e,gr['public_board'],LINE,'KQ_HIGH',viewer_code=f'B495_R79_{flop.upper()}_{args.run_id}')
+            b,pin=emit_board(model,g,e,gr['public_board'],LINE,'KQ_HIGH',viewer_code=f'{batch}_R79_{flop.upper()}_{args.run_id}')
             assert b and pin
             paired_proof(b,pin,(gr,er),model)
             accepted.append((b,pin,gr,er))
@@ -141,11 +156,11 @@ def main():
     boards=[b for b,_,_,_ in accepted];pins=[p for _,p,_,_ in accepted]
     assert 2<=len(boards)==len({b['flop'] for b in boards})<=5
     group=dict(model_id=MODEL,rank=79,line=LINE,actor='CO_IP',spot='UTG_CO',boards=boards,pins=pins)
-    save(REPORT,dict(run=args.run_id,source_commit=args.head,originals=artifacts,prior_report_sha256=PRIOR_SHA,
-                     candidates=CANDIDATES,first_positive_turn_per_flop_in_frozen_order=True,observations=checked,unavailable=missing,model=group))
+    save(report,dict(run=args.run_id,source_commit=args.head,originals=artifacts,prior_report_sha256=PRIOR_SHA,
+                     candidates=candidates,first_positive_turn_per_flop_in_frozen_order=True,observations=checked,unavailable=missing,model=group))
     if len(boards)>=3:
         save(REPAIR,group)
-        save(MEDIUM,dict(schema='NL2_HU_B495_ORIGINAL_LOCKED_MEDIUM_V1',rank=79,report_sha256=sha(REPORT.read_bytes()),
+        save(medium,dict(schema=f'NL2_HU_{batch}_ORIGINAL_LOCKED_MEDIUM_V1',rank=79,report_sha256=sha(report.read_bytes()),
                         gto_references={source_key(MODEL,g):g for _,_,g,e in accepted},
                         references={source_key(MODEL,e):dict(e,gto=g) for _,_,g,e in accepted}))
     print('Rank 79 verified distinct flop pairs:',len(boards))
