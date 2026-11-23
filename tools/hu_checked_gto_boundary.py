@@ -23,7 +23,7 @@ def lock_metadata(rows):
                  **({'street':r['street']} if 'street' in r else {})) for r in rows]
 
 
-def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pipeline, ranges):
+def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pipeline, ranges, flop_line="x x"):
     info=json.loads((folder/f'{aid}.json').read_bytes())
     assert (info['id'],info['name'],info['digest'],info['workflow_run']['id'],info['workflow_run']['head_sha'],info['workflow_run']['repository_id'])==(
         aid,pin['name'],'sha256:'+pin['sha256'],pin['run'],pin['head'],1438346845)
@@ -35,7 +35,7 @@ def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pi
         mf,=[n for n in files if n.endswith('.json') and not n.endswith('pool_stats.json')]
         m=json.loads(z.read(mf))
         assert (m['spot'],m['version'],m['failures'])==(spot,version,[])
-        c,=[c for c in m['cases'] if c['turn']==turn and c['line']=='x x' and (m.get('flop') or c['flop'])==flop]
+        c,=[c for c in m['cases'] if c['turn']==turn and c['line']==flop_line and (m.get('flop') or c['flop'])==flop]
         if m['schema']=='HU_MISSING_ACTION_HISTORY_CFR_V1':
             assert (m['source_pipeline_sha256'],m['source_ranges_sha256'],m['source_preflop_tree_sha256'])==(
                 PIPELINE,RANGES,'d4ca8e0c7d53deb6af337bfef8ff0c125205c1d3ef912267d8b40efc2fe7c100')
@@ -59,8 +59,8 @@ def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pi
             assert sha(raw)==digest
             return json.loads(raw),json.loads(job),sha(job)
         root,rj,rjs=extract(rp,rs);sub,j,js=extract(sp,ss)
-    assert all((source['flop'],source['pot'],source['stack'])==(flop,pot,stack) for source in (root,rj,sub,j))
-    assert sub['turn']==j['turn']==turn and sub['line0']=='x x' and j['line0']==['x','x','/']
+    assert all((source['flop'],source['pot'],source['stack'])==(flop,pot,stack) for source in (root,rj))
+    assert sub['turn']==j['turn']==turn and sub['line0']==flop_line and j['line0']==flop_line.split()+['/']
     assert (rj['oop'],rj['ip'])==tuple(ranges.to_str(weights) for weights in ranges.ranges(spot,version))
     hero={'gto':None,'exp_oop':0,'exp_ip':1}[version]
     for job in (rj,j):
@@ -68,11 +68,16 @@ def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pi
         assert [r['pat'] for r in job.get('locks',[])]==[r['pat'] for r in patterns]
     assert rj.get('locks',[])==j.get('locks',[]) and bool(j.get('locks'))==(hero is not None)
     if expected is not None:assert j.get('locks',[])==json.loads(compact(expected))
-    parent,=[n for n in root['nodes'] if n['line']=='x x/' and n['board'][-2:]==turn]
-    assert parent['pot']==pot and parent['bets']==[0,0] and len(parent['board'])==8
+    parent,=[n for n in root['nodes'] if n['line']==flop_line+'/' and n['board'][-2:]==turn]
+    assert flop_line in ('x x', 'x b50 c')
+    investment = 0 if flop_line == 'x x' else pot // 2
+    assert parent['bets'] == [investment, investment] and len(parent['board']) == 8
+    boundary = (pot + 2 * investment, stack - investment)
+    assert (parent['pot'], stack - max(parent['bets'])) == boundary
+    assert all((source['flop'], source['pot'], source['stack']) == (flop, *boundary) for source in (sub, j))
     for seat,name in enumerate(('oop_w','ip_w')):
         assert j[name]==[[h,w] for h,w in zip(root['hands'][seat],parent['wr'][seat],strict=True) if w>1e-4]
-    assert not j['root_no_bet']
+    assert j['root_no_bet'] == (flop_line == 'x b50 c')
     for game in (root,sub):
         assert 0<=game['info']['gto_expl_pct']<=.5
         if hero is not None:assert 0<=game['info']['hero_gap_pct']<=.5 and game['info']['lock_stats']
@@ -112,7 +117,7 @@ def replay_native(original,version,pool,pipeline,path,run,code):
     raw=base64.b64decode(locked['source_file_b64'],validate=True);assert sha(raw)==locked['source_sha256']
     sub=json.loads(raw);g=original['source'];parent=original['identity']
     old=g['subgame'];assert all(sub[k]==old[k] for k in ('flop','pot','stack','hands'))
-    sub.update(line0='x x',turn=old['turn'],rivers=old['rivers'])
+    sub.update(line0=old['line0'],turn=old['turn'],rivers=old['rivers'])
     manifest=dict(g['manifest'],locks=meta,gto_parent_source_run_id=g['run'],gto_parent_source_sha256=parent['root_sha256'])
     assert parent['root_sha256']==sha(compact(g['root'])) and job['hero']==(version=='exp_ip')
     assert sub['info']['lock_stats']
