@@ -12,16 +12,33 @@ async function run() {
   const result=await ctx.nl2ApplyVerifiedExtensions(base);
   assert.equal(result.CERT_MULTIBOARD,registry.CERT_MULTIBOARD);
   assert.equal(result.APPROX,registry.APPROX);
-  for(const id of new Set([...Object.keys(manifest.board_reach_updates), ...Object.keys(manifest.reverified_board_reach_updates || {})])){
+  assert.equal(result.trainer_route_contract_schema, registry.trainer_route_contract_schema);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.exact_source_extensions)), registry.exact_source_extensions);
+  for(const id of Object.keys(registry.records)){
     const browserRecord=JSON.parse(JSON.stringify(result.records[id]));
     assert.deepEqual(browserRecord,registry.records[id],id);
-    if(browserRecord.label==='APPROX'){
+    if(browserRecord.label==='APPROX' && browserRecord.remaining_exact_board_evidence){
       assert.ok(browserRecord.remaining_exact_board_evidence.length<3);
       assert.equal(browserRecord.certified_3_to_5_exact_flop_boards.length,0);
     }
   }
   const viewer=fs.readFileSync('nl2-multiboard.js','utf8');
   const proof=viewer.slice(viewer.indexOf('async function getProof(run){'),viewer.indexOf('function verifiedCase('));
+  const route118=Object.values(registry.records).find(m=>m.frequency_rank===118);
+  assert.ok(manifest.trainer_route_contract.routes[route118.model_id].streets.includes('x b66 c'));
+  const missingContract=structuredClone(manifest);
+  delete missingContract.trainer_route_contract;
+  ctx.fetch=async()=>({ok:true,json:async()=>missingContract});
+  await assert.rejects(()=>ctx.nl2ApplyVerifiedExtensions(base));
+  const falsePrice=structuredClone(manifest);
+  const sample=falsePrice.trainer_route_exclusions.find(r=>r.model_id===route118.model_id);
+  if(sample) {
+    const route=falsePrice.trainer_route_contract.routes[sample.model_id];
+    route.streets=sample.actual_line.split('/');
+    ctx.fetch=async()=>({ok:true,json:async()=>falsePrice});
+    await assert.rejects(()=>ctx.nl2ApplyVerifiedExtensions(base));
+  }
+  ctx.fetch=async()=>({ok:true,json:async()=>manifest});
   const cases=manifest.models.concat(manifest.reverified_models || []);
   // Exercise both genuine historical sources even before a third rank146 board qualifies.
   if (!cases.some(e=>e.rank===146)) {
@@ -48,6 +65,12 @@ async function run() {
   for(const item of manifest.lock_variants.filter(e=>e.lock.requires_native_joint_replay)){
     const model=result.records[item.model_id], source=item.lock;
     const board=model.certified_3_to_5_exact_flop_boards.find(b=>b.public_board===item.public_board);
+    if (!board) {
+      const excluded=manifest.trainer_route_exclusions.some(row=>row.model_id===item.model_id && row.public_board===item.public_board);
+      const partial=model.remaining_exact_board_evidence?.some(b=>b.public_board===item.public_board);
+      assert.ok(excluded || (model.label==='APPROX' && partial), 'Missing native lock lacks a matching route exclusion or retained partial proof');
+      continue;
+    }
     assert.ok(board.nl2_locked_variants.some(v=>v.sha256===source.sha256));
     Object.assign(ctx,{chosenModel:model,chosenBoard:board,status:result,proofCache:{},Response,DecompressionStream,
       crypto:require('node:crypto').webcrypto,TextEncoder,TextDecoder,atob,fetch:async path=>new Response(fs.readFileSync(path))});
@@ -84,7 +107,17 @@ async function run() {
     await assert.rejects(()=>ctx.nl2ApplyVerifiedExtensions(base));
   }
   for(const file of ['nl2-multiboard.js','nl2_hu_multiboard_ui.js']) {
-    assert.ok(fs.readFileSync(file,'utf8').includes('.then(globalThis.nl2ApplyVerifiedExtensions)'));
+    const script = fs.readFileSync(file, 'utf8');
+    const start = script.indexOf('function applyCurrentTrainerRoutes(');
+    const end = script.indexOf('\nfetchCertifiedRegistry()', start);
+    assert.ok(start >= 0 && end > start && script.slice(end).includes('.then(applyCurrentTrainerRoutes)'));
+    const loader = vm.createContext({});
+    vm.runInContext(script.slice(start, end), loader);
+    await assert.rejects(async () => loader.applyCurrentTrainerRoutes(base));
+    loader.nl2ApplyVerifiedExtensions = async () => base;
+    await assert.rejects(() => loader.applyCurrentTrainerRoutes(base));
+    loader.nl2ApplyVerifiedExtensions = async () => result;
+    assert.equal(await loader.applyCurrentTrainerRoutes(base), result);
   }
   console.log('PASS exact source registry, GTO/locked archives and zero-reach rejection');
 }

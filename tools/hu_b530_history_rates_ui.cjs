@@ -17,30 +17,31 @@ async function main() {
   vm.runInContext(fs.readFileSync('nl2_pool_rate_scope.js', 'utf8'), context);
   const registry = JSON.parse(fs.readFileSync('data/nl2_hu_multiboard_status_current.json'));
   let decisions = 0, bets = 0, facing = 0, assumed = 0;
-  for (const model of Object.values(registry.records)) {
-    for (const board of model.certified_3_to_5_exact_flop_boards || []) {
-      for (const lock of board.nl2_locked_variants.filter(v => v.viewer_archive_code?.startsWith('B530_'))) {
-        const element = new Element();
-        await context.nl2PoolRateScope.show(element, model, board, [lock]);
-        const message = element.text();
-        for (const r of lock.applied_street_rates) {
-          assert.ok(message.includes(r.n.toLocaleString('zh-TW')));
-          if (r.opportunity === 'BET') {
-            assert.ok(message.includes(r.size_proxy) && message.includes('實測下注'));
-            ++bets;
-          } else if (r.opportunity === 'FACING_BET') {
-            assert.ok(message.includes('實測棄／加 '+r.target_fold_pct.toFixed(1)+'%／'+r.target_raise_pct.toFixed(1)+'%'));
-            ++facing;
-          }
-        }
-        assert.ok(!message.includes('istory%'));
-        if (lock.turn_checked_to_bet_assumption) {
-          assert.ok(message.includes('45% 假設'));
-          ++assumed;
-        }
-        ++decisions;
+  const manifest = JSON.parse(fs.readFileSync('data/nl2_hu_verified_extensions.json'));
+  const originals = manifest.lock_variants.filter(item => item.lock.viewer_archive_code?.startsWith('B530_'));
+  for (const item of originals) {
+    const model = registry.records[item.model_id];
+    const board = {flop:item.flop, turn:item.turn};
+    const lock = item.lock;
+    const element = new Element();
+    await context.nl2PoolRateScope.show(element, model, board, [lock]);
+    const message = element.text();
+    for (const r of lock.applied_street_rates) {
+      assert.ok(message.includes(r.n.toLocaleString('zh-TW')));
+      if (r.opportunity === 'BET') {
+        assert.ok(message.includes(r.size_proxy) && message.includes('實測下注'));
+        ++bets;
+      } else if (r.opportunity === 'FACING_BET') {
+        assert.ok(message.includes('實測棄／加 '+r.target_fold_pct.toFixed(1)+'%／'+r.target_raise_pct.toFixed(1)+'%'));
+        ++facing;
       }
     }
+    assert.ok(!message.includes('istory%'));
+    if (lock.turn_checked_to_bet_assumption) {
+      assert.ok(message.includes('45% 假設'));
+      ++assumed;
+    }
+    ++decisions;
   }
   assert.equal(decisions, 49);
   assert.ok(bets > 0 && facing > 0 && assumed > 0);

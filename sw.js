@@ -15,7 +15,8 @@ self.addEventListener('fetch',e=>{
     }).catch(()=>c.match(q).then(h=>h||Response.error()));
     if(/\/data\/|\/river\//.test(u.pathname))return c.match(q,{ignoreSearch:true}).then(h=>h||fetch(q).then(r=>{if(r&&r.ok)c.put(q,r.clone());return r;}));
     const net=fetch(q,{cache:'no-store'}).then(r=>{if(r&&r.ok){c.put(key,r.clone());}return r;});
-    const cached=()=>c.match(key,{ignoreSearch:true}).then(h=>h||(nav?c.match('index.html'):undefined));
+    const routeModule = /\/(nl2_cert_registry|nl2-multiboard|nl2_hu_multiboard_ui)\.js$/.test(u.pathname);
+    const cached=()=>c.match(key,{ignoreSearch:!routeModule}).then(h=>h||(nav?c.match('index.html'):undefined));
     return new Promise(res=>{let done=false;const t=setTimeout(()=>cached().then(h=>{if(!done&&h){done=true;res(h);}}),3000);
       net.then(r=>{if(!done){done=true;clearTimeout(t);res(r);}}).catch(()=>cached().then(h=>{if(!done){done=true;res(h||Response.error());}}));});
   }));

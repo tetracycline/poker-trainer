@@ -12,6 +12,7 @@ from hu_cert_lock_medium_audit import audit
 from hu_b483_locked_medium import proof as original_reach
 from hu_sequential_cfr_reach import game_reach
 from hu_board_reach_corrections import apply_updates, read_replays, replay_updates, source_key
+from hu_trainer_route_gate import active_pins, apply_routes, rendered_contract
 from copy import deepcopy
 
 DATA = Path("data")
@@ -214,7 +215,19 @@ def main():
                 refs["items"][mid]["note"] = "Fewer than three named flops survive the original two-seat action-path replay."
         return changes
 
+    contract = rendered_contract(registry["records"])
+    excluded = {}
+
+    def reconcile_routes():
+        for mid in apply_routes(registry["records"], contract, excluded):
+            model = registry["records"][mid]
+            update_references(model, xwalk, refs)
+            if model["label"] == "APPROX":
+                xwalk["records"][mid]["board_specific_certification_status"] = "APPROX"
+                refs["items"][mid]["note"] = "Fewer than three named flops match the rendered trainer action order and bet sizes."
+
     changes = apply_replays()
+    reconcile_routes()
     repairs = sorted((read(p) for p in (SOURCE/"reverified").glob("rank*.json")), key=lambda e:e["rank"])
     for repair in repairs:
         for pin in repair["pins"]:
@@ -229,12 +242,20 @@ def main():
             assert item["model_id"] in repaired_ids
             append_lock(registry, item, locked, originals)
     repair_changes = apply_replays(repaired_ids)
+    reconcile_routes()
     assert seen == set(locked) and seen_gto == set(originals), "Raw source missing from the named registry boards"
     labels = collections.Counter(r["label"] for r in registry["records"].values())
     registry.update(CERT_MULTIBOARD=labels["CERT-MULTIBOARD"], APPROX=labels["APPROX"])
     view = dict(schema="NL2_EXACT_VERIFIED_EXTENSIONS_V1", models=ordered, lock_variants=variants, board_reach_updates=changes,
-                reverified_models=repairs, reverified_board_reach_updates=repair_changes, locked_medium_reports=sources)
-    registry["exact_source_extensions"] = {e["model_id"]: e["pins"] for e in ordered + repairs}
+                reverified_models=repairs, reverified_board_reach_updates=repair_changes, locked_medium_reports=sources,
+                trainer_route_contract=contract, trainer_route_exclusions=list(excluded.values()))
+    registry["trainer_route_contract_schema"] = contract["schema"]
+    registry["exact_source_extensions"] = {}
+    for e in ordered + repairs:
+        mid = e["model_id"]
+        selected = active_pins(registry["records"][mid], e["pins"])
+        if selected:
+            registry["exact_source_extensions"][mid] = selected
     registry["base_registry_schema"] = registry["schema"]
     registry["schema"] = "NL2_HU_392_MULTIBOARD_CERT_STATUS_VERIFIED_EXTENSIONS_V1"
     registry["base_registry"] = base.name

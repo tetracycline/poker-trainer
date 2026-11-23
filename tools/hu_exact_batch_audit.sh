@@ -5,6 +5,7 @@ registry=${1:?expected current registry file}
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 python3 tools/hu_cert_lock_medium_audit.py --source "$registry" --out "$tmpdir/locks.json"
+python3 tools/hu_trainer_route_gate.py "$registry"
 node tools/hu_line_contract.js >"$tmpdir/contract.json"
 node tools/link_audit.js --md "$tmpdir/link.md" --json "$tmpdir/link.json"
 node tools/reach_verify.js --log "$tmpdir/reach.md" --json "$tmpdir/reach.json"
