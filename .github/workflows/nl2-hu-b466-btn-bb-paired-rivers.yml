@@ -1,0 +1,162 @@
+name: B466 BTN-BB ranks 48 and 52, named river histories and full audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b466-btn-bb-paired-rivers.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: b466-btn-bb-pairs
+  cancel-in-progress: false
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        version: [gto, exp_oop]
+        flop: [As7s2s, Ks7h2d, Qs9s5s]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: trainer
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile authentic pinned Rust CFR
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_multiboard_100bb.py trainer/tools/hu_b460_rank48_first_board.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve the original check/check ranges and exact turn bet sizes
+        working-directory: trainer
+        env:
+          FLOP: ${{ matrix.flop }}
+          VERSION: ${{ matrix.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C ../solver rev-parse HEAD > evidence/poker-solver-commit.txt
+          git -C ../solver/postflop/postflop-solver rev-parse HEAD > evidence/upstream-engine-commit.txt
+          python3 tools/solve_hu_multiboard_100bb.py --solver-root ../solver --spot BTN_BB \
+            --flop "$FLOP" --version "$VERSION" --flop-size-profile full --flop-line-policy checkcheck \
+            --turn-size-menu river-gaps --turn-count 1 --manifest "evidence/BTN_BB-$FLOP-$VERSION.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B466-${{ matrix.flop }}-${{ matrix.version }}
+          path: |
+            trainer/evidence
+            solver/postflop/out/BTN_BB/${{ matrix.version }}
+          if-no-files-found: error
+  archive-board:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [As7s2s, Ks7h2d, Qs9s5s]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Recompute both exact actor lines and both players' legal holdings
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          for version in gto exp_oop; do
+            gh run download "$GITHUB_RUN_ID" -n "B466-$FLOP-$version" -D "../original/$version"
+          done
+          python3 tools/hu_btn_bb_river_pairs.py --download-dir ../original --flop "$FLOP" \
+            --run-id "$GITHUB_RUN_ID" --out ../paired
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B466-paired-${{ matrix.flop }}
+          path: ../paired/
+          if-no-files-found: error
+  historical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Check both actual histories in the existing B460 and B461 outputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for version in gto exp_oop; do
+            gh run download 45092103725 -n "nl2-multiboard-B461-R52-BTNB-B33-$version" -D "../original/$version"
+          done
+          python3 tools/hu_btn_bb_river_pairs.py --download-dir ../original --flop Js9h4d \
+            --run-id 45092103725 --out ../paired
+          python3 tools/hu_btn_bb_river_pairs.py --flop 9s6h3d --run-id 45091990886 \
+            --b460-archive data/solver_evidence/NL2_B460_R48_BTN_BB_9S6H3D_B75.json.gz --out ../paired
+          python3 - <<'PYVERIFY'
+          import json
+          from pathlib import Path
+          for pin in Path('data/solver_evidence/b466').glob('*.proof.json'):
+              expected = json.loads(pin.read_bytes())
+              actual = json.loads((Path('../paired') / pin.name).read_bytes())
+              # Encoded gzip headers can differ between Python versions; both raw source SHAs are pinned.
+              expected.pop('archive_sha256')
+              actual.pop('archive_sha256')
+              assert expected == actual, pin
+          PYVERIFY
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_v51_b453_rank32.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B466-paired-historical
+          path: ../paired/
+          if-no-files-found: error
+  preserve:
+    needs: [archive-board, historical]
+    if: ${{ !cancelled() && needs.historical.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: B466-paired-*
+          path: data/solver_evidence/b466/
+          merge-multiple: true
+      - name: Audit and retain each complete paired source
+        run: |
+          set -euo pipefail
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_v51_b453_rank32.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/solver_evidence/b466/
+          git diff --cached --quiet && exit 0
+          git commit -m 'B466: preserve independent BTN-BB solver sources and exact two-seat river reach'
+          for attempt in 1 2 3; do
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase FETCH_HEAD
+            if git push origin "HEAD:$GITHUB_REF_NAME"; then exit 0; fi
+          done
+          exit 1

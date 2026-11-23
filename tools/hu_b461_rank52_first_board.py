@@ -114,14 +114,14 @@ def main():
     st=load(data/"nl2_hu_multiboard_status_v51_b453_rank32.json")
     assert (st["CERT_MULTIBOARD"],st["APPROX"],st["EST"],st["TOTAL"])==(164,228,0,392)
     model=st["records"][MODEL]
-    assert model["label"]=="APPROX" and model["frequency_rank"]==48
+    assert model["label"]=="APPROX" and model["frequency_rank"]==52
     assert model["solver_profile"]==SPOT and model["street"]==2
     assert abs(model["assumed_model_node_spr"]-TARGET_SPR)<1e-6
     positive_gto={n["board"] for n in glist if n["strict_combos"]>0}
     positive_exp={n["board"] for n in elist if n["strict_combos"]>0}
     paired=sorted(positive_gto&positive_exp)
     payload=dict(schema="NL2_B461_R52_BTN_BB_B33_RIVER_FIRST_EXACT_BOARD_V1",
-        model_id=MODEL,frequency_rank=48,flop=FLOP,turn=TURN,spot=SPOT,
+        model_id=MODEL,frequency_rank=52,flop=FLOP,turn=TURN,spot=SPOT,
         target_exact_river_line=TARGET_LINE,target_spr=TARGET_SPR,acting_seat=0,
         verified_original_gto_run_id=args.run_id,verified_exp_oop_run_id=args.run_id,
         original_gto_sha256=g["subgame_sha256"],actual_NL2_OOP_sha256=e["subgame_sha256"],
@@ -168,6 +168,6 @@ def main():
       f"Actual positive paired river nodes: {len(paired)}. "
       "One board never proves a 3–5-board CERT; the model stays APPROX. "
       "Counts: 164 CERT / 228 APPROX / 0 EST. PR2 stays Draft.\n")
-    print(json.dumps(dict(run=args.run_id,model_rank=48,paired=len(paired),
+    print(json.dumps(dict(run=args.run_id,model_rank=52,paired=len(paired),
         gto_nodes=len(glist),exp_nodes=len(elist),cert=164,approx=228,est=0)))
 if __name__=="__main__":main()

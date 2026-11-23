@@ -24,31 +24,31 @@ def locate(root,rel):
     matches=[x for x in candidates if x.is_file()]
     if len(matches)!=1:raise ValueError("Expected one exact source: "+str(candidates))
     return matches[0]
-def run_sources(download,ver):
+def run_sources(download,ver,flop=FLOP,turn=TURN):
     root=download/ver
-    mf=locate(root,"evidence/BTN_BB-9s6h3d-"+ver+".json")
+    mf=locate(root,f"evidence/BTN_BB-{flop}-{ver}.json")
     base="solver/postflop/out/BTN_BB/"+ver
-    fp=locate(root,base+"/9s6h3d_multiboard.json")
-    fj=locate(root,base+"/9s6h3d_multiboard.job.json")
+    fp=locate(root,base+f"/{flop}_multiboard.json")
+    fj=locate(root,base+f"/{flop}_multiboard.job.json")
     m=load(mf)
     assert (m["schema"],m["spot"],m["version"],m["flop"])==(
-        "NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1",SPOT,ver,FLOP)
+        "NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1",SPOT,ver,flop)
     assert m["flop_size_profile"]=="full" and not m["restricted_tree_assumption"]
     assert m["flop_line_policy"]=="checkcheck" and m["selected_lines"]==["x x"]
     assert m["turn_sizing_mode"]=="river-gaps" and "b75 c" in m["selected_turn_lines"]
-    assert m["turns"]==[TURN] and m["solved_cases"]==1 and not m["failures"] and not m["skipped"]
+    assert m["turns"]==[turn] and m["solved_cases"]==1 and not m["failures"] and not m["skipped"]
     assert m["file_flop_sha256"]==sha(fp)
     assert m["preflop_ranges"]["source"]=="PINNED_POKER_SOLVER_PREFLOP_CFR"
     assert m["root_pot_bb"]==5.5 and m["root_remaining_bb"]==97.5
     assert m["no_generic_certification"] is True
-    c=next(x for x in m["cases"] if (x["line"],x["turn"])==("x x",TURN))
-    sub=locate(root,base+"/9s6h3d_xx_Ts.json")
-    sj=locate(root,base+"/9s6h3d_xx_Ts.job.json")
+    c=next(x for x in m["cases"] if (x["line"],x["turn"])==("x x",turn))
+    sub=locate(root,base+f"/{flop}_xx_{turn}.json")
+    sj=locate(root,base+f"/{flop}_xx_{turn}.job.json")
     assert c["source_sha256"]==sha(sub)
     assert c["gto_gap_pct"] is not None and c["gto_gap_pct"]<=.5
     d,fr,job,subjob=load(sub),load(fp),load(fj),load(sj)
-    assert (fr["flop"],fr["pot"],fr["stack"])==(FLOP,550,9750)
-    assert (d["flop"],d["turn"],d["line0"])==(FLOP,TURN,"x x")
+    assert (fr["flop"],fr["pot"],fr["stack"])==(flop,550,9750)
+    assert (d["flop"],d["turn"],d["line0"])==(flop,turn,"x x")
     assert d["info"]["gto_expl_pct"]<=.5
     assert (subjob["turn_oop"],subjob["turn_ip"])==("33%,66%,75%","33%,66%,75%")
     assert abs(subjob["rake_rate"]-.05)<1e-8 and subjob["rake_cap"]==1000
