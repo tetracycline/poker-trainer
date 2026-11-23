@@ -62,6 +62,8 @@ def coverage(registry):
             alternatives[key]=row
     frozen_path=Path('data/nl2_hu_b561_frozen_river.json')
     frozen=json.loads(frozen_path.read_bytes()) if frozen_path.exists() else None
+    restricted_path=Path('data/nl2_hu_b573_restricted_turn.json')
+    restricted=json.loads(restricted_path.read_bytes()) if restricted_path.exists() else None
     boards=[]
     for model in sorted(registry['records'].values(),key=lambda m:m['frequency_rank']):
         if model['label']!='CERT-MULTIBOARD':
@@ -106,6 +108,16 @@ def coverage(registry):
                                    'b50' in alt[v]['source_actions'] for v in ('gto','exp_oop'))
                 else:
                     row['half_pot_status']='NO_MATCHING_CONDITIONAL_SOURCE'
+            if restricted and (mid,row['public_board'],row['line'],row['seat']) == (
+                    restricted['model_id'], restricted['public_board'], restricted['line'], restricted['seat']):
+                parent_ids={(p['version'],p['run'],p['sha256']) for p in [original,*policies]}
+                if all((v,restricted['source_run'],p['parent']['source_sha256']) in parent_ids
+                       for v,p in restricted['policies'].items()):
+                    assert all(p['original_half_pot_eligible']==0 and p['half_pot_reply_pairs']>0
+                               for p in restricted['policies'].values())
+                    row['restricted_turn_half_pot']={v:dict(source_sha256=p['source_sha256'],
+                        archive_sha256=restricted['archive_sha256'], eligible_combos=p['half_pot']['eligible'],
+                        nonpolarized_candidate=p['half_pot']['candidate']) for v,p in restricted['policies'].items()}
             row['medium_policy_usage']=medium_usage(row, alt, frozen)
             boards.append(row)
     totals=dict(Counter(r['half_pot_status'] for r in boards))

@@ -244,7 +244,10 @@ async function selectVersion(){
    lockScope.replaceChildren();
    const locks=version==='gto'?chosenBoard.nl2_locked_variants:[source];
    if(chosenBoard.leadComparison)globalThis.nl2HalfPotLeads.showLock(lockScope,chosenBoard.leadComparison);
-   else globalThis.nl2PoolRateScope?.show(lockScope,chosenModel,chosenBoard,locks);
+   else {
+     globalThis.nl2PoolRateScope?.show(lockScope,chosenModel,chosenBoard,locks);
+     globalThis.nl2HalfPotLeads?.showRestrictedTurn?.(lockScope,chosenModel,chosenBoard,sourceSha(source));
+   }
  }
  if(jointReach?.row.status==='ZERO_JOINT_REACH'){
    setMessage('此公牌與行動線沒有相容的雙方私牌。');return;

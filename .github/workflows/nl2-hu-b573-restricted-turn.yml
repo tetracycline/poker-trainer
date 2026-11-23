@@ -1,0 +1,40 @@
+name: B573 replay the SB half-pot turn and measured BB response
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b573-restricted-turn.yml'
+      - 'tools/hu_b573_restricted_turn.py'
+      - 'data/nl2_hu_b573_restricted_turn.json'
+      - 'data/nl2_hu_b573_turn_inputs.json'
+      - 'tools/hu_b573_medium_ui.cjs'
+      - 'data/solver_evidence/NL2_B573_R2_AS9H2D_KD.zip'
+permissions: {actions: read, contents: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Recompute reach using the original GitHub flop archives and the native policy outputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for aid in 14598935222 14598079511; do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$aid"
+            gh api "$api" > "$RUNNER_TEMP/$aid.json"
+            gh api "$api/zip" > "$RUNNER_TEMP/$aid.zip"
+          done
+          python tools/hu_b573_restricted_turn.py --originals "$RUNNER_TEMP" --solver pinned-solver --out "$RUNNER_TEMP/replay.json"
+          cmp "$RUNNER_TEMP/replay.json" data/nl2_hu_b573_restricted_turn.json
+          node tools/hu_b573_medium_ui.cjs

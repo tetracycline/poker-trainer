@@ -135,8 +135,42 @@
     details.appendChild(link);
     parent.appendChild(details);
   }
+  function matchRestrictedTurn(report,model,board,source){
+    if(report.model_id!==model.model_id || report.public_board!==board.public_board ||
+       report.line!==board.actual_exact_action_line || report.seat!==board.acting_seat)return false;
+    const g=report.policies.gto,e=report.policies.exp_oop;
+    if(g.parent.source_sha256!==board.source_sha256 || report.source_run!==board.source_run_id ||
+       !board.nl2_locked_variants.some(l=>l.run_id===report.source_run && l.sha256===e.parent.source_sha256))return false;
+    if(source && source!==g.parent.source_sha256 && source!==e.parent.source_sha256)return false;
+    return [g,e].every(p=>sha(p.source_sha256) && p.half_pot.eligible>0 && p.half_pot_reply_pairs>0 &&
+      p.original_half_pot_eligible===0 && p.actions.join(' ')==='x b50' && p.half_pot.eligible<=p.legal_combos);
+  }
+  function showRestrictedTurn(parent,model,board,source){
+    if(model.model_id!=='ln-opfr-t_model-19esov6' || board.public_board!=='2d9hAsKd')return;
+    const slot=document.createElement('div');
+    parent.appendChild(slot);
+    fetch('data/nl2_hu_b573_restricted_turn.json',{cache:'no-store'}).then(response=>{
+      if(!response.ok)throw Error('HTTP '+response.status);
+      return response.json();
+    }).then(report=>{
+      if(!matchRestrictedTurn(report,model,board,source))return;
+      const g=report.policies.gto,e=report.policies.exp_oop;
+      const details=document.createElement('details'),title=document.createElement('summary');
+      title.textContent='比較轉牌只開放過牌或半池下注的解';details.appendChild(title);
+      for(const [name,p] of [['GTO',g],['NL2',e]]){
+        const para=document.createElement('p');
+        para.textContent=name+' 原樹半池合格手牌 '+p.original_half_pot_eligible+' 組。限尺寸子局有 '+p.half_pot.eligible+' / '+p.legal_combos+
+          ' 組可下半池，其中 '+p.half_pot.middle_count+' 組屬中段勝率。'+(p.half_pot.candidate?'符合非極化研究門檻。':'未達非極化研究門檻。');
+        details.appendChild(para);
+      }
+      const para=document.createElement('p'),rate=e.response;
+      para.textContent='大盲面對半池的鎖頻取自 '+rate.n.toLocaleString('zh-TW')+' 次 NL2 轉牌回應。棄牌 '+rate.fold_pct+
+        '%、跟注 '+rate.call_pct+'%、加注 '+rate.raise_pct+'%。';
+      details.appendChild(para);slot.appendChild(details);
+    }).catch(()=>{slot.textContent='目前無法讀取轉牌限尺寸對照解。';});
+  }
   function showBoard(parent,model,board){
-    if(board.exact_node_actions.includes('b50'))return;
+    if(board.exact_node_actions.includes('b50'))return showRestrictedTurn(parent,model,board);
     const line=document.createElement('div');parent.appendChild(line);
     if(board.actual_spr<.5){
       line.textContent='剩餘有效籌碼不足半個底池。';return;
@@ -154,5 +188,5 @@
         return showFrozenRiver(parent,model,board,r);
     }).catch(()=>{line.textContent='半池領打對照來源暫時無法核對。';});
   }
-  globalThis.nl2HalfPotLeads={load,match,matchFrozenRiver,reachReport,showBoard,showLock};
+  globalThis.nl2HalfPotLeads={load,match,matchFrozenRiver,matchRestrictedTurn,showRestrictedTurn,reachReport,showBoard,showLock};
 })();
