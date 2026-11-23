@@ -1,0 +1,36 @@
+name: B475 audit historical measured pool scope and current HU registry
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b475-source-scope.yml'
+      - 'tools/hu_b475_pool_source_scope.py'
+      - 'tools/hu_b475_scope_view_test.cjs'
+      - 'data/nl2_hu_b475_verified_lock_scope.json'
+      - 'nl2_pool_rate_scope.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: '${{ github.sha }}', fetch-depth: 0}
+      - name: Recompute scope from pinned pool and archived CFR data
+        run: |
+          set -euo pipefail
+          base=9442f067eef09ed757198f0880d33023b489cf34
+          mkdir -p "$RUNNER_TEMP/b475-base"
+          git archive "$base" data/solver_evidence data/nl2_hu_multiboard_status_current.json | tar -x -C "$RUNNER_TEMP/b475-base"
+          curl -fsSL --retry 3 https://raw.githubusercontent.com/tetracycline/poker-solver/abe310c3aad02dd4a7c77fb2831801fd490cf51b/inputs/pool_stats.json -o "$RUNNER_TEMP/pool.json"
+          python tools/hu_b475_pool_source_scope.py --data "$RUNNER_TEMP/b475-base/data" --pool "$RUNNER_TEMP/pool.json" --out "$RUNNER_TEMP/scope.json"
+          cmp data/nl2_hu_b475_verified_lock_scope.json "$RUNNER_TEMP/scope.json"
+          node tools/hu_b475_scope_view_test.cjs "$RUNNER_TEMP/b475-base/data/nl2_hu_multiboard_status_current.json"
+          node --check nl2_pool_rate_scope.js
+      - name: Audit current register, extensions and all HU routes
+        run: |
+          set -euo pipefail
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json

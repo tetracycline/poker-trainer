@@ -156,6 +156,12 @@ async function selectVersion(){
  caseData=null;el('node').replaceChildren();
  const version=el('version').value;const source=sourceCase(version);
  if(!source){setMessage('尚無符合的 source');return;}
+ const lockScope=el('lock-pool-source');
+ if(lockScope){
+   lockScope.replaceChildren();
+   const locks=version==='gto'?chosenBoard.nl2_locked_variants:[source];
+   globalThis.nl2PoolRateScope?.show(lockScope,chosenModel,chosenBoard,locks);
+ }
  const run=sourceRun(source),digest=sourceSha(source);
  if(chosenModel?.model_id==='ln-opfr-t_model-qx9t0u'&&
     status?.B453_rank32_three_true_original_GTO_NL2_OOP_flops&&!status?.B463_rank45_three_true_original_GTO_NL2_OOP_flops&&
