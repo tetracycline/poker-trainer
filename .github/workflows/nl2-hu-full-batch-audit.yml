@@ -31,3 +31,11 @@ jobs:
           node tools/hu_b483_lock_medium_ui.cjs
           node tools/hu_b485_medium_viewers.cjs
           node tools/hu_b492_medium_tree_ui.cjs
+      - name: Audit current named-board locks and half-pot decisions
+        run: python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/current-medium-coverage.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: current-named-board-lock-and-half-pot-coverage
+          path: ${{ runner.temp }}/current-medium-coverage.json
+          if-no-files-found: error
+          retention-days: 90
