@@ -12,7 +12,7 @@
     return report.records;
   }
   function load(){
-    request??=Promise.all(['nl2_hu_b492_half_pot_leads.json','nl2_hu_b493_half_pot_leads.json'].map(readReport))
+    request??=Promise.all(['nl2_hu_b492_half_pot_leads.json','nl2_hu_b493_half_pot_leads.json','nl2_hu_b500_half_pot_leads.json'].map(readReport))
       .then(groups=>groups.flat()).catch(error=>{request=undefined;throw error;});
     return request;
   }

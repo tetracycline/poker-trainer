@@ -1,0 +1,33 @@
+name: NL2 full batch audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+permissions:
+  contents: read
+jobs:
+  registry-and-routes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify published registry against original GTO and actor-lock evidence
+        run: |
+          set -euo pipefail
+          published=data/nl2_hu_multiboard_status_current.json
+          replay="$RUNNER_TEMP/registry.json"
+          python3 tools/hu_apply_cert_extensions.py --out "$replay"
+          cmp "$published" "$replay"
+          git diff --exit-code -- data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+          node tools/hu_extension_runtime_test.cjs "$published"
+          bash tools/hu_exact_batch_audit.sh "$published"
+      - name: Check lock sources, medium-bet masks and conditional hand views
+        run: |
+          set -euo pipefail
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python3 tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          node tools/hu_b492_medium_tree_ui.cjs

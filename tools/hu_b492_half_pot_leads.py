@@ -20,7 +20,7 @@ from solve_hu_multiboard_100bb import make_fallbacks
 from verify_hu_multiboard_100bb import lock_scope
 
 
-EXPECTED_SIZES={"B492":(17,7),"B493":(4,0)}
+EXPECTED_SIZES={"B492":(17,7),"B493":(4,0),"B500":(3,0)}
 VERSIONS=("gto","exp_oop")
 SCOPE="CONDITIONAL_TURN_SUBGAME_WITH_ORIGINAL_VERSION_FLOP_REACH_AND_HALF_POT_LEAD"
 

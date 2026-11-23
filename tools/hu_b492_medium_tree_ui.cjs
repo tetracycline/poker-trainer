@@ -2,7 +2,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'), vm=require('node:vm'), zlib=require('node:zlib');
 const crypto=require('node:crypto');
 const read=f=>JSON.parse(fs.readFileSync(f));
-const files=process.argv[2]?[process.argv[2]]:[492,493].map(n=>'data/nl2_hu_b'+n+'_half_pot_leads.json').filter(f=>fs.existsSync(f));
+const files=process.argv[2]?[process.argv[2]]:[492,493,500].map(n=>'data/nl2_hu_b'+n+'_half_pot_leads.json').filter(f=>fs.existsSync(f));
 const reports=files.map(read);
 for(const report of reports)assert.equal(report.schema,'NL2_HU_B492_CONDITIONAL_HALF_POT_LEADS_V1');
 const records=reports.flatMap(r=>r.records);
@@ -18,6 +18,7 @@ for(const row of records){
   if(!old || !old.nl2_locked_variants.some(v=>v.sha256===row.original_lock_sha256))continue;
   assert.equal(helper.match(records,m,old),row);
   assert.equal(helper.match(records,m,{...old,source_sha256:'0'.repeat(64)}),null);
+  assert.equal(helper.match(records,m,{...old,nl2_locked_variants:old.nl2_locked_variants.map(v=>({...v,sha256:'0'.repeat(64)}))}),null);
   if(row.status!=='BOTH_POSITIVE'){others++;continue;}
   positive++;
   const bySource=helper.reachReport(m,row);
@@ -185,6 +186,27 @@ async function renderOriginalPair(sample){
   }
 }
 (async()=>{
+  const loader=vm.createContext({document:{createElement:element},URLSearchParams,fetch:async file=>fs.existsSync(file)?new Response(fs.readFileSync(file)):new Response('',{status:404}),console});
+  vm.runInContext(fs.readFileSync('nl2_half_pot_leads.js','utf8'),loader);
+  const combined=await loader.nl2HalfPotLeads.load();
+  for(const row of records){
+    const m=frozen.records[row.model_id];
+    const old=m?.certified_3_to_5_exact_flop_boards?.find(b=>b.public_board===row.public_board &&
+      b.source_sha256===row.original_gto_sha256 && b.nl2_locked_variants.some(v=>v.sha256===row.original_lock_sha256));
+    if(!old)continue;
+    assert.equal(loader.nl2HalfPotLeads.match(combined,m,old)?.source_run_id,row.source_run_id);
+    const entry=element();
+    loader.nl2HalfPotLeads.showBoard(entry,m,old);
+    await tick();
+    if(row.status==='BOTH_POSITIVE'){
+      const link=entry.children[0].children[0];
+      const params=new URL(link.href,'https://trainer.local/').searchParams;
+      assert.equal(params.get('model'),m.model_id);
+      assert.equal(params.get('board'),old.public_board);
+      assert.equal(params.get('tree'),'half-pot');
+      assert.equal(params.get('sha'),row.gto.source_sha256);
+    }else assert.equal(entry.children[0].children.length,0);
+  }
   await navigate(first||navigationFixture());
   if(first)await renderOriginalPair(first);
   console.log('Verified '+positive+' authentic conditional pairs and '+others+' other matched results. '+
