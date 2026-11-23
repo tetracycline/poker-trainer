@@ -19,7 +19,7 @@ BOARDS = (("7s5h3d", "6c"), ("8s7h5d", "3d"), ("4s4h2d", "8s"))
 ROOT = Path("data/nl2_hu_multiboard_status_v51_b453_rank32.json")
 
 
-def audit_patterns(game, job, manifest, pool):
+def audit_patterns(game, job, manifest, pool, hero_seat=None):
     records = manifest["locks"]
     rules = job["locks"]
     assert [r["pat"] for r in records] == [r["pat"] for r in rules]
@@ -50,7 +50,8 @@ def audit_patterns(game, job, manifest, pool):
                 path = "x x/" * (i-1) + suffix
                 assert bool(re.search(record["pat"], path)) == (i == street)
     matches = {}
-    villain = 1-job["hero"]
+    assert job["hero"] in (0, 1) and (hero_seat is None or hero_seat == job["hero"])
+    villain = 1 - job["hero"]
     for node in game["nodes"]:
         if node["player"] != villain or len(node["acts"]) < 2 or not any(w > 1e-4 for w in node["w"][villain]):
             continue

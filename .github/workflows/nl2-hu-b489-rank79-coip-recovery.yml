@@ -1,0 +1,152 @@
+name: B489 recover rank79 CO-IP exact checked turn from original sources
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b489-rank79-coip-recovery.yml'
+permissions:
+  contents: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {flop: KsQh4d, version: exp_ip, turns: 1}
+          - {flop: QsJh4d, version: exp_ip, turns: 1}
+          - {flop: KsQh3d, version: gto, turns: 3}
+          - {flop: KsQh3d, version: exp_ip, turns: 3}
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned Rust solver
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          mkdir -p trainer/evidence
+          cp solver/inputs/pool_stats.json trainer/evidence/pool_stats.json
+          git -C solver rev-parse HEAD > trainer/evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > trainer/evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve full flop tree and original 50/100 turn menu with check-through river extraction
+        working-directory: trainer
+        env:
+          FLOP: ${{ matrix.flop }}
+          VERSION: ${{ matrix.version }}
+          TURNS: ${{ matrix.turns }}
+        run: |
+          set -euo pipefail
+          status=0
+          python3 tools/solve_hu_multiboard_100bb.py --solver-root ../solver --spot UTG_CO \
+            --flop "$FLOP" --version "$VERSION" --flop-size-profile full --flop-line-policy oop-b50only \
+            --turn-line-policy checkcheck --lock-marginals-by-street --archive-empty-river-extraction --turn-count "$TURNS" --manifest "evidence/$FLOP-$VERSION.json" || status=$?
+          python3 - "$status" "evidence/$FLOP-$VERSION.json" <<'PY'
+          import json,sys
+          m=json.load(open(sys.argv[2]))
+          assert not m["failures"] and len(m["cases"]) == m["solved_cases"] <= len(m["turns"])
+          assert int(sys.argv[1]) == (0 if m["cases"] else 1)
+          assert m["cases"] or len(m["skipped"]) == len(m["turns"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NL2-B489-${{ matrix.flop }}-${{ matrix.version }}
+          path: |
+            trainer/evidence
+            solver/postflop/out/UTG_CO/${{ matrix.version }}
+          if-no-files-found: error
+          retention-days: 30
+
+  gate:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: NL2-B489-*
+          path: ${{ runner.temp }}/b489-new
+      - name: Authenticate originals and reconstruct all CO-IP strategies on the exact turn decisions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/b489-originals"
+          mkdir -p "$dir"
+          for id in $(python3 tools/hu_b489_rank79_originals.py --list-artifacts); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$dir/$id.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$dir/$id.zip"
+            unzip -q "$dir/$id.zip" -d "$dir/$id"
+          done
+          python3 tools/hu_b489_rank79_originals.py --originals "$dir" --solver pinned-solver --fresh "$RUNNER_TEMP/b489-new" --run-id "$GITHUB_RUN_ID"
+          node tools/hu_b489_model_route.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B489-authenticated-rank79-source-gates
+          path: |
+            data/nl2_hu_b489_rank79_attempts.json
+            data/nl2_hu_b489_locked_medium.json
+            data/solver_evidence/NL2_B489_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R79_*.json.gz
+            data/solver_evidence/reverified/rank79.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Audit and commit the named source decisions against the live draft branch
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          shopt -s nullglob
+          files=(data/nl2_hu_b489_rank79_attempts.json data/solver_evidence/NL2_B489_*.json.gz data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R79_*.json.gz)
+          if test -f data/solver_evidence/reverified/rank79.json; then files+=(data/solver_evidence/reverified/rank79.json); fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add --quiet --detach "$live" FETCH_HEAD
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              status=data/nl2_hu_multiboard_status_current.json
+              python3 tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              git add "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B489: publish authenticated rank79 named-board results and cumulative registry'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then
+              git worktree remove "$live"
+              bash tools/hu_publish_cert_extensions.sh
+              exit 0
+            fi
+            git worktree remove "$live"
+          done
+          exit 1
