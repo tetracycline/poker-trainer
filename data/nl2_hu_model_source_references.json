@@ -2291,15 +2291,68 @@
       "solver_profile": "SB_BB",
       "model_root_spr": 16.167,
       "model_node_spr": 2.594,
-      "reference_count": 0,
-      "references": [],
+      "reference_count": 4,
+      "references": [
+        {
+          "source_run_id": 44666285424,
+          "source_sha256": "a18156f8a40a7f3f3e74b151ba427d16a9943f072aecfcd855a3f932c71f55f2",
+          "spot": "SB_BB",
+          "family": "SRP",
+          "version": "gto",
+          "flop": "8s8h3d",
+          "turn": "5s",
+          "exact_solver_node_line": "x b75 r c/",
+          "flop_line": "x b75 r c",
+          "turn_spr": 2.530303,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
+        {
+          "source_run_id": 44666285424,
+          "source_sha256": "daa6c5f007dfec72f4cc178ae75309e4a03881038b8c8d0329a748d3d9655642",
+          "spot": "SB_BB",
+          "family": "SRP",
+          "version": "gto",
+          "flop": "Js9h4d",
+          "turn": "Ts",
+          "exact_solver_node_line": "x b75 r c/",
+          "flop_line": "x b75 r c",
+          "turn_spr": 2.530303,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
+        {
+          "source_run_id": 44732810327,
+          "source_sha256": "2d45d0472fe022da9c553e97f80cced686b5df95662400d581a2d545d367a6b2",
+          "spot": "SB_BB",
+          "family": "SRP",
+          "version": "gto",
+          "flop": "9s6h3d",
+          "turn": "Ts",
+          "exact_solver_node_line": "x b75 r c/",
+          "flop_line": "x b75 r c",
+          "turn_spr": 2.530303,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
+        {
+          "source_run_id": 44736420272,
+          "source_sha256": "3444097a6d73bb0f85e43eb2d6a5f40a94d2fbd3f960fbace74dd4d67e75307c",
+          "spot": "SB_BB",
+          "family": "SRP",
+          "version": "gto",
+          "flop": "Jh9d6s",
+          "turn": "3c",
+          "exact_solver_node_line": "x b75 r c/",
+          "flop_line": "x b75 r c",
+          "turn_spr": 2.530303,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        }
+      ],
       "status": "REFERENCE_ONLY_NOT_CERTIFIED",
       "blockers": [
         "MODEL_HAS_NO_EXACT_FLOP_TURN_RIVER",
         "MODEL_ACTION_AND_POT_HISTORY_NOT_MATCHED_TO_SOLVER",
         "MODEL_COMBO_REACH_NOT_DERIVED_FROM_EXACT_BOARD"
       ],
-      "note": "Fewer than three named flops survive the original two-seat action-path replay."
+      "note": "Exact GTO and separately solved hero lock on each named board. Generic texture rows remain approximate."
     },
     "ln-opfr-t_model-nuaak": {
       "model_id": "ln-opfr-t_model-nuaak",
