@@ -1,0 +1,98 @@
+name: B552 authenticate two SB river checkpoints with measured NL2 opponent frequencies
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b552-sb-rendered-river.yml'
+      - 'tools/hu_b552_measured_sb_rivers.py'
+      - 'tools/hu_b552_river_action_cells.cjs'
+      - 'data/nl2_hu_b552_sb_parents.json'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  solve-and-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Retrieve the completed original GTO roots and turn subgames
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/parents"
+          mkdir -p "$dir"
+          for aid in $(jq -r '.[] | .id' data/nl2_hu_b552_sb_parents.json); do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$aid"
+            gh api "$api" > "$dir/$aid.json"
+            gh api "$api/zip" > "$dir/$aid.zip"
+          done
+      - name: Compile the native solver and solve the priced conditional subgames
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver && RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          python tools/hu_b552_measured_sb_rivers.py --solver pinned-solver --originals "$RUNNER_TEMP/parents" \
+            --run "$GITHUB_RUN_ID" --results "$RUNNER_TEMP/native" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+      - name: Verify exact source identities, shared private hands and each rendered action
+        run: |
+          python tools/hu_b552_measured_sb_rivers.py --solver pinned-solver --originals "$RUNNER_TEMP/parents" \
+            --run "$GITHUB_RUN_ID" --results "$RUNNER_TEMP/native"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B552-native-sb-checkpoints
+          path: |
+            data/nl2_hu_b552_sb_river_checkpoints.json
+            data/solver_evidence/NL2_B552_*.zip
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R15_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R16_*.json.gz
+          if-no-files-found: error
+          retention-days: 90
+      - name: Audit the complete current registry and publish the two independently verified boards
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          registry=data/nl2_hu_multiboard_status_current.json
+          report=data/nl2_hu_b552_sb_river_checkpoints.json
+          files=("$report" data/solver_evidence/NL2_B552_*.zip)
+          while read -r code; do files+=("data/solver_evidence/NL2_MULTIBOARD_${code}.json.gz"); done < <(jq -r '.groups[].pins[] | .viewer_archive_code, (.locked_viewer_archive_code // empty)' "$report" | sort -u)
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            for f in "${files[@]}"; do if test -f "$live/$f"; then cmp "$f" "$live/$f"; fi; done
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$registry"
+              node tools/hu_extension_runtime_test.cjs "$registry"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              bash tools/hu_exact_batch_audit.sh "$registry"
+              git add -- "${files[@]}"
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B552: retain the first exact matched SB river board for each barrel rank'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
