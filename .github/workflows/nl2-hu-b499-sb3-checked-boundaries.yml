@@ -1,0 +1,154 @@
+name: B499 original checked SB three-bet-pot boundaries and three missing native locks
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b499-sb3-checked-boundaries.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {flop: Ks7h2d, version: exp_oop, code: B499_SB3_KS7H2D_EXP_OOP}
+          - {flop: As7h3d, version: exp_oop, code: B499_SB3_AS7H3D_EXP_OOP}
+          - {flop: As7h3d, version: exp_ip, code: B499_SB3_AS7H3D_EXP_IP}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          persist-credentials: false
+          path: pinned-solver
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Fetch the original native GTO flop and turn jobs, ranges and extractor
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/originals"; mkdir -p "$dir"
+          id=$(python3 tools/hu_b499_sb3_checked.py --list-artifacts --flop "$FLOP")
+          api="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+          gh api "$api" > "$dir/$id.json"
+          gh api "$api/zip" > "$dir/$id.zip"
+      - name: Compile original Rust driver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd pinned-solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve independent turn and river lock on the immutable GTO boundary
+        env:
+          FLOP: ${{ matrix.flop }}
+          VERSION: ${{ matrix.version }}
+        run: |
+          python3 tools/hu_b499_sb3_checked.py --originals "$RUNNER_TEMP/originals" --solver pinned-solver \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver --work "$RUNNER_TEMP/new" \
+            --flop "$FLOP" --version "$VERSION" --run-id "$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ matrix.code }}
+          path: ${{ runner.temp }}/new/NL2_${{ matrix.code }}.json.gz
+          if-no-files-found: warn
+          retention-days: 90
+  gate:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          persist-credentials: false
+          path: pinned-solver
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Reverify original and conditional jobs, masks and half-pot strategies on each decision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/originals"; work="$RUNNER_TEMP/new"; mkdir -p "$dir" "$work"
+          base="repos/$GITHUB_REPOSITORY/actions/artifacts"
+          for id in $(python3 tools/hu_b499_sb3_checked.py --list-artifacts); do
+            gh api "$base/$id" > "$dir/$id.json"
+            gh api "$base/$id/zip" > "$dir/$id.zip"
+          done
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" > "$work/list.json"
+          for id in $(python3 -c 'import json,sys;print(*(r["id"] for r in json.load(open(sys.argv[1]))["artifacts"] if r["name"].startswith("B499_SB3_")))' "$work/list.json"); do
+            gh api "$base/$id/zip" > "$work/$id.zip"
+          done
+          python3 tools/hu_b499_sb3_checked.py --originals "$dir" --solver pinned-solver --work "$work" --run-id "$GITHUB_RUN_ID" --head "$GITHUB_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B499-verified-SB3-checked-decisions
+          path: |
+            data/nl2_hu_b499_sb3_checked.json
+            data/nl2_hu_b499_locked_medium.json
+            data/solver_evidence/NL2_B499_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R82_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R156_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R301_*.json.gz
+            data/solver_evidence/reverified/rank82.json
+            data/solver_evidence/reverified/rank156.json
+            data/solver_evidence/reverified/rank301.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Rebuild and audit every named source before fast-forwarding the draft branch
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          shopt -s nullglob
+          files=(data/nl2_hu_b499_sb3_checked.json data/solver_evidence/NL2_B499_*.json.gz)
+          if test -f data/nl2_hu_b499_locked_medium.json; then files+=(data/nl2_hu_b499_locked_medium.json); fi
+          for rank in 82 156 301; do
+            files+=(data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R"${rank}"_*.json.gz)
+            f="data/solver_evidence/reverified/rank${rank}.json"; if test -f "$f"; then files+=("$f"); fi
+          done
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d);git worktree add --quiet --detach "$live" FETCH_HEAD
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              status=data/nl2_hu_multiboard_status_current.json
+              python3 tools/hu_apply_cert_extensions.py --out "$status"
+              python3 - <<'PY'
+          import json
+          report=json.load(open('data/nl2_hu_b499_sb3_checked.json'))
+          registry=json.load(open('data/nl2_hu_multiboard_status_current.json'))['records']
+          for rank,count in report['eligible_by_rank'].items():
+              m,=(m for m in registry.values() if m['frequency_rank']==int(rank))
+              assert (m['label']=='CERT-MULTIBOARD')==(count>=3)
+          PY
+              node tools/hu_extension_runtime_test.cjs "$status"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              git add "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B499: publish the native SB three-bet-pot checked decisions and verified registry'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
