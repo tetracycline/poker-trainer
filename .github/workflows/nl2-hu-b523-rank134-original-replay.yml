@@ -1,0 +1,50 @@
+name: B523 replay rank134 native archives and audit the rendered turn check
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b523-rank134-original-replay.yml'
+      - 'tools/hu_b523_rank134_*.py'
+      - 'tools/hu_b523_rank134_*.cjs'
+permissions: {contents: read, actions: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate existing native output and compare independent source replay
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          originals="$RUNNER_TEMP/b508"
+          results="$RUNNER_TEMP/b523"
+          api="repos/$GITHUB_REPOSITORY/actions/artifacts"
+          mkdir -p "$originals" "$results"
+          for id in $(jq -r 'keys[]' data/nl2_hu_b508_rank134_artifacts.json); do
+            gh api "$api/$id" > "$originals/$id.json"
+            gh api "$api/$id/zip" > "$originals/$id.zip"
+          done
+          for id in $(jq -r '.[].id' data/nl2_hu_b523_recovered_archives.json); do
+            gh api "$api/$id" > "$results/$id.json"
+            gh api "$api/$id/zip" > "$results/$id.zip"
+          done
+          python tools/hu_b523_rank134_replay.py --originals "$originals" --solver pinned-solver --completed "$results"
+          git diff --exit-code -- data/nl2_hu_b523_rank134_attempts.json data/solver_evidence/NL2_B508_R134_*.json.gz
+      - name: Audit the full exact-board registry and both viewers
+        run: |
+          set -euo pipefail
+          status=data/nl2_hu_multiboard_status_current.json
+          python tools/hu_apply_cert_extensions.py --out "$status"
+          node tools/hu_extension_runtime_test.cjs "$status"
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b492_medium_tree_ui.cjs
+          bash tools/hu_exact_batch_audit.sh "$status"
