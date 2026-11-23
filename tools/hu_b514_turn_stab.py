@@ -6,13 +6,11 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
-from zipfile import ZipFile
 
-from hu_b463_rank45_gate import SOLVER, RUST
-from hu_b467_river_source_gate import EVIDENCE, compact, json_bytes, sha
-from hu_b470_rank73_new_rivers import audit_patterns
+from hu_b463_rank45_gate import SOLVER
+from hu_b467_river_source_gate import EVIDENCE, json_bytes, sha
+from hu_native_turn_result import replay, run_native
 from hu_b483_locked_medium import POOL
-from hu_b492_half_pot_leads import zip_payload
 from hu_b509_limp_ip import common_hands, observations
 from hu_board_reach_corrections import source_key
 from hu_checked_gto_boundary import load_original, prepare_job
@@ -42,33 +40,6 @@ def turn_job(original, version, pool, pipeline):
     for river in original["source"]["subgame"]["rivers"]:
         job["extract"].append(dict(prefix=["x","b33","c",river], street=True))
     return job, locks
-
-
-def replay(original, version, pool, pipeline, path, run, code):
-    job, locks = turn_job(original, version, pool, pipeline)
-    gto = original["source"]
-    frozen = original["identity"]
-    with ZipFile(path) as archive:
-        raw = archive.read("turn.json")
-        meta = json.loads(archive.read("provenance.json"))
-        assert archive.read("job.json") == compact(job) and archive.read("locks.json") == compact(locks)
-        assert sha(archive.read("original-flop.json")) == frozen["root_sha256"]
-    assert meta == dict(solver=SOLVER, rust=RUST, pool_sha256=POOL, run=run, version=version,
-                        original=frozen, result_sha256=sha(raw), job_sha256=sha(compact(job)))
-    sub = json.loads(raw)
-    assert all(sub[k] == gto["subgame"][k] for k in ("hands","pot","stack","flop"))
-    sub.update(line0=PARENT, turn=job["turn"], rivers=gto["subgame"]["rivers"])
-    manifest = dict(gto["manifest"], locks=locks)
-    source = dict(root=gto["root"], subgame=sub, manifest=manifest, version=version, run=run,
-                  source_sha256=sha(raw), archive_code=code, archive_sha256=sha(path.read_bytes()))
-    if version == "exp_ip":
-        parent = dict(run=gto["run"], sha256=frozen["root_sha256"])
-        manifest.update(gto_parent_source_run_id=parent["run"],gto_parent_source_sha256=parent["sha256"])
-        source.update(verified_gto_parent=parent, measured_lock_application=audit_patterns(sub,job,manifest,pool,1))
-    else:
-        assert not sub["info"].get("lock_stats") and not job.get("locks")
-    source["applied_rust_rates"] = sub["info"].get("lock_stats",{})
-    return source
 
 
 def rates(source):
@@ -124,21 +95,13 @@ def main():
             job,lock_meta = turn_job(original,version,pool,pipeline)
             if args.driver:
                 assert args.artifact and args.version and args.run and args.results
-                folder = args.results.resolve()
-                folder.mkdir(parents=True,exist_ok=True)
-                (folder/"job.json").write_bytes(compact(job))
-                subprocess.run([str(args.driver.resolve()),"job.json"],cwd=folder,check=True,timeout=360)
-                raw = (folder/"turn.json").read_bytes()
-                provenance = dict(solver=SOLVER,rust=RUST,pool_sha256=POOL,run=args.run,version=version,
-                                  original=original["identity"],result_sha256=sha(raw),job_sha256=sha(compact(job)))
-                zip_payload(folder/name,{"turn.json":raw,"job.json":compact(job),"locks.json":compact(lock_meta),
-                          "original-flop.json":compact(original["source"]["root"]),"provenance.json":compact(provenance)})
-                replay(original,version,pool,pipeline,folder/name,args.run,code)
+                path = run_native(args.results, args.driver, original, job, lock_meta, args.run, version, name)
+                replay(original,version,pool,pipeline,path,args.run,code,turn_job)
                 return
             if args.results:
                 found, = args.results.rglob(name)
                 shutil.copyfile(found,EVIDENCE/name)
-                source = replay(original,version,pool,pipeline,found,args.run,code)
+                source = replay(original,version,pool,pipeline,found,args.run,code,turn_job)
                 pair[version] = source
                 info = source["subgame"]["info"]
                 if not 0 <= info["gto_expl_pct"] <= .5 or version=="exp_ip" and not 0 <= info["hero_gap_pct"] <= .5:
@@ -194,7 +157,7 @@ def main():
                 report["references"][source_key(group["model_id"],e)] = e
                 report["gto_references"][source_key(group["model_id"],g)] = g
         (DATA/"nl2_hu_b514_locked_medium.json").write_bytes(json_bytes(report))
-        (DATA/"nl2_hu_b514_actual_size_attempts.json").write_bytes(json_bytes(dict(run=args.run,attempts=attempts)))
+        (DATA/"nl2_hu_b514_turn_stab_outcomes.json").write_bytes(json_bytes(dict(run=args.run,attempts=attempts)))
 
 if __name__ == "__main__":
     main()

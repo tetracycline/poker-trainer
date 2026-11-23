@@ -47,18 +47,19 @@ def boundary(folder, flop, pin):
     return dict(source=source, identity=identity, job=job)
 
 
-def observations(source, line, depth, root_sha):
+def observations(source, line, depth, root_sha, seat=1):
     game = source["subgame"]
     masks = game_reach(source["root"], game)[0]
     result = {}
     version = source["version"]
     scope = lock_scope(game, source["manifest"]["locks"], version)
     applied = sum(r["nodes"] for r in game["info"].get("lock_stats", {}).values())
-    if version == "exp_ip":
+    if version != "gto":
+        assert (version, seat) in (("exp_ip", 1), ("exp_oop", 0))
         assert source["measured_lock_application"]["first_pattern_visible_nodes"]
         assert applied > 0 and scope["observed_marginal_source_nodes"] > 0
     for node in game["nodes"]:
-        if (node["line"], node["player"], len(node["board"])) != (line, 1, depth):
+        if (node["line"], node["player"], len(node["board"])) != (line, seat, depth):
             continue
         assert len(node["acts"]) >= 2 and node["acts"][0] == "x"
         row = proof(source["root"], game, node, masks)
