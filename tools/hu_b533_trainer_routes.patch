@@ -1,0 +1,574 @@
+diff --git a/nl2-multiboard.html b/nl2-multiboard.html
+index 0b26294b8b035cb1f5e631b3f21df3331ac5f32d..c2fb8070b81765aa3b71d6323822f64bf8144e90 100644
+--- a/nl2-multiboard.html
++++ b/nl2-multiboard.html
+@@ -52,7 +52,7 @@ th{background:#254631;position:sticky;top:0}
+ <script src="nl2_half_pot_leads.js?v=b500"></script>
+ <script src="nl2_locked_medium.js?v=b504"></script>
+ <script src="nl2_pool_rate_scope.js?v=b530"></script>
+-<script src="nl2_cert_registry.js?v=task-hybrid-b463-b484-b491-b494"></script>
+-<script src="nl2-multiboard.js?v=task-hybrid-b463-v52-b494"></script>
++<script src="nl2_cert_registry.js?v=task-hybrid-b463-b484-b491-b494-b533"></script>
++<script src="nl2-multiboard.js?v=task-hybrid-b463-v52-b494-b533"></script>
+ </body>
+ </html>
+\ No newline at end of file
+diff --git a/nl2-multiboard.js b/nl2-multiboard.js
+index c42b92f1aa2a091d9b5f639dd68d563bfff59a55..12d50f2ad0bdcbe651ca7269bb1efe9cf4cfafe7 100644
+--- a/nl2-multiboard.js
++++ b/nl2-multiboard.js
+@@ -1547,8 +1547,17 @@ const v42=d=>{
+      }));
+ }
+
++function applyCurrentTrainerRoutes(base) {
++  return globalThis.nl2ApplyVerifiedExtensions(base).then(registry => {
++    if (registry.trainer_route_contract_schema !== 'NL2_HU_RENDERED_ACTION_ROUTES_V1') {
++      throw Error('此版本缺少逐街行動與下注尺寸稽核');
++    }
++    return registry;
++  });
++}
++
+ fetchCertifiedRegistry()
+- .then(globalThis.nl2ApplyVerifiedExtensions)
++ .then(applyCurrentTrainerRoutes)
+  .then(d=>{
+    if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V1','NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE','NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28','NL2_HU_392_MULTIBOARD_CERT_STATUS_V4_BATCH50','NL2_HU_392_MULTIBOARD_CERT_STATUS_V5_BATCH55','NL2_HU_392_MULTIBOARD_CERT_STATUS_V6_RANK33','NL2_HU_392_MULTIBOARD_CERT_STATUS_V7_BATCH59','NL2_HU_392_MULTIBOARD_CERT_STATUS_V8_BATCH61','NL2_HU_392_MULTIBOARD_CERT_STATUS_V9_RANK40_B67','NL2_HU_392_MULTIBOARD_CERT_STATUS_V10_BATCH69','NL2_HU_392_MULTIBOARD_CERT_STATUS_V11_BATCH71','NL2_HU_392_MULTIBOARD_CERT_STATUS_V12_BATCH73','NL2_HU_392_MULTIBOARD_CERT_STATUS_V13_BATCH75','NL2_HU_392_MULTIBOARD_CERT_STATUS_V14_BATCH77','NL2_HU_392_MULTIBOARD_CERT_STATUS_V15_BATCH80','NL2_HU_392_MULTIBOARD_CERT_STATUS_V16_BATCH82','NL2_HU_392_MULTIBOARD_CERT_STATUS_V17_BATCH84','NL2_HU_392_MULTIBOARD_CERT_STATUS_V18_BATCH86','NL2_HU_392_MULTIBOARD_CERT_STATUS_V19_BATCH88','NL2_HU_392_MULTIBOARD_CERT_STATUS_V20_BATCH90','NL2_HU_392_MULTIBOARD_CERT_STATUS_V21_BATCH92','NL2_HU_392_MULTIBOARD_CERT_STATUS_V22_BATCH94','NL2_HU_392_MULTIBOARD_CERT_STATUS_V23_B100_LMP_PAIR','NL2_HU_392_MULTIBOARD_CERT_STATUS_V24_B103_RANK43','NL2_HU_392_MULTIBOARD_CERT_STATUS_V25_B106_RANK135','NL2_HU_392_MULTIBOARD_CERT_STATUS_V26_B111_RANK215_220','NL2_HU_392_MULTIBOARD_CERT_STATUS_V53_B465_R218','NL2_HU_392_MULTIBOARD_CERT_STATUS_V52_B463_R45','NL2_HU_392_MULTIBOARD_CERT_STATUS_V51_B453_R32','NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166','NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219','NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B390_RANK107','NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B369_RANK27','NL2_HU_392_MULTIBOARD_CERT_STATUS_V47_B364_RANK96','NL2_HU_392_MULTIBOARD_CERT_STATUS_V46_B354_RANK79','NL2_HU_392_MULTIBOARD_CERT_STATUS_V45_B345_RANK71','NL2_HU_392_MULTIBOARD_CERT_STATUS_V44_B331_RANK60_FOUR','NL2_HU_392_MULTIBOARD_CERT_STATUS_V43_B319_RANK60','NL2_HU_392_MULTIBOARD_CERT_STATUS_V42_B289_RANK46','NL2_HU_392_MULTIBOARD_CERT_STATUS_V41_B271_RANK61','NL2_HU_392_MULTIBOARD_CERT_STATUS_V40_B265_RANK313','NL2_HU_392_MULTIBOARD_CERT_STATUS_V39_B247_RANK30','NL2_HU_392_MULTIBOARD_CERT_STATUS_V38_B206_RANK190','NL2_HU_392_MULTIBOARD_CERT_STATUS_V37_B205_RANK188','NL2_HU_392_MULTIBOARD_CERT_STATUS_V36_B201_RANK159','NL2_HU_392_MULTIBOARD_CERT_STATUS_V35_B193_RANK201','NL2_HU_392_MULTIBOARD_CERT_STATUS_V34_B190_RANK199_202','NL2_HU_392_MULTIBOARD_CERT_STATUS_V33_B179_RANK138','NL2_HU_392_MULTIBOARD_CERT_STATUS_V32_B168_RANK80','NL2_HU_392_MULTIBOARD_CERT_STATUS_V31_B161_RANK150','NL2_HU_392_MULTIBOARD_CERT_STATUS_V30_B145_RANK47','NL2_HU_392_MULTIBOARD_CERT_STATUS_V29_B142_RANK88','NL2_HU_392_MULTIBOARD_CERT_STATUS_V28_B133_RANK69','NL2_HU_392_MULTIBOARD_CERT_STATUS_V27_B123_R41_236','NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'].includes(d.schema)||d.CERT_MULTIBOARD+d.APPROX!==392)
+       throw Error('模型認證來源驗證失敗');
+diff --git a/nl2.html b/nl2.html
+index b1d310d760ba1d99b454aa901b87acec2ea44a9f..8af667c636cf804081f533b082e9014c5c3ad033 100644
+--- a/nl2.html
++++ b/nl2.html
+@@ -65,7 +65,7 @@ details.defs summary{cursor:pointer}details.defs dt{font-weight:700;margin-top:6
+ <script src="nl2_half_pot_leads.js?v=b500"></script>
+ <script src="nl2_locked_medium.js?v=b504"></script>
+ <script src="nl2_pool_rate_scope.js?v=b530"></script>
+-<script src="nl2_cert_registry.js?v=task-hybrid-b463-b484-b491-b494"></script>
+-<script src="nl2_hu_multiboard_ui.js?v=task-hybrid-b463-v52-b492"></script>
++<script src="nl2_cert_registry.js?v=task-hybrid-b463-b484-b491-b494-b533"></script>
++<script src="nl2_hu_multiboard_ui.js?v=task-hybrid-b463-v52-b492-b533"></script>
+ <script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+ </body></html>
+\ No newline at end of file
+diff --git a/nl2_cert_registry.js b/nl2_cert_registry.js
+index c84fa38fbbbacd2c3eb13eae991ee6f67b2d366b..23c8ea80da2eb85a818437bda3622d0bf2cc30de 100644
+--- a/nl2_cert_registry.js
++++ b/nl2_cert_registry.js
+@@ -165,7 +165,51 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
+       records[id]=updated;
+     }
+   }
++  const contract = manifest.trainer_route_contract;
++  const schema = 'NL2_HU_RENDERED_ACTION_ROUTES_V1';
++  if (contract?.schema !== schema || !contract.routes || Object.keys(contract.routes).length !== 392 ||
++      !Array.isArray(manifest.trainer_route_exclusions)) throw Error('缺少訓練表行動與下注尺寸證據');
++  const excluded = new Set();
++  const boardKey = b => JSON.stringify([b.flop,b.public_board,b.source_run_id,b.source_sha256]);
++  const active = m => m.label === 'CERT-MULTIBOARD' ? m.certified_3_to_5_exact_flop_boards : m.remaining_exact_board_evidence || [];
++  function applyRoutes() {
++    for (const [id,m] of Object.entries(records)) {
++      const route = contract.routes[id];
++      if (!route || ![0,1].includes(route.seat) || !Array.isArray(route.streets) || route.streets.length !== m.street+1 ||
++          !route.streets.every(s=>typeof s==='string' && s.split(' ').every(t=>/^(?:|x|c|bet|raise|overbet|b[1-9][0-9]*)$/.test(t)))) {
++        throw Error('訓練表尺寸或行動順序資料缺失');
++      }
++      if ((id==='ln-ipfr-r_model-1iypoop') !== (route.requires_three_suited_turn===true)) throw Error('轉牌過牌路徑缺少單色牌面條件');
++      const before=active(m);
++      const kept=before.filter(b=>{
++        const actual=b.actual_exact_action_line.split('/');
++        const suits=[b.public_board[1],b.public_board[3],b.public_board[5],b.public_board[7]];
++        const turnAllowed=!route.requires_three_suited_turn || suits.some(s=>suits.filter(v=>v===s).length>=3);
++        const match=turnAllowed && route.seat===b.acting_seat && actual.length===route.streets.length && actual.every((street,i)=>{
++          const played=street.split(' ').filter(Boolean);
++          const expected=route.streets[i].split(' ').filter(Boolean);
++          return played.length===expected.length && played.every((v,j)=>{
++            const t=expected[j];
++            if(t==='bet')return /^b[1-9][0-9]*$/.test(v) || v==='a';
++            if(t==='overbet')return v==='a' || (/^b[0-9]+$/.test(v) && Number(v.slice(1))>100);
++            if(t==='raise')return /^r[0-9]*$/.test(v) || v==='a';
++            return t===v;
++          });
++        });
++        if(!match) excluded.add(JSON.stringify([id,b.public_board,b.actual_exact_action_line,b.acting_seat,b.source_run_id,b.source_sha256]));
++        return match;
++      });
++      if(kept.length===before.length)continue;
++      if(kept.length>=3){
++        records[id]={...m,proven_exact_board_count:kept.length,certified_3_to_5_exact_flop_boards:kept};
++      }else{
++        records[id]={...m,label:'APPROX',blocked_reason:'FEWER_THAN_THREE_FLOPS_AFTER_RENDERED_ACTION_ROUTE_CHECK',
++          proven_exact_board_count:kept.length,certified_3_to_5_exact_flop_boards:[],remaining_exact_board_evidence:kept};
++      }
++    }
++  }
+   applyReplays(manifest.board_reach_updates);
++  applyRoutes();
+   for(const repair of manifest.reverified_models){
+     if(!repair.pins.every(p=>positive(p.GTO_compatible_hole_card_pairs) && p.GTO_compatible_hole_card_pairs>=p.GTO_strict_combos &&
+       positive(p.NL2_compatible_hole_card_pairs) && p.NL2_compatible_hole_card_pairs>=p.NL2_strict_combos)) throw Error('缺少雙方合法配牌');
+@@ -180,11 +224,20 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
+     appendLock(item, repairUpdates);
+   }
+   applyReplays(repairUpdates);
++  applyRoutes();
++  const recorded=new Set(manifest.trainer_route_exclusions.map(x=>JSON.stringify([x.model_id,x.public_board,x.actual_line,x.acting_seat,x.run,x.sha256])));
++  if(recorded.size!==manifest.trainer_route_exclusions.length || recorded.size!==excluded.size ||
++     ![...excluded].every(key=>recorded.has(key)))throw Error('訓練表尺寸排除清單與具名公牌不符');
++  for(const [id,pins] of Object.entries(extensions)){
++    const keys=new Set(active(records[id]).map(boardKey));
++    const kept=pins.filter(p=>keys.has(JSON.stringify([p.flop,p.public_board,p.source_run_id,p.original_GTO_SHA256])));
++    if(kept.length)extensions[id]=kept;else delete extensions[id];
++  }
+   const models = Object.values(records);
+   const cert = models.filter(m=>m.label==='CERT-MULTIBOARD').length;
+   const approx = models.filter(m=>m.label==='APPROX').length;
+   if (cert+approx!==392 || base.EST!==0) throw Error('模型分類總數不符');
+-  return {...base, records, CERT_MULTIBOARD:cert, APPROX:approx, exact_source_extensions:extensions};
++  return {...base, records, CERT_MULTIBOARD:cert, APPROX:approx, exact_source_extensions:extensions, trainer_route_contract_schema:schema};
+ };
+
+ globalThis.nl2ValidateRank218 = function validateRank218(registry) {
+diff --git a/nl2_hu_multiboard_ui.js b/nl2_hu_multiboard_ui.js
+index 124da38303897165df2db5d01efed3b05fb28873..77dfb61a39a96be621d68f6d4d2bfc09e48d21a7 100644
+--- a/nl2_hu_multiboard_ui.js
++++ b/nl2_hu_multiboard_ui.js
+@@ -1123,8 +1123,17 @@ const v42=d=>{
+      }));
+ }
+
++function applyCurrentTrainerRoutes(base) {
++  return globalThis.nl2ApplyVerifiedExtensions(base).then(registry => {
++    if (registry.trainer_route_contract_schema !== 'NL2_HU_RENDERED_ACTION_ROUTES_V1') {
++      throw Error('此版本缺少逐街行動與下注尺寸稽核');
++    }
++    return registry;
++  });
++}
++
+ fetchCertifiedRegistry()
+- .then(globalThis.nl2ApplyVerifiedExtensions)
++ .then(applyCurrentTrainerRoutes)
+  .then(d=>{
+    if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V1','NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE','NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28','NL2_HU_392_MULTIBOARD_CERT_STATUS_V4_BATCH50','NL2_HU_392_MULTIBOARD_CERT_STATUS_V5_BATCH55','NL2_HU_392_MULTIBOARD_CERT_STATUS_V6_RANK33','NL2_HU_392_MULTIBOARD_CERT_STATUS_V7_BATCH59','NL2_HU_392_MULTIBOARD_CERT_STATUS_V8_BATCH61','NL2_HU_392_MULTIBOARD_CERT_STATUS_V9_RANK40_B67','NL2_HU_392_MULTIBOARD_CERT_STATUS_V10_BATCH69','NL2_HU_392_MULTIBOARD_CERT_STATUS_V11_BATCH71','NL2_HU_392_MULTIBOARD_CERT_STATUS_V12_BATCH73','NL2_HU_392_MULTIBOARD_CERT_STATUS_V13_BATCH75','NL2_HU_392_MULTIBOARD_CERT_STATUS_V14_BATCH77','NL2_HU_392_MULTIBOARD_CERT_STATUS_V15_BATCH80','NL2_HU_392_MULTIBOARD_CERT_STATUS_V16_BATCH82','NL2_HU_392_MULTIBOARD_CERT_STATUS_V17_BATCH84','NL2_HU_392_MULTIBOARD_CERT_STATUS_V18_BATCH86','NL2_HU_392_MULTIBOARD_CERT_STATUS_V19_BATCH88','NL2_HU_392_MULTIBOARD_CERT_STATUS_V20_BATCH90','NL2_HU_392_MULTIBOARD_CERT_STATUS_V21_BATCH92','NL2_HU_392_MULTIBOARD_CERT_STATUS_V22_BATCH94','NL2_HU_392_MULTIBOARD_CERT_STATUS_V23_B100_LMP_PAIR','NL2_HU_392_MULTIBOARD_CERT_STATUS_V24_B103_RANK43','NL2_HU_392_MULTIBOARD_CERT_STATUS_V25_B106_RANK135','NL2_HU_392_MULTIBOARD_CERT_STATUS_V26_B111_RANK215_220','NL2_HU_392_MULTIBOARD_CERT_STATUS_V53_B465_R218','NL2_HU_392_MULTIBOARD_CERT_STATUS_V52_B463_R45','NL2_HU_392_MULTIBOARD_CERT_STATUS_V51_B453_R32','NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166','NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219','NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B390_RANK107','NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B369_RANK27','NL2_HU_392_MULTIBOARD_CERT_STATUS_V47_B364_RANK96','NL2_HU_392_MULTIBOARD_CERT_STATUS_V46_B354_RANK79','NL2_HU_392_MULTIBOARD_CERT_STATUS_V45_B345_RANK71','NL2_HU_392_MULTIBOARD_CERT_STATUS_V44_B331_RANK60_FOUR','NL2_HU_392_MULTIBOARD_CERT_STATUS_V43_B319_RANK60','NL2_HU_392_MULTIBOARD_CERT_STATUS_V42_B289_RANK46','NL2_HU_392_MULTIBOARD_CERT_STATUS_V41_B271_RANK61','NL2_HU_392_MULTIBOARD_CERT_STATUS_V40_B265_RANK313','NL2_HU_392_MULTIBOARD_CERT_STATUS_V39_B247_RANK30','NL2_HU_392_MULTIBOARD_CERT_STATUS_V38_B206_RANK190','NL2_HU_392_MULTIBOARD_CERT_STATUS_V37_B205_RANK188','NL2_HU_392_MULTIBOARD_CERT_STATUS_V36_B201_RANK159','NL2_HU_392_MULTIBOARD_CERT_STATUS_V35_B193_RANK201','NL2_HU_392_MULTIBOARD_CERT_STATUS_V34_B190_RANK199_202','NL2_HU_392_MULTIBOARD_CERT_STATUS_V33_B179_RANK138','NL2_HU_392_MULTIBOARD_CERT_STATUS_V32_B168_RANK80','NL2_HU_392_MULTIBOARD_CERT_STATUS_V31_B161_RANK150','NL2_HU_392_MULTIBOARD_CERT_STATUS_V30_B145_RANK47','NL2_HU_392_MULTIBOARD_CERT_STATUS_V29_B142_RANK88','NL2_HU_392_MULTIBOARD_CERT_STATUS_V28_B133_RANK69','NL2_HU_392_MULTIBOARD_CERT_STATUS_V27_B123_R41_236'].includes(d.schema)||d.TOTAL!==392||
+       d.CERT_MULTIBOARD+d.APPROX!==392||Object.keys(d.records).length!==392){
+diff --git a/sw.js b/sw.js
+index fa865586f14eebaf6ecd1d1f0a26c54b52665fbd..5cde081254a6479fa7fa4e53d9b496bb106c9076 100644
+--- a/sw.js
++++ b/sw.js
+@@ -15,7 +15,8 @@ self.addEventListener('fetch',e=>{
+     }).catch(()=>c.match(q).then(h=>h||Response.error()));
+     if(/\/data\/|\/river\//.test(u.pathname))return c.match(q,{ignoreSearch:true}).then(h=>h||fetch(q).then(r=>{if(r&&r.ok)c.put(q,r.clone());return r;}));
+     const net=fetch(q,{cache:'no-store'}).then(r=>{if(r&&r.ok){c.put(key,r.clone());}return r;});
+-    const cached=()=>c.match(key,{ignoreSearch:true}).then(h=>h||(nav?c.match('index.html'):undefined));
++    const routeModule = /\/(nl2_cert_registry|nl2-multiboard|nl2_hu_multiboard_ui)\.js$/.test(u.pathname);
++    const cached=()=>c.match(key,{ignoreSearch:!routeModule}).then(h=>h||(nav?c.match('index.html'):undefined));
+     return new Promise(res=>{let done=false;const t=setTimeout(()=>cached().then(h=>{if(!done&&h){done=true;res(h);}}),3000);
+       net.then(r=>{if(!done){done=true;clearTimeout(t);res(r);}}).catch(()=>cached().then(h=>{if(!done){done=true;res(h||Response.error());}}));});
+   }));
+diff --git a/tools/hu_apply_cert_extensions.py b/tools/hu_apply_cert_extensions.py
+index a5baeaa8ce3d7350bca0ececd158d9e90ec08877..ea869a2583a37dadd3410a3bc91ca186c6eb1f70 100644
+--- a/tools/hu_apply_cert_extensions.py
++++ b/tools/hu_apply_cert_extensions.py
+@@ -12,6 +12,7 @@ from hu_cert_lock_medium_audit import audit
+ from hu_b483_locked_medium import proof as original_reach
+ from hu_sequential_cfr_reach import game_reach
+ from hu_board_reach_corrections import apply_updates, read_replays, replay_updates, source_key
++from hu_trainer_route_gate import active_pins, apply_routes, rendered_contract
+ from copy import deepcopy
+
+ DATA = Path("data")
+@@ -214,7 +215,19 @@ def main():
+                 refs["items"][mid]["note"] = "Fewer than three named flops survive the original two-seat action-path replay."
+         return changes
+
++    contract = rendered_contract(registry["records"])
++    excluded = {}
++
++    def reconcile_routes():
++        for mid in apply_routes(registry["records"], contract, excluded):
++            model = registry["records"][mid]
++            update_references(model, xwalk, refs)
++            if model["label"] == "APPROX":
++                xwalk["records"][mid]["board_specific_certification_status"] = "APPROX"
++                refs["items"][mid]["note"] = "Fewer than three named flops match the rendered trainer action order and bet sizes."
++
+     changes = apply_replays()
++    reconcile_routes()
+     repairs = sorted((read(p) for p in (SOURCE/"reverified").glob("rank*.json")), key=lambda e:e["rank"])
+     for repair in repairs:
+         for pin in repair["pins"]:
+@@ -229,12 +242,20 @@ def main():
+             assert item["model_id"] in repaired_ids
+             append_lock(registry, item, locked, originals)
+     repair_changes = apply_replays(repaired_ids)
++    reconcile_routes()
+     assert seen == set(locked) and seen_gto == set(originals), "Raw source missing from the named registry boards"
+     labels = collections.Counter(r["label"] for r in registry["records"].values())
+     registry.update(CERT_MULTIBOARD=labels["CERT-MULTIBOARD"], APPROX=labels["APPROX"])
+     view = dict(schema="NL2_EXACT_VERIFIED_EXTENSIONS_V1", models=ordered, lock_variants=variants, board_reach_updates=changes,
+-                reverified_models=repairs, reverified_board_reach_updates=repair_changes, locked_medium_reports=sources)
+-    registry["exact_source_extensions"] = {e["model_id"]: e["pins"] for e in ordered + repairs}
++                reverified_models=repairs, reverified_board_reach_updates=repair_changes, locked_medium_reports=sources,
++                trainer_route_contract=contract, trainer_route_exclusions=list(excluded.values()))
++    registry["trainer_route_contract_schema"] = contract["schema"]
++    registry["exact_source_extensions"] = {}
++    for e in ordered + repairs:
++        mid = e["model_id"]
++        selected = active_pins(registry["records"][mid], e["pins"])
++        if selected:
++            registry["exact_source_extensions"][mid] = selected
+     registry["base_registry_schema"] = registry["schema"]
+     registry["schema"] = "NL2_HU_392_MULTIBOARD_CERT_STATUS_VERIFIED_EXTENSIONS_V1"
+     registry["base_registry"] = base.name
+diff --git a/tools/hu_b530_history_rates_ui.cjs b/tools/hu_b530_history_rates_ui.cjs
+index e92cd565f17e024ced45528b030cd455e6656985..24c5e5af012bb8c0801df3c64d952d0c3ebf320c 100644
+--- a/tools/hu_b530_history_rates_ui.cjs
++++ b/tools/hu_b530_history_rates_ui.cjs
+@@ -17,30 +17,31 @@ async function main() {
+   vm.runInContext(fs.readFileSync('nl2_pool_rate_scope.js', 'utf8'), context);
+   const registry = JSON.parse(fs.readFileSync('data/nl2_hu_multiboard_status_current.json'));
+   let decisions = 0, bets = 0, facing = 0, assumed = 0;
+-  for (const model of Object.values(registry.records)) {
+-    for (const board of model.certified_3_to_5_exact_flop_boards || []) {
+-      for (const lock of board.nl2_locked_variants.filter(v => v.viewer_archive_code?.startsWith('B530_'))) {
+-        const element = new Element();
+-        await context.nl2PoolRateScope.show(element, model, board, [lock]);
+-        const message = element.text();
+-        for (const r of lock.applied_street_rates) {
+-          assert.ok(message.includes(r.n.toLocaleString('zh-TW')));
+-          if (r.opportunity === 'BET') {
+-            assert.ok(message.includes(r.size_proxy) && message.includes('實測下注'));
+-            ++bets;
+-          } else if (r.opportunity === 'FACING_BET') {
+-            assert.ok(message.includes('實測棄／加 '+r.target_fold_pct.toFixed(1)+'%／'+r.target_raise_pct.toFixed(1)+'%'));
+-            ++facing;
+-          }
+-        }
+-        assert.ok(!message.includes('istory%'));
+-        if (lock.turn_checked_to_bet_assumption) {
+-          assert.ok(message.includes('45% 假設'));
+-          ++assumed;
+-        }
+-        ++decisions;
++  const manifest = JSON.parse(fs.readFileSync('data/nl2_hu_verified_extensions.json'));
++  const originals = manifest.lock_variants.filter(item => item.lock.viewer_archive_code?.startsWith('B530_'));
++  for (const item of originals) {
++    const model = registry.records[item.model_id];
++    const board = {flop:item.flop, turn:item.turn};
++    const lock = item.lock;
++    const element = new Element();
++    await context.nl2PoolRateScope.show(element, model, board, [lock]);
++    const message = element.text();
++    for (const r of lock.applied_street_rates) {
++      assert.ok(message.includes(r.n.toLocaleString('zh-TW')));
++      if (r.opportunity === 'BET') {
++        assert.ok(message.includes(r.size_proxy) && message.includes('實測下注'));
++        ++bets;
++      } else if (r.opportunity === 'FACING_BET') {
++        assert.ok(message.includes('實測棄／加 '+r.target_fold_pct.toFixed(1)+'%／'+r.target_raise_pct.toFixed(1)+'%'));
++        ++facing;
+       }
+     }
++    assert.ok(!message.includes('istory%'));
++    if (lock.turn_checked_to_bet_assumption) {
++      assert.ok(message.includes('45% 假設'));
++      ++assumed;
++    }
++    ++decisions;
+   }
+   assert.equal(decisions, 49);
+   assert.ok(bets > 0 && facing > 0 && assumed > 0);
+diff --git a/tools/hu_exact_batch_audit.sh b/tools/hu_exact_batch_audit.sh
+index 01ce5bc29eef6b979110b72852d9a46632bb4233..a0c75c3acbe71ac8b504921f1aa44ef467bdcb92 100644
+--- a/tools/hu_exact_batch_audit.sh
++++ b/tools/hu_exact_batch_audit.sh
+@@ -5,6 +5,7 @@ registry=${1:?expected current registry file}
+ tmpdir=$(mktemp -d)
+ trap 'rm -rf "$tmpdir"' EXIT
+ python3 tools/hu_cert_lock_medium_audit.py --source "$registry" --out "$tmpdir/locks.json"
++python3 tools/hu_trainer_route_gate.py "$registry"
+ node tools/hu_line_contract.js >"$tmpdir/contract.json"
+ node tools/link_audit.js --md "$tmpdir/link.md" --json "$tmpdir/link.json"
+ node tools/reach_verify.js --log "$tmpdir/reach.md" --json "$tmpdir/reach.json"
+diff --git a/tools/hu_extension_runtime_test.cjs b/tools/hu_extension_runtime_test.cjs
+index a7b534e8a23cecbbe638fd8814a8bafa3061618a..4f48d5270391f3e90e6db7c4b569c321cd8cba8e 100644
+--- a/tools/hu_extension_runtime_test.cjs
++++ b/tools/hu_extension_runtime_test.cjs
+@@ -12,16 +12,33 @@ async function run() {
+   const result=await ctx.nl2ApplyVerifiedExtensions(base);
+   assert.equal(result.CERT_MULTIBOARD,registry.CERT_MULTIBOARD);
+   assert.equal(result.APPROX,registry.APPROX);
+-  for(const id of new Set([...Object.keys(manifest.board_reach_updates), ...Object.keys(manifest.reverified_board_reach_updates || {})])){
++  assert.equal(result.trainer_route_contract_schema, registry.trainer_route_contract_schema);
++  assert.deepEqual(JSON.parse(JSON.stringify(result.exact_source_extensions)), registry.exact_source_extensions);
++  for(const id of Object.keys(registry.records)){
+     const browserRecord=JSON.parse(JSON.stringify(result.records[id]));
+     assert.deepEqual(browserRecord,registry.records[id],id);
+-    if(browserRecord.label==='APPROX'){
++    if(browserRecord.label==='APPROX' && browserRecord.remaining_exact_board_evidence){
+       assert.ok(browserRecord.remaining_exact_board_evidence.length<3);
+       assert.equal(browserRecord.certified_3_to_5_exact_flop_boards.length,0);
+     }
+   }
+   const viewer=fs.readFileSync('nl2-multiboard.js','utf8');
+   const proof=viewer.slice(viewer.indexOf('async function getProof(run){'),viewer.indexOf('function verifiedCase('));
++  const route118=Object.values(registry.records).find(m=>m.frequency_rank===118);
++  assert.ok(manifest.trainer_route_contract.routes[route118.model_id].streets.includes('x b66 c'));
++  const missingContract=structuredClone(manifest);
++  delete missingContract.trainer_route_contract;
++  ctx.fetch=async()=>({ok:true,json:async()=>missingContract});
++  await assert.rejects(()=>ctx.nl2ApplyVerifiedExtensions(base));
++  const falsePrice=structuredClone(manifest);
++  const sample=falsePrice.trainer_route_exclusions.find(r=>r.model_id===route118.model_id);
++  if(sample) {
++    const route=falsePrice.trainer_route_contract.routes[sample.model_id];
++    route.streets=sample.actual_line.split('/');
++    ctx.fetch=async()=>({ok:true,json:async()=>falsePrice});
++    await assert.rejects(()=>ctx.nl2ApplyVerifiedExtensions(base));
++  }
++  ctx.fetch=async()=>({ok:true,json:async()=>manifest});
+   const cases=manifest.models.concat(manifest.reverified_models || []);
+   // Exercise both genuine historical sources even before a third rank146 board qualifies.
+   if (!cases.some(e=>e.rank===146)) {
+@@ -48,6 +65,12 @@ async function run() {
+   for(const item of manifest.lock_variants.filter(e=>e.lock.requires_native_joint_replay)){
+     const model=result.records[item.model_id], source=item.lock;
+     const board=model.certified_3_to_5_exact_flop_boards.find(b=>b.public_board===item.public_board);
++    if (!board) {
++      const excluded=manifest.trainer_route_exclusions.some(row=>row.model_id===item.model_id && row.public_board===item.public_board);
++      const partial=model.remaining_exact_board_evidence?.some(b=>b.public_board===item.public_board);
++      assert.ok(excluded || (model.label==='APPROX' && partial), 'Missing native lock lacks a matching route exclusion or retained partial proof');
++      continue;
++    }
+     assert.ok(board.nl2_locked_variants.some(v=>v.sha256===source.sha256));
+     Object.assign(ctx,{chosenModel:model,chosenBoard:board,status:result,proofCache:{},Response,DecompressionStream,
+       crypto:require('node:crypto').webcrypto,TextEncoder,TextDecoder,atob,fetch:async path=>new Response(fs.readFileSync(path))});
+@@ -84,7 +107,17 @@ async function run() {
+     await assert.rejects(()=>ctx.nl2ApplyVerifiedExtensions(base));
+   }
+   for(const file of ['nl2-multiboard.js','nl2_hu_multiboard_ui.js']) {
+-    assert.ok(fs.readFileSync(file,'utf8').includes('.then(globalThis.nl2ApplyVerifiedExtensions)'));
++    const script = fs.readFileSync(file, 'utf8');
++    const start = script.indexOf('function applyCurrentTrainerRoutes(');
++    const end = script.indexOf('\nfetchCertifiedRegistry()', start);
++    assert.ok(start >= 0 && end > start && script.slice(end).includes('.then(applyCurrentTrainerRoutes)'));
++    const loader = vm.createContext({});
++    vm.runInContext(script.slice(start, end), loader);
++    await assert.rejects(async () => loader.applyCurrentTrainerRoutes(base));
++    loader.nl2ApplyVerifiedExtensions = async () => base;
++    await assert.rejects(() => loader.applyCurrentTrainerRoutes(base));
++    loader.nl2ApplyVerifiedExtensions = async () => result;
++    assert.equal(await loader.applyCurrentTrainerRoutes(base), result);
+   }
+   console.log('PASS exact source registry, GTO/locked archives and zero-reach rejection');
+ }
+diff --git a/tools/hu_trainer_route_contract.cjs b/tools/hu_trainer_route_contract.cjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..7b8e406d0ef25587a685052702237bff3f7cc902
+--- /dev/null
++++ b/tools/hu_trainer_route_contract.cjs
+@@ -0,0 +1,96 @@
++// Resolve the actual primary action links for each rendered HU model.
++// Calls and unsized actions carry no numeric price in this contract.
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const vm = require('node:vm');
++
++const ids = JSON.parse(fs.readFileSync(0, 'utf8'));
++const app = { innerHTML: '', querySelectorAll: () => [], addEventListener() {} };
++const context = {
++  console, __LINES_QA: true, location: {hash:'#lines'}, scrollTo() {}, addEventListener() {},
++  document: {querySelector: () => app, querySelectorAll: () => [], getElementById: () => null}
++};
++context.window = context;
++vm.createContext(context);
++for (const file of ['lines_data.js','nl2_rules.js','hwrange.js','nl2_reach.js','nl2_titles.js','nl2_hu_model.js','nl2.js']) {
++  vm.runInContext(fs.readFileSync(file, 'utf8'), context, {filename:file});
++}
++
++const actions = {'過':'x','跟':'c','下注':'bet','加注':'raise','超池下注':'overbet'};
++const positions = ['SB','BB','UTG','HJ','CO','BTN'];
++const fractions = {'⅓':'b33','½':'b50','⅔':'b66','¾':'b75','1½':'b150'};
++function betToken(text) {
++  if (!/^下注/.test(text)) return null;
++  const match = text.match(/^下注\s*(1½|⅓|½|⅔|¾|\d+(?:\.\d+)?%?)/);
++  if (!match) return null;
++  const size = match[1];
++  return fractions[size] || 'b' + Math.round(parseFloat(size) * (size.endsWith('%') ? 1 : 100));
++}
++
++const routes = {};
++for (const spot of new Set(ids.map(id => id.split('-')[1]))) {
++  context.__linesQA.render(spot);
++  const html = app.innerHTML;
++  const headings = [...html.matchAll(/<div class="sec" data-node="([^"]+)" id="([^"]+)">/g)];
++  const sections = new Map(headings.map((m,i) => [m[2], html.slice(m.index, headings[i+1]?.index ?? html.length)]));
++  const incoming = new Map();
++  for (const [from, section] of sections) {
++    for (const match of section.matchAll(/<a class="jmp" href="#([^"]+)">([\s\S]*?)<\/a>/g)) {
++      const target = match[1].replace(/-(low|mid_high|KQ_high|A_high|paired|mono)$/, '');
++      if (!sections.has(target)) continue;
++      const edge = {from, href:match[1], label:match[2].replace(/<[^>]*>/g, '').trim()};
++      if (!incoming.has(target)) incoming.set(target, []);
++      incoming.get(target).push(edge);
++    }
++  }
++  const nodes = new Map(context.__HU_MODEL_LAST.nodes.map(node => [node.id, node]));
++  for (const model of nodes.values()) {
++    const hero = model.pre.match(/你\s*(SB|BB|UTG|HJ|CO|BTN)\b/)?.[1];
++    const villain = model.pre.match(/\b(?:SB|BB|UTG|HJ|CO|BTN)\b/g)?.find(p => p !== hero);
++    assert(hero && villain, model.id);
++    const seat = Number(positions.indexOf(hero) > positions.indexOf(villain));
++    const history = model.key.split('|').map(street => street.split('、').filter(Boolean));
++    const streets = history.map(tokens => tokens.map((roleAction, i) => {
++      assert.equal(roleAction.startsWith('你') ? seat : 1-seat, i%2, model.id);
++      const token = actions[roleAction.replace(/^(你|對手)/,'')];
++      assert(token, roleAction);
++      return token;
++    }));
++    assert.equal(streets.length, model.st+1);
++    assert.equal(streets.at(-1).length%2, seat, model.id);
++    const links = [];
++    function addSize(street, edges) {
++      const labels = [...new Set(edges.map(e => e.label))].sort();
++      const sizes = new Set(labels.map(betToken));
++      if (sizes.size !== 1 || sizes.has(null)) return;
++      const i = history[street].lastIndexOf('你下注');
++      assert(i >= 0 && streets[street][i] === 'bet', model.id);
++      streets[street][i] = [...sizes][0];
++      links.push({street:street+1,action:i+1,labels,from:[...new Set(edges.map(e => e.from))].sort()});
++    }
++    for (let node=model; node; node=nodes.get(node.source)) {
++      const edges = (incoming.get(node.id) || []).filter(edge => edge.from === node.source);
++      assert(edges.length, node.id + ' has no primary link from ' + node.source);
++      if (node.action === 'bet') addSize(node.st-1, edges);
++      if (!nodes.has(node.source) && node.st === 2 && history[0].includes('你下注')) {
++        // For a pre-authored turn, infer a flop price only when every direct primary ingress
++        // from a flop section explicitly specifies the same bet. An example paragraph is not an action.
++        const prior = (incoming.get(node.source) || []).filter(e => /^ln-.*-(?:[a-z0-9]+_)?f_[a-z0-9_]+-/.test(e.from));
++        if (prior.length) addSize(0, prior);
++      }
++    }
++    assert(!routes[model.id], model.id);
++    const route = {seat,streets:streets.map(tokens => tokens.join(' ')),links};
++    if(model.id==='ln-ipfr-r_model-1iypoop') {
++      const edges=incoming.get(model.id).filter(e=>e.from===model.source);
++      assert.equal(model.source,'ln-ipfr-t_model-dzbacd');
++      assert.deepEqual([...new Set(edges.map(e=>e.href))],[model.id+'-mono']);
++      assert.deepEqual([...new Set(edges.map(e=>e.label))],['過']);
++      route.requires_three_suited_turn=true;
++    }
++    routes[model.id] = route;
++  }
++}
++assert.equal(ids.length, 392);
++assert.deepEqual(Object.keys(routes).sort(), [...ids].sort());
++process.stdout.write(JSON.stringify({schema:'NL2_HU_RENDERED_ACTION_ROUTES_V1',routes}));
+diff --git a/tools/hu_trainer_route_gate.py b/tools/hu_trainer_route_gate.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..3ee1798569ce72d8ccee8ac53b462e173b639244
+--- /dev/null
++++ b/tools/hu_trainer_route_gate.py
+@@ -0,0 +1,101 @@
++"""Admit original CFR boards only on the trainer's rendered actor and exact priced action ancestry."""
++import argparse
++import json
++from pathlib import Path
++import re
++import subprocess
++
++SCHEMA = "NL2_HU_RENDERED_ACTION_ROUTES_V1"
++REASON = "FEWER_THAN_THREE_FLOPS_AFTER_RENDERED_ACTION_ROUTE_CHECK"
++
++
++def rendered_contract(records):
++    out = subprocess.run(["node", "tools/hu_trainer_route_contract.cjs"], input=json.dumps(list(records)),
++                         text=True, stdout=subprocess.PIPE, check=True)
++    contract = json.loads(out.stdout)
++    assert contract["schema"] == SCHEMA and set(contract["routes"]) == set(records)
++    return contract
++
++
++def three_suited_turn(public):
++    suits = public[1:8:2]
++    return len(suits) == 4 and any(suits.count(suit) >= 3 for suit in 'cdhs')
++
++
++def compatible(route, board):
++    if route.get('requires_three_suited_turn') and not three_suited_turn(board['public_board']):
++        return False
++    expected = [street.split() for street in route["streets"]]
++    actual = [street.split() for street in board["actual_exact_action_line"].split("/")]
++    if route["seat"] != board["acting_seat"] or len(expected) != len(actual):
++        return False
++    for required, played in zip(expected, actual, strict=True):
++        if len(required) != len(played):
++            return False
++        for target, token in zip(required, played, strict=True):
++            if target == "bet":
++                ok = re.fullmatch(r"b[1-9][0-9]*", token) is not None or token == "a"
++            elif target == "overbet":
++                ok = token == "a" or (re.fullmatch(r"b[0-9]+", token) is not None and int(token[1:]) > 100)
++            elif target == "raise":
++                ok = re.fullmatch(r"r[0-9]*", token) is not None or token == "a"
++            else:
++                ok = target == token
++            if not ok:
++                return False
++    return True
++
++
++def active_boards(model):
++    if model["label"] == "CERT-MULTIBOARD":
++        return model["certified_3_to_5_exact_flop_boards"]
++    return model.get("remaining_exact_board_evidence", [])
++
++
++def apply_routes(records, contract, exclusions):
++    changed = []
++    for mid, model in records.items():
++        route = contract["routes"][mid]
++        valid = []
++        before = active_boards(model)
++        for b in before:
++            if compatible(route, b):
++                valid.append(b)
++            else:
++                key = (mid, b["public_board"], b["actual_exact_action_line"], b["acting_seat"], b["source_run_id"], b["source_sha256"])
++                exclusions[key] = dict(model_id=mid, public_board=b["public_board"], actual_line=b["actual_exact_action_line"],
++                    acting_seat=b["acting_seat"], run=b["source_run_id"], sha256=b["source_sha256"])
++        if len(valid) == len(before):
++            continue
++        changed.append(mid)
++        assert len({b["flop"] for b in valid}) == len(valid)
++        model["proven_exact_board_count"] = len(valid)
++        if len(valid) >= 3:
++            model["certified_3_to_5_exact_flop_boards"] = valid
++        else:
++            model.update(label="APPROX", blocked_reason=REASON, remaining_exact_board_evidence=valid,
++                         certified_3_to_5_exact_flop_boards=[])
++    return changed
++
++
++def active_pins(model, pins):
++    keys = {(b["flop"], b["public_board"], b["source_run_id"], b["source_sha256"]) for b in active_boards(model)}
++    return [p for p in pins if (p["flop"], p["public_board"], p["source_run_id"], p["original_GTO_SHA256"]) in keys]
++
++
++def audit_file(path):
++    data = json.loads(path.read_bytes())
++    if data["schema"] != "NL2_HU_392_MULTIBOARD_CERT_STATUS_VERIFIED_EXTENSIONS_V1":
++        return
++    manifest = json.loads(Path("data/nl2_hu_verified_extensions.json").read_bytes())
++    current = rendered_contract(data["records"])
++    assert data["trainer_route_contract_schema"] == current["schema"]
++    assert manifest["trainer_route_contract"] == current
++    for mid, m in data["records"].items():
++        assert all(compatible(current["routes"][mid], b) for b in active_boards(m)), mid
++
++
++if __name__ == "__main__":
++    cli = argparse.ArgumentParser(description=__doc__)
++    cli.add_argument("registry", type=Path)
++    audit_file(cli.parse_args().registry)
