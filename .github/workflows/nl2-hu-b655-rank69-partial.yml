@@ -1,0 +1,44 @@
+name: B655 authenticate the first rendered rank69 board and measured half-pot policy
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b655-rank69-partial.yml'
+      - 'tools/hu_b655_publish_rank69.py'
+      - 'data/nl2_hu_b655_rank69_partial.json'
+      - 'data/solver_evidence/NL2_B655_R69_TH7H5C.zip'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Verify the successful native worker and replay both seats
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45271606815" > "$RUNNER_TEMP/run.json"
+          python - "$RUNNER_TEMP/run.json" <<'PY'
+          import json,sys
+          r=json.load(open(sys.argv[1]))
+          assert (r["head_sha"],r["status"],r["conclusion"])==("19b59d0dc6342d7f51019d7796bc1e0b2525306c","completed","success")
+          PY
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14865762105" > "$RUNNER_TEMP/receipt.json"
+          python tools/hu_b655_publish_rank69.py --solver ../solver --receipt "$RUNNER_TEMP/receipt.json"             --archive data/solver_evidence/NL2_B655_R69_TH7H5C.zip
+          git diff --exit-code -- data/nl2_hu_b655_rank69_partial.json data/solver_evidence/NL2_MULTIBOARD_B655_R69_TH7H5C.json.gz
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
