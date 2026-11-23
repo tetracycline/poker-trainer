@@ -119,18 +119,27 @@ def export_board(parent_pin, parent_board, sources, rank, line, model_spr, verif
     code = viewer_code or f"R{rank}_{run}"
     if not code.replace("_", "").isalnum():
         raise ValueError(f"Invalid viewer archive code: {code}")
-    output = dict(schema="NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1", source_run_id=run,
-                  original_archive_sha256=archive_digest, errors=[], no_generic_texture_certification=True,
-                  artifacts=[dict(cases=[g, e])])
-    path = EVIDENCE / f"NL2_MULTIBOARD_{code}.json.gz"
-    if verify:
-        encoded = path.read_bytes()
-        assert gzip.decompress(encoded) == compact(output)
-    else:
-        encoded = gzip.compress(compact(output), mtime=0, compresslevel=9)
-        path.write_bytes(encoded)
+    locked_run = parent_pin.get("NL2_run_id", run)
+    views = [(code, run, archive_digest, [g, e])]
+    if locked_run != run:
+        locked_code = f"R{rank}_{locked_run}"
+        views = [(code, run, archive_digest, [g]),
+                 (locked_code, locked_run, parent_pin["NL2_archive_sha256"], [e])]
+    hashes = {}
+    for view_code, source_run, origin_sha, cases in views:
+        output = dict(schema="NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1", source_run_id=source_run,
+                      original_archive_sha256=origin_sha, errors=[], no_generic_texture_certification=True,
+                      artifacts=[dict(cases=cases)])
+        path = EVIDENCE / f"NL2_MULTIBOARD_{view_code}.json.gz"
+        if verify:
+            encoded = path.read_bytes()
+            assert gzip.decompress(encoded) == compact(output)
+        else:
+            encoded = gzip.compress(compact(output), mtime=0, compresslevel=9)
+            path.write_bytes(encoded)
+        hashes[source_run] = sha(encoded)
     scope = e["villain_lock_scope"]
-    lock = dict(version="exp_oop", run_id=run, sha256=exp["source_sha256"], source_scope="PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+    lock = dict(version="exp_oop", run_id=locked_run, sha256=exp["source_sha256"], source_scope="PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
                 source_not_real_per_combo_observation=True, villain_observed_pattern_node_share_pct=scope["coverage_pct"],
                 unknown_history_frequency_filled_with_default=bool(scope["imputed_assumption_nodes"]),
                 observed_marginal_source_nodes=scope["observed_marginal_source_nodes"],
@@ -147,12 +156,15 @@ def export_board(parent_pin, parent_board, sources, rank, line, model_spr, verif
              b50_nonpolarized_relative_equity_research_candidate=node["b50_nonpolarized_relative_equity_research_candidate"],
              nl2_locked_variants=[lock], flop_texture=parent_board["flop_texture"])
     p = dict(flop=b["flop"], turn=b["turn"], river=b["river"], public_board=b["public_board"], source_run_id=run,
-             archive_code=archive, archive_sha256=archive_digest, viewer_archive_code=code, viewer_sha256=sha(encoded),
+             archive_code=archive, archive_sha256=archive_digest, viewer_archive_code=code, viewer_sha256=hashes[run],
              original_GTO_SHA256=gto["source_sha256"], actual_NL2_SHA256=exp["source_sha256"], actual_spr=b["actual_spr"],
              GTO_strict_combos=node["strictly_reachable_combos"], NL2_strict_combos=e_node["strictly_reachable_combos"],
              GTO_compatible_hole_card_pairs=gpairs, NL2_compatible_hole_card_pairs=epairs, common_legal_hero_combos=len(ghands & ehands),
              pool_observed_marginal_lock_nodes=scope["observed_marginal_source_nodes"], pool_assumed_lock_nodes=scope["imputed_assumption_nodes"],
              pool_unlocked_nodes=scope["unmatched_nodes"], medium50_exact_research_candidate=b["b50_nonpolarized_relative_equity_research_candidate"])
+    if locked_run != run:
+        p.update(locked_viewer_archive_code=locked_code, locked_viewer_sha256=hashes[locked_run],
+                 locked_original_archive_sha256=parent_pin["NL2_archive_sha256"], locked_source_run_id=locked_run)
     return b, p
 
 

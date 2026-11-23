@@ -1,0 +1,33 @@
+name: B471 remaining APPROX geometry and source queue audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b471-source-queue.yml'
+      - 'data/nl2_hu_b471_*'
+      - 'tools/hu_b471_*'
+permissions:
+  actions: read
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replay original rank146 GTO and separately locked source pairs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for id in 14703138852 14703731534 14706190808 14705753667; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/r30-$id.zip"
+            unzip -q "$RUNNER_TEMP/r30-$id.zip" -d "$RUNNER_TEMP/r30-$id"
+          done
+          python3 tools/hu_b471_rank146_prior.py --downloads "$RUNNER_TEMP" --verify
+      - name: Verify queue classification and the complete HU model and route audit
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b471_remaining_queue.py --out "$RUNNER_TEMP/queue.json"
+          cmp "$RUNNER_TEMP/queue.json" data/nl2_hu_b471_remaining_approx_queue.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
