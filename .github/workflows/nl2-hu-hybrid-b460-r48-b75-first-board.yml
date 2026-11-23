@@ -1,0 +1,153 @@
+name: B460 rank48 BTN_BB x-x / b75-call authentic GTO and NL2-OOP first board
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b460-r48-b75-first-board.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: b460-r48-b75-first-board
+  cancel-in-progress: false
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        version: [gto, exp_oop]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: trainer
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile authentic pinned Rust CFR
+        run: |
+          set -euo pipefail
+          python3 -m py_compile trainer/tools/solve_hu_multiboard_100bb.py trainer/tools/hu_b460_rank48_first_board.py
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve exact new GTO or NL2-OOP under same frozen flop and real b75 turn menu
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C ../solver rev-parse HEAD > evidence/poker-solver-commit.txt
+          git -C ../solver/postflop/postflop-solver rev-parse HEAD > evidence/upstream-engine-commit.txt
+          python3 tools/solve_hu_multiboard_100bb.py \
+            --solver-root ../solver --spot BTN_BB --flop 9s6h3d \
+            --version '${{ matrix.version }}' --flop-size-profile full \
+            --flop-line-policy checkcheck --turn-size-menu river-gaps \
+            --turn-count 1 \
+            --manifest 'evidence/BTN_BB-9s6h3d-${{ matrix.version }}.json'
+          python3 - <<'PY'
+          import json,pathlib
+          p=pathlib.Path('evidence/BTN_BB-9s6h3d-${{ matrix.version }}.json')
+          m=json.loads(p.read_text())
+          assert (m['schema'],m['spot'],m['flop'],m['version'])==(
+            'NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1','BTN_BB','9s6h3d','${{ matrix.version }}')
+          assert m['selected_lines']==['x x'] and m['turns']==['Ts']
+          assert m['turn_sizing_mode']=='river-gaps' and 'b75 c' in m['selected_turn_lines']
+          assert m['solved_cases']==1 and not m['failures'] and not m['skipped']
+          c=m['cases'][0]
+          assert c['gto_gap_pct']<=.5
+          if m['version']=='exp_oop': assert c['hero_gap_pct']<=.5
+          print('PASS authentic source',m['version'],c['source_sha256'])
+          PY
+      - name: Preserve real Rust source and exact manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nl2-multiboard-B460-R48-BTNB-B75-${{ matrix.version }}
+          path: |
+            trainer/evidence
+            solver/postflop/out/BTN_BB/${{ matrix.version }}
+          retention-days: 30
+          if-no-files-found: warn
+  verify-and-commit:
+    needs: solve
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: trainer
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download only the two current authentic solver sources
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p ../downloads/gto ../downloads/exp_oop
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-multiboard-B460-R48-BTNB-B75-gto' --dir ../downloads/gto
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-multiboard-B460-R48-BTNB-B75-exp_oop' --dir ../downloads/exp_oop
+      - name: Independently validate real exact boards, actual actor/SPR, 40-70 reach, NL2 locks and medium50
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b460_rank48_first_board.py
+          python3 tools/hu_b460_rank48_first_board.py \
+            --downloads ../downloads --run-id "$GITHUB_RUN_ID"
+      - name: Full V51 source, NL2-lock, medium and all HU2475 navigation/reach/UI audits
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_cert_lock_medium_audit.py \
+            --source data/nl2_hu_multiboard_status_v51_b453_rank32.json --out /tmp/b460-cert.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('/tmp/b460-cert.json'))
+          assert (x['cert_multiboard'],x['approx'],x['EST'],x['models_total'])==(164,228,0,392)
+          assert (x['aggregate']['named_board_proofs'],x['aggregate']['paired_hero_locked_source_variants'])==(621,713)
+          assert x['not_generalized_handclass_GTO'] and x['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js >/tmp/b460-contract.json
+          node tools/link_audit.js --md /tmp/b460-link.md --json /tmp/b460-link.json
+          node tools/reach_verify.js --log /tmp/b460-reach.md --json /tmp/b460-reach.json
+          node tools/hu_model_path_audit.js /tmp/b460-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b460-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B460 HU2475/2475")'
+          git diff --check
+      - name: Commit only verified B460 source evidence and keep PR2 draft
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b460_rank48_first_exact_b75_evidence.json \
+            data/solver_evidence/NL2_B460_R48_BTN_BB_9S6H3D_B75.json.gz \
+            data/solver_evidence/NL2_B460_R48_BTN_BB_9S6H3D_B75.index.json \
+            docs/NL2_HU_B460_R48_FIRST_EXACT_B75.md
+          git diff --cached --quiet && exit 1
+          git commit -m 'B460: preserve rank48 first authentic BTN-BB b75 GTO/OOP exact-board evidence'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
