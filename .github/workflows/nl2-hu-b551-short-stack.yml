@@ -1,0 +1,65 @@
+name: B551 replay actual short-stack all-in sizes and hands in the trainer
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b551-short-stack.yml'
+      - 'tools/hu_b551_short_stack_actions.py'
+      - 'tools/hu_b551_short_stack_views.patch'
+permissions: {contents: write, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate original native sources and replay all-in decisions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/originals"
+          mkdir -p "$dir"
+          python tools/hu_b551_short_stack_actions.py --list-ids > "$RUNNER_TEMP/source-ids"
+          while read -r id; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$dir/$id.zip"
+          done < "$RUNNER_TEMP/source-ids"
+          python tools/hu_b551_short_stack_actions.py --originals "$dir" --out "$RUNNER_TEMP/report.json"
+      - name: Validate and publish source-bound short-stack decisions and all routes
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            (
+              cd "$live"
+              patch=tools/hu_b551_short_stack_views.patch
+              if test -e "$patch"; then git apply --3way "$patch"; git rm -- "$patch"; fi
+              cp "$RUNNER_TEMP/report.json" data/nl2_hu_b551_locked_medium.json
+              status=data/nl2_hu_multiboard_status_current.json
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_extension_runtime_test.cjs "$status"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              git add -- data/nl2_hu_b551_locked_medium.json "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B551: publish verified all-in pot fractions and native hand-equity profiles on short-stacked rivers'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B551-current-medium-coverage
+          path: ${{ runner.temp }}/coverage.json
+          if-no-files-found: error
