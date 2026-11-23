@@ -225,6 +225,8 @@ def main():
             if model["label"] == "APPROX":
                 xwalk["records"][mid]["board_specific_certification_status"] = "APPROX"
                 refs["items"][mid]["note"] = "Fewer than three named flops match the rendered trainer action order and bet sizes."
+                if any(row["model_id"] == mid and row.get("missing_rows") for row in excluded.values()):
+                    refs["items"][mid]["note"] = "Archived source policies remain available. Their actual boards have no playable row on the rendered turn-to-river route."
 
     changes = apply_replays()
     reconcile_routes()

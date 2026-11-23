@@ -27,6 +27,29 @@ function betToken(text) {
   return fractions[size] || 'b' + Math.round(parseFloat(size) * (size.endsWith('%') ? 1 : 100));
 }
 
+const reviewed = JSON.parse(fs.readFileSync('data/nl2_hu_b566_reviewed_partials.json','utf8'));
+const inspect = new Set(process.argv.slice(2));
+
+function visibleCells(section, source, target) {
+  const cells={};
+  for (const texture of ['low','mid_high','KQ_high','A_high','paired','mono']) {
+    const row=section.match(new RegExp('<tr[^>]* id="'+source+'-'+texture+'">([\\s\\S]*?)</tr>'));
+    if (!row) continue;
+    const columns=[];
+    for (const [index,match] of [...row[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)].entries()) {
+      const cell=match[1];
+      if (target) {
+        if ([...cell.matchAll(/<a class="jmp" href="#([^"]+)">([^<]*)<\/a>/g)].some(m=>m[1]===target+'-'+texture)) columns.push(index);
+      } else {
+        const primary=cell.split('<small')[0].split('<a class="jmp sub"')[0].replace(/<[^>]*>/g,'').trim();
+        if (primary && primary!=='—') columns.push(index);
+      }
+    }
+    if (columns.length) cells[texture]=columns;
+  }
+  return cells;
+}
+
 const routes = {};
 for (const spot of new Set(ids.map(id => id.split('-')[1]))) {
   context.__linesQA.render(spot);
@@ -87,6 +110,16 @@ for (const spot of new Set(ids.map(id => id.split('-')[1]))) {
       assert.deepEqual([...new Set(edges.map(e=>e.href))],[model.id+'-mono']);
       assert.deepEqual([...new Set(edges.map(e=>e.label))],['過']);
       route.requires_three_suited_turn=true;
+    }
+    if (reviewed[model.id] || inspect.has(model.id)) {
+      const rows=[];
+      for (let child=model; child; child=nodes.get(child.source)) {
+        rows.unshift({street:child.st, from:child.source, to:child.id,
+          visible:visibleCells(sections.get(child.source),child.source,child.id)});
+      }
+      rows.push({street:model.st+1, from:model.id, visible:visibleCells(sections.get(model.id),model.id)});
+      route.visible_street_rows=rows;
+      if (reviewed[model.id]) route.reviewed_partial_sources=reviewed[model.id];
     }
     routes[model.id] = route;
   }

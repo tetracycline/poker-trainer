@@ -172,6 +172,26 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
   const excluded = new Set();
   const boardKey = b => JSON.stringify([b.flop,b.public_board,b.source_run_id,b.source_sha256]);
   const active = m => m.label === 'CERT-MULTIBOARD' ? m.certified_3_to_5_exact_flop_boards : m.remaining_exact_board_evidence || [];
+  function actualTexture(publicBoard) {
+    const cards=publicBoard.match(/../g);
+    const ranks=cards.map(c=>c[0]), suits=cards.map(c=>c[1]);
+    if (suits.some(s=>suits.filter(v=>v===s).length>=3)) return 'mono';
+    if (new Set(ranks).size<ranks.length) return 'paired';
+    if (ranks.includes('A')) return 'A_high';
+    if (ranks.some(r=>'KQ'.includes(r))) return 'KQ_high';
+    return ranks.some(r=>'JT'.includes(r)) ? 'mid_high' : 'low';
+  }
+  function reviewedRowsAllow(route, board) {
+    const pins=route.reviewed_partial_sources;
+    if (pins===undefined) return true;
+    if (!Array.isArray(pins) || !Array.isArray(route.visible_street_rows)) throw Error('具名公牌缺少各街路徑資料');
+    const reviewed=pins.some(p=>p.public_board===board.public_board && p.line===board.actual_exact_action_line &&
+      p.seat===board.acting_seat && p.run===board.source_run_id && p.gto_sha256===board.source_sha256);
+    return !reviewed || route.visible_street_rows.every(step=>{
+      const texture=actualTexture(board.public_board.slice(0,4+2*step.street));
+      return Array.isArray(step.visible[texture]) && step.visible[texture].length>0;
+    });
+  }
   function applyRoutes() {
     for (const [id,m] of Object.entries(records)) {
       const route = contract.routes[id];
@@ -185,7 +205,7 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
         const actual=b.actual_exact_action_line.split('/');
         const suits=[b.public_board[1],b.public_board[3],b.public_board[5],b.public_board[7]];
         const turnAllowed=!route.requires_three_suited_turn || suits.some(s=>suits.filter(v=>v===s).length>=3);
-        const match=turnAllowed && route.seat===b.acting_seat && actual.length===route.streets.length && actual.every((street,i)=>{
+        const match=turnAllowed && reviewedRowsAllow(route,b) && route.seat===b.acting_seat && actual.length===route.streets.length && actual.every((street,i)=>{
           const played=street.split(' ').filter(Boolean);
           const expected=route.streets[i].split(' ').filter(Boolean);
           return played.length===expected.length && played.every((v,j)=>{
