@@ -1,0 +1,105 @@
+name: B462 independently audit all 164 CERT / 621 authentic boards / 713 NL2 locks and medium50
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b462-v51-all-cert-lock-medium-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: b462-v51-all-cert-lock-medium-audit
+  cancel-in-progress: false
+jobs:
+  audit-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Revalidate the exact 164 certified models and their paired GTO/EXP lock sources
+        run: |
+          set -euo pipefail
+          python3 tools/hu_cert_lock_medium_audit.py \
+            --source data/nl2_hu_multiboard_status_v51_b453_rank32.json \
+            --out data/nl2_hu_b462_all_cert_lock_medium_audit_v51.json
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          d=pathlib.Path("data")
+          source=d/"nl2_hu_multiboard_status_v51_b453_rank32.json"
+          report=d/"nl2_hu_b462_all_cert_lock_medium_audit_v51.json"
+          x=json.loads(report.read_text())
+          assert (x["cert_multiboard"],x["approx"],x["EST"],x["models_total"])==(164,228,0,392)
+          assert x["aggregate"]["named_board_proofs"]==621
+          assert x["aggregate"]["paired_hero_locked_source_variants"]==713
+          assert len(x["models"])==164
+          assert x["not_generalized_handclass_GTO"] is True and x["not_actual_NL2_earnings"] is True
+          board_count=0;locks=0;candidate_count=0
+          for k,m in x["models"].items():
+              assert m["model_id"]==k and m["generic_handclass_texture_actions_still_approx"] is True
+              b=m["boards"];assert 3<=len(b)<=5
+              assert len({q["flop"] for q in b})==len(b)
+              for q in b:
+                  assert q["strictly_reachable_combo_rows"]>0
+                  assert q["gto_exploitability_pct"]<=0.5
+                  assert len(q["source_sha256"])==64
+                  assert q["paired_NL2_hero_lock"] and q["no_global_bet_size_recommendation"]
+                  assert q["medium_nonpolarized_status"] in (
+                      "EXACT_BOARD_RESEARCH_CANDIDATE","NOT_SUPPORTED_BY_CURRENT_CFR_EVIDENCE")
+                  assert q["medium_50pct_eligible_combos"]>=0
+                  candidate_count+=q["medium_nonpolarized_status"]=="EXACT_BOARD_RESEARCH_CANDIDATE"
+                  board_count+=1
+                  for lk in q["paired_NL2_hero_lock"]:
+                      assert lk["version"]==("exp_ip" if x["models"][k]["boards"][0]["paired_NL2_hero_lock"][0]["version"]=="exp_ip" else "exp_oop")
+                      assert lk["scope"]=="PARTIALLY_LOCKED_NL2_MARGINAL_PROXY" or "TURN" in lk["scope"] or "PARTIAL" in lk["scope"]
+                      assert len(lk["source_sha256"])==64
+                      assert lk["model_based_not_actual_winnings"] is True
+                      locks+=1
+          assert (board_count,locks)==(621,713)
+          assert candidate_count==x["aggregate"]["board_examples_with_b50_candidate"]
+          sh=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          doc=pathlib.Path("docs/NL2_HU_B462_ALL_CERT_LOCK_MEDIUM_621_BOARD_AUDIT.md")
+          doc.write_text(
+             "# B462 V51 independently verified 164 CERT-MULTIBOARD models\n\n"
+             f"- Exact named GTO boards: {board_count}; paired real Rust NL2 lock sources: {locks}\n"
+             f"- Strict-source medium 50% **research** candidates: {candidate_count}, never default generic bet sizes\n"
+             f"- Exact source status SHA256: {sh(source)}\n"
+             f"- Exact independent per-board lock/medium ledger SHA256: {sh(report)}\n\n"
+             "Observed pool frequencies are aggregate street/size marginals, not observed conditional private-card frequencies. "
+             "Every board is matched only to its own original source/history/SPR, with a disclosed lock provenance. "
+             "The full abstract texture strategy remains APPROX outside the exact named boards; no unproved CERT or EST. "
+             "Counts remain 164 CERT / 228 APPROX / 0 EST. Draft PR #2 must not merge.\n")
+          print("PASS B462 all CERT evidence:",board_count,"boards",locks,"NL2 locks",candidate_count,"50pct candidates")
+          PY
+      - name: Full HU2475 action order, legal card reach, line links, source labels, and V47 loader audits
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js >/tmp/b462-contract.json
+          node tools/link_audit.js --md /tmp/b462-link.md --json /tmp/b462-link.json
+          node tools/reach_verify.js --log /tmp/b462-reach.md --json /tmp/b462-reach.json
+          node tools/hu_model_path_audit.js /tmp/b462-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b462-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B462 HU2475/2475")'
+          git diff --check
+      - name: Commit 621-board independently audited lock / nonpolarized ledger; never merge PR2
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b462_all_cert_lock_medium_audit_v51.json \
+            docs/NL2_HU_B462_ALL_CERT_LOCK_MEDIUM_621_BOARD_AUDIT.md
+          git diff --cached --quiet && exit 1
+          git commit -m 'B462: audit all 164 CERT, 621 exact boards, 713 NL2 locks and per-board medium50'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
