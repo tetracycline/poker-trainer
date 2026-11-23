@@ -110,7 +110,7 @@ def main():
     a.add_argument('--turn-count',type=int,default=1)
     a.add_argument('--flop-size-profile',choices=('full','lmp-50-only'),default='full',
         help='Only LMP: predeclared flop single 50pct menu; genuine restricted-game CFR, not unrestricted GTO')
-    a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','checkcheck-and-oop-b50','oop-b75only','oop-b100only','oop-b75raisecall','oop-b33only','checked-b33only','checked-b50only','checked-b100only','checked-b50b100only','checkcheck'),default='all',
+    a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','checkcheck-and-oop-b50','oop-b75only','oop-b100only','oop-b75raisecall','oop-b33only','checked-b33only','checked-b50only','checked-b75only','checked-b100only','checked-b50b100only','checkcheck'),default='all',
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
     a.add_argument('--archive-empty-river-extraction', action='store_true',
         help='Preserve a converged subgame that exported turn decisions but no requested river nodes')
@@ -118,8 +118,8 @@ def main():
         help='Match the pooled bet-size and raise fallback to the actual flop, turn, or river before applying it')
     a.add_argument('--allow-turn-lead', action='store_true',
         help='Solve an alternative turn tree with OOP leads after an IP half-pot flop stab and call')
-    a.add_argument('--turn-line-policy',choices=('default','b100only','checkcheck'),default='default',
-        help='Extract only exact b100-call river continuations; never alter the full underlying solved tree')
+    a.add_argument('--turn-line-policy',choices=('default','b100only','checked-b50only','checkcheck'),default='default',
+        help='Select exact turn continuations for extraction from the default 50/100 tree')
     a.add_argument('--turn-size-menu',choices=('default','river-gaps','exact-b66-only','exact-b50-only','33-50-75-100'),default='default',
         help='river-gaps: predeclared 33/66/75pct turn size tree for x x / turn bet-call river MODEL proofs')
     a.add_argument('--authenticated-original-gto-flop',type=pathlib.Path,
@@ -246,10 +246,10 @@ def main():
     if args.turn_size_menu=='33-50-75-100':
         pipeline.SUB.update(turn_oop='33%,50%,75%,100%',turn_ip='33%,50%,75%,100%')
         pipeline.TURN_LINES=['b33 c','b50 c','b75 c','b100 c']
-    if args.turn_line_policy in ('b100only','checkcheck'):
+    if args.turn_line_policy != 'default':
         if args.turn_size_menu!='default':
             a.error('targeted turn-line extraction requires default turn size menu (50/100)')
-        pipeline.TURN_LINES=['b100 c' if args.turn_line_policy=='b100only' else 'x x']
+        pipeline.TURN_LINES=[{'b100only':'b100 c', 'checked-b50only':'x b50 c', 'checkcheck':'x x'}[args.turn_line_policy]]
     turns=pipeline.turns_for(flop)[:args.turn_count]
     lines=(['b33 c','b50 c','b75 c','b100 c'] if args.flop_line_policy=='oop-betcall'
            else ['x x','b50 c'] if args.flop_line_policy=='checkcheck-and-oop-b50'
@@ -261,6 +261,7 @@ def main():
            else ['x b50 c','x b100 c'] if args.flop_line_policy=='checked-b50b100only'
            else ['x b33 c'] if args.flop_line_policy=='checked-b33only'
            else ['x b50 c'] if args.flop_line_policy=='checked-b50only'
+           else ['x b75 c'] if args.flop_line_policy=='checked-b75only'
            else ['x b100 c'] if args.flop_line_policy=='checked-b100only'
             else ['x x'] if args.flop_line_policy=='checkcheck'
            else list(FLOP_ACTIONS))
