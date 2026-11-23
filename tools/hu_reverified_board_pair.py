@@ -16,7 +16,14 @@ def source_case(model, source, public, line, seat):
     assert version=='gto' or version==('exp_ip' if seat else 'exp_oop')
     assert 0<=sub['info']['gto_expl_pct']<=.5 and 0<=root['info']['gto_expl_pct']<=.5
     if version!='gto':
-        assert 0<=sub['info']['hero_gap_pct']<=.5 and 0<=root['info']['hero_gap_pct']<=.5
+        assert 0<=sub['info']['hero_gap_pct']<=.5
+        if 'verified_gto_parent' in source:
+            parent=source['verified_gto_parent']
+            assert root['info'].get('hero_gap_pct') is None and not root['info'].get('lock_stats')
+            assert parent['run']==m['gto_parent_source_run_id'] and parent['run']>0
+            assert parent['sha256']==m['gto_parent_source_sha256']==sha(compact(root))
+        else:
+            assert 0<=root['info']['hero_gap_pct']<=.5
     matches=[n for n in sub['nodes'] if (n['board'],n['line'],n['player'])==(public,line,seat)]
     if not matches:return None
     node,=matches
