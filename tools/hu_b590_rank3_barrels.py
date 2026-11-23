@@ -23,13 +23,15 @@ CASES = {
 }
 
 
-def reply_rules(pool, flop_line):
+def reply_rules(pool, flop_line, pfr):
     rows = []
-    table = pool["postflop_HU"]["SRP_PFR_OOP"]
+    table = pool["postflop_HU"]["SRP_PFR_" + pfr.upper()]
     if flop_line=="x x":
-        rate=table["vs_delayed_cbet"]
-        assert rate["n"]==26780
-        return [dict(pattern="^x x/b(50|100)$",table="vs_delayed_cbet",size="all",**rate)]
+        metric = "vs_probe" if pfr == "ip" else "vs_delayed_cbet"
+        rate = table[metric]
+        assert rate["n"] == (49952 if pfr == "ip" else 26780)
+        return [dict(pattern="^x x/b(50|100)$",table=metric,size="all",**rate)]
+    assert pfr == "oop"
     for street, prefix in (("turn", "^"+flop_line+"/"), ("river", "^"+flop_line+"/b(50|100) c/")):
         field = "vs_" + street + "_barrel_by_size"
         for action, interval in (("b50", "34-55%"), ("b100", "81-110%")):
@@ -47,7 +49,7 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
     parent_pin=dict(name=receipt["name"],head=receipt["workflow_run"]["head_sha"],run=pin["run"],sha256=pin["archive_sha256"])
     spot = model["solver_profile"]
     profile = ranges.SPOTS[spot]
-    assert (profile["kind"],profile["pfr"]) == ("SRP","oop")
+    assert profile["kind"] == "SRP" and profile["pfr"] in ("ip", "oop")
     pot, stack = round(100*profile["pot"]), round(100*profile["stack"])
     parent=load_original(originals,aid,parent_pin,spot,board["flop"],board["turn"],"gto",pot=pot,stack=stack,
                          pipeline=pipeline,ranges=ranges,flop_line=flop_line)
@@ -61,7 +63,7 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
     assert (parent_job["rake_rate"], parent_job["rake_cap"], parent_job["line0"]) == (.05, 1000, [*flop_line.split(), "/"])
     assert not parent_job.get("locks") and parent_job.get("hero") is None and not original["info"].get("lock_stats")
     assert (original["pot"]/100, original["stack"]/100) == (board["actual_pot_bb"], board["actual_effective_stack_bb"])
-    rules = reply_rules(pool, flop_line)
+    rules = reply_rules(pool, flop_line, profile["pfr"])
     job = dict(parent_job, hero=0, iters=2500, target_pct=.35, rank_pct=.35, out="result.json",
                locks=[dict(pat=r["pattern"], fold=r["fold"]/100, **{"raise":r["raise"]/100}) for r in rules])
     key = public+"/result.json"
@@ -112,7 +114,7 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
                 gto=before,locked=after,gto_gap_pct=locked["info"]["gto_expl_pct"],hero_gap_pct=locked["info"]["hero_gap_pct"],rules=rules)
 
 
-def main(*, model_id=MODEL, rank=3, flop_line="b75 c", cases=CASES, argv=None):
+def main(*, model_id=MODEL, rank=3, flop_line="b75 c", cases=CASES, argv=None, schema="NL2_HU_B590_SB_BB_BARREL_REPLIES_V1"):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--solver",type=Path,required=True)
     p.add_argument("--originals",type=Path,required=True)
@@ -138,7 +140,7 @@ def main(*, model_id=MODEL, rank=3, flop_line="b75 c", cases=CASES, argv=None):
             b=boards[public]
             pin=dict(archive_id=aid,archive_sha256=digest,version="gto",run=b["source_run_id"],source_sha256=b["source_sha256"])
             records.append(calculate(b,pin,a.originals,json.loads(pool_raw)["NL2"],archive,a.driver,a.verification_driver,pipeline,ranges,model,flop_line))
-    report=dict(schema="NL2_HU_B590_SB_BB_BARREL_REPLIES_V1",solver=SOLVER,rust=RUST,pool_sha256=POOL,
+    report=dict(schema=schema,solver=SOLVER,rust=RUST,pool_sha256=POOL,
                 archive_sha256=sha(a.archive.read_bytes()),records=records)
     a.out.write_text(json.dumps(report,sort_keys=True,indent=2)+"\n")
 

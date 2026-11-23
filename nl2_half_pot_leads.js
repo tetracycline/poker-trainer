@@ -231,6 +231,7 @@
       'ln-opfr-t_model-1wej9w5':'nl2_hu_b590_rank3_barrels.json',
       'ln-opfr-t_model-trdt3w':'nl2_hu_b594_rank4_barrels.json',
       'ln-opfr-t_model-id38uf':'nl2_hu_b596_rank5_barrels.json',
+      'ln-bb-t_model-1n6d5u3':'nl2_hu_b609_rank6_barrels.json',
       'ln-opfr-t_model-1hmsxaw':'nl2_hu_b603_rank30_barrels.json',
       'ln-opfr-t_model-1xzqrwx':'nl2_hu_b606_rank31_barrels.json',
       'ln-opfr-t_model-qx9t0u':'nl2_hu_b606_rank32_barrels.json',
@@ -243,21 +244,23 @@
       const response=await fetch('data/'+name,{cache:'no-store'});
       if(!response.ok)throw Error('HTTP '+response.status);
       const report=await response.json();
-      if(report.schema!=='NL2_HU_B590_SB_BB_BARREL_REPLIES_V1')throw Error('來源格式不符');
+      const probe=model.solver_profile==='BTN_BB';
+      if(report.schema!==(probe?'NL2_HU_B609_BB_PROBE_RESPONSES_V1':'NL2_HU_B590_SB_BB_BARREL_REPLIES_V1'))throw Error('來源格式不符');
       const row=report.records.find(r=>r.model_id===model.model_id && r.public_board===board.public_board &&
         r.line===board.actual_exact_action_line && r.seat===board.acting_seat && r.original.version==='gto' &&
         r.original.run===board.source_run_id && r.original.source_sha256===board.source_sha256 &&
         r.pot_bb===board.actual_pot_bb && r.stack_bb===board.actual_effective_stack_bb);
       if(!row)return;
-      const delayed=row.line==='x x/';
+      const checked=row.line==='x x/';
+      const rateTable=probe?'vs_probe':'vs_delayed_cbet';
       if(!sha(row.output_sha256) || !sha(row.job_sha256) || !sha(report.archive_sha256) ||
          !(row.locked.legal_combos>0 && row.locked.compatible_pairs>=row.locked.legal_combos) ||
          row.locked.legal_combos!==row.gto.legal_combos || row.locked.compatible_pairs!==row.gto.compatible_pairs ||
-         row.rules.length!==(delayed?1:4) || (delayed && row.rules[0].table!=='vs_delayed_cbet') || !row.rules.every(r=>r.n>0 && r.applied_nodes>0))throw Error('來源核對失敗');
+         row.rules.length!==(checked?1:4) || (checked && row.rules[0].table!==rateTable) || !row.rules.every(r=>r.n>0 && r.applied_nodes>0))throw Error('來源核對失敗');
       const details=document.createElement('details');
       const summary=document.createElement('summary');
-      const actors=model.solver_profile==='UTG_CO'?['UTG','CO']:['小盲','大盲'];
-      summary.textContent=delayed?actors[0]+' 延遲持續下注的 '+actors[1]+' 回應鎖':actors[0]+' 連續下注的轉牌及河牌尺寸鎖';
+      const actors=probe?['大盲','按鈕位']:model.solver_profile==='UTG_CO'?['UTG','CO']:['小盲','大盲'];
+      summary.textContent=probe?'大盲轉牌探測下注的按鈕位回應鎖':checked?actors[0]+' 延遲持續下注的 '+actors[1]+' 回應鎖':actors[0]+' 連續下注的轉牌及河牌尺寸鎖';
       details.appendChild(summary);
       const add=text=>{const p=document.createElement('p');p.textContent=text;details.appendChild(p);};
       add('沿用原 GTO 翻牌範圍。轉牌可過牌、下半池或滿池。');
@@ -277,12 +280,12 @@
       }
       for(const r of row.rules){
         const street=r.table==='vs_turn_barrel_by_size'?'轉牌':'河牌';
-        const scope=delayed?actors[1]+' 面對延遲持續下注，各下注尺寸合計':street+'面對 '+r.size+' 底池的下注';
+        const scope=checked?actors[1]+' 面對'+(probe?'探測下注':'延遲持續下注')+'，各下注尺寸合計':street+'面對 '+r.size+' 底池的下注';
         add(scope+'，共 '+r.n.toLocaleString('zh-TW')+' 次。棄牌 '+r.fold+
           '%、跟注 '+r.call+'%、加注 '+r.raise+'%。');
       }
-      add('實測樣本合併單挑、單次加注底池中翻前加注者在位置外的對局。');
-      if(delayed)add('此子局將同一組合併樣本頻率分別套用到半池與滿池回應。河牌保留自由求解。');
+      add('實測樣本合併單挑、單次加注底池中翻前加注者在位置'+(probe?'內':'外')+'的對局。');
+      if(checked)add('此子局將同一組合併樣本頻率分別套用到半池與滿池回應。河牌保留自由求解。');
       slot.appendChild(details);
     }catch{slot.textContent='目前無法核對連續下注的鎖頻資料。';}
   }

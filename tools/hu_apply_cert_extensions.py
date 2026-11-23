@@ -194,6 +194,11 @@ def main():
     assert loaded, "No verified extensions to apply"
     x_path, r_path = DATA/"nl2_hu_model_history_crosswalk.json", DATA/"nl2_hu_model_source_references.json"
     xwalk, refs = read(x_path), read(r_path)
+    contract = rendered_contract(registry["records"])
+    for mid, route in contract["routes"].items():
+        if "priced_model_spr" in route:
+            registry["records"][mid]["assumed_model_node_spr"] = route["priced_model_spr"]
+            refs["items"][mid]["model_node_spr"] = route["priced_model_spr"]
     ordered = sorted(loaded, key=lambda x: x["rank"])
     for ext in ordered:
         update_references(promote(registry, deepcopy(ext)), xwalk, refs)
@@ -215,7 +220,6 @@ def main():
                 refs["items"][mid]["note"] = "Fewer than three named flops survive the original two-seat action-path replay."
         return changes
 
-    contract = rendered_contract(registry["records"])
     excluded = {}
 
     def reconcile_routes():

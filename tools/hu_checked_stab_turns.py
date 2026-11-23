@@ -42,6 +42,9 @@ class TurnStudy:
     root_branches: tuple
     label: str
     report_schema: str
+    acting_seat: int = 1
+    oop_bet_pct: int = 50
+    root_threads: int = 2
 
     @property
     def bet(self):
@@ -61,7 +64,7 @@ class TurnStudy:
 
     @property
     def line(self):
-        return self.flop_line + "/x"
+        return self.flop_line + ("/x" if self.acting_seat else "/")
 
     def archive_code(self, flop):
         return f"{self.batch}_R{self.rank}_{flop.upper()}"
@@ -69,12 +72,12 @@ class TurnStudy:
 
 def rendered_policy(study, source, reach, public, routes):
     game = source["subgame"]
-    node, = (n for n in game["nodes"] if (n["line"], n["board"], n["player"]) == (study.line, public, 1))
+    node, = (n for n in game["nodes"] if (n["line"], n["board"], n["player"]) == (study.line, public, study.acting_seat))
     assert node["pot"] == study.pot and node["bets"] == [0, 0]
     actions = node["acts"]
     assert "x" in actions and "b50" in actions
     masks = base64.b64decode(reach["compatible_action_mask_b64"], validate=True)
-    hands = game["hands"][1]
+    hands = game["hands"][study.acting_seat]
     result = {}
     for i, (hand, mask) in enumerate(zip(hands, masks, strict=True)):
         if not mask:
@@ -109,7 +112,7 @@ def replay(study, spec, template, pool, pipeline, run, route, model):
         extracts = [dict(prefix=[], street=True)]
         for branch in study.root_branches:
             extracts.extend(dict(prefix=branch.split()+[t], street=False, raw=True) for t in spec["root_turns"])
-        root_job = dict(template["root_job"], flop=flop, out="root.json", flop_oop="50%",
+        root_job = dict(template["root_job"], flop=flop, out="root.json", flop_oop=f"{study.oop_bet_pct}%",
                         flop_ip=f"{study.ip_bet_pct}%", target_pct=.45, extract=extracts)
         assert json.loads(z.read("root.job.json")) == root_job
         assert (root["flop"], root["pot"], root["stack"]) == (flop, study.root_pot, study.root_stack)
@@ -127,10 +130,10 @@ def replay(study, spec, template, pool, pipeline, run, route, model):
         assert json.loads(z.read("gto.job.json")) == job
         manifest = dict(spot=study.spot, pot_family=study.family, locks=[], preflop_ranges=template["manifest"]["preflop_ranges"])
         gto = dict(version="gto", root=root, run=run, archive_code=code, archive_sha256=digest, manifest=manifest)
-        lockjob, rules = prepare_job(dict(source=gto, job=job), "exp_ip", pool, pipeline)
+        lockjob, rules = prepare_job(dict(source=gto, job=job), "exp_ip" if study.acting_seat else "exp_oop", pool, pipeline)
         assert json.loads(z.read("lock.job.json")) == lockjob
         root_sha = sha(compact(root))
-        locked = dict(gto, version="exp_ip", verified_gto_parent=dict(run=run,sha256=root_sha),
+        locked = dict(gto, version="exp_ip" if study.acting_seat else "exp_oop", verified_gto_parent=dict(run=run,sha256=root_sha),
                       manifest=dict(manifest,locks=rules,gto_parent_source_run_id=run,gto_parent_source_sha256=root_sha))
         for source, filename in [(gto,"gto.json"), (locked,"native.json")]:
             raw = z.read(filename)
@@ -144,9 +147,9 @@ def replay(study, spec, template, pool, pipeline, run, route, model):
     assert not gto["subgame"]["info"].get("lock_stats")
     info = locked["subgame"]["info"]
     assert 0 <= info["hero_gap_pct"] <= .5 and info["lock_stats"]
-    locked.update(measured_lock_application=audit_patterns(locked["subgame"], lockjob, locked["manifest"], pool, hero_seat=1),
+    locked.update(measured_lock_application=audit_patterns(locked["subgame"], lockjob, locked["manifest"], pool, hero_seat=study.acting_seat),
                   applied_rust_rates=info["lock_stats"])
-    rows = [audit_decision(s, public, study.line, 1, root_sha) for s in (gto, locked)]
+    rows = [audit_decision(s, public, study.line, study.acting_seat, root_sha) for s in (gto, locked)]
     assert all(r and r["compatible_hole_card_pairs"]>0 for r in rows)
     hands = [rendered_policy(study, s, r, public, route) for s,r in zip((gto, locked), rows, strict=True)]
     common = []
@@ -164,7 +167,7 @@ def reproduce(study, spec, driver):
     assert sha(archive.read_bytes()) == spec["sha256"]
     with ZipFile(archive) as z, tempfile.TemporaryDirectory() as folder:
         work = Path(folder)
-        for name, output, threads in [("root.job.json","root.json",2), ("gto.job.json","gto.json",1),
+        for name, output, threads in [("root.job.json","root.json",study.root_threads), ("gto.job.json","gto.json",1),
                                       ("lock.job.json","native.json",1)]:
             job = json.loads(z.read(name))
             assert job["out"] == output
@@ -224,7 +227,7 @@ def main(study):
     assert 3<=len(inputs)==len({s["flop"] for s in inputs})<=5
     for spec in inputs:
         public,(g,e),rows,hands,root_sha=replay(study,spec,template,pool,pipeline,args.run,routes,model)
-        assert compatible(registry_route,dict(public_board=public,actual_exact_action_line=study.line,acting_seat=1))
+        assert compatible(registry_route,dict(public_board=public,actual_exact_action_line=study.line,acting_seat=study.acting_seat))
         result.append(dict(flop=spec["flop"],public_board=public,common_hands=len(hands),
                            strict_pairs=[r["compatible_hole_card_pairs"] for r in rows],
                            nonpolarized_candidates=[r["b50"]["candidate"] for r in rows]))
@@ -233,8 +236,8 @@ def main(study):
         assert args.run > 0
         board,pin=emit_board(model,g,e,public,study.line,texture(spec["flop"]),viewer_code=g["archive_code"])
         pin.update(rendered_decision_hands=hands,source_run_role="VERIFICATION_OF_LOCAL_NATIVE_RESULTS")
-        board.update(source_run_role=pin["source_run_role"],origin_solve_run_id=None,flop_bet_size_menu=("50%" if study.ip_bet_pct==50 else "OOP 50%, IP 100%"),
-                     restricted_flop_bet_sizes_pct=sorted({50,study.ip_bet_pct}),conditional_turn_oop_bet_sizes_pct=[33,50,75],
+        board.update(source_run_role=pin["source_run_role"],origin_solve_run_id=None,flop_bet_size_menu=(f"{study.ip_bet_pct}%" if study.ip_bet_pct==study.oop_bet_pct else f"OOP {study.oop_bet_pct}%, IP {study.ip_bet_pct}%"),
+                     restricted_flop_bet_sizes_pct=sorted({study.oop_bet_pct,study.ip_bet_pct}),conditional_turn_oop_bet_sizes_pct=[33,50,75],
                      conditional_turn_ip_bet_sizes_pct=[33,50,75])
         board["nl2_locked_variants"][0].update(source_run_role=pin["source_run_role"],origin_solve_run_id=None,
             variant_label=study.label,pool_sha256=POOL,

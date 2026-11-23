@@ -1,0 +1,49 @@
+name: B609 verify five BB probe locks against IP preflop-raiser responses
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b609-bb-probes.yml'
+      - 'tools/hu_b609_*'
+      - 'data/nl2_hu_b609_rank6_barrels.json'
+      - 'data/solver_evidence/NL2_B609_R6.zip'
+permissions: {contents: read, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the original native solver
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Authenticate all five original boards and reproduce the native policies
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAYON_NUM_THREADS: 1
+        run: |
+          set -euo pipefail
+          for id in 14592317474 14531225991 14530176503 14591863023 14591903053; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$RUNNER_TEMP/$id.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/$id.zip"
+          done
+          python tools/hu_b609_rank6_probe.py --solver ../solver --verification-driver ../solver/postflop/pfdriver/target/release/pfdriver --originals "$RUNNER_TEMP" --archive data/solver_evidence/NL2_B609_R6.zip --out "$RUNNER_TEMP/replay.json"
+          report=data/nl2_hu_b609_rank6_barrels.json
+          cmp "$RUNNER_TEMP/replay.json" "$report"
+          node tools/hu_b590_barrel_ui.cjs "$report"

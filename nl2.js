@@ -443,6 +443,22 @@ function faceHtml(sp, nd, line, ro) { // 這個節點你面對什麼：例題的
   const cand = []; // 例題必須跟標題同一條線、同一組翻前位置
   for (const r of ex) for (const e of r.eg) if (!line || !TITLES || TITLES.lineKeyFromEg(e, stOf(nd)) === line.key) cand.push(e);
   if (line && line.eg) cand.sort((a, b) => (sig(b) === sig(line.eg)) - (sig(a) === sig(line.eg)));
+  let flopPrice = '';
+  if (sp === 'iso' && line?.eg && ['f_vs_donk', 'iso_f_vs_cbet'].includes(nd)) {
+    const matching = cand.filter(e => sig(e) === sig(line.eg) && e.t === 'ISO' && !e.l.includes('/'));
+    const prices = matching.map(e => {
+      const villain = [e.pa, ...e.pc].find(seat => seat !== e.me);
+      const prefix = nd === 'iso_f_vs_cbet' ? e.me + ':x ' : '';
+      const bet = e.l.match(/(?:^| )([A-Z]+):b(0?\.\d+|1(?:\.0+)?)$/);
+      if (!bet || e.pc.length !== 1 || bet[1] !== villain || e.l !== prefix + villain + ':b' + bet[2]) return null;
+      const pct = Number(bet[2]) * 100;
+      return Number.isInteger(pct) && pct > 0 ? [e.pot, pct].join('/') : null;
+    });
+    if (prices[0] && prices.every(p => p === prices[0])) {
+      const [pot, pct] = prices[0].split('/');
+      flopPrice = ' data-iso-call-price="' + pot + '/' + pct + '"';
+    }
+  }
   for (const r of [0]) {
     for (const e of cand) {
       if (line && line.eg && sig(e) !== sig(line.eg)) continue;
@@ -450,7 +466,7 @@ function faceHtml(sp, nd, line, ro) { // 這個節點你面對什麼：例題的
       const face = isVs(nd) ? `你要跟 ${r1(s.facing)}bb（底池 ${s.pot}bb）` : `輪到你（底池 ${l.pot}bb）`;
       const cs = x => stOf(nd) ? ' ' + pretty(x.cards) : ''; // 轉牌／河牌：例題寫出每街實際發的牌
       const prev = s.slice(1, -1).map(x => `${x.st}${cs(x)}：${esc(x.txt)}`).join(' → ');
-      return `<p class="small muted">你面對（例）：${esc(s[0])} → ${prev ? prev + ' → ' : ''}${l.st}${cs(l)}${l.txt ? '：' + esc(l.txt) : ''}，${face}</p>`; } }
+      return `<p class="small muted"${flopPrice}>你面對（例）：${esc(s[0])} → ${prev ? prev + ' → ' : ''}${l.st}${cs(l)}${l.txt ? '：' + esc(l.txt) : ''}，${face}</p>`; } }
   return '';
 }
 function dataHtml(sp, nd, line, ro) {

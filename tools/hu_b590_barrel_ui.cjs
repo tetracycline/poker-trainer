@@ -32,6 +32,7 @@ async function main() {
       assert.equal(Boolean(group),hands.length>0);
       for(const [hand,freq] of hands)assert.ok(group.children[1].textContent.includes(hand+' '+(100*freq).toFixed(1)+'%'));
     }
+    if(model.solver_profile==='BTN_BB')assert.ok(content.includes('探測下注') && content.includes('位置內'));
     if(model.solver_profile==='UTG_CO')assert.ok(content.includes('UTG'));
     if(row.line==='x x/')assert.ok(content.includes('同一組合併樣本頻率'));
     for (const r of row.rules) assert.ok(content.includes(r.n.toLocaleString('zh-TW')));

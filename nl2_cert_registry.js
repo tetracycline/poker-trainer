@@ -48,6 +48,12 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
     throw Error('具名來源格式不符');
   }
   const records = {...base.records};
+  for (const [id,route] of Object.entries(manifest.trainer_route_contract?.routes || {})) {
+    if (route.priced_model_spr === undefined) continue;
+    if (!records[id] || !Number.isFinite(route.priced_model_spr) || route.priced_model_spr <= 0 ||
+        !/^x? ?b[1-9]\d* c$/.test(route.streets[0])) throw Error('翻牌跟注的來源尺寸或 SPR 不符');
+    records[id] = {...records[id],assumed_model_node_spr:route.priced_model_spr};
+  }
   const extensions = {};
   const digest = x => typeof x === 'string' && /^[0-9a-f]{64}$/.test(x);
   const positive = x => Number.isSafeInteger(x) && x > 0;

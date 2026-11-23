@@ -162,8 +162,16 @@ function repair(html,sp,catalog){
     if(ids.has(id))throw Error('Unexpected modeled id collision');
     ids.add(id);
     const m=s.modelMeta||walkActions(s);
-    const next=transition(m,action,size,s.st),line=keyNext(s,action,stage);
-    const x={id,sp:s.sp,nd,st:stage,pfx:s.pfx,source:s.id,action,size:round(size),
+    const printed = !s.modelMeta && action==='call' && s.st===0 && m.root.family==='ISO'
+      ? s.part.match(/data-iso-call-price="([0-9.]+)\/([0-9]+)"/) : null;
+    const priced = printed && Number(printed[1])===m.root.pot;
+    const facing = priced ? Math.min(m.root.stack,Math.round(m.root.pot*Number(printed[2]))/100) : 0;
+    const next = priced
+      ? {pot:round(m.root.pot+2*facing),stack:round(m.root.stack-facing),root:m.root}
+      : transition(m,action,size,s.st);
+    const flopCallPct = priced ? Number(printed[2]) : s.flopCallPct;
+    const line=keyNext(s,action,stage);
+    const x={id,sp:s.sp,nd,st:stage,pfx:s.pfx,source:s.id,action,size:round(size),flopCallPct,
       pre:s.pre,modelMeta:next,key:line,title:titleFor(s.pre,line,stage),allowed:new Set(),
       facts:{root:next.root,pot:next.pot,stack:next.stack,spr:next.pot?round(next.stack/next.pot):0}};
     model.set(key,x);created.push(x);return x;
@@ -248,6 +256,7 @@ function repair(html,sp,catalog){
     }).join('');
     const sizeDesc='100bb；'+rootP.family+'；'+rootP.range+'；根底池 '+rootP.pot+'bb／根餘額 '+rootP.stack+
       'bb／根 SPR '+rootP.rootSPR+'；模型節點底池約 '+P.pot+'bb、剩餘有效籌碼約 '+P.stack+'bb、SPR 約 '+P.spr+
+      (n.flopCallPct ? '；翻牌跟注按來源行動線的 '+n.flopCallPct+'% 底池下注計價' : '')+
       '；每街採常見 ⅓／½／¾ 底池下注、加注到 3 倍並由對手跟注；所有值是明示假設，非真實逐 combo 解算。';
     const exactViewerSpots=['BTN_BB','BB3_BTN','CO_BB','SB_BB','SB3_BTN','UTG_CO','CO3_BTN'];
     const sourceRef=exactViewerSpots.includes(rootP.spot)
@@ -270,7 +279,7 @@ function repair(html,sp,catalog){
   root.__HU_MODEL_LAST={spot:sp,synthetic:created.length,assumption:true,sourceSections:sections.length,
     nodes:created.map(n=>({id:n.id,source:n.source,sp:n.sp,nd:n.nd,st:n.st,
       pre:n.pre,action:n.action,size:n.size,key:n.key,allowed:[...n.allowed].sort(),
-      facts:n.facts}))};
+      facts:n.facts,flopCallPct:n.flopCallPct}))};
   return patched;
 }
 root.NL2HUModel={repair,version:'hu-nl2-100bb-assumption-v1'};
