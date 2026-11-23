@@ -45,6 +45,12 @@ function selectBoard(){
  if(q.has('version')){
    const requested=q.get('version');
    const versions=[...el('version').options];
+   const pinned=q.get('sha');
+   if(pinned&&q.get('model')===chosenModel.model_id&&q.get('board')===chosenBoard.public_board){
+     const match=versions.find(x=>sourceSha(sourceCase(x.value))===pinned);
+     if(!match){el('version').value='';selectVersion();setMessage('所選牌面的指定求解 SHA 已無對應來源。');return;}
+     el('version').value=match.value;selectVersion();return;
+   }
    const selected=versions.find(x=>x.value===requested)||
       versions.find(x=>x.value.startsWith(requested+'@'));
    if(selected)el('version').value=selected.value;
@@ -161,16 +167,39 @@ function verifiedCase(source,proof){
  return item;
 }
 let versionRequest=0;
+let jointReach=null;
 async function selectVersion(){
  const request=++versionRequest;
- caseData=null;el('node').replaceChildren();
+ caseData=null;jointReach=null;el('node').replaceChildren();
+ el('lock-pool-source')?.replaceChildren();el('locked-medium')?.replaceChildren();
  const version=el('version').value;const source=sourceCase(version);
  if(!source){setMessage('尚無符合的 source');return;}
+ const medium=el('locked-medium');
+ if(medium){
+   medium.textContent='';
+   setMessage('正在核對來源與雙方可達性……');
+   try{
+     const audit=globalThis.nl2LockedMedium, report=await audit.load();
+     if(request!==versionRequest)return;
+     const row=audit.lookup(report,chosenModel,chosenBoard,source);
+     if(row){
+       jointReach={row,mask:null};
+       medium.textContent=(version==='gto'?'GTO':'NL2 鎖 '+sourceRun(source))+'｜'+audit.describe(row);
+     }else if(version!=='gto')medium.textContent=audit.describe(null);
+   }catch(error){
+     if(request!==versionRequest)return;
+     medium.textContent='雙方可達性來源無法核對。';
+     setMessage('未能核對此版本的雙方可達手牌：'+error.message);return;
+   }
+ }
  const lockScope=el('lock-pool-source');
  if(lockScope){
    lockScope.replaceChildren();
    const locks=version==='gto'?chosenBoard.nl2_locked_variants:[source];
    globalThis.nl2PoolRateScope?.show(lockScope,chosenModel,chosenBoard,locks);
+ }
+ if(jointReach?.row.status==='ZERO_JOINT_REACH'){
+   setMessage('此公牌與行動線沒有相容的雙方私牌。');return;
  }
  const run=sourceRun(source),digest=sourceSha(source);
  if(chosenModel?.model_id==='ln-opfr-t_model-qx9t0u'&&
@@ -321,6 +350,13 @@ async function selectVersion(){
    if(request!==versionRequest)return;
    if(!proof){setMessage('來源未由獨立 GitHub Actions 驗證；不可將本頁標示為 CERT。'+url);return;}
    const actual=verifiedCase(source,proof);
+   if(jointReach){
+     const checked=jointReach, row=checked.row;
+     const anchor=actual.nodes.find(n=>n.public_board===chosenBoard.public_board&&n.exact_node_line===chosenBoard.actual_exact_action_line&&n.acting_seat===chosenBoard.acting_seat);
+     try{checked.mask=await globalThis.nl2LockedMedium.bindMask(row,actual,anchor);}
+     catch(e){checked.reason=e.message;}
+     if(request!==versionRequest)return;
+   }
    caseData=actual;
    const options=actual.nodes.map((n,i)=>({n,i}))
      .filter(({n})=>n.strictly_reachable_combos>0);
@@ -335,12 +371,24 @@ async function selectVersion(){
    selectNode();
  }catch(e){if(request===versionRequest){caseData=null;el('node').replaceChildren();setMessage('來源稽核錯誤：'+e.message);}}
 }
+function jointFor(node){
+ const row=jointReach?.row;
+ return row && row.public_board===node.public_board && row.line===node.exact_node_line && row.acting_seat===node.acting_seat ? jointReach : null;
+}
 function selectNode(){
  if(!caseData)return;
  const node=caseData.nodes[Number(el('node').value)];
  if(!node){setMessage('該真實牌面沒有可達的 solver 決策。');return;}
  const version=el('version').value;
- const cands=node.medium_50pct_strict_evidence||{};
+ const joint=jointFor(node);
+ const medium=el('locked-medium');
+ if(medium){
+   const anchor=node.public_board===chosenBoard.public_board&&node.exact_node_line===chosenBoard.actual_exact_action_line&&node.acting_seat===chosenBoard.acting_seat;
+   if(!anchor)medium.textContent='此索引只核對所選具名公牌的認證行動線。';
+   else if(joint)medium.textContent=(version==='gto'?'GTO':'NL2 鎖 '+joint.row.source_run_id)+'｜'+globalThis.nl2LockedMedium.describe(joint.row);
+   else medium.textContent=version==='gto'?'':globalThis.nl2LockedMedium.describe(null);
+ }
+ const cands=(joint?joint.row.b50:node.medium_50pct_strict_evidence)||{};
  const lock=caseData.villain_lock_scope||{};
  const origin=sourceCase(version);
  const details=el('details');details.replaceChildren();
@@ -358,13 +406,13 @@ function selectNode(){
  '具體公牌：'+node.public_board+'；完整動作線 '+node.exact_node_line,
  '認證範圍：'+currentSourceType,
  selectedLock,
- 'GTO 基線可達 combo '+chosenBoard.strict_full_street_combo_reachable+
+ 'GTO 基線可達 combo '+(joint?((version==='gto'?joint.row:joint.row.gto)?.strict_legal_combos??chosenBoard.strict_full_street_combo_reachable):chosenBoard.strict_full_street_combo_reachable)+
    '；GTO／鎖頻來源各自 SHA 為 '+chosenBoard.source_sha256+'／'+sourceSha(origin),
  '座位 '+(node.acting_seat?'IP':'OOP')+'；底池 '+fmt(node.pot_bb)+' bb；剩餘有效籌碼 '+fmt(node.remaining_bb)+' bb；SPR '+fmt(node.node_spr),
  'GTO 基線 exploitability：'+fmt(caseData.gto_exploitability_pct)+'%；NL2 模型 hero gap：'+fmt(caseData.locked_hero_gap_pct)+'%',
- '真正跨街可達 combos：'+fmt(node.strictly_reachable_combos,0)+'；合法動作：'+node.source_actions.join('、'),
- '各動作原始來源加權頻率：'+Object.entries(node.action_frequency_weighted_pct||{}).map(([k,v])=>k+' '+fmt(v)+'%').join('；'),
- '50% pot：可達 combos '+(cands.eligible||0)+'；其中 EV 最高動作為 50%：'+(cands.preferred||0)+
+ (joint?'雙方可達英雄 combos：':'原始來源跨街可達 combos：')+fmt(joint?joint.row.strict_legal_combos:node.strictly_reachable_combos,0)+'；合法動作：'+node.source_actions.join('、'),
+ (joint?'各動作原始來源加權頻率（未依雙方可達遮罩重算）：':'各動作原始來源加權頻率：')+Object.entries(node.action_frequency_weighted_pct||{}).map(([k,v])=>k+' '+fmt(v)+'%').join('；'),
+ joint?null:'50% pot：可達 combos '+(cands.eligible||0)+'；其中 EV 最高動作為 50%：'+(cands.preferred||0)+
    '；中 equity '+(cands.middle_count||0)+' / 低 '+(cands.low_count||0)+' / 高 '+(cands.high_count||0)+
    '；'+(cands.candidate?'僅列去極化研究候選':'沒有足夠非極化證據，不作建議'),
  '對手來源匹配節點 '+fmt(lock.pattern_matched_nodes,0)+'/'+fmt(lock.villain_decision_nodes,0)+
@@ -391,7 +439,7 @@ function selectNode(){
    }
    lines.push(comparison+'。');
  }
- for(const line of lines){const p=document.createElement('p');p.textContent=line;details.appendChild(p);}
+ for(const line of lines.filter(Boolean)){const p=document.createElement('p');p.textContent=line;details.appendChild(p);}
  details.appendChild(buildLinks(origin,caseData));
  if(chosenModel.model_id==='ln-iso-lmp_t_model-19hfq8v' && node.public_board==='2d4h4s8s' &&
     node.exact_node_line==='b50 c/' && node.acting_seat===0 && chosenBoard.source_run_id===44762388523){
@@ -414,7 +462,11 @@ function fillCombos(){
    td.textContent='缺少 Hole cards 的原始順序，不顯示可能誤對應的手牌策略。';
    td.colSpan=3;tr.appendChild(td);box.appendChild(tr);return;
  }
- const masks=atob(node.strictly_reachable_masks_b64);
+ const joint=jointFor(node);
+ if(joint && joint.mask===null){
+   box.textContent='無法核對此來源的雙方可達手牌：'+(joint.reason||'缺少遮罩');return;
+ }
+ const masks=joint?joint.mask:atob(node.strictly_reachable_masks_b64);
  const best=node.strict_legal_best_ev_action_indices_b64?atob(node.strict_legal_best_ev_action_indices_b64):null;
  if(masks.length!==hands.length||(best!==null&&best.length!==hands.length)){
    box.textContent='原始 combo/EV 維度不相同，無法安全展示。';return;
@@ -431,9 +483,9 @@ function fillCombos(){
    if(best&&(index===255||index>=node.source_actions.length)){
      box.textContent='最大 EV 行動來源不相容';return;
    }
-   eligible.push([hands[i],actions.join(' / '),best?node.source_actions[index]:'原始未收錄']);
+   eligible.push([hands[i],actions.join(' / '),best && (mask&(1<<index))?node.source_actions[index]:'原始未收錄']);
  }
- if(eligible.length!==node.strictly_reachable_combos){
+ if(eligible.length!==(joint?joint.row.strict_legal_combos:node.strictly_reachable_combos)){
    box.textContent='本條行動線超出原始嚴格可達手牌數，禁止顯示';return;
  }
  const show=el('all-combos').checked?eligible:eligible.slice(0,100);

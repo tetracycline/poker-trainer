@@ -1,0 +1,56 @@
+name: B483 raw two-player reach and half-pot evidence from the B1–B3 source archives
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b483-locked-medium.yml'
+      - 'tools/hu_b483_*'
+      - 'data/nl2_hu_b483_locked_medium.json'
+permissions:
+  actions: read
+  contents: read
+jobs:
+  original:
+    strategy:
+      fail-fast: false
+      matrix:
+        source_run: ['44666285424', '44666290556', '44666294821']
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authenticate the original GitHub archive and reconstruct both players' compatible deals
+        env:
+          SOURCE_RUN: ${{ matrix.source_run }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN/artifacts?per_page=100" > "$RUNNER_TEMP/$SOURCE_RUN.json"
+          for id in $(python3 tools/hu_b483_locked_medium.py --run "$SOURCE_RUN" --list-artifacts); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/$id.zip"
+            unzip -q "$RUNNER_TEMP/$id.zip" -d "$RUNNER_TEMP/$id"
+          done
+          python3 tools/hu_b483_locked_medium.py --downloads "$RUNNER_TEMP" --run "$SOURCE_RUN" --out "$RUNNER_TEMP/source-$SOURCE_RUN.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B483-source-${{ matrix.source_run }}
+          path: ${{ runner.temp }}/source-${{ matrix.source_run }}.json
+          if-no-files-found: error
+  audit:
+    needs: original
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: B483-source-*
+          path: ${{ runner.temp }}/b483
+          merge-multiple: true
+      - name: Compare every original mask, equity distribution, source lock and coverage result
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b483_locked_medium.py --assemble "$RUNNER_TEMP"/b483/source-*.json --out "$RUNNER_TEMP/complete.json"
+          cmp "$RUNNER_TEMP/complete.json" data/nl2_hu_b483_locked_medium.json
+          node tools/hu_b483_lock_medium_ui.cjs
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json

@@ -59,7 +59,7 @@ function render(){
          const flavor=b.flop_texture;
          li.append(document.createTextNode(
            b.public_board+'（'+flavor+'）｜歷史 '+b.actual_exact_action_line
-           +'｜SPR '+b.actual_spr+'｜可達 combo '+b.strict_full_street_combo_reachable
+           +'｜SPR '+b.actual_spr+'｜原始 GTO 可達 combo '+b.strict_full_street_combo_reachable
            +'｜GTO exploitability '+b.genuine_gto_exploitability_pct.toFixed(3)+'%｜'));
          const link=make('a','', '真實 CFR Run '+b.source_run_id);
          if(b.source_kind.includes('OFFICIAL')){
@@ -84,7 +84,7 @@ function render(){
           '｜NL2 英雄 lock '+b.nl2_locked_variants.length+' 來源：'+lockLines.join('；')+
           (b.assumed_preflop_ranges?'｜翻前 169 類假設範圍，非實測 LMP 私牌':'')+
           (b.strict_full_street_combo_reachable<10?'｜警示：嚴格可達 combo 少於 10':'')+
-          '｜50% pot '+(b.b50_nonpolarized_relative_equity_research_candidate
+          '｜GTO 50% pot '+(b.b50_nonpolarized_relative_equity_research_candidate
              ? '具名牌面非極化研究候選':'缺乏足夠非極化證據，不可推薦')+
           '。聚合頻率非逐牌面／逐私牌實測。'));
          if(item.model_id==='ln-iso-lmp_t_model-19hfq8v' && b.public_board==='2d4h4s8s' &&
@@ -100,6 +100,7 @@ function render(){
            extra.href='nl2-multiboard.html?'+href;li.appendChild(extra);
          });
          globalThis.nl2PoolRateScope?.show(li,item,b,b.nl2_locked_variants);
+         globalThis.nl2LockedMedium?.showBoard(li,item,b);
          ul.appendChild(li);
        }
        note.append(ul);
