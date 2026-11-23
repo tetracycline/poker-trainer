@@ -231,7 +231,10 @@
       'ln-opfr-t_model-1wej9w5':'nl2_hu_b590_rank3_barrels.json',
       'ln-opfr-t_model-trdt3w':'nl2_hu_b594_rank4_barrels.json',
       'ln-opfr-t_model-id38uf':'nl2_hu_b596_rank5_barrels.json',
-      'ln-opfr-t_model-1hmsxaw':'nl2_hu_b603_rank30_barrels.json'
+      'ln-opfr-t_model-1hmsxaw':'nl2_hu_b603_rank30_barrels.json',
+      'ln-opfr-t_model-1xzqrwx':'nl2_hu_b606_rank31_barrels.json',
+      'ln-opfr-t_model-qx9t0u':'nl2_hu_b606_rank32_barrels.json',
+      'ln-opfr-t_model-1ocorr7':'nl2_hu_b606_rank33_barrels.json'
     }[model.model_id];
     if(!name || (source && source!==board.source_sha256))return;
     const slot=document.createElement('div');

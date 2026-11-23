@@ -112,7 +112,7 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
                 gto=before,locked=after,gto_gap_pct=locked["info"]["gto_expl_pct"],hero_gap_pct=locked["info"]["hero_gap_pct"],rules=rules)
 
 
-def main(*, model_id=MODEL, rank=3, flop_line="b75 c", cases=CASES):
+def main(*, model_id=MODEL, rank=3, flop_line="b75 c", cases=CASES, argv=None):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--solver",type=Path,required=True)
     p.add_argument("--originals",type=Path,required=True)
@@ -121,7 +121,7 @@ def main(*, model_id=MODEL, rank=3, flop_line="b75 c", cases=CASES):
     drivers=p.add_mutually_exclusive_group()
     drivers.add_argument("--driver",type=Path,help="Generate the frozen native outputs")
     drivers.add_argument("--verification-driver",type=Path,help="Independently solve all jobs and compare both players’ native arrays")
-    a=p.parse_args()
+    a=p.parse_args(argv)
     assert subprocess.check_output(["git","-C",a.solver,"rev-parse","HEAD"],text=True).strip()==SOLVER
     sys.path.insert(0,str((a.solver/"postflop/py").resolve()))
     import pipeline
