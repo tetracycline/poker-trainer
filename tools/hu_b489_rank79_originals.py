@@ -55,8 +55,8 @@ def audit_node(source):
                 subgame_applied_rust_lock_nodes=sum(v["nodes"] for v in sub["info"].get("lock_stats",{}).values()))
 
 
-def pack(source, flop, turn):
-    code=f'B489_R79_{flop.upper()}_{turn.upper()}_{source["version"].upper()}'
+def pack(source, flop, turn, batch="B489"):
+    code=f'{batch}_R79_{flop.upper()}_{turn.upper()}_{source["version"].upper()}'
     raw=gzip.compress(compact(source),mtime=0)
     raw=raw[:9]+bytes([255])+raw[10:]
     (EVIDENCE/f"NL2_{code}.json.gz").write_bytes(raw)
@@ -70,7 +70,7 @@ def native_size_weights(rules):
             if rule.get("sizes") is not None else rule for rule in rules]
 
 
-def parse(base,evidence,manifest,run,flop,version,solver,pipeline,ranges,fresh):
+def parse(base,evidence,manifest,run,flop,version,solver,pipeline,ranges,fresh,*,expected_turns=None,case_turn=None):
     m=read(manifest)
     assert (m["spot"],m["pot_family"],m["flop"],m["version"]) == ("UTG_CO","SRP",flop,version)
     assert m["schema"]=="NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1" and not m["failures"]
@@ -90,7 +90,7 @@ def parse(base,evidence,manifest,run,flop,version,solver,pipeline,ranges,fresh):
     if fresh:
         assert (m["marginal_lock_matching"],m["flop_line_policy"],m["selected_turn_lines"])==(
             "RUST_FIRST_MATCH_POOLED_FALLBACK_EXACT_STREET","oop-b50only",["x x"])
-        assert m["turns"]==CANDIDATES[flop] and m["turn_sizing_mode"]=="default"
+        assert m["turns"]==(CANDIDATES[flop] if expected_turns is None else expected_turns) and m["turn_sizing_mode"]=="default"
         pool=read(solver/"inputs/pool_stats.json")["NL2"]
         rules,_=make_fallbacks("UTG_CO",version,pool,pipeline.lock_list,flop,by_street=True)
         assert native_size_weights(root_job.get("locks",[]))==native_size_weights(json.loads(encode(rules)))
@@ -100,7 +100,7 @@ def parse(base,evidence,manifest,run,flop,version,solver,pipeline,ranges,fresh):
     else:assert version=="gto" and root_job.get("hero") is None and not root_job.get("locks")
     out={}
     for c in m["cases"]:
-        if c["line"]!="b50 c":continue
+        if c["line"]!="b50 c" or (case_turn is not None and case_turn!=c["turn"]):continue
         turn=c["turn"]
         path=base/c["source_path"]
         assert sha(path.read_bytes())==c["source_sha256"]
