@@ -17,6 +17,11 @@ const model=context.__HU_MODEL_LAST.nodes.find(n=>n.id==='ln-ipc-t_model-1cla93g
 assert.deepEqual([model.pre,model.source,model.action,model.key],[
   '翻前：UTG 開， 你 CO 跟','ln-ipc-f_vs_cbet-m5gxt4','call','對手下注、你跟|對手過'
 ]);
+if(process.argv.includes('--check-low-call')) {
+  for(const t of ['low','KQ_high']) for(const column of [0,1,2]) {
+    assert.ok(model.allowed.includes(t+':'+column), 'Missing the actual one-pair flop calling cell');
+  }
+}
 const {root,pot,spr}=model.facts;
 assert.deepEqual([root.spot,root.pot,root.stack,pot,spr],['UTG_CO',6.5,97.5,13,7]);
 const actualBet=(pot-root.pot)/2;

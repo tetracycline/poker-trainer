@@ -66,7 +66,9 @@ function selectLeadTree(){
 }
 function fillVersions(){
  el('version').replaceChildren();
- opt(el('version'),'gto',chosenBoard?.leadComparison?'開放領打的條件 GTO 對照':'本公牌 GTO CERT');
+ const sizes=chosenBoard?.restricted_flop_bet_sizes_pct;
+ const baseline=sizes?.length?'本公牌 GTO CERT（翻牌下注尺寸 '+sizes.join(' / ')+'%）':'本公牌 GTO CERT';
+ opt(el('version'),'gto',chosenBoard?.leadComparison?'開放領打的條件 GTO 對照':baseline);
  if(chosenBoard)chosenBoard.nl2_locked_variants.forEach((b,i)=>{
    opt(el('version'),b.version+'@'+i,(b.variant_label||b.version)+'｜Run '+b.run_id+
      '｜觀測聚合節點 '+nodeCount(b,'observed_marginal_source_nodes')+

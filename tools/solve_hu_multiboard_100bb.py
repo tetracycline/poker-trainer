@@ -108,8 +108,8 @@ def main():
     a.add_argument('--version',choices=('gto','exp_ip','exp_oop'),default='gto')
     a.add_argument('--flop',required=True)
     a.add_argument('--turn-count',type=int,default=1)
-    a.add_argument('--flop-size-profile',choices=('full','lmp-50-only'),default='full',
-        help='Only LMP: predeclared flop single 50pct menu; genuine restricted-game CFR, not unrestricted GTO')
+    a.add_argument('--flop-size-profile',choices=('full','lmp-50-only','utg-50-only'),default='full',
+        help='Predeclared 50% flop menu for the named spot; other streets retain their configured sizes')
     a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','checkcheck-and-oop-b50','oop-b75only','oop-b100only','oop-b75raisecall','oop-b33only','checked-b33only','checked-b50only','checked-b75only','checked-b100only','checked-b50b100only','checkcheck'),default='all',
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
     a.add_argument('--archive-empty-river-extraction', action='store_true',
@@ -158,6 +158,8 @@ def main():
     if args.flop_line_policy=='checked-b50b100only':
         if args.spot!='CO_BB' or args.flop_size_profile!='full' or args.turn_size_menu!='default':
             a.error('Dual checked-b50/b100 original solve only for full-size CO_BB SRP with default turn menu')
+    if args.flop_size_profile=='utg-50-only' and (args.spot,args.flop_line_policy)!=('UTG_CO','oop-b50only'):
+        a.error('Restricted UTG half-pot flop tree requires the UTG_CO OOP half-pot bet-call line')
     if args.flop_size_profile=='lmp-50-only':
         if args.spot!='LMP_CO_BB' or args.flop_line_policy not in ('oop-b50only','checked-b50only'):
             a.error('Restricted half-pot flop tree requires a LMP half-pot bet-call line')
@@ -213,7 +215,7 @@ def main():
         kwargs['rank']=0.5 if args.version!='gto' else 1.5
         kwargs['iters']=1700
         j=orig_make(*pos,**kwargs)
-        if args.flop_size_profile=='lmp-50-only':
+        if args.flop_size_profile!='full':
             j['flop_oop']='50%'
             j['flop_ip']='50%'
         else:
@@ -284,9 +286,9 @@ def main():
       n_NL2_hands=pool['hands'],
       pool_source_sha256=sha(src/'inputs/pool_stats.json'),
       solver_pin=sha(pf/'py/pipeline.py'),solver_ranges_sha256=sha(pf/'py/ranges.py'),
-      flop_action_sizes=['50%'] if args.flop_size_profile=='lmp-50-only' else SIZES,
+      flop_action_sizes=['50%'] if args.flop_size_profile!='full' else SIZES,
       flop_size_profile=args.flop_size_profile,
-      restricted_tree_assumption=args.flop_size_profile=='lmp-50-only',
+      restricted_tree_assumption=args.flop_size_profile!='full',
       allow_OOP_flop_leads=True,
       turn_sizing_mode=args.turn_size_menu,
       turn_subgame_sizing={'oop':pipeline.SUB['turn_oop'],'ip':pipeline.SUB['turn_ip']},

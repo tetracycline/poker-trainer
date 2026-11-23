@@ -70,12 +70,14 @@ def native_size_weights(rules):
             if rule.get("sizes") is not None else rule for rule in rules]
 
 
-def parse(base,evidence,manifest,run,flop,version,solver,pipeline,ranges,fresh,*,expected_turns=None,case_turn=None):
+def parse(base,evidence,manifest,run,flop,version,solver,pipeline,ranges,fresh,*,expected_turns=None,case_turn=None,flop_profile='full'):
     m=read(manifest)
     assert (m["spot"],m["pot_family"],m["flop"],m["version"]) == ("UTG_CO","SRP",flop,version)
     assert m["schema"]=="NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1" and not m["failures"]
     assert (m["solver_pin"],m["solver_ranges_sha256"],m["pool_source_sha256"])==(PIPELINE,RANGES,POOL)
-    assert (m["root_pot_bb"],m["root_remaining_bb"],m["flop_action_sizes"]) == (6.5,97.5,["33%","50%","75%","100%"])
+    sizes = {'full':['33%','50%','75%','100%'], 'utg-50-only':['50%']}[flop_profile]
+    assert (m["root_pot_bb"],m["root_remaining_bb"],m["flop_action_sizes"]) == (6.5,97.5,sizes)
+    assert m["flop_size_profile"] == flop_profile and m["restricted_tree_assumption"] == (flop_profile != 'full')
     assert m["preflop_ranges"]["source"]=="PINNED_POKER_SOLVER_PREFLOP_CFR" and m["preflop_ranges"]["spot"]=="UTG_CO"
     pin_name,=evidence.glob("*poker-solver*.txt")
     rust_name,=evidence.glob("*rust*.txt")
@@ -84,7 +86,7 @@ def parse(base,evidence,manifest,run,flop,version,solver,pipeline,ranges,fresh,*
     assert sha(rootpath.read_bytes())==m["file_flop_sha256"]
     root,root_job=read(rootpath),read(rootpath.with_suffix(".job.json"))
     assert (root["flop"],root["pot"],root["stack"])==(flop,650,9750)
-    assert root_job["flop_oop"]==root_job["flop_ip"]=="33%,50%,75%,100%"
+    assert root_job["flop_oop"]==root_job["flop_ip"]==",".join(sizes)
     assert [root_job["oop"],root_job["ip"]]==[ranges.to_str(w) for w in ranges.ranges("UTG_CO",version)]
     lock_coverage={}
     if fresh:
