@@ -1,0 +1,34 @@
+name: B482 original CO vs BTN 3-bet-pot two-seat reach
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b482-co3btn-joint-reach.yml'
+      - 'tools/hu_b482_co3btn_joint_reach.py'
+      - 'data/nl2_hu_b482_co3btn_joint_reach.json'
+permissions:
+  actions: read
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - name: Reconstruct ranges, measured pool locks and both players' private deals
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for id in 14528208109 14529596879 14529072231; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/b482-$id.zip"
+          done
+          python3 tools/hu_b482_co3btn_joint_reach.py --downloads "$RUNNER_TEMP" --solver pinned-solver --verify
+      - name: Audit the cumulative HU registry, all sources and viewer routes
+        run: bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
