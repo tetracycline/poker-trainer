@@ -1,0 +1,32 @@
+name: B477 original river sources for ranks 116, 200, 213, 232 and 237
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b477-raw-partial-river-audit.yml'
+      - 'tools/hu_b477_*'
+      - 'data/nl2_hu_b477_raw_river_pairs.json'
+      - 'data/solver_evidence/NL2_MULTIBOARD_R200_44666294821.json.gz'
+      - 'data/solver_evidence/NL2_MULTIBOARD_R232_44666290556.json.gz'
+permissions:
+  actions: read
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replay twelve original GTO and seat-matched NL2 sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for id in $(python3 tools/hu_b477_partial_rivers.py --list-artifacts); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/$id.zip"
+            unzip -q "$RUNNER_TEMP/$id.zip" -d "$RUNNER_TEMP/$id"
+          done
+          python3 tools/hu_b477_partial_rivers.py --downloads "$RUNNER_TEMP" --verify
+          node tools/hu_b477_model_routes.cjs
+      - name: Audit the cumulative HU registry, all original sources and navigation
+        run: bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
