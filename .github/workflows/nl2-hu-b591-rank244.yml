@@ -1,0 +1,63 @@
+name: B591 verify three CO half-pot barrels and full HU audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b591-rank244.yml'
+      - 'tools/hu_b591_rank244*'
+      - 'data/nl2_hu_b591_rank244_inputs.json'
+      - 'data/solver_evidence/NL2_B591_R244_*.zip'
+permissions: {contents: read, actions: read}
+jobs:
+  replay-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Authenticate original B537 roots and replay three B591 river pairs
+        env: {GH_TOKEN: "${{ github.token }}"}
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/receipts"
+          for id in 14793292865 14793284533 14793575962; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" | jq -e --argjson id "$id" '.id == $id and .workflow_run.id == 45119582030 and .workflow_run.repository_id == 1438346845' > /dev/null
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/receipts/$id.zip"
+          done
+          python tools/hu_b591_rank244.py --solver ../solver --receipts "$RUNNER_TEMP/receipts" --run "$GITHUB_RUN_ID"
+          node tools/hu_b558_river_policy_view.cjs data/solver_evidence/reverified/rank244.json
+      - name: Regenerate registry and run full HU audit
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          registry=data/nl2_hu_multiboard_status_current.json
+          cp "$registry" "$RUNNER_TEMP/before.json"
+          python tools/hu_apply_cert_extensions.py --out "$registry"
+          python - "$RUNNER_TEMP/before.json" "$registry" <<'PYCODE'
+          import json, sys
+          before, after = (json.load(open(p))['records'] for p in sys.argv[1:])
+          mid = 'ln-3bp-3c_r_model-knstxa'
+          assert before.keys() == after.keys()
+          assert all(before[k] == after[k] for k in before if k != mid)
+          assert after[mid]['label'] == 'CERT-MULTIBOARD' and after[mid]['proven_exact_board_count'] == 3
+          PYCODE
+          node tools/hu_extension_runtime_test.cjs "$registry"
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+          bash tools/hu_exact_batch_audit.sh "$registry"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B591-authenticated-rank244
+          path: |
+            trainer/data/nl2_hu_b591_locked_medium.json
+            trainer/data/solver_evidence/reverified/rank244.json
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B591_R244_*.json.gz
