@@ -62,7 +62,7 @@ def observations(source, line, depth, root_sha):
             continue
         assert len(node["acts"]) >= 2 and node["acts"][0] == "x"
         row = proof(source["root"], game, node, masks)
-        row.update(spot="LMP_CO_BB", family="LMP", flop=game["flop"], turn=game["turn"], version=version,
+        row.update(spot=source["manifest"]["spot"], family=source["manifest"]["pot_family"], flop=game["flop"], turn=game["turn"], version=version,
                    root_sha256=root_sha, source_run_id=source["run"], source_sha256=source["source_sha256"],
                    archive_sha256=source["archive_sha256"], gto_gap_pct=game["info"]["gto_expl_pct"],
                    locked_hero_gap_pct=game["info"].get("hero_gap_pct"), root_applied_rust_lock_nodes=0,

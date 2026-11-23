@@ -69,7 +69,7 @@ def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pi
     assert rj.get('locks',[])==j.get('locks',[]) and bool(j.get('locks'))==(hero is not None)
     if expected is not None:assert j.get('locks',[])==json.loads(compact(expected))
     parent,=[n for n in root['nodes'] if n['line']==flop_line+'/' and n['board'][-2:]==turn]
-    bet_pct, raise_multiple = {"x x": (0, 1), "x b33 c": (33, 1), "x b50 c": (50, 1), "x b75 r c": (75, 3)}[flop_line]
+    bet_pct, raise_multiple = {"x x": (0, 1), "x b33 c": (33, 1), "x b50 c": (50, 1), "x b75 c": (75, 1), "x b100 c": (100, 1), "x b75 r c": (75, 3)}[flop_line]
     bet = (pot * bet_pct + 50) // 100
     investment = bet * raise_multiple
     if bet:
@@ -84,7 +84,7 @@ def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pi
     assert all((source['flop'], source['pot'], source['stack']) == (flop, *boundary) for source in (sub, j))
     for seat,name in enumerate(('oop_w','ip_w')):
         assert j[name]==[[h,w] for h,w in zip(root['hands'][seat],parent['wr'][seat],strict=True) if w>1e-4]
-    assert j['root_no_bet'] == (flop_line in ('x b33 c', 'x b50 c'))
+    assert j['root_no_bet'] == (flop_line in ('x b33 c', 'x b50 c', 'x b75 c', 'x b100 c'))
     for game in (root,sub):
         assert 0<=game['info']['gto_expl_pct']<=.5
         if hero is not None:assert 0<=game['info']['hero_gap_pct']<=.5 and game['info']['lock_stats']
