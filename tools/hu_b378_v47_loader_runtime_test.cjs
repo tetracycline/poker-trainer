@@ -28,6 +28,6 @@ for(const filename of ['nl2_hu_multiboard_ui.js','nl2-multiboard.js']){
 }
 for(const filename of ['nl2.html','nl2-multiboard.html']){
  const h=fs.readFileSync(filename,'utf8');
- assert.ok(/task-hybrid-b(?:378-v47-loaderfix|390-v48|392-persistent-r107|405-v49|414-persistent|417-v50|420-persistent)-20261122/.test(h),filename+' cache marker missing for verified source version');
+ assert.ok(/task-hybrid-b463-v52|task-hybrid-b(?:378-v47-loaderfix|390-v48|392-persistent-r107|405-v49|414-persistent|417-v50|420-persistent)-20261122/.test(h),filename+' cache marker missing for verified source version');
 }
 console.log('PASS B378 authentic V47 159/233 actual runtime validator, corrupt/mislabeled source rejected in both loaders');

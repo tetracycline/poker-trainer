@@ -73,27 +73,21 @@ async function getProof(run){
      ?.find(x=>x.run_id===run);
    if(rank96)batch=[`B${rank96.pin.batch}_R96_VERIFIED`,{run_id:run,status:'VERIFIED'}];
  }
- if(!batch && chosenModel?.model_id==='ln-ipfr-r_model-ujl14x' &&
-    ['NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B390_RANK107','NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219','NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'].includes(status?.schema)){
-   const verifiedOriginalRuns={
-     45017142943:'B392_R107_B374',
-     45023132316:'B392_R107_B387',
-     45025076333:'B392_R107_B388'
+ if(!batch){
+   // These immutable run IDs and per-case SHAs survive later promotions.
+   const archives={
+     45017142943:'B392_R107_B374', 45023132316:'B392_R107_B387', 45025076333:'B392_R107_B388',
+     45026396521:'B414_COBB_B393', 45027557999:'B414_COBB_B396',
+     45028060598:'B420_COBB_B400', 45029267778:'B420_COBB_B407'
    };
-   const code=verifiedOriginalRuns[run];
+   const code=archives[run];
    if(code)batch=[code,{run_id:run,status:'VERIFIED'}];
  }
- if(!batch && ['ln-ipfr-r_model-1t7q0mn','ln-ipfr-r_model-kp19if'].includes(chosenModel?.model_id) &&
-   ['NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219','NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'].includes(status?.schema)){
-   const verifiedOriginalRuns={45026396521:'B414_COBB_B393',45027557999:'B414_COBB_B396'};
-   const code=verifiedOriginalRuns[run];
-   if(code)batch=[code,{run_id:run,status:'VERIFIED'}];
- }
- if(!batch && chosenModel?.model_id==='ln-ipfr-r_model-1spq1ko' &&
-   status?.schema==='NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166'){
-   const verifiedOriginalRuns={45028060598:'B420_COBB_B400',45029267778:'B420_COBB_B407'};
-   const code=verifiedOriginalRuns[run];
-   if(code)batch=[code,{run_id:run,status:'VERIFIED'}];
+ if(!batch && status?.schema==='NL2_HU_392_MULTIBOARD_CERT_STATUS_V52_B463_R45'){
+   const group=chosenModel?.frequency_rank===45?status.B463_rank45_three_true_original_GTO_NL2_OOP_flops:
+      chosenModel?.frequency_rank===32?status.B453_rank32_three_true_original_GTO_NL2_OOP_flops:null;
+   const pin=group?.pins.find(x=>x.source_run_id===run && x.flop===chosenBoard.flop && x.turn===chosenBoard.turn);
+   if(pin)batch=['R'+group.rank+'_'+run,{run_id:run,status:'VERIFIED'}];
  }
  if(!batch && chosenModel?.model_id==='ln-ipfr-t_model-snfiz2' &&
    status?.schema==='NL2_HU_392_MULTIBOARD_CERT_STATUS_V51_B444_R62'){
@@ -122,14 +116,16 @@ function verifiedCase(source,proof){
  const digest=sourceSha(source);
  if(!digest||!sourceRun(source))throw Error('來源缺少完整 run id／SHA-256');
  const item=records.find(x=>x.source_sha256===digest &&
-    x.spot===chosenModel.solver_profile&&x.pot_family===chosenModel.family);
+    x.version===source.version&&x.spot===chosenModel.solver_profile&&x.pot_family===chosenModel.family);
  if(!item)throw Error('真實 CFR ZIP 缺指定 SHA／位置／底池來源');
  if(item.flop!==chosenBoard.flop||item.turn!==chosenBoard.turn||
     item.flop_line!==chosenBoard.exact_flop_action)
     throw Error('試算來源具體公牌／行動歷史不符');
  return item;
 }
+let versionRequest=0;
 async function selectVersion(){
+ const request=++versionRequest;
  caseData=null;el('node').replaceChildren();
  const version=el('version').value;const source=sourceCase(version);
  if(!source){setMessage('尚無符合的 source');return;}
@@ -270,7 +266,7 @@ async function selectVersion(){
       +'&version='+encodeURIComponent(source.version||version)+'&sha='+encodeURIComponent(digest)
       +'&board='+encodeURIComponent(chosenBoard.public_board)
       +'&line='+encodeURIComponent(chosenBoard.actual_exact_action_line);
-   link.textContent='開啟已驗證的原始 644 子局逐 combo GTO/EXP 查閱頁（Run '+source.source_run_id+'）';
+   link.textContent='開啟已驗證的原始 644 子局逐 combo GTO/EXP 查閱頁（Run '+run+'）';
    el('details').replaceChildren(link);
    el('combo-rows').replaceChildren();
    return;
@@ -279,6 +275,7 @@ async function selectVersion(){
  setMessage('正在檢查真正的 GitHub Rust CFR run '+run+' 與來源 SHA……');
  try{
    const proof=await getProof(run);
+   if(request!==versionRequest)return;
    if(!proof){setMessage('來源未由獨立 GitHub Actions 驗證；不可將本頁標示為 CERT。'+url);return;}
    const actual=verifiedCase(source,proof);
    caseData=actual;
@@ -290,9 +287,10 @@ async function selectVersion(){
    const chosen=actual.nodes.findIndex(n=>n.public_board===chosenBoard.public_board &&
      n.exact_node_line===chosenBoard.actual_exact_action_line &&
      n.acting_seat===chosenBoard.acting_seat);
-   if(chosen>=0)el('node').value=String(chosen);
+   if(chosen<0||!options.some(({i})=>i===chosen))throw Error('來源缺少所選公牌、座位與可達行動線');
+   el('node').value=String(chosen);
    selectNode();
- }catch(e){setMessage('來源稽核錯誤：'+e.message);}
+ }catch(e){if(request===versionRequest){caseData=null;el('node').replaceChildren();setMessage('來源稽核錯誤：'+e.message);}}
 }
 function selectNode(){
  if(!caseData)return;
@@ -1320,7 +1318,8 @@ const v42=d=>{
       throw Error('V2 tied-score source ledger failed guard');
    return d;
  };
- return fetch('data/nl2_hu_multiboard_status_v51_b453_rank32.json',{cache:'no-store'}).then(open).then(v51b453)
+ return fetch('data/nl2_hu_multiboard_status_v52_b463_rank45.json',{cache:'no-store'}).then(open).then(globalThis.nl2ValidateRank45)
+    .catch(()=>fetch('data/nl2_hu_multiboard_status_v51_b453_rank32.json',{cache:'no-store'}).then(open).then(v51b453))
     .catch(()=>fetch('data/nl2_hu_multiboard_status_v51_b444_rank62.json',{cache:'no-store'}).then(open).then(v51b444))
     .catch(()=>fetch('data/nl2_hu_multiboard_status_v50_b417_rank166.json',{cache:'no-store'}).then(open).then(v50b417))
     .catch(()=>fetch('data/nl2_hu_multiboard_status_v49_b405_rank214_219.json',{cache:'no-store'}).then(open).then(v49b405))
@@ -1383,7 +1382,7 @@ const v42=d=>{
 
 fetchCertifiedRegistry()
  .then(d=>{
-   if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V1','NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE','NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28','NL2_HU_392_MULTIBOARD_CERT_STATUS_V4_BATCH50','NL2_HU_392_MULTIBOARD_CERT_STATUS_V5_BATCH55','NL2_HU_392_MULTIBOARD_CERT_STATUS_V6_RANK33','NL2_HU_392_MULTIBOARD_CERT_STATUS_V7_BATCH59','NL2_HU_392_MULTIBOARD_CERT_STATUS_V8_BATCH61','NL2_HU_392_MULTIBOARD_CERT_STATUS_V9_RANK40_B67','NL2_HU_392_MULTIBOARD_CERT_STATUS_V10_BATCH69','NL2_HU_392_MULTIBOARD_CERT_STATUS_V11_BATCH71','NL2_HU_392_MULTIBOARD_CERT_STATUS_V12_BATCH73','NL2_HU_392_MULTIBOARD_CERT_STATUS_V13_BATCH75','NL2_HU_392_MULTIBOARD_CERT_STATUS_V14_BATCH77','NL2_HU_392_MULTIBOARD_CERT_STATUS_V15_BATCH80','NL2_HU_392_MULTIBOARD_CERT_STATUS_V16_BATCH82','NL2_HU_392_MULTIBOARD_CERT_STATUS_V17_BATCH84','NL2_HU_392_MULTIBOARD_CERT_STATUS_V18_BATCH86','NL2_HU_392_MULTIBOARD_CERT_STATUS_V19_BATCH88','NL2_HU_392_MULTIBOARD_CERT_STATUS_V20_BATCH90','NL2_HU_392_MULTIBOARD_CERT_STATUS_V21_BATCH92','NL2_HU_392_MULTIBOARD_CERT_STATUS_V22_BATCH94','NL2_HU_392_MULTIBOARD_CERT_STATUS_V23_B100_LMP_PAIR','NL2_HU_392_MULTIBOARD_CERT_STATUS_V24_B103_RANK43','NL2_HU_392_MULTIBOARD_CERT_STATUS_V25_B106_RANK135','NL2_HU_392_MULTIBOARD_CERT_STATUS_V26_B111_RANK215_220','NL2_HU_392_MULTIBOARD_CERT_STATUS_V51_B453_R32','NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166','NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219','NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B390_RANK107','NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B369_RANK27','NL2_HU_392_MULTIBOARD_CERT_STATUS_V47_B364_RANK96','NL2_HU_392_MULTIBOARD_CERT_STATUS_V46_B354_RANK79','NL2_HU_392_MULTIBOARD_CERT_STATUS_V45_B345_RANK71','NL2_HU_392_MULTIBOARD_CERT_STATUS_V44_B331_RANK60_FOUR','NL2_HU_392_MULTIBOARD_CERT_STATUS_V43_B319_RANK60','NL2_HU_392_MULTIBOARD_CERT_STATUS_V42_B289_RANK46','NL2_HU_392_MULTIBOARD_CERT_STATUS_V41_B271_RANK61','NL2_HU_392_MULTIBOARD_CERT_STATUS_V40_B265_RANK313','NL2_HU_392_MULTIBOARD_CERT_STATUS_V39_B247_RANK30','NL2_HU_392_MULTIBOARD_CERT_STATUS_V38_B206_RANK190','NL2_HU_392_MULTIBOARD_CERT_STATUS_V37_B205_RANK188','NL2_HU_392_MULTIBOARD_CERT_STATUS_V36_B201_RANK159','NL2_HU_392_MULTIBOARD_CERT_STATUS_V35_B193_RANK201','NL2_HU_392_MULTIBOARD_CERT_STATUS_V34_B190_RANK199_202','NL2_HU_392_MULTIBOARD_CERT_STATUS_V33_B179_RANK138','NL2_HU_392_MULTIBOARD_CERT_STATUS_V32_B168_RANK80','NL2_HU_392_MULTIBOARD_CERT_STATUS_V31_B161_RANK150','NL2_HU_392_MULTIBOARD_CERT_STATUS_V30_B145_RANK47','NL2_HU_392_MULTIBOARD_CERT_STATUS_V29_B142_RANK88','NL2_HU_392_MULTIBOARD_CERT_STATUS_V28_B133_RANK69','NL2_HU_392_MULTIBOARD_CERT_STATUS_V27_B123_R41_236','NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'].includes(d.schema)||d.CERT_MULTIBOARD+d.APPROX!==392)
+   if(!['NL2_HU_392_MULTIBOARD_CERT_STATUS_V1','NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE','NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28','NL2_HU_392_MULTIBOARD_CERT_STATUS_V4_BATCH50','NL2_HU_392_MULTIBOARD_CERT_STATUS_V5_BATCH55','NL2_HU_392_MULTIBOARD_CERT_STATUS_V6_RANK33','NL2_HU_392_MULTIBOARD_CERT_STATUS_V7_BATCH59','NL2_HU_392_MULTIBOARD_CERT_STATUS_V8_BATCH61','NL2_HU_392_MULTIBOARD_CERT_STATUS_V9_RANK40_B67','NL2_HU_392_MULTIBOARD_CERT_STATUS_V10_BATCH69','NL2_HU_392_MULTIBOARD_CERT_STATUS_V11_BATCH71','NL2_HU_392_MULTIBOARD_CERT_STATUS_V12_BATCH73','NL2_HU_392_MULTIBOARD_CERT_STATUS_V13_BATCH75','NL2_HU_392_MULTIBOARD_CERT_STATUS_V14_BATCH77','NL2_HU_392_MULTIBOARD_CERT_STATUS_V15_BATCH80','NL2_HU_392_MULTIBOARD_CERT_STATUS_V16_BATCH82','NL2_HU_392_MULTIBOARD_CERT_STATUS_V17_BATCH84','NL2_HU_392_MULTIBOARD_CERT_STATUS_V18_BATCH86','NL2_HU_392_MULTIBOARD_CERT_STATUS_V19_BATCH88','NL2_HU_392_MULTIBOARD_CERT_STATUS_V20_BATCH90','NL2_HU_392_MULTIBOARD_CERT_STATUS_V21_BATCH92','NL2_HU_392_MULTIBOARD_CERT_STATUS_V22_BATCH94','NL2_HU_392_MULTIBOARD_CERT_STATUS_V23_B100_LMP_PAIR','NL2_HU_392_MULTIBOARD_CERT_STATUS_V24_B103_RANK43','NL2_HU_392_MULTIBOARD_CERT_STATUS_V25_B106_RANK135','NL2_HU_392_MULTIBOARD_CERT_STATUS_V26_B111_RANK215_220','NL2_HU_392_MULTIBOARD_CERT_STATUS_V52_B463_R45','NL2_HU_392_MULTIBOARD_CERT_STATUS_V51_B453_R32','NL2_HU_392_MULTIBOARD_CERT_STATUS_V50_B417_R166','NL2_HU_392_MULTIBOARD_CERT_STATUS_V49_B405_R214_R219','NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B390_RANK107','NL2_HU_392_MULTIBOARD_CERT_STATUS_V48_B369_RANK27','NL2_HU_392_MULTIBOARD_CERT_STATUS_V47_B364_RANK96','NL2_HU_392_MULTIBOARD_CERT_STATUS_V46_B354_RANK79','NL2_HU_392_MULTIBOARD_CERT_STATUS_V45_B345_RANK71','NL2_HU_392_MULTIBOARD_CERT_STATUS_V44_B331_RANK60_FOUR','NL2_HU_392_MULTIBOARD_CERT_STATUS_V43_B319_RANK60','NL2_HU_392_MULTIBOARD_CERT_STATUS_V42_B289_RANK46','NL2_HU_392_MULTIBOARD_CERT_STATUS_V41_B271_RANK61','NL2_HU_392_MULTIBOARD_CERT_STATUS_V40_B265_RANK313','NL2_HU_392_MULTIBOARD_CERT_STATUS_V39_B247_RANK30','NL2_HU_392_MULTIBOARD_CERT_STATUS_V38_B206_RANK190','NL2_HU_392_MULTIBOARD_CERT_STATUS_V37_B205_RANK188','NL2_HU_392_MULTIBOARD_CERT_STATUS_V36_B201_RANK159','NL2_HU_392_MULTIBOARD_CERT_STATUS_V35_B193_RANK201','NL2_HU_392_MULTIBOARD_CERT_STATUS_V34_B190_RANK199_202','NL2_HU_392_MULTIBOARD_CERT_STATUS_V33_B179_RANK138','NL2_HU_392_MULTIBOARD_CERT_STATUS_V32_B168_RANK80','NL2_HU_392_MULTIBOARD_CERT_STATUS_V31_B161_RANK150','NL2_HU_392_MULTIBOARD_CERT_STATUS_V30_B145_RANK47','NL2_HU_392_MULTIBOARD_CERT_STATUS_V29_B142_RANK88','NL2_HU_392_MULTIBOARD_CERT_STATUS_V28_B133_RANK69','NL2_HU_392_MULTIBOARD_CERT_STATUS_V27_B123_R41_236','NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'].includes(d.schema)||d.CERT_MULTIBOARD+d.APPROX!==392)
       throw Error('模型認證來源驗證失敗');
    status=d;
    models=Object.values(d.records).filter(x=>x.label==='CERT-MULTIBOARD')
@@ -1399,22 +1398,16 @@ fetchCertifiedRegistry()
         '格'+(d.supplementary_cert_count?'；另有經事前登記的補充認證 '+d.supplementary_cert_count+' 格':'')+
         '；CERT 僅限下方 3–5 張具名牌面，其他 '+d.APPROX+' 個模型仍為 APPROX。';
    text('summary',summaryBase);
-   fetch('data/nl2_hu_cert_lock_medium_matrix_v50_b417.json',{cache:'no-store'}).catch(()=>fetch('data/nl2_hu_cert_lock_medium_matrix_v49_b405.json',{cache:'no-store'})).catch(()=>fetch('data/nl2_hu_cert_lock_medium_matrix_v48_b390.json',{cache:'no-store'})).catch(()=>fetch('data/nl2_hu_cert_lock_medium_matrix_v48_b369.json',{cache:'no-store'})).catch(()=>fetch('data/nl2_hu_cert_lock_medium_matrix_v47_b364.json',{cache:'no-store'}))
-    .then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json()})
-    .then(m=>{
-      const locks=(m.boards||[]).flatMap(b=>b.hero_lock_proofs||[]);
-      const unknown=locks.filter(x=>x.node_rate_data_status==='HISTORICAL_POOL_MARGINAL_SOURCE_COUNTS_UNKNOWN').length;
-      const a=m.strict_aggregate||{};
-      text('summary',summaryBase+'；具名來源牌面 '+fmt(
-          d.schema==='NL2_HU_392_MULTIBOARD_CERT_STATUS_V51_B453_R32'?currentNamedBoards:a.named_board_proofs,0)+
-        '；部分 NL2 node-lock '+fmt(
-          d.schema==='NL2_HU_392_MULTIBOARD_CERT_STATUS_V51_B453_R32'?currentPartialLocks:a.hero_lock_variants,0)+
-        '（實測聚合節點 '+fmt(a.observed_marginal_pattern_nodes,0)+
-        '／假設 '+fmt(a.assumed_pattern_nodes,0)+'／未匹配 '+fmt(a.unmatched_opponent_nodes,0)+
-        '）；分母 UNKNOWN '+unknown+
-        '；50% 非極化精確牌面研究候選 '+fmt(a.b50_research_candidate_boards,0)+
-        '。UNKNOWN 不當作零；50% 標記只限具名牌面研究。');
-    }).catch(()=>{});
+   const locks=exactBoards.flatMap(b=>b.nl2_locked_variants);
+   const fields=['observed_marginal_source_nodes','assumed_default_source_nodes','unlocked_source_nodes'];
+   const known=locks.filter(v=>fields.every(k=>Number.isInteger(v[k])&&v[k]>=0));
+   const totals=fields.map(k=>known.reduce((n,v)=>n+v[k],0));
+   const medium=exactBoards.filter(b=>b.b50_nonpolarized_relative_equity_research_candidate===true).length;
+   text('summary',summaryBase+'；具名來源牌面 '+fmt(currentNamedBoards,0)+
+     '；部分 NL2 node-lock '+fmt(currentPartialLocks,0)+
+     '（已知分母的實測聚合節點 '+fmt(totals[0],0)+'／假設 '+fmt(totals[1],0)+
+     '／未匹配 '+fmt(totals[2],0)+'）；分母 UNKNOWN '+(locks.length-known.length)+
+     '；50% 非極化精確牌面研究候選 '+fmt(medium,0)+'。');
    const id=q.get('model');
    const i=id?models.findIndex(x=>x.model_id===id):-1;
    if(i>=0)el('model').value=String(i);

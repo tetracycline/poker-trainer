@@ -1,0 +1,205 @@
+name: B463 rank45 ISO_BTN_CO check-check GTO and NL2-OOP third board; strict HU2475
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b463-r45-iso-xx-third-board.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        version: [gto, exp_oop]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned exact 100bb Rust CFR
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve third predeclared rank45 ISO original full-menu check-check flop and 6c turn
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C ../solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C ../solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          set +e
+          python3 tools/solve_hu_multiboard_100bb.py \
+            --solver-root ../solver --spot ISO_BTN_CO --flop 7s5h3d \
+            --version "${{ matrix.version }}" --flop-size-profile full \
+            --flop-line-policy checkcheck --turn-count 1 \
+            --manifest "evidence/ISO_BTN_CO-7s5h3d-${{ matrix.version }}.json"
+          status=$?
+          set -e
+          export SOLVE_EXIT="$status"
+          python3 - <<'PY'
+          import json,os,pathlib
+          name='${{ matrix.version }}'
+          m=json.loads(pathlib.Path('evidence/ISO_BTN_CO-7s5h3d-'+name+'.json').read_text())
+          assert m['spot']=='ISO_BTN_CO' and m['version']==name and m['flop']=='7s5h3d'
+          assert m['preflop_ranges']['source']=='ASSUMED_EXPLICIT_169CLASS'
+          assert m['flop_size_profile']=='full' and not m['restricted_tree_assumption']
+          assert m['selected_lines']==['x x'] and m['turns']==['6c']
+          assert not m['failures'] and len(m['cases'])==m['solved_cases']<=1
+          assert int(os.environ['SOLVE_EXIT']) == (0 if m['solved_cases'] else 1)
+          assert m['solved_cases'] or len(m['skipped']) == 1
+          print('B463 authentic',name,'cases',m['solved_cases'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NL2-B463-R45-7s5h3d-${{ matrix.version }}
+          path: |
+            trainer/evidence
+            solver/postflop/out/ISO_BTN_CO/${{ matrix.version }}
+          retention-days: 30
+          if-no-files-found: error
+  verify-audit-commit:
+    needs: [solve]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: trainer
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download only this run original Rust source artifacts
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p ../downloads/gto ../downloads/exp_oop
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name 'NL2-B463-R45-7s5h3d-gto' --dir ../downloads/gto
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name 'NL2-B463-R45-7s5h3d-exp_oop' --dir ../downloads/exp_oop
+      - name: Recompute original and locked combo reach and certify only three distinct positive flops
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b463_rank45_gate.py --downloads ../downloads --run-id "$GITHUB_RUN_ID"
+          latest=data/nl2_hu_multiboard_status_v52_b463_rank45.json
+          if test -f "$latest"; then
+            python3 tools/hu_v52_combo_sources.py
+          else
+            latest=data/nl2_hu_multiboard_status_v51_b453_rank32.json
+          fi
+          python3 tools/hu_cert_lock_medium_audit.py --source "$latest" --out /tmp/b463-lock-medium.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          gate=json.loads(Path('data/nl2_hu_b463_rank45_three_board_gate.json').read_text())
+          ledger=json.loads(Path('/tmp/b463-lock-medium.json').read_text())
+          accepted=gate['classification']=='CERT-MULTIBOARD'
+          boards=gate['positive_exact_boards'] if accepted else []
+          expected=(164+int(accepted),228-int(accepted),621+len(boards),713+len(boards))
+          aggregate=ledger['aggregate']
+          assert (ledger['cert_multiboard'],ledger['approx'],aggregate['named_board_proofs'],
+                  aggregate['paired_hero_locked_source_variants'])==expected
+          assert ledger['models_total']==392 and ledger['EST']==0
+          assert aggregate['board_examples_with_b50_candidate']==135+sum(b['b50_nonpolarized_relative_equity_research_candidate'] for b in boards)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NL2-B463-third-board-original-and-gate
+          path: |
+            trainer/data/solver_evidence/NL2_B463_R45_7S_5H_3D.json.gz
+            trainer/data/nl2_hu_b463_rank45_three_board_gate.json
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Verify HU route reachability and browser loaders
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b463-contract.json
+          node tools/link_audit.js --md /tmp/b463-link.md --json /tmp/b463-link.json
+          node tools/reach_verify.js --log /tmp/b463-reach.md --json /tmp/b463-reach.json
+          node tools/hu_model_path_audit.js /tmp/b463-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b463-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1)'
+          if test -f data/nl2_hu_multiboard_status_v52_b463_rank45.json; then
+            node tools/hu_b463_loader_runtime_test.cjs
+          fi
+          git diff --check
+      - name: Save audited source and exact named-board classification to the draft branch
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b463_rank45_three_board_gate.json data/solver_evidence/NL2_B463_R45_7S_5H_3D.json.gz
+          if test -f data/nl2_hu_multiboard_status_v52_b463_rank45.json; then
+            git add data/nl2_hu_multiboard_status_v52_b463_rank45.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+            git add 'data/solver_evidence/NL2_MULTIBOARD_R32_*.json.gz' 'data/solver_evidence/NL2_MULTIBOARD_R45_*.json.gz'
+          fi
+          git commit -m 'B463: record independently audited three-flop rank45 result and original Rust evidence'
+          for attempt in 1 2 3; do
+            git fetch origin "$branch"
+            git rebase FETCH_HEAD
+            if git push origin "HEAD:$branch"; then exit 0; fi
+          done
+          exit 1
+      - name: Preserve validated raw third-board archive if downstream publication fails
+        if: failure()
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          pack=data/solver_evidence/NL2_B463_R45_7S_5H_3D.json.gz
+          test -f "$pack" || exit 0
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          root=pathlib.Path("data")
+          gate=root/"nl2_hu_b463_rank45_three_board_gate.json"
+          if not gate.exists(): raise SystemExit("Original rank45 gate was incomplete")
+          pin=json.loads(gate.read_text())["pins"][-1]
+          pack=root/"solver_evidence"/f'NL2_{pin["archive_code"]}.json.gz'
+          assert pin["archive_sha256"]==hashlib.sha256(pack.read_bytes()).hexdigest()
+          PY
+          cp "$pack" /tmp/b463-verified-source.gz
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch origin "$branch"
+            git worktree add --detach "/tmp/b463-source-$attempt" FETCH_HEAD
+            (
+              cd "/tmp/b463-source-$attempt"
+              cp /tmp/b463-verified-source.gz "$pack"
+              git add "$pack"
+              git diff --cached --quiet && exit 0
+              git commit -m 'B463: preserve validated original rank45 third-board archive for independent review'
+              git push origin "HEAD:$branch"
+            ) && exit 0
+          done
+          exit 1

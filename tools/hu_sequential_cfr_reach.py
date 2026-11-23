@@ -99,6 +99,63 @@ def game_reach(fr,sub):
         nodes['|'.join((board,n['line'],str(actor)))]={'mask':base64.b64encode(output).decode('ascii'),
             'count':reached,'parent_actor_decisions':len(ancestors)}
     return nodes,stats
+
+def compatible_node_reach(flop_root, subgame, node, actor_reach):
+    """Restrict an actor mask to deals where both players could take every prior action."""
+    board = node["board"]
+    actor = node["player"]
+    opponent = 1 - actor
+    public = {board[i:i+2] for i in range(0, len(board), 2)}
+    streets = node["line"].split("/")
+    if len(streets) != len(board) // 2 - 2 or streets[0] != subgame["line0"]:
+        raise ValueError("Source board and action history disagree")
+    hands = subgame["hands"]
+    if len(node["w"][opponent]) != len(hands[opponent]):
+        raise ValueError("Opponent source weight dimension mismatch")
+    villains = {cardkey(hand) for hand, weight in zip(hands[opponent], node["w"][opponent])
+                if weight > 1e-4 and public.isdisjoint(cardkey(hand))}
+    for street, history in enumerate(streets):
+        game = flop_root if street == 0 else subgame
+        street_board = board[:6 + 2 * street]
+        parents = {n["line"]: n for n in game["nodes"] if n["board"] == street_board}
+        actions = history.split()
+        for i, action in enumerate(actions):
+            prefix = "/".join(streets[:street] + [" ".join(actions[:i])])
+            parent = parents[prefix]
+            if parent["player"] == opponent:
+                villains &= accepted(parent, game["hands"], action)
+
+    mask = bytearray(base64.b64decode(actor_reach["mask"], validate=True))
+    if len(mask) != len(hands[actor]) or sum(map(bool, mask)) != actor_reach["count"]:
+        raise ValueError("Actor sequential mask dimension/count mismatch")
+
+    def blocker_counts(combos):
+        return collections.Counter(card for combo in combos for card in combo)
+
+    def disjoint_count(hand, combos, counts):
+        first, second = hand
+        return len(combos) - counts[first] - counts[second] + (hand in combos)
+
+    villain_counts = blocker_counts(villains)
+    heroes = set()
+    pairs = 0
+    for i, hole in enumerate(hands[actor]):
+        if not mask[i]:
+            continue
+        hand = cardkey(hole)
+        compatible = disjoint_count(hand, villains, villain_counts) if public.isdisjoint(hand) else 0
+        if compatible:
+            heroes.add(hand)
+            pairs += compatible
+        else:
+            mask[i] = 0
+    if len(heroes) != sum(map(bool, mask)):
+        raise ValueError("Duplicate private hands in source")
+    hero_counts = blocker_counts(heroes)
+    opponent_count = sum(disjoint_count(hand, heroes, hero_counts) > 0 for hand in villains)
+    return dict(actor_reach, mask=base64.b64encode(mask).decode(), count=len(heroes),
+                compatible_opponent_combos=opponent_count, compatible_hole_card_pairs=pairs)
+
 def compile_batch(downloads,proof):
     validated={(art['artifact'],c['source_sha256']) for art in proof['artifacts'] for c in art['cases']}
     out={};tot=collections.Counter();artifact_count=0
