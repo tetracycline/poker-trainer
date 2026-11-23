@@ -1,0 +1,827 @@
+{
+  "schema": "NL2_HU_B531_ORIGINAL_LOCKED_MEDIUM_V1",
+  "references": {
+    "[\"ln-iso-lmp_r_model-1hgiamg\",\"2d4h6cKc5s\",\"x b50 c/x x/\",0,45118955588,\"c81fe27039ffc13eb411226822cf25d999787517a15abbe5dcce662849c13f6e\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "2d4h6cKc5s",
+      "line": "x b50 c/x x/",
+      "acting_seat": 0,
+      "source_actions": [
+        "x",
+        "b50",
+        "b100",
+        "a"
+      ],
+      "source_hand_order_sha256": "e5c99d8367d773170217c2a878264ceb18858f3d900d343820a0659fa81ad353",
+      "source_hand_count": 457,
+      "compatible_action_mask_b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAEAAAABAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAEAAAABAAAAAQAAAAEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAAEBAQABAQABAQAAAAAAAAAAAAAAAAAAAAAAAQEBAAEBAQEBAQABAQAAAAAAAAAAAAAAAAAAAAAAAQABAAEBAQEBAQAAAQECAgAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQ==",
+      "strict_legal_combos": 73,
+      "compatible_opponent_combos": 207,
+      "compatible_hole_card_pairs": 13988,
+      "b50": {
+        "eligible": 4,
+        "preferred": 4,
+        "best_ev_b50_fraction_pct": 100.0,
+        "low_count": 3,
+        "middle_count": 0,
+        "high_count": 1,
+        "mid_reach_mass_fraction_pct": 0.0,
+        "candidate": false,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "version": "exp_oop",
+      "spot": "LMP_CO_BB",
+      "family": "LMP",
+      "flop": "6c4h2d",
+      "turn": "Kc",
+      "source_run_id": 45118955588,
+      "source_sha256": "c81fe27039ffc13eb411226822cf25d999787517a15abbe5dcce662849c13f6e",
+      "archive_sha256": "08e0c3751ab15b96734b41c80c197782cd3d2a0291b5f819d4a97fefc4522486",
+      "root_sha256": "0d1ac78e6209cac31157523a86e0fbc489504b43af45d6f7a54407ed76672f60",
+      "gto_gap_pct": 0.4706701338291168,
+      "locked_hero_gap_pct": 0.4742729067802429,
+      "root_gto_stage_gap_pct": 0.4772661328315735,
+      "root_locked_hero_gap_pct": 0.49499207735061646,
+      "lock_scope": {
+        "villain_decision_nodes": 30,
+        "pattern_matched_nodes": 25,
+        "observed_marginal_source_nodes": 14,
+        "imputed_assumption_nodes": 11,
+        "unmatched_nodes": 5,
+        "coverage_pct": 83.333,
+        "all_villain_nodes_locked": false,
+        "matching_examples": [
+          {
+            "line": "x b50 c/x",
+            "board": "2d4h6cKc",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/b50",
+            "board": "2d4h6cKc",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[2].by_size[34-55%]",
+            "source_observed_count": 144567,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/b100",
+            "board": "2d4h6cKc",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b100$",
+            "source": "NL2.HU_facing_bet[2].by_size[81-110%]",
+            "source_observed_count": 43254,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x b50 c/x",
+            "board": "2d4h6cKc5s",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b50 c/x",
+            "board": "2d4h6cKc9h",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b100 c/x",
+            "board": "2d4h6cKc5s",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b100 c/x",
+            "board": "2d4h6cKc9h",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x x/x",
+            "board": "2d4h6cKc5s",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x x/b50",
+            "board": "2d4h6cKc5s",
+            "first_pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+            "source_observed_count": 64272,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x x/b100",
+            "board": "2d4h6cKc5s",
+            "first_pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b100$",
+            "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+            "source_observed_count": 43634,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x x/x",
+            "board": "2d4h6cKc9h",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x x/b50",
+            "board": "2d4h6cKc9h",
+            "first_pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+            "source_observed_count": 64272,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          }
+        ],
+        "caveat": "Regex/source bucket matching does not prove the Rust driver locked every combo nor its conditional opponent behavior."
+      },
+      "root_applied_rust_lock_nodes": 49640,
+      "subgame_applied_rust_lock_nodes": 531
+    },
+    "[\"ln-iso-lmp_r_model-1hgiamg\",\"4c7dAs3h2h\",\"x b50 c/x x/\",0,45118955588,\"eab97c57d96a215290ad8c45c3cb3c3b1fccba688255a494a0822b1b27578f49\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "4c7dAs3h2h",
+      "line": "x b50 c/x x/",
+      "acting_seat": 0,
+      "source_actions": [
+        "x",
+        "b50",
+        "b100",
+        "a"
+      ],
+      "source_hand_order_sha256": "c6ceb175e7285c29f8afe376b46057d39e83f4e4ab106dba049019baca412fbb",
+      "source_hand_count": 226,
+      "compatible_action_mask_b64": "AAAAAQEAAAAFAQEAAAAAAAAAAAABAQEAAAAABQUBAQEAAAAAAAUFAQEAAQAAAAAABQUBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAIEAgIAAAAAAAACBAIAAAIFAgAAAAACBAICAAAAAQEBAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAwEBAQEBAQEBAQ==",
+      "strict_legal_combos": 161,
+      "compatible_opponent_combos": 216,
+      "compatible_hole_card_pairs": 31730,
+      "b50": {
+        "eligible": 11,
+        "preferred": 6,
+        "best_ev_b50_fraction_pct": 54.545,
+        "low_count": 0,
+        "middle_count": 0,
+        "high_count": 11,
+        "mid_reach_mass_fraction_pct": 0.0,
+        "candidate": false,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "version": "exp_oop",
+      "spot": "LMP_CO_BB",
+      "family": "LMP",
+      "flop": "As7d4c",
+      "turn": "3h",
+      "source_run_id": 45118955588,
+      "source_sha256": "eab97c57d96a215290ad8c45c3cb3c3b1fccba688255a494a0822b1b27578f49",
+      "archive_sha256": "14f53bbd015922b91029ca081f75f2420211d00f1adf378b8f8131b9c7c6e497",
+      "root_sha256": "d88f8c542af91d2cc83a59fa1cf4cb709d82d14f4f3dede6e89f16ee10773408",
+      "gto_gap_pct": 0.48986688256263733,
+      "locked_hero_gap_pct": 0.48293229937553406,
+      "root_gto_stage_gap_pct": 0.47666436433792114,
+      "root_locked_hero_gap_pct": 0.3919212222099304,
+      "lock_scope": {
+        "villain_decision_nodes": 33,
+        "pattern_matched_nodes": 24,
+        "observed_marginal_source_nodes": 14,
+        "imputed_assumption_nodes": 10,
+        "unmatched_nodes": 9,
+        "coverage_pct": 72.727,
+        "all_villain_nodes_locked": false,
+        "matching_examples": [
+          {
+            "line": "x b50 c/x",
+            "board": "4c7dAs3h",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/b50",
+            "board": "4c7dAs3h",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[2].by_size[34-55%]",
+            "source_observed_count": 144567,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/b100",
+            "board": "4c7dAs3h",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b100$",
+            "source": "NL2.HU_facing_bet[2].by_size[81-110%]",
+            "source_observed_count": 43254,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x b50 c/x",
+            "board": "4c7dAs3h2h",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b50 c/x",
+            "board": "4c7dAs3hTs",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b100 c/x",
+            "board": "4c7dAs3h2h",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b100 c/x",
+            "board": "4c7dAs3hTs",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x x/x",
+            "board": "4c7dAs3h2h",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x x/b50",
+            "board": "4c7dAs3h2h",
+            "first_pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+            "source_observed_count": 64272,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x x/b100",
+            "board": "4c7dAs3h2h",
+            "first_pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b100$",
+            "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+            "source_observed_count": 43634,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x x/x",
+            "board": "4c7dAs3hTs",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x x/b50",
+            "board": "4c7dAs3hTs",
+            "first_pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+            "source_observed_count": 64272,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          }
+        ],
+        "caveat": "Regex/source bucket matching does not prove the Rust driver locked every combo nor its conditional opponent behavior."
+      },
+      "root_applied_rust_lock_nodes": 49640,
+      "subgame_applied_rust_lock_nodes": 531
+    },
+    "[\"ln-iso-lmp_r_model-1hgiamg\",\"4d7cTh3cJd\",\"x b50 c/x x/\",0,45118955588,\"ba5ba943a9092ede0e517ff2587df5f19524db287b1130f0461ccee283c56cdb\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "4d7cTh3cJd",
+      "line": "x b50 c/x x/",
+      "acting_seat": 0,
+      "source_actions": [
+        "x",
+        "b50",
+        "b100",
+        "a"
+      ],
+      "source_hand_order_sha256": "2265626b9cc7b13cd9098e8f72d153b4f0e7054fd59da1696b28ac1b6a3f8f1e",
+      "source_hand_count": 380,
+      "compatible_action_mask_b64": "AAAAAgICAgICAAAAAgICAgICAAIAAgICAgICAAICAgICAgACAAICAgICAgACAAICAgICAgAAAAICAgICAgICAgICAgICAgICAgICAgICAAICAgICAgICAQICAgICAgICAgICAgICAgICAgICAgIAAgICAgICAgIBAgICAgICAgICAgICAgICAgICAgICAgACAgICAgICAgECAgICAgICAgICAgACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAgICAgICAgICAgICAgICAgICAgICAgIAAgICAgICAgICAgICAgICAgICAgICAgIAAgICAgICAgICAgICAgICAgIAAgICAgACAgIAAgICAgICAgICAgICAgICAgICAgICAgACAgIAAgICAgAAAgIAAgIAAAAAAAIAAAACAgICAAICAgACAgIAAAAAAAICAgABAQEBAQEBAAEBAQA=",
+      "strict_legal_combos": 331,
+      "compatible_opponent_combos": 196,
+      "compatible_hole_card_pairs": 60361,
+      "b50": {
+        "eligible": 318,
+        "preferred": 318,
+        "best_ev_b50_fraction_pct": 100.0,
+        "low_count": 105,
+        "middle_count": 109,
+        "high_count": 104,
+        "mid_reach_mass_fraction_pct": 34.892,
+        "candidate": true,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "version": "exp_oop",
+      "spot": "LMP_CO_BB",
+      "family": "LMP",
+      "flop": "Th7c4d",
+      "turn": "3c",
+      "source_run_id": 45118955588,
+      "source_sha256": "ba5ba943a9092ede0e517ff2587df5f19524db287b1130f0461ccee283c56cdb",
+      "archive_sha256": "4db98cad16977b25922a4624a3532224430c485015d62ce6678e995026d8072a",
+      "root_sha256": "cea1762d2f9179c4f2366fb864b135439fc2f5f3a6a8d7da7326af256a181045",
+      "gto_gap_pct": 0.4885064959526062,
+      "locked_hero_gap_pct": 0.20540465414524078,
+      "root_gto_stage_gap_pct": 0.4577241837978363,
+      "root_locked_hero_gap_pct": 0.4597839415073395,
+      "lock_scope": {
+        "villain_decision_nodes": 27,
+        "pattern_matched_nodes": 18,
+        "observed_marginal_source_nodes": 9,
+        "imputed_assumption_nodes": 9,
+        "unmatched_nodes": 9,
+        "coverage_pct": 66.667,
+        "all_villain_nodes_locked": false,
+        "matching_examples": [
+          {
+            "line": "x b50 c/x",
+            "board": "4d7cTh3c",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/b50",
+            "board": "4d7cTh3c",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[2].by_size[34-55%]",
+            "source_observed_count": 144567,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/b100",
+            "board": "4d7cTh3c",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b100$",
+            "source": "NL2.HU_facing_bet[2].by_size[81-110%]",
+            "source_observed_count": 43254,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x b50 c/x",
+            "board": "4d7cTh3cJd",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b50 c/x",
+            "board": "4d7cTh3cAs",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b100 c/x",
+            "board": "4d7cTh3cJd",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b100 c/x",
+            "board": "4d7cTh3cAs",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x x/x",
+            "board": "4d7cTh3cJd",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x x/b50",
+            "board": "4d7cTh3cJd",
+            "first_pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+            "source_observed_count": 64272,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x x/x",
+            "board": "4d7cTh3cAs",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x x/b50",
+            "board": "4d7cTh3cAs",
+            "first_pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+            "source_observed_count": 64272,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/b50 c/x",
+            "board": "4d7cTh3cJd",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          }
+        ],
+        "caveat": "Regex/source bucket matching does not prove the Rust driver locked every combo nor its conditional opponent behavior."
+      },
+      "root_applied_rust_lock_nodes": 49640,
+      "subgame_applied_rust_lock_nodes": 531
+    },
+    "[\"ln-iso-lmp_r_model-1hgiamg\",\"3h8dJc2h6c\",\"x b50 c/x x/\",0,45118955588,\"0dba21224761ef5e903decf3db39b07a40d9923b8414a6e0f5b6ec83a6f9176b\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "3h8dJc2h6c",
+      "line": "x b50 c/x x/",
+      "acting_seat": 0,
+      "source_actions": [
+        "x",
+        "b50",
+        "b100",
+        "a"
+      ],
+      "source_hand_order_sha256": "50344089b8d779825e624001dbf81f8cdc758f714efa8a61db705fb76e3de343",
+      "source_hand_count": 277,
+      "compatible_action_mask_b64": "AgICAgICAgICAgICAgICAgICAAAAAAABAAEAAAABAAABAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAACAgICAgIAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAAAAAICAgACAgAAAAACAgACAAAAAAICAAAAAAACAgICAgIAAAAAAgIAAAIAAgAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAA==",
+      "strict_legal_combos": 202,
+      "compatible_opponent_combos": 209,
+      "compatible_hole_card_pairs": 39476,
+      "b50": {
+        "eligible": 198,
+        "preferred": 198,
+        "best_ev_b50_fraction_pct": 100.0,
+        "low_count": 65,
+        "middle_count": 66,
+        "high_count": 67,
+        "mid_reach_mass_fraction_pct": 34.623,
+        "candidate": true,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "version": "exp_oop",
+      "spot": "LMP_CO_BB",
+      "family": "LMP",
+      "flop": "Jc8d3h",
+      "turn": "2h",
+      "source_run_id": 45118955588,
+      "source_sha256": "0dba21224761ef5e903decf3db39b07a40d9923b8414a6e0f5b6ec83a6f9176b",
+      "archive_sha256": "2eb4e21234bcc13aa4d0bc7b9e4d4247e6243401e5c9ac364915709241e01030",
+      "root_sha256": "29a961ec4e5302b92439cb003580940afb19ba3114f03fe4a8f6fa88461cfc1d",
+      "gto_gap_pct": 0.4806734025478363,
+      "locked_hero_gap_pct": 0.1455230712890625,
+      "root_gto_stage_gap_pct": 0.45344772934913635,
+      "root_locked_hero_gap_pct": 0.4229385256767273,
+      "lock_scope": {
+        "villain_decision_nodes": 23,
+        "pattern_matched_nodes": 22,
+        "observed_marginal_source_nodes": 13,
+        "imputed_assumption_nodes": 9,
+        "unmatched_nodes": 1,
+        "coverage_pct": 95.652,
+        "all_villain_nodes_locked": false,
+        "matching_examples": [
+          {
+            "line": "x b50 c/x",
+            "board": "3h8dJc2h",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/b50",
+            "board": "3h8dJc2h",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[2].by_size[34-55%]",
+            "source_observed_count": 144567,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/b100",
+            "board": "3h8dJc2h",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b100$",
+            "source": "NL2.HU_facing_bet[2].by_size[81-110%]",
+            "source_observed_count": 43254,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x b50 c/x",
+            "board": "3h8dJc2h6c",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b50 c/x",
+            "board": "3h8dJc2hQd",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b100 c/x",
+            "board": "3h8dJc2h6c",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b100 c/x",
+            "board": "3h8dJc2hQd",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x x/x",
+            "board": "3h8dJc2h6c",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x x/b50",
+            "board": "3h8dJc2h6c",
+            "first_pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+            "source_observed_count": 64272,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x x/b100",
+            "board": "3h8dJc2h6c",
+            "first_pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b100$",
+            "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+            "source_observed_count": 43634,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x x/x",
+            "board": "3h8dJc2hQd",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x x/b50",
+            "board": "3h8dJc2hQd",
+            "first_pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+            "source_observed_count": 64272,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          }
+        ],
+        "caveat": "Regex/source bucket matching does not prove the Rust driver locked every combo nor its conditional opponent behavior."
+      },
+      "root_applied_rust_lock_nodes": 49640,
+      "subgame_applied_rust_lock_nodes": 531
+    }
+  },
+  "gto_references": {
+    "[\"ln-iso-lmp_r_model-1hgiamg\",\"2d4h6cKc5s\",\"x b50 c/x x/\",0,45118955588,\"cfaf73cf3831c1ade1808f43dbdea005a2362be9e65f59498f0acc56cf6b9de7\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "2d4h6cKc5s",
+      "line": "x b50 c/x x/",
+      "acting_seat": 0,
+      "source_actions": [
+        "x",
+        "b50",
+        "b100",
+        "a"
+      ],
+      "source_hand_order_sha256": "0f05b76a3676a3781e2add74c3b0b71d276399c9de866cb1c8d08aac74510bfa",
+      "source_hand_count": 751,
+      "compatible_action_mask_b64": "AAAAAQEBAAEBAAEBAAEBAQEBAQEBAQEBAQEBAQABAQEBAQEBAAEBAQEBAQABAQEAAAAAAQEAAAEBAAABAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAEBAAEBAQABAQEBAQEAAAEBAQABAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAEBAAAAAAAAAAABAQEAAAAAAQEBAAEBAQEBAQABAAAAAAAAAAEAAQEEAAAAAAAAAAEBAAABAQEBAQEAAAAAAAAAAQEAAQQAAAAAAAEBAAEAAQEBAQAAAAAAAAABAQEBAAAAAAEBAAABAQEAAQEAAAAAAQEBAQEBAQEBAQEBAAEAAAABAQEAAQEBAQEBAAEBAQEAAQAAAAABAQEBAQEBAQABAQEAAQEBAQEBAQEAAQEAAQEBAAEBAQEBAAAAAAEBAQEBAQEBAAEBAQABAQEBAQEBAQEBAQEBAQEBAQEBBQAAAQEAAAAAAAAAAAAAAAAAAAABAAEBAQABAQEBAQEAAAAAAQAAAAEAAAAAAAAAAAAAAAAAAAAAAQABAQEAAAEAAQEAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAABAQABAQAAAQEAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAwEBAQEAAQABAAAAAAEBAQEAAAEBAAEAAQABAQABAQMBAQEBAAEAAAAAAAABAQEBAAEAAQEAAQEAAQEBAQMBAQEBAAEAAAAAAAABAQEBAAEBAAEBAAEBAQEAAAMAAAAABgADAAAAAAECAwAAAAABBgAAAAAAAAACAAABAgABAgAAAAIAAAECAAEBAAAAAAEAAAAAAAABAAEAAAAAAQAAAQAAAAAAAAAAAAEBAQEAAAIAAQEBAQACAAEBAQEBAQEBAAAAAAABAQEBAQAAAAABAQEBAAAAAAEBAQEAAQEBAQAAAAEBAQAAAQEBAAAAAAEBAQEBAQ==",
+      "strict_legal_combos": 410,
+      "compatible_opponent_combos": 50,
+      "compatible_hole_card_pairs": 18946,
+      "b50": {
+        "eligible": 16,
+        "preferred": 9,
+        "best_ev_b50_fraction_pct": 56.25,
+        "low_count": 10,
+        "middle_count": 6,
+        "high_count": 0,
+        "mid_reach_mass_fraction_pct": 22.311,
+        "candidate": false,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "version": "gto",
+      "spot": "LMP_CO_BB",
+      "family": "LMP",
+      "flop": "6c4h2d",
+      "turn": "Kc",
+      "source_run_id": 45118955588,
+      "source_sha256": "cfaf73cf3831c1ade1808f43dbdea005a2362be9e65f59498f0acc56cf6b9de7",
+      "archive_sha256": "5a4c013117a3bf874753419c94bb0d6a5f5aeb25b959907f3011df4dcaf1119c",
+      "root_sha256": "955971712172d2aea50506490cd66f06fee864f2962e693d2bebbef7e20c682a",
+      "gto_gap_pct": 0.4913219213485718,
+      "locked_hero_gap_pct": null,
+      "root_gto_stage_gap_pct": 0.4772661328315735,
+      "root_locked_hero_gap_pct": null,
+      "lock_scope": {
+        "villain_decision_nodes": 0,
+        "pattern_matched_nodes": 0,
+        "observed_marginal_source_nodes": 0,
+        "imputed_assumption_nodes": 0,
+        "unmatched_nodes": 0,
+        "coverage_pct": null,
+        "all_villain_nodes_locked": false
+      },
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 0
+    },
+    "[\"ln-iso-lmp_r_model-1hgiamg\",\"4c7dAs3h2h\",\"x b50 c/x x/\",0,45118955588,\"180b70b2e552ac34101666e6628c460b62b11f112825580420ecbf12f79a76a1\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "4c7dAs3h2h",
+      "line": "x b50 c/x x/",
+      "acting_seat": 0,
+      "source_actions": [
+        "x",
+        "b50",
+        "b100",
+        "a"
+      ],
+      "source_hand_order_sha256": "ebdb46d49b433b4dd360b43ed84b5c4e218616832b2f68e89a285d3397b044ad",
+      "source_hand_count": 554,
+      "compatible_action_mask_b64": "AAAAAAAABAQEBAAAAAQEBAAAAAAAAAQEBAQAAAAEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAAAAAQEBAQEBAAAAAAAAAAABAQFBAQEBAQEAAAAAAAAAAAEBAUEBAQEBAQAAAAAAAAAAAQEBAAEBAQABAQAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQQEAAQABAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBBAQEAAAEBAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEEBAQEBAQAAAAABQUFAAAAAAAEBAQEBAAAAAAFBQUAAAAAAAQEBAQAAAAABQUFAAAAAAQEBAAAAAAFBAUAAAAAAAQEBAAAAAEBAQAAAAACAgIAAAEBAQAAAAICAgABAQEAAAAAAgICAQEBAAAAAgICAgEBAQEAAQAAAAAAAAEBAQEAAAAAAAAAAAEBAQEAAQAAAAAAAAEBAQEAAAAAAAAAAAEBAQEAAAAAAAAAAAEBAQEAAAAAAAAAAAAAAAACAgIAAAACAgIAAgICAAACAgICAAAAAAACAgIAAAAAAgICAAICAgAAAgICAgAAAgAAAgICAgAAAAACAgICAAICAgACAgICAgICAgACAgICAgIAAgICAgICAgICAgICAgICAgIAAAACAgICAgACAAACAAICAAAAAAICAgAAAAICAgICAgIAAAICAAACAAAAAAAAAAA=",
+      "strict_legal_combos": 318,
+      "compatible_opponent_combos": 230,
+      "compatible_hole_card_pairs": 67881,
+      "b50": {
+        "eligible": 104,
+        "preferred": 101,
+        "best_ev_b50_fraction_pct": 97.115,
+        "low_count": 14,
+        "middle_count": 47,
+        "high_count": 43,
+        "mid_reach_mass_fraction_pct": 55.703,
+        "candidate": true,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "version": "gto",
+      "spot": "LMP_CO_BB",
+      "family": "LMP",
+      "flop": "As7d4c",
+      "turn": "3h",
+      "source_run_id": 45118955588,
+      "source_sha256": "180b70b2e552ac34101666e6628c460b62b11f112825580420ecbf12f79a76a1",
+      "archive_sha256": "4669a1da67460c1600e13b63b3aa2ce4e8c3b09e496e8cef2b2b36be33940db4",
+      "root_sha256": "c487c8a3bfdccc0f0b74eada29317e5f96008edcd24a356238050d9ba1b77df9",
+      "gto_gap_pct": 0.4843408763408661,
+      "locked_hero_gap_pct": null,
+      "root_gto_stage_gap_pct": 0.47666436433792114,
+      "root_locked_hero_gap_pct": null,
+      "lock_scope": {
+        "villain_decision_nodes": 0,
+        "pattern_matched_nodes": 0,
+        "observed_marginal_source_nodes": 0,
+        "imputed_assumption_nodes": 0,
+        "unmatched_nodes": 0,
+        "coverage_pct": null,
+        "all_villain_nodes_locked": false
+      },
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 0
+    },
+    "[\"ln-iso-lmp_r_model-1hgiamg\",\"4d7cTh3cJd\",\"x b50 c/x x/\",0,45118955588,\"6c164586272d8c2dd29ed1937efb6249a12a638077c7095dbba970352672d504\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "4d7cTh3cJd",
+      "line": "x b50 c/x x/",
+      "acting_seat": 0,
+      "source_actions": [
+        "x",
+        "b50",
+        "b100",
+        "a"
+      ],
+      "source_hand_order_sha256": "1f20a75936dc80abe18be18856c214242455ed7c397354c2ef4e45efd10d3a77",
+      "source_hand_count": 680,
+      "compatible_action_mask_b64": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQUFAAAAAAAAAAAFAAQEAAAFBQUAAAAAAAAAAAUABQAAAAUFBQAAAAAAAAAAAAUABAQAAAAAAQABAQEAAAABAAAAAQAAAAAAAAUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgIAAAAAAAAAAAIAAgICAAIAAAAAAAAAAAICAAICAgIAAAAAAAAAAAICAgICAgIAAAAAAAAAAAAAAAAAAAACAgIAAAAAAAAAAAAAAAAAAgACAAAAAAAAAAAAAAAAAgICAAAAAAAAAAAAAAAAAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAAAAAAAAAAAAAAAAAgAAAgIAAAAAAAAAAAAAAAIAAgACAAAAAAAAAAAAAAACAAACAAAAAAAAAAAAAAACAgIAAAAAAAAAAAACAgIAAAAAAAAAAgIDAgAAAAAAAAACAgAAAAAAAAAAAAICAAAAAAAAAAAAAAAAAAACAgICAgICAgIAAAAAAAAAAgIAAgICAgAAAAAAAAAAAAAAAAAAAAICAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgIAAAACAgMAAAAAAgICAAACAgEAAAAAAgICAQAAAAAAAgACAgABAQEAAgIAAgABAQECAgICAAEBAQAAAAEBAQEAAAEBAQEAAQEBAQEBAQEAAAAAAAA=",
+      "strict_legal_combos": 154,
+      "compatible_opponent_combos": 123,
+      "compatible_hole_card_pairs": 16906,
+      "b50": {
+        "eligible": 97,
+        "preferred": 88,
+        "best_ev_b50_fraction_pct": 90.722,
+        "low_count": 36,
+        "middle_count": 26,
+        "high_count": 35,
+        "mid_reach_mass_fraction_pct": 31.871,
+        "candidate": true,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "version": "gto",
+      "spot": "LMP_CO_BB",
+      "family": "LMP",
+      "flop": "Th7c4d",
+      "turn": "3c",
+      "source_run_id": 45118955588,
+      "source_sha256": "6c164586272d8c2dd29ed1937efb6249a12a638077c7095dbba970352672d504",
+      "archive_sha256": "1f12635cb6506310363074b3e69b888aabb8051efd9ad5821e9c74e224f7b69c",
+      "root_sha256": "0ba5d87cd7254e6de3e99a231fc1a129f347a22a5962d286a8fb975525b7d441",
+      "gto_gap_pct": 0.4890144467353821,
+      "locked_hero_gap_pct": null,
+      "root_gto_stage_gap_pct": 0.4577241837978363,
+      "root_locked_hero_gap_pct": null,
+      "lock_scope": {
+        "villain_decision_nodes": 0,
+        "pattern_matched_nodes": 0,
+        "observed_marginal_source_nodes": 0,
+        "imputed_assumption_nodes": 0,
+        "unmatched_nodes": 0,
+        "coverage_pct": null,
+        "all_villain_nodes_locked": false
+      },
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 0
+    },
+    "[\"ln-iso-lmp_r_model-1hgiamg\",\"3h8dJc2h6c\",\"x b50 c/x x/\",0,45118955588,\"0501a0bd71369e0ac2a4ca52bdd4222a6d438ad65c5b6a8f9d5036e0950b5a9c\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "3h8dJc2h6c",
+      "line": "x b50 c/x x/",
+      "acting_seat": 0,
+      "source_actions": [
+        "x",
+        "b50",
+        "b100",
+        "a"
+      ],
+      "source_hand_order_sha256": "88338c9ba1f3140cee986dc01a400273f8684eb802f9861ec1b51835c7338e67",
+      "source_hand_count": 637,
+      "compatible_action_mask_b64": "AAAEBAQEBAQEBAQABAQEBAQEBAQEAAQEBAQEBAQEBAAAAAAAAAAAAAAAAAEBAAEAAAABAQABAAAAAAAAAAAAAAEDAwADAgICAgAAAAAAAAAAAAAAAAEBAAEAAAAAAAABAAAAAAAAAAAAAAADAwADAgICAgAAAAAAAAAAAAAAAAEBAAEAAAAAAAABAAAAAAAAAAAAAAADAwADAgICAgICAgAAAAICAgAAAgIAAAACAgIAAAIAAgACAAIAAgAAAAICAgICAgAAAAYCBgAAAgIAAAAGBgYAAAIAAAAGAAYAAgAAAAYGBgAAAAAAAAAAAAAAAgIAAAAAAAAAAgIABAACAAIAAgAAAAAAAAICAgAAAAYGBgYGBgAAAAACAgIAAAAGBgYGBgYAAAAAAgIAAgAGBAQGBgYAAAYAAgAAAAYGBAQGBgYGAAAAAAAAAAAAAAAAAAAAAAICAAICAgACAgICAgAAAAIAAAAAAAAAAAICAgICAgACAgIAAgAAAAAAAAAAAAAAAgIAAgICAAICAgICAgICAAAAAAYGBAAAAAACAAACAgIAAAAABgYEAAAAAAIAAgACAgAAAAAEAAQAAAAAAAAAAgIAAAAABgYEAAAAAAAAAAACAgIEBAQAAAAAAAAAAgICAgICAAQEAAAAAAAAAAACAgICAgQABAAAAAAAAAAAAgICAgQEBAAAAAAAAAAAAgICAgAABAQEBAQABAAAAAAAAAQEBAQAAAAAAAAAAAQEBAQEBAAAAAAAAAAAAAACAgIBAQEBAAACAgICAQEBAQACAgACAAABAAICAgIBAQEBAAAAAQEBAQAAAQEBAQABAQEAAQEBAQQEAAQAAA==",
+      "strict_legal_combos": 293,
+      "compatible_opponent_combos": 197,
+      "compatible_hole_card_pairs": 52288,
+      "b50": {
+        "eligible": 184,
+        "preferred": 127,
+        "best_ev_b50_fraction_pct": 69.022,
+        "low_count": 64,
+        "middle_count": 77,
+        "high_count": 43,
+        "mid_reach_mass_fraction_pct": 41.215,
+        "candidate": true,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "version": "gto",
+      "spot": "LMP_CO_BB",
+      "family": "LMP",
+      "flop": "Jc8d3h",
+      "turn": "2h",
+      "source_run_id": 45118955588,
+      "source_sha256": "0501a0bd71369e0ac2a4ca52bdd4222a6d438ad65c5b6a8f9d5036e0950b5a9c",
+      "archive_sha256": "0f47ffefaaac6693da7c23915b89c199fb8b586a90cc899dee1c5b84ed57cda1",
+      "root_sha256": "4e9f70193b3dc9575713a6821562a36e16c50b209088fca4727cad5198f5ee1c",
+      "gto_gap_pct": 0.4773448705673218,
+      "locked_hero_gap_pct": null,
+      "root_gto_stage_gap_pct": 0.45344772934913635,
+      "root_locked_hero_gap_pct": null,
+      "lock_scope": {
+        "villain_decision_nodes": 0,
+        "pattern_matched_nodes": 0,
+        "observed_marginal_source_nodes": 0,
+        "imputed_assumption_nodes": 0,
+        "unmatched_nodes": 0,
+        "coverage_pct": null,
+        "all_villain_nodes_locked": false
+      },
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 0
+    }
+  }
+}
