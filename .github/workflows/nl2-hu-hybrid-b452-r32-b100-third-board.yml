@@ -1,0 +1,145 @@
+name: B452 rank32 third UTG_CO b100-call GTO and NL2-OOP exact board; strict HU2475
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b452-r32-b100-third-board.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        version: [gto, exp_oop]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned exact 100bb Rust CFR
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve third predeclared rank32 original full-menu flop and Tc turn
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git -C ../solver rev-parse HEAD > evidence/poker-solver-pin.txt
+          git -C ../solver/postflop/postflop-solver rev-parse HEAD > evidence/rust-pin.txt
+          set +e
+          python3 tools/solve_hu_multiboard_100bb.py \
+            --solver-root ../solver --spot UTG_CO --flop KsQh4d \
+            --version "${{ matrix.version }}" --flop-size-profile full \
+            --flop-line-policy oop-b100only --turn-count 1 \
+            --manifest "evidence/UTG_CO-KsQh4d-${{ matrix.version }}.json"
+          status=$?
+          set -e
+          python3 - <<'PY'
+          import json,pathlib
+          name='${{ matrix.version }}'
+          m=json.loads(pathlib.Path('evidence/UTG_CO-KsQh4d-'+name+'.json').read_text())
+          assert m['spot']=='UTG_CO' and m['version']==name and m['flop']=='KsQh4d'
+          assert m['preflop_ranges']['source']=='PINNED_POKER_SOLVER_PREFLOP_CFR'
+          assert m['flop_size_profile']=='full' and not m['restricted_tree_assumption']
+          assert m['selected_lines']==['b100 c'] and m['turns']==['Tc']
+          assert not m['failures'] and len(m['cases'])==m['solved_cases']<=1
+          print('B452 authentic',name,'cases',m['solved_cases'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NL2-B452-R32-KsQh4d-${{ matrix.version }}
+          path: |
+            trainer/evidence
+            solver/postflop/out/UTG_CO/${{ matrix.version }}
+          retention-days: 30
+          if-no-files-found: error
+  verify-audit-commit:
+    needs: [solve]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: trainer
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download only this run original Rust source artifacts
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p ../downloads/gto ../downloads/exp_oop
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name 'NL2-B452-R32-KsQh4d-gto' --dir ../downloads/gto
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name 'NL2-B452-R32-KsQh4d-exp_oop' --dir ../downloads/exp_oop
+      - name: Verify source SHA, strict GTO and NL2-OOP reach and preserve no false CERT
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/verify_b452_rank32_first_board.py
+          python3 tools/verify_b452_rank32_first_board.py --downloads ../downloads --run-id "$GITHUB_RUN_ID"
+      - name: Full V50 CERT locks, exact b50-only research, and HU2475 navigation audit
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v50_b417_rank166.json --out /tmp/b452-base.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/b452-base.json'))
+          assert (d['cert_multiboard'],d['approx'],d['EST'],d['models_total'])==(163,229,0,392)
+          assert (d['aggregate']['named_board_proofs'],d['aggregate']['paired_hero_locked_source_variants'])==(618,710)
+          assert d['not_generalized_handclass_GTO'] and d['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js >/tmp/b452-contract.json
+          node tools/link_audit.js --md /tmp/b452-link.md --json /tmp/b452-link.json
+          node tools/reach_verify.js --log /tmp/b452-reach.md --json /tmp/b452-reach.json
+          node tools/hu_model_path_audit.js /tmp/b452-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b452-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B452 HU2475/2475")'
+          git diff --check
+      - name: Commit verified original source, or strict-negative, to PR2 draft
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b452_rank32_first_source_proof.json \
+            data/solver_evidence/NL2_B452_R32_KS_QH_4D.json.gz \
+            data/solver_evidence/NL2_B452_R32_KS_QH_4D.index.json \
+            docs/NL2_HU_B452_R32_KS_QH_4D_SOURCE_PROOF.md
+          git diff --cached --quiet && exit 1
+          git commit -m 'B452: preserve authentic rank32 b100-call first GTO/NL2-OOP source; no premature CERT'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
