@@ -51,7 +51,14 @@ def main():
       "NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1","LMP_CO_BB","gto",flop)
     assert m["preflop_ranges"]["source"]=="ASSUMED_EXPLICIT_169CLASS"
     assert (m["root_pot_bb"],m["root_remaining_bb"])==(2.5,99.0)
-    assert m["flop_size_profile"]=="full" and not m["restricted_tree_assumption"]
+    root_job=load(rp.with_suffix(".job.json"))
+    assert m["flop_action_sizes"]==["33%","50%","75%","100%"]
+    assert m["allow_OOP_flop_leads"] is True
+    assert root_job["flop_oop"]=="33%,50%,75%,100%" and root_job["flop_ip"]=="33%,50%,75%,100%"
+    assert root_job["flop_raise"]=="3x,a" and root_job.get("hero") is None
+    assert (root_job["pot"],root_job["stack"])==(250,9900)
+    assert abs(root_job["rake_rate"]-0.05)<1e-8 and root_job["rake_cap"]==1000
+    # Historical B3 predates the manifest field flop_size_profile; check the actual Rust job, never invent metadata.
     assert "b33 c" in m["selected_lines"] and m["turns"]==[turn]
     assert m["solved_cases"]>=1 and not m["failures"]
     assert m["file_flop_sha256"]==sha(rp)

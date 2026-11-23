@@ -1,0 +1,69 @@
+name: B456 fix historical B3 original root-menu verification; rank35 strict GTO zero; HU2475
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b456-r35-legacy-source-verify.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download only three genuinely completed old B3 original GTO sources, no solve rerun
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads/8s8h3d downloads/9s6h3d downloads/KsQh4d
+          gh run download 44666294821 --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B3-LMP_CO_BB-gto-8s8h3d' --dir downloads/8s8h3d
+          gh run download 44666294821 --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B3-LMP_CO_BB-gto-9s6h3d' --dir downloads/9s6h3d
+          gh run download 44666294821 --repo "$GITHUB_REPOSITORY"             --name 'nl2-multiboard-B3-LMP_CO_BB-gto-KsQh4d' --dir downloads/KsQh4d
+      - name: Independently revalidate authentic root and child SHA, GTO gap, actor, SPR and 40/70 strict reach
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b454_rank35_three_original_negative.py
+          python3 tools/hu_b454_rank35_three_original_negative.py             --downloads downloads --run-id "$GITHUB_RUN_ID"
+      - name: Full V51 source lock nonpolarized audit and HU2475 legal navigation
+        run: |
+          set -euo pipefail
+          python3 tools/hu_cert_lock_medium_audit.py             --source data/nl2_hu_multiboard_status_v51_b453_rank32.json             --out /tmp/b454-v51.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b454-v51.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'],a['models_total'])==(164,228,0,392)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'])==(621,713)
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+          node tools/hu_line_contract.js >/tmp/b454-contract.json
+          node tools/link_audit.js --md /tmp/b454-link.md --json /tmp/b454-link.json
+          node tools/reach_verify.js --log /tmp/b454-reach.md --json /tmp/b454-reach.json
+          node tools/hu_model_path_audit.js /tmp/b454-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b454-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B456 HU2475/2475")'
+          git diff --check
+      - name: Commit authenticated negative evidence and keep PR2 draft
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b454_rank35_authentic_strict_zero_negative.json              docs/NL2_HU_B456_R35_B33XX_STRICT_ZERO_NEGATIVE.md
+          git diff --cached --quiet && exit 1
+          git commit -m 'B456: authentic legacy B3 root menu verified; preserve rank35 zero-reach GTO evidence'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
