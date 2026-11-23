@@ -27,7 +27,13 @@ def sha(path):
         for chunk in iter(lambda:f.read(1024*1024),b''):h.update(chunk)
     return h.hexdigest()
 
-def make_fallbacks(spot,ver,p,orig,loc):
+def marginal_pattern(street, action, by_street):
+    if not by_street:
+        return r'(?:^|[ /])' + action + '$'
+    return rf'^(?:[^/]*/){{{street-1}}}(?:[^/]+ )?{action}$'
+
+
+def make_fallbacks(spot,ver,p,orig,loc,by_street=False):
     if ver=='gto':return [],[]
     configs=[]
     is_assumed=spot in RULES
@@ -43,7 +49,7 @@ def make_fallbacks(spot,ver,p,orig,loc):
         for size,bucket in [('33','≤33%'),('50','34-55%'),('75','56-80%'),('100','81-110%')]:
             v=ps['by_size'][bucket];n=int(v['n'])
             if n>=500:
-                config={'pat':r'(?:^|[ /])b'+size+r'$',
+                config={'pat':marginal_pattern(street,'b'+size,by_street),
                         'fold':v['fold']/100,'raise':v['raise']/100}
                 configs.append(config)
                 meta.append({'pat':config['pat'],'n':n,'street':street,
@@ -53,7 +59,7 @@ def make_fallbacks(spot,ver,p,orig,loc):
         # Fallback raise response based observed marginal on betting facing raise.
         v=ps['bettor_vs_raise'];n=int(v['n'])
         if n>=500:
-            config={'pat':r'(?:^|[ /])r$', 'fold':v['fold']/100,'raise':v['raise']/100}
+            config={'pat':marginal_pattern(street,'r',by_street), 'fold':v['fold']/100,'raise':v['raise']/100}
             configs.append(config)
             meta.append({'pat':config['pat'],'n':n,'street':street,
                  'src':f'NL2.HU_facing_bet[{street}].bettor_vs_raise',
@@ -106,6 +112,8 @@ def main():
         help='Only LMP: predeclared flop single 50pct menu; genuine restricted-game CFR, not unrestricted GTO')
     a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','oop-b75only','oop-b100only','oop-b75raisecall','oop-b33only','checked-b33only','checked-b50only','checked-b100only','checked-b50b100only','checkcheck'),default='all',
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
+    a.add_argument('--lock-marginals-by-street', action='store_true',
+        help='Match the pooled bet-size and raise fallback to the actual flop, turn, or river before applying it')
     a.add_argument('--turn-line-policy',choices=('default','b100only'),default='default',
         help='Extract only exact b100-call river continuations; never alter the full underlying solved tree')
     a.add_argument('--turn-size-menu',choices=('default','river-gaps','exact-b66-only','exact-b50-only'),default='default',
@@ -191,7 +199,7 @@ def main():
     spot=pipeline.SPOTS[args.spot]
     original_locks=pipeline.lock_list
     def lock_list(spot,ver,board):
-        return make_fallbacks(spot,ver,pool,original_locks,board)
+        return make_fallbacks(spot,ver,pool,original_locks,board,args.lock_marginals_by_street)
     pipeline.lock_list=lock_list
     orig_make=pipeline.make_job
     def sized_make(*pos,**kwargs):
@@ -272,6 +280,11 @@ def main():
       no_generic_certification=True,not_observed_exact_NL2_hero_EV=True,
       file_flop=str(path.relative_to(pf)),file_flop_sha256=None,
       cases=[],failures=[],skipped=[],elapsed_seconds=0)
+    if args.lock_marginals_by_street:
+        info["marginal_lock_matching"] = "RUST_FIRST_MATCH_POOLED_FALLBACK_EXACT_STREET"
+        for record, original in zip(info["locks"], lock_src, strict=True):
+            if "street" in original:
+                record["street"] = original["street"]
     t0=time.monotonic()
     try:
         if using_authenticated_parent:
