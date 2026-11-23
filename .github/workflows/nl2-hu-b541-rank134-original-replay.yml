@@ -1,0 +1,47 @@
+name: B541 replay original B528 river reach and first-match NL2 opponent locks
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b541-rank134-original-replay.yml'
+      - 'tools/hu_b541_rank134_replay.py'
+      - 'data/nl2_hu_b541_*.json'
+permissions: {contents: read, actions: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install phevaluator==0.5.3.1
+      - name: Authenticate existing native output and compare independent source replay
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          originals="$RUNNER_TEMP/b528-originals"
+          report=data/nl2_hu_b541_rank134_original_reach.json
+          api="repos/$GITHUB_REPOSITORY/actions/artifacts"
+          mkdir -p "$originals"
+          for id in $(jq -r '.[].id' data/nl2_hu_b541_originals.json); do
+            gh api "$api/$id" > "$originals/$id.json"
+            gh api "$api/$id/zip" > "$originals/$id.zip"
+          done
+          python tools/hu_b541_rank134_replay.py --originals "$originals" --solver pinned-solver --out "$RUNNER_TEMP/replay.json"
+          cmp "$report" "$RUNNER_TEMP/replay.json"
+      - name: Audit the full exact-board registry and both viewers
+        run: |
+          set -euo pipefail
+          status=data/nl2_hu_multiboard_status_current.json
+          python tools/hu_apply_cert_extensions.py --out "$status"
+          node tools/hu_extension_runtime_test.cjs "$status"
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b492_medium_tree_ui.cjs
+          bash tools/hu_exact_batch_audit.sh "$status"

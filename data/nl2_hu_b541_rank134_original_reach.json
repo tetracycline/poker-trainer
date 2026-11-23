@@ -1,0 +1,1978 @@
+{
+  "source_run_id": 45118400160,
+  "source_head": "959bbdef4b02e4f9be24429ba6d3a4412ecdcc19",
+  "model_id": "ln-ipfr-r_model-1iypoop",
+  "line": "x b50 c/x x/x",
+  "pool_sha256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+  "qualified_distinct_flops": 0,
+  "attempts": [
+    {
+      "flop": "Kh8h3h",
+      "turn": "5d",
+      "sources": {
+        "gto": {
+          "archive_sha256": "b5e305bcf157134bd3321065ec53ade3e97313894727ddf1d22fed405dc11fe3",
+          "root_sha256": "51864a3fa5003d9b77c723b15b10371e9ee30515fa76a059ba2af8869e002346",
+          "subgame_sha256": "0f2619a74e9d29302cc364105fc8df0ee7ca7ba2bb8236f6a02d6f974eee4ca3"
+        },
+        "exp_ip": {
+          "archive_sha256": "c50cf16ab2110625559c6cde3a6977d2cc0a214b39706a49a5f6c29e3737e2fd",
+          "root_sha256": "0890fc70ba325a45bab6dcca7195392c38de3a1a10582c24ed0655b87d11357f",
+          "subgame_sha256": "ff0bcf6607da0a16cd9b00f29f4c0ca8bb77f8d25ae7d3c7c4933d44dbad640f"
+        }
+      },
+      "river_decisions": [
+        {
+          "status": "NO_PAIRED_JOINT_REACH",
+          "public_board": "3h8hKh5d5h",
+          "compatible_deals": {
+            "gto": 0,
+            "exp_ip": 729
+          }
+        },
+        {
+          "status": "NO_PAIRED_JOINT_REACH",
+          "public_board": "3h8hKh5d8s",
+          "compatible_deals": {
+            "gto": 0,
+            "exp_ip": 902
+          }
+        }
+      ],
+      "streets_with_reachable_measured_response": [
+        1,
+        2,
+        3
+      ],
+      "opponent_locks": [
+        {
+          "street": 1,
+          "board": "3h8hKh",
+          "line": "",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b33",
+            "b50",
+            "b75",
+            "b100"
+          ],
+          "compatible_deal_lower_bound_from_named_turn": 5945,
+          "first_rule_index": 26,
+          "pattern": "^$",
+          "scope": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT",
+          "source": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT; NL2_OBSERVED_PFR_CBET_SIZE_AGGREGATE_NOT_EXACT_NODE",
+          "pool_decisions": 343183,
+          "target": {
+            "bet": 0.612,
+            "sizes": [
+              [
+                33,
+                0.21479229989868287
+              ],
+              [
+                50,
+                0.4802431610942249
+              ],
+              [
+                75,
+                0.23505572441742653
+              ],
+              [
+                100,
+                0.06990881458966565
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.611999904042102,
+            "fold": 0.0,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 1,
+          "board": "3h8hKh",
+          "line": "x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "r",
+            "a"
+          ],
+          "compatible_deal_lower_bound_from_named_turn": 5945,
+          "first_rule_index": 12,
+          "pattern": "^(?:[^/]*/){0}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[1].by_size[34-55%]",
+          "pool_decisions": 275923,
+          "target": {
+            "fold": 0.428,
+            "raise": 0.08900000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.08899998128887943,
+            "fold": 0.42800000983482395,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 2,
+          "board": "3h8hKh5d",
+          "line": "x b50 c/",
+          "seat": 0,
+          "actions": [
+            "x"
+          ],
+          "compatible_deals": 5945,
+          "scope": "FORCED_ACTION_NO_OPPONENT_LOCK"
+        },
+        {
+          "street": 2,
+          "board": "3h8hKh5d",
+          "line": "x b50 c/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 3642,
+          "first_rule_index": 3,
+          "pattern": "^x b\\d+ c/x b50$",
+          "scope": "PINNED_MEASURED_NL2_SOURCE",
+          "source": "SRP_PFR_IP.vs_turn_barrel_by_size[34-55%]",
+          "pool_decisions": 15700,
+          "target": {
+            "fold": 0.35600000000000004,
+            "raise": 0.102
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.10199997489160452,
+            "fold": 0.35600006037953585,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 2,
+          "board": "3h8hKh5d",
+          "line": "x b50 c/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 1026,
+          "first_rule_index": 4,
+          "pattern": "^x b\\d+ c/x b100$",
+          "scope": "PINNED_MEASURED_NL2_SOURCE",
+          "source": "SRP_PFR_IP.vs_turn_barrel_by_size[81-110%]",
+          "pool_decisions": 4480,
+          "target": {
+            "fold": 0.498,
+            "raise": 0.09
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.08999998231076166,
+            "fold": 0.4979999882612014,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 3,
+          "board": "3h8hKh5d5h",
+          "line": "x b50 c/x x/",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "compatible_deals": 1333,
+          "first_rule_index": 29,
+          "pattern": ".*/$",
+          "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+          "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+          "pool_decisions": 0,
+          "target": {
+            "bet": 0.45,
+            "sizes": [
+              [
+                33,
+                0.35
+              ],
+              [
+                50,
+                0.35
+              ],
+              [
+                75,
+                0.2
+              ],
+              [
+                100,
+                0.1
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.22686647948773295,
+            "fold": 0.0,
+            "nodes": 106
+          }
+        },
+        {
+          "street": 3,
+          "board": "3h8hKh5d5h",
+          "line": "x b50 c/x x/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 585,
+          "first_rule_index": 22,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+          "pool_decisions": 64272,
+          "target": {
+            "fold": 0.531,
+            "raise": 0.09300000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.09299998096409547,
+            "fold": 0.5310000041753677,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "3h8hKh5d5h",
+          "line": "x b50 c/x x/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 297,
+          "first_rule_index": 24,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b100$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+          "pool_decisions": 43634,
+          "target": {
+            "fold": 0.6459999999999999,
+            "raise": 0.062
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.06199998450620308,
+            "fold": 0.6459999876125421,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "3h8hKh5d5h",
+          "line": "x b50 c/x x/x a",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c"
+          ],
+          "compatible_deals": 0,
+          "scope": "NO_MATCHING_LOCK"
+        },
+        {
+          "street": 3,
+          "board": "3h8hKh5d8s",
+          "line": "x b50 c/x x/",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "compatible_deals": 1509,
+          "first_rule_index": 29,
+          "pattern": ".*/$",
+          "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+          "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+          "pool_decisions": 0,
+          "target": {
+            "bet": 0.45,
+            "sizes": [
+              [
+                33,
+                0.35
+              ],
+              [
+                50,
+                0.35
+              ],
+              [
+                75,
+                0.2
+              ],
+              [
+                100,
+                0.1
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.22686647948773295,
+            "fold": 0.0,
+            "nodes": 106
+          }
+        },
+        {
+          "street": 3,
+          "board": "3h8hKh5d8s",
+          "line": "x b50 c/x x/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 74,
+          "first_rule_index": 22,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+          "pool_decisions": 64272,
+          "target": {
+            "fold": 0.531,
+            "raise": 0.09300000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.09299998096409547,
+            "fold": 0.5310000041753677,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "3h8hKh5d8s",
+          "line": "x b50 c/x x/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 828,
+          "first_rule_index": 24,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b100$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+          "pool_decisions": 43634,
+          "target": {
+            "fold": 0.6459999999999999,
+            "raise": 0.062
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.06199998450620308,
+            "fold": 0.6459999876125421,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "3h8hKh5d8s",
+          "line": "x b50 c/x x/x a",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c"
+          ],
+          "compatible_deals": 0,
+          "scope": "NO_MATCHING_LOCK"
+        }
+      ]
+    },
+    {
+      "flop": "Qc7c2c",
+      "turn": "3d",
+      "sources": {
+        "gto": {
+          "archive_sha256": "0d51de9c689629f7bd7d8d49984bb0cf226c08754dcf183d372ad5af448a6cd0",
+          "root_sha256": "89aff46c5e31e63ced185b88a417c7e01a3cd196e53fcb16dab4c9a4a5c29f30",
+          "subgame_sha256": "90d019df5a0fccf313d9c02418b894768652c0eb0e471048b8803cbf7eecaf2d"
+        },
+        "exp_ip": {
+          "archive_sha256": "8986ce59195d527addb456da7a3295b6ce48bd795cb2f62139aeec3120b5ea43",
+          "root_sha256": "277825b028e35ea99c35f11e09b4962b1ce73df817d944384b083635cdd1a602",
+          "subgame_sha256": "2f1ed3436d5a93fb0f4394bc0d438cae9ecb3d8244252b4e9e2f214629678c5e"
+        }
+      },
+      "river_decisions": [
+        {
+          "public_board": "2c7cQc3d5s",
+          "compatible_deals": {
+            "gto": 579,
+            "exp_ip": 108
+          },
+          "common_legal_hands": 0,
+          "route_witnesses": [],
+          "status": "NO_RENDERED_HAND_IN_BOTH_SOURCES"
+        },
+        {
+          "public_board": "2c7cQc3d8c",
+          "compatible_deals": {
+            "gto": 261,
+            "exp_ip": 81
+          },
+          "common_legal_hands": 0,
+          "route_witnesses": [],
+          "status": "NO_RENDERED_HAND_IN_BOTH_SOURCES"
+        }
+      ],
+      "streets_with_reachable_measured_response": [
+        1,
+        2,
+        3
+      ],
+      "opponent_locks": [
+        {
+          "street": 1,
+          "board": "2c7cQc",
+          "line": "",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b33",
+            "b50",
+            "b75",
+            "b100"
+          ],
+          "compatible_deal_lower_bound_from_named_turn": 2705,
+          "first_rule_index": 26,
+          "pattern": "^$",
+          "scope": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT",
+          "source": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT; NL2_OBSERVED_PFR_CBET_SIZE_AGGREGATE_NOT_EXACT_NODE",
+          "pool_decisions": 343183,
+          "target": {
+            "bet": 0.612,
+            "sizes": [
+              [
+                33,
+                0.21479229989868287
+              ],
+              [
+                50,
+                0.4802431610942249
+              ],
+              [
+                75,
+                0.23505572441742653
+              ],
+              [
+                100,
+                0.06990881458966565
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.6119999038793107,
+            "fold": 0.0,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 1,
+          "board": "2c7cQc",
+          "line": "x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "r",
+            "a"
+          ],
+          "compatible_deal_lower_bound_from_named_turn": 2705,
+          "first_rule_index": 12,
+          "pattern": "^(?:[^/]*/){0}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[1].by_size[34-55%]",
+          "pool_decisions": 275923,
+          "target": {
+            "fold": 0.428,
+            "raise": 0.08900000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.08899998196867406,
+            "fold": 0.4280000161857907,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 2,
+          "board": "2c7cQc3d",
+          "line": "x b50 c/",
+          "seat": 0,
+          "actions": [
+            "x"
+          ],
+          "compatible_deals": 2705,
+          "scope": "FORCED_ACTION_NO_OPPONENT_LOCK"
+        },
+        {
+          "street": 2,
+          "board": "2c7cQc3d",
+          "line": "x b50 c/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 2282,
+          "first_rule_index": 3,
+          "pattern": "^x b\\d+ c/x b50$",
+          "scope": "PINNED_MEASURED_NL2_SOURCE",
+          "source": "SRP_PFR_IP.vs_turn_barrel_by_size[34-55%]",
+          "pool_decisions": 15700,
+          "target": {
+            "fold": 0.35600000000000004,
+            "raise": 0.102
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.10199997370492503,
+            "fold": 0.35600003056055174,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 2,
+          "board": "2c7cQc3d",
+          "line": "x b50 c/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 240,
+          "first_rule_index": 4,
+          "pattern": "^x b\\d+ c/x b100$",
+          "scope": "PINNED_MEASURED_NL2_SOURCE",
+          "source": "SRP_PFR_IP.vs_turn_barrel_by_size[81-110%]",
+          "pool_decisions": 4480,
+          "target": {
+            "fold": 0.498,
+            "raise": 0.09
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.08999998132403969,
+            "fold": 0.4979999891902579,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 3,
+          "board": "2c7cQc3d5s",
+          "line": "x b50 c/x x/",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "compatible_deals": 171,
+          "first_rule_index": 29,
+          "pattern": ".*/$",
+          "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+          "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+          "pool_decisions": 0,
+          "target": {
+            "bet": 0.45,
+            "sizes": [
+              [
+                33,
+                0.35
+              ],
+              [
+                50,
+                0.35
+              ],
+              [
+                75,
+                0.2
+              ],
+              [
+                100,
+                0.1
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.22678476216341145,
+            "fold": 0.0,
+            "nodes": 106
+          }
+        },
+        {
+          "street": 3,
+          "board": "2c7cQc3d5s",
+          "line": "x b50 c/x x/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 0,
+          "first_rule_index": 22,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+          "pool_decisions": 64272,
+          "target": {
+            "fold": 0.531,
+            "raise": 0.09300000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.092999981446129,
+            "fold": 0.5310000036005469,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "2c7cQc3d5s",
+          "line": "x b50 c/x x/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 108,
+          "first_rule_index": 24,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b100$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+          "pool_decisions": 43634,
+          "target": {
+            "fold": 0.6459999999999999,
+            "raise": 0.062
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.06199998508147039,
+            "fold": 0.6459999891088283,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "2c7cQc3d5s",
+          "line": "x b50 c/x x/x a",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c"
+          ],
+          "compatible_deals": 0,
+          "scope": "NO_MATCHING_LOCK"
+        },
+        {
+          "street": 3,
+          "board": "2c7cQc3d8c",
+          "line": "x b50 c/x x/",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "compatible_deals": 165,
+          "first_rule_index": 29,
+          "pattern": ".*/$",
+          "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+          "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+          "pool_decisions": 0,
+          "target": {
+            "bet": 0.45,
+            "sizes": [
+              [
+                33,
+                0.35
+              ],
+              [
+                50,
+                0.35
+              ],
+              [
+                75,
+                0.2
+              ],
+              [
+                100,
+                0.1
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.22678476216341145,
+            "fold": 0.0,
+            "nodes": 106
+          }
+        },
+        {
+          "street": 3,
+          "board": "2c7cQc3d8c",
+          "line": "x b50 c/x x/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 54,
+          "first_rule_index": 22,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+          "pool_decisions": 64272,
+          "target": {
+            "fold": 0.531,
+            "raise": 0.09300000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.092999981446129,
+            "fold": 0.5310000036005469,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "2c7cQc3d8c",
+          "line": "x b50 c/x x/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 27,
+          "first_rule_index": 24,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b100$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+          "pool_decisions": 43634,
+          "target": {
+            "fold": 0.6459999999999999,
+            "raise": 0.062
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.06199998508147039,
+            "fold": 0.6459999891088283,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "2c7cQc3d8c",
+          "line": "x b50 c/x x/x a",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c"
+          ],
+          "compatible_deals": 0,
+          "scope": "NO_MATCHING_LOCK"
+        }
+      ]
+    },
+    {
+      "flop": "Jd9d5d",
+      "turn": "3c",
+      "sources": {
+        "gto": {
+          "archive_sha256": "0c263ffdc4b15722f0a57be84a1e04d4033f83bf67f509ce06773f4081ab820e",
+          "root_sha256": "cd37ca5b2d1495ea4a364c95f4661dd9645fe0ac8e0f953f086873fcfd24f5a5",
+          "subgame_sha256": "3c9ec555a75a128cbb1b4e7b8013098582b68adcd7adecdea86463351f402f77"
+        },
+        "exp_ip": {
+          "archive_sha256": "986d4900585da36cb143fb227e737ab3d9b74202db001fd10f70d8da9954f598",
+          "root_sha256": "3c621183580431d298db9172dac2e96cb91da18e5f3a18b9f13a0e0dd92aa435",
+          "subgame_sha256": "c4d23088a9f369a9f26b6ffb3cf1045ea25e4f20274a935f2efe42d57c5db590"
+        }
+      },
+      "river_decisions": [
+        {
+          "public_board": "5d9dJd3cQh",
+          "compatible_deals": {
+            "gto": 793,
+            "exp_ip": 3120
+          },
+          "common_legal_hands": 0,
+          "route_witnesses": [],
+          "status": "NO_RENDERED_HAND_IN_BOTH_SOURCES"
+        },
+        {
+          "public_board": "5d9dJd3cKh",
+          "compatible_deals": {
+            "gto": 939,
+            "exp_ip": 3164
+          },
+          "common_legal_hands": 0,
+          "route_witnesses": [],
+          "status": "NO_RENDERED_HAND_IN_BOTH_SOURCES"
+        }
+      ],
+      "streets_with_reachable_measured_response": [
+        1,
+        2,
+        3
+      ],
+      "opponent_locks": [
+        {
+          "street": 1,
+          "board": "5d9dJd",
+          "line": "",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b33",
+            "b50",
+            "b75",
+            "b100"
+          ],
+          "compatible_deal_lower_bound_from_named_turn": 22697,
+          "first_rule_index": 26,
+          "pattern": "^$",
+          "scope": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT",
+          "source": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT; NL2_OBSERVED_PFR_CBET_SIZE_AGGREGATE_NOT_EXACT_NODE",
+          "pool_decisions": 343183,
+          "target": {
+            "bet": 0.612,
+            "sizes": [
+              [
+                33,
+                0.21479229989868287
+              ],
+              [
+                50,
+                0.4802431610942249
+              ],
+              [
+                75,
+                0.23505572441742653
+              ],
+              [
+                100,
+                0.06990881458966565
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.6119999033996256,
+            "fold": 0.0,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 1,
+          "board": "5d9dJd",
+          "line": "x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "r",
+            "a"
+          ],
+          "compatible_deal_lower_bound_from_named_turn": 22697,
+          "first_rule_index": 12,
+          "pattern": "^(?:[^/]*/){0}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[1].by_size[34-55%]",
+          "pool_decisions": 275923,
+          "target": {
+            "fold": 0.428,
+            "raise": 0.08900000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.08899997968999133,
+            "fold": 0.42800000950675665,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 2,
+          "board": "5d9dJd3c",
+          "line": "x b50 c/",
+          "seat": 0,
+          "actions": [
+            "x"
+          ],
+          "compatible_deals": 22697,
+          "scope": "FORCED_ACTION_NO_OPPONENT_LOCK"
+        },
+        {
+          "street": 2,
+          "board": "5d9dJd3c",
+          "line": "x b50 c/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 17205,
+          "first_rule_index": 3,
+          "pattern": "^x b\\d+ c/x b50$",
+          "scope": "PINNED_MEASURED_NL2_SOURCE",
+          "source": "SRP_PFR_IP.vs_turn_barrel_by_size[34-55%]",
+          "pool_decisions": 15700,
+          "target": {
+            "fold": 0.35600000000000004,
+            "raise": 0.102
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.10199997277585768,
+            "fold": 0.3560000334601259,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 2,
+          "board": "5d9dJd3c",
+          "line": "x b50 c/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 428,
+          "first_rule_index": 4,
+          "pattern": "^x b\\d+ c/x b100$",
+          "scope": "PINNED_MEASURED_NL2_SOURCE",
+          "source": "SRP_PFR_IP.vs_turn_barrel_by_size[81-110%]",
+          "pool_decisions": 4480,
+          "target": {
+            "fold": 0.498,
+            "raise": 0.09
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.08999998226294052,
+            "fold": 0.49799998562821124,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 3,
+          "board": "5d9dJd3cQh",
+          "line": "x b50 c/x x/",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "compatible_deals": 5301,
+          "first_rule_index": 29,
+          "pattern": ".*/$",
+          "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+          "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+          "pool_decisions": 0,
+          "target": {
+            "bet": 0.45,
+            "sizes": [
+              [
+                33,
+                0.35
+              ],
+              [
+                50,
+                0.35
+              ],
+              [
+                75,
+                0.2
+              ],
+              [
+                100,
+                0.1
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.22683444939429978,
+            "fold": 0.0,
+            "nodes": 106
+          }
+        },
+        {
+          "street": 3,
+          "board": "5d9dJd3cQh",
+          "line": "x b50 c/x x/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 2852,
+          "first_rule_index": 22,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+          "pool_decisions": 64272,
+          "target": {
+            "fold": 0.531,
+            "raise": 0.09300000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.09299998069940178,
+            "fold": 0.5310000058551646,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "5d9dJd3cQh",
+          "line": "x b50 c/x x/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 483,
+          "first_rule_index": 24,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b100$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+          "pool_decisions": 43634,
+          "target": {
+            "fold": 0.6459999999999999,
+            "raise": 0.062
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.06199998526024814,
+            "fold": 0.6459999903833621,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "5d9dJd3cQh",
+          "line": "x b50 c/x x/x a",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c"
+          ],
+          "compatible_deals": 0,
+          "scope": "NO_MATCHING_LOCK"
+        },
+        {
+          "street": 3,
+          "board": "5d9dJd3cKh",
+          "line": "x b50 c/x x/",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "compatible_deals": 5365,
+          "first_rule_index": 29,
+          "pattern": ".*/$",
+          "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+          "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+          "pool_decisions": 0,
+          "target": {
+            "bet": 0.45,
+            "sizes": [
+              [
+                33,
+                0.35
+              ],
+              [
+                50,
+                0.35
+              ],
+              [
+                75,
+                0.2
+              ],
+              [
+                100,
+                0.1
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.22683444939429978,
+            "fold": 0.0,
+            "nodes": 106
+          }
+        },
+        {
+          "street": 3,
+          "board": "5d9dJd3cKh",
+          "line": "x b50 c/x x/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 1691,
+          "first_rule_index": 22,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+          "pool_decisions": 64272,
+          "target": {
+            "fold": 0.531,
+            "raise": 0.09300000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.09299998069940178,
+            "fold": 0.5310000058551646,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "5d9dJd3cKh",
+          "line": "x b50 c/x x/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 2253,
+          "first_rule_index": 24,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b100$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+          "pool_decisions": 43634,
+          "target": {
+            "fold": 0.6459999999999999,
+            "raise": 0.062
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.06199998526024814,
+            "fold": 0.6459999903833621,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "5d9dJd3cKh",
+          "line": "x b50 c/x x/x a",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c"
+          ],
+          "compatible_deals": 0,
+          "scope": "NO_MATCHING_LOCK"
+        }
+      ]
+    },
+    {
+      "flop": "Ks9s5s",
+      "turn": "6c",
+      "sources": {
+        "gto": {
+          "archive_sha256": "624bef243e2acf8241d26d14d5c7d9c11875087f0501b51e9075d399356e8e18",
+          "root_sha256": "999605b1ad993d55de4d7fac461eddd0d570357c8657df84babbc2af8810507f",
+          "subgame_sha256": "2d7c82019876b58fa63a90fb4de1fd7b054bac6c373a0eed3297aa3291d97421"
+        },
+        "exp_ip": {
+          "archive_sha256": "a57e39eda99eed50d87b21b4801aabf4a24e78b3b34fa266ff78a095c021ed78",
+          "root_sha256": "3c1aa32373ea70b4ef18a16040336f27ca6e1d3f7ffb4dc7b61264ef114b59c0",
+          "subgame_sha256": "cc84913cfefefb6ce0ba50dccf9c96b959369d70026768fdb21e3d2f1a43c88f"
+        }
+      },
+      "river_decisions": [
+        {
+          "status": "NO_PAIRED_JOINT_REACH",
+          "public_board": "5s9sKs6c4h",
+          "compatible_deals": {
+            "gto": 0,
+            "exp_ip": 2215
+          }
+        },
+        {
+          "status": "NO_PAIRED_JOINT_REACH",
+          "public_board": "5s9sKs6c2h",
+          "compatible_deals": {
+            "gto": 0,
+            "exp_ip": 2080
+          }
+        }
+      ],
+      "streets_with_reachable_measured_response": [
+        1,
+        2,
+        3
+      ],
+      "opponent_locks": [
+        {
+          "street": 1,
+          "board": "5s9sKs",
+          "line": "",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b33",
+            "b50",
+            "b75",
+            "b100"
+          ],
+          "compatible_deal_lower_bound_from_named_turn": 15293,
+          "first_rule_index": 26,
+          "pattern": "^$",
+          "scope": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT",
+          "source": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT; NL2_OBSERVED_PFR_CBET_SIZE_AGGREGATE_NOT_EXACT_NODE",
+          "pool_decisions": 343183,
+          "target": {
+            "bet": 0.612,
+            "sizes": [
+              [
+                33,
+                0.21479229989868287
+              ],
+              [
+                50,
+                0.4802431610942249
+              ],
+              [
+                75,
+                0.23505572441742653
+              ],
+              [
+                100,
+                0.06990881458966565
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.6119999035626372,
+            "fold": 0.0,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 1,
+          "board": "5s9sKs",
+          "line": "x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "r",
+            "a"
+          ],
+          "compatible_deal_lower_bound_from_named_turn": 15293,
+          "first_rule_index": 12,
+          "pattern": "^(?:[^/]*/){0}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[1].by_size[34-55%]",
+          "pool_decisions": 275923,
+          "target": {
+            "fold": 0.428,
+            "raise": 0.08900000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.08899998119777466,
+            "fold": 0.42800000932899424,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 2,
+          "board": "5s9sKs6c",
+          "line": "x b50 c/",
+          "seat": 0,
+          "actions": [
+            "x"
+          ],
+          "compatible_deals": 15293,
+          "scope": "FORCED_ACTION_NO_OPPONENT_LOCK"
+        },
+        {
+          "street": 2,
+          "board": "5s9sKs6c",
+          "line": "x b50 c/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 6897,
+          "first_rule_index": 3,
+          "pattern": "^x b\\d+ c/x b50$",
+          "scope": "PINNED_MEASURED_NL2_SOURCE",
+          "source": "SRP_PFR_IP.vs_turn_barrel_by_size[34-55%]",
+          "pool_decisions": 15700,
+          "target": {
+            "fold": 0.35600000000000004,
+            "raise": 0.102
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.10199997276312414,
+            "fold": 0.3560000301969788,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 2,
+          "board": "5s9sKs6c",
+          "line": "x b50 c/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 5117,
+          "first_rule_index": 4,
+          "pattern": "^x b\\d+ c/x b100$",
+          "scope": "PINNED_MEASURED_NL2_SOURCE",
+          "source": "SRP_PFR_IP.vs_turn_barrel_by_size[81-110%]",
+          "pool_decisions": 4480,
+          "target": {
+            "fold": 0.498,
+            "raise": 0.09
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.08999998319381274,
+            "fold": 0.49799998597701145,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 3,
+          "board": "5s9sKs6c4h",
+          "line": "x b50 c/x x/",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "compatible_deals": 4094,
+          "first_rule_index": 29,
+          "pattern": ".*/$",
+          "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+          "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+          "pool_decisions": 0,
+          "target": {
+            "bet": 0.45,
+            "sizes": [
+              [
+                33,
+                0.35
+              ],
+              [
+                50,
+                0.35
+              ],
+              [
+                75,
+                0.2
+              ],
+              [
+                100,
+                0.1
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.22679017497699042,
+            "fold": 0.0,
+            "nodes": 106
+          }
+        },
+        {
+          "street": 3,
+          "board": "5s9sKs6c4h",
+          "line": "x b50 c/x x/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 1957,
+          "first_rule_index": 22,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+          "pool_decisions": 64272,
+          "target": {
+            "fold": 0.531,
+            "raise": 0.09300000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.09299998028405942,
+            "fold": 0.5310000038807535,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "5s9sKs6c4h",
+          "line": "x b50 c/x x/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 600,
+          "first_rule_index": 24,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b100$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+          "pool_decisions": 43634,
+          "target": {
+            "fold": 0.6459999999999999,
+            "raise": 0.062
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.06199998451536172,
+            "fold": 0.645999987435114,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "5s9sKs6c4h",
+          "line": "x b50 c/x x/x a",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c"
+          ],
+          "compatible_deals": 0,
+          "scope": "NO_MATCHING_LOCK"
+        },
+        {
+          "street": 3,
+          "board": "5s9sKs6c2h",
+          "line": "x b50 c/x x/",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "compatible_deals": 3903,
+          "first_rule_index": 29,
+          "pattern": ".*/$",
+          "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+          "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+          "pool_decisions": 0,
+          "target": {
+            "bet": 0.45,
+            "sizes": [
+              [
+                33,
+                0.35
+              ],
+              [
+                50,
+                0.35
+              ],
+              [
+                75,
+                0.2
+              ],
+              [
+                100,
+                0.1
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.22679017497699042,
+            "fold": 0.0,
+            "nodes": 106
+          }
+        },
+        {
+          "street": 3,
+          "board": "5s9sKs6c2h",
+          "line": "x b50 c/x x/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 696,
+          "first_rule_index": 22,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+          "pool_decisions": 64272,
+          "target": {
+            "fold": 0.531,
+            "raise": 0.09300000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.09299998028405942,
+            "fold": 0.5310000038807535,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "5s9sKs6c2h",
+          "line": "x b50 c/x x/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 342,
+          "first_rule_index": 24,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b100$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+          "pool_decisions": 43634,
+          "target": {
+            "fold": 0.6459999999999999,
+            "raise": 0.062
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.06199998451536172,
+            "fold": 0.645999987435114,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "5s9sKs6c2h",
+          "line": "x b50 c/x x/x a",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c"
+          ],
+          "compatible_deals": 0,
+          "scope": "NO_MATCHING_LOCK"
+        }
+      ]
+    },
+    {
+      "flop": "9d7d4d",
+      "turn": "8s",
+      "sources": {
+        "gto": {
+          "archive_sha256": "9c2a581ebe86455464fe7b17ae5953ab8858efeee0cdb9b04bc906ea4c23849f",
+          "root_sha256": "6544252343c4caf2dcd38268368402a03d7bcd5c773c5f90bd01a6487cd61b2c",
+          "subgame_sha256": "3cbb48f3ca32e5e653b33ab12aa5f1d1f20c6bc655921be8ab4c1e4338a9b2ff"
+        },
+        "exp_ip": {
+          "archive_sha256": "670357a8de4df337f26c9d4f06130693fc6a41a7f88bc1b1679aa531aa0fdd81",
+          "root_sha256": "f042dee076de05eb3e4dff862170e6566dd17dc69de56fbb34ccfd85c3ee0314",
+          "subgame_sha256": "1bb7f93108e24c58477d16e4fc8c3be5b78e8284e5a834b815e75cde3b3a8bc6"
+        }
+      },
+      "river_decisions": [
+        {
+          "status": "NO_PAIRED_JOINT_REACH",
+          "public_board": "4d7d9d8s2d",
+          "compatible_deals": {
+            "gto": 0,
+            "exp_ip": 4097
+          }
+        },
+        {
+          "status": "NO_PAIRED_JOINT_REACH",
+          "public_board": "4d7d9d8sAh",
+          "compatible_deals": {
+            "gto": 0,
+            "exp_ip": 3379
+          }
+        }
+      ],
+      "streets_with_reachable_measured_response": [
+        1,
+        2,
+        3
+      ],
+      "opponent_locks": [
+        {
+          "street": 1,
+          "board": "4d7d9d",
+          "line": "",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b33",
+            "b50",
+            "b75",
+            "b100"
+          ],
+          "compatible_deal_lower_bound_from_named_turn": 15058,
+          "first_rule_index": 26,
+          "pattern": "^$",
+          "scope": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT",
+          "source": "NL2_PFR_CB_AGGREGATE_PROXY_NOT_EXACT_SPOT; NL2_OBSERVED_PFR_CBET_SIZE_AGGREGATE_NOT_EXACT_NODE",
+          "pool_decisions": 343183,
+          "target": {
+            "bet": 0.612,
+            "sizes": [
+              [
+                33,
+                0.21479229989868287
+              ],
+              [
+                50,
+                0.4802431610942249
+              ],
+              [
+                75,
+                0.23505572441742653
+              ],
+              [
+                100,
+                0.06990881458966565
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.6119999034271313,
+            "fold": 0.0,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 1,
+          "board": "4d7d9d",
+          "line": "x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "r",
+            "a"
+          ],
+          "compatible_deal_lower_bound_from_named_turn": 15058,
+          "first_rule_index": 12,
+          "pattern": "^(?:[^/]*/){0}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[1].by_size[34-55%]",
+          "pool_decisions": 275923,
+          "target": {
+            "fold": 0.428,
+            "raise": 0.08900000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.08899998120021567,
+            "fold": 0.42800000737327243,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 2,
+          "board": "4d7d9d8s",
+          "line": "x b50 c/",
+          "seat": 0,
+          "actions": [
+            "x"
+          ],
+          "compatible_deals": 15058,
+          "scope": "FORCED_ACTION_NO_OPPONENT_LOCK"
+        },
+        {
+          "street": 2,
+          "board": "4d7d9d8s",
+          "line": "x b50 c/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 7893,
+          "first_rule_index": 3,
+          "pattern": "^x b\\d+ c/x b50$",
+          "scope": "PINNED_MEASURED_NL2_SOURCE",
+          "source": "SRP_PFR_IP.vs_turn_barrel_by_size[34-55%]",
+          "pool_decisions": 15700,
+          "target": {
+            "fold": 0.35600000000000004,
+            "raise": 0.102
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.10199997523228803,
+            "fold": 0.3560000287714954,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 2,
+          "board": "4d7d9d8s",
+          "line": "x b50 c/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 336,
+          "first_rule_index": 4,
+          "pattern": "^x b\\d+ c/x b100$",
+          "scope": "PINNED_MEASURED_NL2_SOURCE",
+          "source": "SRP_PFR_IP.vs_turn_barrel_by_size[81-110%]",
+          "pool_decisions": 4480,
+          "target": {
+            "fold": 0.498,
+            "raise": 0.09
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.08999998169631357,
+            "fold": 0.4979999872987255,
+            "nodes": 1
+          }
+        },
+        {
+          "street": 3,
+          "board": "4d7d9d8s2d",
+          "line": "x b50 c/x x/",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "compatible_deals": 6678,
+          "first_rule_index": 29,
+          "pattern": ".*/$",
+          "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+          "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+          "pool_decisions": 0,
+          "target": {
+            "bet": 0.45,
+            "sizes": [
+              [
+                33,
+                0.35
+              ],
+              [
+                50,
+                0.35
+              ],
+              [
+                75,
+                0.2
+              ],
+              [
+                100,
+                0.1
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.22686838642047386,
+            "fold": 0.0,
+            "nodes": 106
+          }
+        },
+        {
+          "street": 3,
+          "board": "4d7d9d8s2d",
+          "line": "x b50 c/x x/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 3655,
+          "first_rule_index": 22,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+          "pool_decisions": 64272,
+          "target": {
+            "fold": 0.531,
+            "raise": 0.09300000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.09299998043458141,
+            "fold": 0.5310000042312333,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "4d7d9d8s2d",
+          "line": "x b50 c/x x/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 576,
+          "first_rule_index": 24,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b100$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+          "pool_decisions": 43634,
+          "target": {
+            "fold": 0.6459999999999999,
+            "raise": 0.062
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.06199998565055711,
+            "fold": 0.6459999889993714,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "4d7d9d8s2d",
+          "line": "x b50 c/x x/x a",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c"
+          ],
+          "compatible_deals": 0,
+          "scope": "NO_MATCHING_LOCK"
+        },
+        {
+          "street": 3,
+          "board": "4d7d9d8sAh",
+          "line": "x b50 c/x x/",
+          "seat": 0,
+          "actions": [
+            "x",
+            "b50",
+            "b100",
+            "a"
+          ],
+          "compatible_deals": 5496,
+          "first_rule_index": 29,
+          "pattern": ".*/$",
+          "scope": "ASSUMED_HISTORY_RATE_OR_SIZE",
+          "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+          "pool_decisions": 0,
+          "target": {
+            "bet": 0.45,
+            "sizes": [
+              [
+                33,
+                0.35
+              ],
+              [
+                50,
+                0.35
+              ],
+              [
+                75,
+                0.2
+              ],
+              [
+                100,
+                0.1
+              ]
+            ]
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.22686838642047386,
+            "fold": 0.0,
+            "nodes": 106
+          }
+        },
+        {
+          "street": 3,
+          "board": "4d7d9d8sAh",
+          "line": "x b50 c/x x/x b50",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 2309,
+          "first_rule_index": 22,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+          "pool_decisions": 64272,
+          "target": {
+            "fold": 0.531,
+            "raise": 0.09300000000000001
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.09299998043458141,
+            "fold": 0.5310000042312333,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "4d7d9d8sAh",
+          "line": "x b50 c/x x/x b100",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c",
+            "a"
+          ],
+          "compatible_deals": 1002,
+          "first_rule_index": 24,
+          "pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b100$",
+          "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL",
+          "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+          "pool_decisions": 43634,
+          "target": {
+            "fold": 0.6459999999999999,
+            "raise": 0.062
+          },
+          "driver_pattern_aggregate": {
+            "agg": 0.06199998565055711,
+            "fold": 0.6459999889993714,
+            "nodes": 35
+          }
+        },
+        {
+          "street": 3,
+          "board": "4d7d9d8sAh",
+          "line": "x b50 c/x x/x a",
+          "seat": 0,
+          "actions": [
+            "f",
+            "c"
+          ],
+          "compatible_deals": 0,
+          "scope": "NO_MATCHING_LOCK"
+        }
+      ]
+    }
+  ]
+}
