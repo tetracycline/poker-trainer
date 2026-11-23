@@ -1,12 +1,6 @@
 name: NL2 B390 true 3-flop rank107 source-blind CERT, full node-lock medium and HU2475 (max11m)
 on:
-  push:
-    branches: [fix/nl2-hu-lines-audit-20261118]
-    paths:
-      - '.github/workflows/nl2-hu-hybrid-b390-r107-three-cert.yml'
-      - 'tools/hu_b390_r107_three_true_sources_promote.py'
-      - 'data/nl2_hu_b389_rank107_three_true_flop_pre_cert_gate.json'
-      - 'tools/hu_b378_v47_loader_runtime_test.cjs'
+  # B390 is a frozen historical promotion. Active branch audits exercise its fallback.
   workflow_dispatch:
 permissions:
   contents: write

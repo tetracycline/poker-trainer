@@ -1,0 +1,131 @@
+"""Assemble the exact-board registry from the latest base and independently verified source pairs."""
+import argparse
+import base64
+import collections
+import gzip
+import hashlib
+import json
+from pathlib import Path
+import re
+
+from hu_cert_lock_medium_audit import audit
+
+DATA = Path("data")
+SOURCE = DATA / "solver_evidence"
+EXTENSIONS = SOURCE / "extensions"
+BASES = (
+    "nl2_hu_multiboard_status_v53_b465_rank218.json",
+    "nl2_hu_multiboard_status_v52_b463_rank45.json",
+    "nl2_hu_multiboard_status_v51_b453_rank32.json",
+)
+
+
+def read(path):
+    return json.loads(path.read_bytes())
+
+
+def dump(path, obj):
+    path.write_text(json.dumps(obj, indent=2, ensure_ascii=False) + "\n")
+
+
+def verify_case(path, run, model, board, version, sha, count):
+    assert re.fullmatch(r"[0-9a-f]{64}", sha) and run > 0 and count > 0
+    proof = json.loads(gzip.decompress(path.read_bytes()))
+    assert proof["schema"] == "NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1"
+    assert proof["source_run_id"] == run and proof["no_generic_texture_certification"] and not proof["errors"]
+    case, = (c for item in proof["artifacts"] for c in item["cases"]
+             if (c["version"], c["source_sha256"], c["flop"], c["turn"]) ==
+                (version, sha, board["flop"], board["turn"]))
+    assert (case["spot"], case["pot_family"], case["flop_line"]) == (
+        model["solver_profile"], model["family"], board["exact_flop_action"])
+    node, = (n for n in case["nodes"] if (n["public_board"], n["exact_node_line"], n["acting_seat"]) ==
+            (board["public_board"], board["actual_exact_action_line"], board["acting_seat"]))
+    mask = base64.b64decode(node["strictly_reachable_masks_b64"], validate=True)
+    assert len(mask) == len(case["hands_by_seat"][board["acting_seat"]])
+    assert sum(bool(val) for val in mask) == node["strictly_reachable_combos"] == count
+    assert abs(node["node_spr"]/board["actual_spr"] - 1) < .001
+    assert 0 <= case["gto_exploitability_pct"] <= .5
+    if version == "gto":
+        assert node["source_actions"] == board["exact_node_actions"]
+        assert node["medium_50pct_eligible_combos"] == board["medium_50pct_eligible_combos"]
+        assert node["b50_nonpolarized_relative_equity_research_candidate"] is board["b50_nonpolarized_relative_equity_research_candidate"]
+    else:
+        assert 0 <= case["locked_hero_gap_pct"] <= .5
+
+
+def promote(registry, extension):
+    mid, rank = extension["model_id"], extension["rank"]
+    model = registry["records"][mid]
+    assert model["frequency_rank"] == rank and model["label"] == "APPROX"
+    boards, pins = extension["boards"], extension["pins"]
+    assert 3 <= len(boards) <= 5 and len({b["flop"] for b in boards}) == len(boards) == len(pins)
+    for b in boards:
+        p, = (p for p in pins if (p["flop"], p["turn"], p["public_board"]) == (b["flop"], b["turn"], b["public_board"]))
+        code = p["viewer_archive_code"]
+        assert re.fullmatch(r"[A-Za-z0-9_]+", code)
+        path = SOURCE / f"NL2_MULTIBOARD_{code}.json.gz"
+        assert b["source_sha256"] == p["original_GTO_SHA256"]
+        assert b["strict_full_street_combo_reachable"] == p["GTO_strict_combos"] > 0
+        assert b["model_assumed_spr"] == model["assumed_model_node_spr"]
+        assert abs(b["actual_spr"]/b["model_assumed_spr"] - 1) <= .05
+        verify_case(path, b["source_run_id"], model, b, "gto", b["source_sha256"], p["GTO_strict_combos"])
+        lock, = b["nl2_locked_variants"]
+        assert lock["sha256"] == p["actual_NL2_SHA256"] and lock["version"] == ("exp_ip" if b["acting_seat"] else "exp_oop")
+        assert lock["observed_marginal_source_nodes"] > 0
+        verify_case(path, lock["run_id"], model, b, lock["version"], lock["sha256"], p["NL2_strict_combos"])
+    model.update(label="CERT-MULTIBOARD", proven_exact_board_count=len(boards),
+                 certified_3_to_5_exact_flop_boards=boards, blocked_reason=None)
+    return model
+
+
+def update_references(model, crosswalk, refs):
+    rank_boards = model["certified_3_to_5_exact_flop_boards"]
+    common = []
+    examples = []
+    for b in rank_boards:
+        src = dict(source_run_id=b["source_run_id"], source_sha256=b["source_sha256"], spot=model["solver_profile"],
+                   family=model["family"], version="gto", flop=b["flop"], turn=b["turn"], exact_solver_node_line=b["actual_exact_action_line"])
+        common.append(dict(src, flop_line=b["exact_flop_action"], turn_spr=b["actual_spr"],
+                           reference_status="CERT_EXACT_BOARD_GTO_ONLY"))
+        examples.append(dict(src, actual_public_board=b["public_board"], exact_flop_actions=b["exact_flop_action"],
+                             acting_seat=b["acting_seat"], actual_node_spr=b["actual_spr"],
+                             model_assumed_node_spr=b["model_assumed_spr"], relative_spr_difference=b["relative_spr_error_pct"]/100,
+                             reached_combos=b["exact_combo_reachable"], strict_full_street_reachable_combos=b["strict_full_street_combo_reachable"],
+                             board_exact_match_to_model=False, available_for="EXACT_SOURCE_EXAMPLE_ONLY_NOT_GENERIC_CERT"))
+    mid = model["model_id"]
+    crosswalk["records"][mid].update(board_specific_certification_status="CERT_MULTIBOARD", best_exact_board_examples=examples,
+                                     source_line_match_count=len(examples), same_history_within_1pct_spr_count=sum(e["relative_spr_difference"] <= .01 for e in examples))
+    refs["items"][mid].update(reference_count=len(common), references=common,
+                              note="Exact GTO and separately solved hero lock on each named board. Generic texture rows remain approximate.")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--out", type=Path, required=True)
+    args = parser.parse_args()
+    base = next(DATA / p for p in BASES if (DATA/p).is_file())
+    registry = read(base)
+    loaded = [read(p) for p in EXTENSIONS.glob("rank*.json")]
+    assert loaded, "No verified extensions to apply"
+    x_path, r_path = DATA/"nl2_hu_model_history_crosswalk.json", DATA/"nl2_hu_model_source_references.json"
+    xwalk, refs = read(x_path), read(r_path)
+    ordered = sorted(loaded, key=lambda x: x["rank"])
+    for ext in ordered:
+        update_references(promote(registry, ext), xwalk, refs)
+    labels = collections.Counter(r["label"] for r in registry["records"].values())
+    registry.update(CERT_MULTIBOARD=labels["CERT-MULTIBOARD"], APPROX=labels["APPROX"])
+    view = dict(schema="NL2_EXACT_VERIFIED_EXTENSIONS_V1", models=ordered)
+    registry["exact_source_extensions"] = {e["model_id"]: e["pins"] for e in ordered}
+    registry["base_registry"] = base.name
+    registry["base_registry_sha256"] = hashlib.sha256(base.read_bytes()).hexdigest()
+    summary = audit(registry)
+    assert summary["cert_multiboard"] + summary["approx"] == registry["TOTAL"] == 392
+    dump(x_path, xwalk)
+    dump(r_path, refs)
+    dump(DATA/"nl2_hu_verified_extensions.json", view)
+    dump(args.out, registry)
+    print(f'{summary["cert_multiboard"]} CERT / {summary["approx"]} APPROX')
+
+
+if __name__ == "__main__":
+    main()

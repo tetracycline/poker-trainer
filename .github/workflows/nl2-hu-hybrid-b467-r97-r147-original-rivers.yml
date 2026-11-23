@@ -1,0 +1,41 @@
+name: B467 verify three exact UTG river sources each for ranks 97 and 147
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b467-r97-r147-original-rivers.yml'
+      - 'tools/hu_b467_*'
+      - 'data/nl2_hu_b467_*'
+      - 'data/solver_evidence/NL2_MULTIBOARD_R97_*'
+      - 'data/solver_evidence/NL2_MULTIBOARD_R147_*'
+      - 'data/solver_evidence/extensions/rank97.json'
+      - 'data/solver_evidence/extensions/rank147.json'
+permissions:
+  contents: write
+jobs:
+  verify-exact-sources-and-all-routes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Validate real source arrays, compatible private deals, all lock and medium evidence
+        run: python3 tools/hu_b467_river_source_gate.py --verify
+      - name: Verify source action sizes and every HU route
+        run: |
+          set -euo pipefail
+          node tools/hu_b467_model_routes.cjs
+          node tools/hu_line_contract.js >/tmp/b467-contract.json
+          node tools/link_audit.js --md /tmp/b467-link.md --json /tmp/b467-link.json
+          node tools/reach_verify.js --log /tmp/b467-reach.md --json /tmp/b467-reach.json
+          node tools/hu_model_path_audit.js /tmp/b467-path.json
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node --check nl2-multiboard.js
+          node --check nl2_hu_multiboard_ui.js
+          node -e 'const c=require("/tmp/b467-link.json").counts;if(c.reachRiver!==2475||c.continuing!==2475||c.riverShare!==100)process.exit(1)'
+      - name: Validate historical source fallback and publish cumulative exact-board status
+        run: |
+          node tools/hu_b390_loader_runtime_test.cjs
+          bash tools/hu_publish_cert_extensions.sh

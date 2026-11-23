@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """B390: rank107 source-blind exact-board promotion, independently SHA-gated 3 real GTO/NL2 pairs."""
-import argparse,copy,hashlib,json,pathlib
+import argparse,copy,hashlib,json,pathlib,subprocess
 from hu_multiboard_promote import build_source_index,candidates,texture
 from hu_sequential_cfr_reach import game_reach
 from hu_cert_lock_medium_audit import audit
@@ -248,11 +248,20 @@ def main():
   hero_lock_variants_after=701,B368_unknown_after=0,
   no_generic_handclass_CERT=True,no_observed_private_card_NL2=True,
   PR2_draft_never_merge=True),ensure_ascii=False,indent=2)+"\n")
- for name in ("nl2_hu_multiboard_ui.js","nl2-multiboard.js"):patch_js(pathlib.Path(name))
- for name in ("nl2.html","nl2-multiboard.html"):
-  p=pathlib.Path(name);s=p.read_text()
-  assert s.count("task-hybrid-b378-v47-loaderfix-20261122")==1
-  p.write_text(s.replace("task-hybrid-b378-v47-loaderfix-20261122","task-hybrid-b390-v48-20261122"))
+ loaders = [pathlib.Path(name) for name in ("nl2_hu_multiboard_ui.js", "nl2-multiboard.js")]
+ installed = ["const v48b390=d=>{" in path.read_text() for path in loaders]
+ if any(installed) and not all(installed):
+  raise ValueError("Partial V48 loader installation")
+ if not all(installed):
+  for path in loaders:
+   patch_js(path)
+  for name in ("nl2.html","nl2-multiboard.html"):
+   p=pathlib.Path(name);s=p.read_text()
+   assert s.count("task-hybrid-b378-v47-loaderfix-20261122")==1
+   p.write_text(s.replace("task-hybrid-b378-v47-loaderfix-20261122","task-hybrid-b390-v48-20261122"))
+ # Later registries preserve V48 as a fallback. Replay the live fetch path
+ # without reinstalling V48 or replacing a newer HTML cache key.
+ subprocess.run(["node","tools/hu_b390_loader_runtime_test.cjs"],check=True)
  DOC.write_text("# B390 rank107: 3 authenticated exact full 100bb GTO+NL2 BTN-IP sources\n\n"
   "Only the three named public boards (distinct flops Jh9d6s, 7s5h3d, QsJh4d) "
   "have original GTO and independently proven genuine partially NL2-locked Rust source, "
