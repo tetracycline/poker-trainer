@@ -96,7 +96,7 @@ def read_replays(directory=Path("data")):
         if before is None:
             before = verified[identity] = {k: v for k, v in row.items() if k != "gto"}
         else:
-            for field in (*RESULT, *APPLIED, "root_sha256", "root_gto_stage_gap_pct", "root_locked_hero_gap_pct"):
+            for field in (*RESULT, *APPLIED, "short_stack_all_in", "root_sha256", "root_gto_stage_gap_pct", "root_locked_hero_gap_pct"):
                 if field in row and field in before and row[field] != before[field]:
                     raise ValueError(f"Conflicting replay of {key}: {field}")
                 if field in row:

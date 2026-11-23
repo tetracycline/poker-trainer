@@ -37,6 +37,12 @@ def decision(model, board, lock, pins, sources):
     assert (eligible,candidate)==(published['medium_50pct_eligible_combos'],published['b50_nonpolarized_relative_equity_research_candidate'])
     result=dict(version=version,run=run,sha256=digest,actions=actions,legal_combos=combos,
                 compatible_pairs=pairs,half_pot_eligible_combos=eligible,nonpolarized_candidate=candidate)
+    if raw and 'short_stack_all_in' in raw:
+        all_in = raw['short_stack_all_in']
+        assert (all_in['version'], all_in['action'], all_in['pot_chips'], all_in['all_in_chips']) == (
+            version, 'a', round(board['actual_pot_bb']*100), round(board['actual_effective_stack_bb']*100))
+        assert actions == ['x','a'] and all_in['compatible_pairs'] == pairs and all_in['eligible_combos'] <= combos
+        result['short_stack_all_in'] = all_in
     if lock:
         assert version==('exp_ip' if board['acting_seat'] else 'exp_oop')
         result.update(measured_nodes=lock['observed_marginal_source_nodes'],
