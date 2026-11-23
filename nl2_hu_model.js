@@ -59,10 +59,10 @@ function roleHistory(s){
   while(parts.length<=s.st)parts.push('');
   return parts;
 }
-function walkActions(s){
+function walkActions(s, flopBetPct){
   const P=profile(s.pre),hist=roleHistory(s);
   let pot=P.pot,stack=P.stack;
-  const ratios={0:1/3,1:1/2,2:3/4};
+  const ratios={0:flopBetPct ? flopBetPct/100 : 1/3,1:1/2,2:3/4};
   for(let st=0;st<=s.st;st++){
     const a=(hist[st]||'').split('、').filter(Boolean);
     let spent=[0,0],base=pot;
@@ -149,6 +149,19 @@ function repair(html,sp,catalog){
     return {sp:ssp,nd,st:stOf(nd),pfx:pfxOf(nd),id:m[2],title,pre:title.split(' → ')[0],
       key:item?.key||'',pf:item?.pf||'',part};
   });
+  // Read the flop price from the playable BB lead links that enter the authored turn.
+  function limpedFlopPrice(s){
+    if(s.sp!=='iso'||s.nd!=='lmp_t_barrel'||roleHistory(s)[0]!=='你下注、對手跟')return null;
+    const labels=new Set();
+    for(const parent of sections.filter(p=>p.st===0&&p.pre===s.pre)){
+      for(const cell of parent.part.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)){
+        for(const edge of cell[1].matchAll(/<a class="jmp" href="#([^"]+)">([^<]*)<\/a>/g)){
+          if(BTS.some(([tx])=>edge[1]===s.id+'-'+tx))labels.add(strip(edge[2]).replace(/≈$/,''));
+        }
+      }
+    }
+    return labels.size===1&&labels.has('下注 ½')?50:null;
+  }
   const model=new Map(),created=[],ids=new Set(sections.map(x=>x.id));
   const make=(s,action,label)=>{
     const stage=s.st+1;
@@ -161,7 +174,8 @@ function repair(html,sp,catalog){
     if(ids.has(id))id+='x'+HASH(key+'collision');
     if(ids.has(id))throw Error('Unexpected modeled id collision');
     ids.add(id);
-    const m=s.modelMeta||walkActions(s);
+    const flopBetPct=s.flopBetPct||(!s.modelMeta && limpedFlopPrice(s));
+    const m=s.modelMeta||walkActions(s,flopBetPct);
     const printed = !s.modelMeta && action==='call' && s.st===0 && m.root.family==='ISO'
       ? s.part.match(/data-iso-call-price="([0-9.]+)\/([0-9]+)"/) : null;
     const priced = printed && Number(printed[1])===m.root.pot;
@@ -171,7 +185,7 @@ function repair(html,sp,catalog){
       : transition(m,action,size,s.st);
     const flopCallPct = priced ? Number(printed[2]) : s.flopCallPct;
     const line=keyNext(s,action,stage);
-    const x={id,sp:s.sp,nd,st:stage,pfx:s.pfx,source:s.id,action,size:round(size),flopCallPct,
+    const x={id,sp:s.sp,nd,st:stage,pfx:s.pfx,source:s.id,action,size:round(size),flopCallPct,flopBetPct,
       pre:s.pre,modelMeta:next,key:line,title:titleFor(s.pre,line,stage),allowed:new Set(),
       facts:{root:next.root,pot:next.pot,stack:next.stack,spr:next.pot?round(next.stack/next.pot):0}};
     model.set(key,x);created.push(x);return x;
@@ -279,7 +293,7 @@ function repair(html,sp,catalog){
   root.__HU_MODEL_LAST={spot:sp,synthetic:created.length,assumption:true,sourceSections:sections.length,
     nodes:created.map(n=>({id:n.id,source:n.source,sp:n.sp,nd:n.nd,st:n.st,
       pre:n.pre,action:n.action,size:n.size,key:n.key,allowed:[...n.allowed].sort(),
-      facts:n.facts,flopCallPct:n.flopCallPct}))};
+      facts:n.facts,flopCallPct:n.flopCallPct,flopBetPct:n.flopBetPct}))};
   return patched;
 }
 root.NL2HUModel={repair,version:'hu-nl2-100bb-assumption-v1'};

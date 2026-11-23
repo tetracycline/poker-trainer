@@ -18,6 +18,7 @@ const config={
   124:{section:'iso', id:'ln-iso-t_model-1gjwm8f',pot:9.5,stack:96,label:'下注 ½'},
   133:{section:'ipc', id:'ln-ipc-t_model-day18r',pot:6.5,stack:97.5,label:'下注 1'},
   173:{section:'3bp',id:'ln-3bp-3b_t_model-3sv4e8',pot:16.5,stack:92.5,label:'下注 ¾'},
+  195:{section:'3bp',id:'ln-3bp-3c_t_model-1dv9vgr',pot:20.5,stack:90,label:'過'},
   198:{section:'3bp', id:'ln-3bp-3b_t_model-wsml7c',pot:16.5,stack:92.5,label:'過'}
 }[rank];
 assert.ok(config,'unknown turn study');

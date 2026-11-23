@@ -1,0 +1,93 @@
+name: B642 reproduce the limped BB check on paired rivers
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b642-rank35.yml'
+      - 'tools/hu_b642_rank35.py'
+      - 'tools/hu_b642_rank35_routes.cjs'
+permissions: {contents: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [2c2d4h, 3s3h2d, 4s4h2d, 5c5d2h]
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the pinned native engine
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve original and measured-limped-river strategies and replay both seats
+        working-directory: trainer
+        env:
+          RAYON_NUM_THREADS: 2
+          FLOP: ${{ matrix.flop }}
+        run: |
+          python tools/hu_b642_rank35.py --solver ../solver --flop "$FLOP" --run "$GITHUB_RUN_ID" --output "$RUNNER_TEMP/case"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B642-${{ matrix.flop }}
+          path: ${{ runner.temp }}/case/
+          if-no-files-found: error
+  verify:
+    needs: solve
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: B642-*
+          path: ${{ runner.temp }}/cases
+      - name: Verify the cumulative registry, hand masks and HU routes
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          python tools/hu_b642_rank35.py --collect "$RUNNER_TEMP/cases"
+          registry=data/nl2_hu_multiboard_status_current.json
+          cp "$registry" "$RUNNER_TEMP/before.json"
+          python tools/hu_apply_cert_extensions.py --out "$registry"
+          python - "$RUNNER_TEMP/before.json" "$registry" <<'PY'
+          import json, sys
+          before, after = (json.load(open(p))['records'] for p in sys.argv[1:])
+          target = 'ln-iso-lmp_r_model-pjewx6'
+          assert before.keys() == after.keys() and all(before[k] == after[k] for k in before if k != target)
+          model = after[target]
+          assert model['assumed_model_node_spr'] == 19.55
+          if model['label'] == 'CERT-MULTIBOARD':
+              boards = model['certified_3_to_5_exact_flop_boards']
+              assert 3 <= len(boards) <= 4 and all(b['strict_full_street_combo_reachable'] > 0 for b in boards)
+          PY
+          node tools/hu_extension_runtime_test.cjs "$registry"
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+          bash tools/hu_exact_batch_audit.sh "$registry"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B642-verified-rank35
+          if-no-files-found: ignore
+          path: |
+            data/nl2_hu_b642_locked_medium.json
+            data/nl2_hu_b642_rank35_partial.json
+            data/solver_evidence/reverified/rank35.json
+            data/solver_evidence/NL2_B642_R35_*.zip
+            data/solver_evidence/NL2_MULTIBOARD_B642_R35_*.json.gz

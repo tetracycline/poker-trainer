@@ -185,7 +185,7 @@ def reproduce(study, spec, driver):
             assert fresh == expected, (spec["flop"], name)
 
 
-def main(study, displayed_actions=None):
+def main(study, displayed_actions=None, template_reader=None):
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument("--solver", required=True, type=Path)
     cli.add_argument("--run", type=int)
@@ -210,10 +210,13 @@ def main(study, displayed_actions=None):
     pool=json.loads(poolraw)["NL2"]
     raw=(EVIDENCE/study.template).read_bytes()
     assert sha(raw)==study.template_sha
-    doc=json.loads(gzip.decompress(raw))
-    if study.family=="ISO":
-        assert (doc["solver"],doc["rust"])==(SOLVER,RUST)
-    template,=(src for src in doc["source_arrays"] if src["version"]=="gto")
+    if template_reader is None:
+        doc=json.loads(gzip.decompress(raw))
+        if study.family=="ISO":
+            assert (doc["solver"],doc["rust"])==(SOLVER,RUST)
+        template,=(src for src in doc["source_arrays"] if src["version"]=="gto")
+    else:
+        template=template_reader(raw)
     assert template["manifest"]["preflop_ranges"]["source"]==study.preflop_source
     assert template["manifest"]["spot"] == study.spot
     if study.preflop_source=="PINNED_POKER_SOLVER_PREFLOP_CFR":

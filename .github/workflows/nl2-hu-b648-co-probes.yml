@@ -1,0 +1,107 @@
+name: B648 reproduce CO river decisions after a checked-through three-bet flop
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b648-co-probes.yml'
+      - 'tools/hu_b619_utg_rivers.py'
+      - 'tools/hu_b648_co_probes.cjs'
+      - 'data/nl2_hu_b607_checked_3bet_inputs.json'
+      - 'data/nl2_hu_b648_co_probes_inputs.json'
+      - 'data/solver_evidence/NL2_B648_*.zip'
+permissions: {contents: read}
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.flops.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: flops
+        run: |
+          set -euo pipefail
+          jq -rc '"matrix="+({flop: ([.[][] | .flop] | unique)} | tojson)' data/nl2_hu_b648_co_probes_inputs.json >> "$GITHUB_OUTPUT"
+  reproduce:
+    needs: select
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the pinned native engine
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Re-solve flop, transferred turn and locked river policies
+        working-directory: trainer
+        run: python tools/hu_b619_utg_rivers.py --batch 648 --solver ../solver --reproduce-flop ${{ matrix.flop }}
+  verify:
+    needs: reproduce
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Check shared private hands, branch prices and existing certifications
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          registry=data/nl2_hu_multiboard_status_current.json
+          cp "$registry" "$RUNNER_TEMP/before.json"
+          python tools/hu_b619_utg_rivers.py --batch 648 --solver ../solver --run "$GITHUB_RUN_ID" --out "$RUNNER_TEMP/report.json"
+          cmp "$RUNNER_TEMP/report.json" data/nl2_hu_b648_co_probes_preview.json
+          python tools/hu_apply_cert_extensions.py --out "$registry"
+          python - "$RUNNER_TEMP/before.json" "$registry" <<'PY'
+          import json,sys
+          before,after=(json.load(open(p))['records'] for p in sys.argv[1:])
+          import pathlib,shutil
+          inputs=json.load(open('data/nl2_hu_b648_co_probes_inputs.json'))
+          targets={r for r, boards in inputs.items() if len(boards)>=3}
+          expected={k:len(inputs[str(m['frequency_rank'])]) for k,m in before.items() if str(m['frequency_rank']) in targets}
+          assert len(expected)==len(targets) and before.keys()==after.keys()
+          assert all(before[k]==after[k] for k in before if k not in expected or before[k]['label']=='CERT-MULTIBOARD')
+          assert all(after[k]['label']=='CERT-MULTIBOARD' and after[k]['proven_exact_board_count']==n for k,n in expected.items())
+          out=pathlib.Path('verified')
+          (out/'reverified').mkdir(parents=True)
+          shutil.copy('data/nl2_hu_b648_locked_medium.json',out)
+          for rank in targets:
+              file=pathlib.Path(f'data/solver_evidence/reverified/rank{rank}.json')
+              shutil.copy(file,out/'reverified')
+              for pin in json.loads(file.read_bytes())['pins']:
+                  shutil.copy('data/solver_evidence/NL2_MULTIBOARD_'+pin['viewer_archive_code']+'.json.gz',out)
+          PY
+          for file in verified/reverified/*.json; do node tools/hu_b558_river_policy_view.cjs "$file"; done
+          node tools/hu_extension_runtime_test.cjs "$registry"
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+          bash tools/hu_exact_batch_audit.sh "$registry"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B648-authenticated-co-probes
+          if-no-files-found: error
+          path: trainer/verified

@@ -1,0 +1,43 @@
+name: Reproduce rank55 from the verified priced river worker
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b650-rank55-publication.yml'
+      - 'tools/hu_b650_publish_rank55.py'
+      - 'data/nl2_hu_b650_locked_medium.json'
+      - 'data/solver_evidence/NL2_B644_R55_6D5C3C.zip'
+      - 'data/solver_evidence/reverified/rank55.json'
+permissions: {contents: read, actions: read}
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate the prior flop and original solver worker, then rebuild the publication
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          originals="$RUNNER_TEMP/originals"
+          mkdir -p "$originals"
+          api="repos/$GITHUB_REPOSITORY/actions/artifacts"
+          parent=$(jq -r '.["6d5c3c"].artifact' data/nl2_hu_b644_rank55_parents.json)
+          gh api "$api/$parent" > "$originals/$parent.json"
+          gh api "$api/$parent/zip" > "$originals/$parent.zip"
+          gh api "$api/14847671820" > "$RUNNER_TEMP/worker.json"
+          python tools/hu_b650_publish_rank55.py --solver ../solver --originals "$originals" --receipt "$RUNNER_TEMP/worker.json"
+          git diff --exit-code -- data/nl2_hu_b650_locked_medium.json data/solver_evidence/reverified/rank55.json data/solver_evidence/NL2_MULTIBOARD_B644_R55_6D5C3C.json.gz
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
