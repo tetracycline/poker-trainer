@@ -14,6 +14,7 @@ from hu_b483_locked_medium import POOL, proof
 from hu_checked_gto_boundary import load_original
 from hu_sequential_cfr_reach import game_reach
 from solve_hu_missing_branches import EXTRA_SPOTS
+from solve_hu_assumed_pots import RULES as ASSUMED_PROFILES
 
 MODEL = "ln-opfr-t_model-1wej9w5"
 CASES = {
@@ -25,7 +26,20 @@ CASES = {
 
 def reply_rules(pool, flop_line, pfr, family, actions):
     rows = []
+    if family == "LMP":
+        assert flop_line in ("b50 c", "x x") and actions == ["x", "b50", "b100"]
+        rate = pool["HU_facing_bet"]["2"]["by_pot"]["limped"]
+        assert rate["n"] == 63420
+        return [dict(pattern="^"+flop_line+"/b(50|100)$", table="HU_facing_bet[2].by_pot[limped]",
+                     size="all", **rate)]
     table = pool["postflop_HU"][family + "_PFR_" + pfr.upper()]
+    if flop_line.startswith("x b"):
+        assert family == "SRP" and pfr == "ip" and actions == ["x","b50","b100"]
+        for action, interval, count in (("b50","34-55%",15700),("b100","81-110%",4480)):
+            rate = table["vs_turn_barrel_by_size"][interval]
+            assert rate["n"] == count
+            rows.append(dict(pattern="^"+flop_line+"/x "+action+"$", table="vs_turn_barrel_by_size", size=interval, **rate))
+        return rows
     if family == "3BP" and flop_line != "x x":
         assert pfr == "oop" and flop_line == "b75 c"
         assert actions in (["x","b50","a"], ["x","b50","b100","a"])
@@ -53,10 +67,12 @@ def reply_rules(pool, flop_line, pfr, family, actions):
 
 def calculate(board, pin, originals, pool, archive, driver, verification_driver, pipeline, ranges, model, flop_line, repo_parent=None):
     public = board["public_board"]
-    line = flop_line+"/"
+    seat = int(flop_line.startswith("x b"))
+    turn_root = flop_line+"/"
+    line = turn_root+("x" if seat else "")
     spot = model["solver_profile"]
-    profile = ranges.SPOTS[spot]
-    assert profile["kind"] in ("SRP", "3BP") and profile["pfr"] in ("ip", "oop")
+    profile = ASSUMED_PROFILES[spot] if spot == "LMP_CO_BB" else ranges.SPOTS[spot]
+    assert profile["kind"] in ("SRP", "3BP", "LMP") and profile["pfr"] in ("ip", "oop")
     pot, stack = round(100*profile["pot"]), round(100*profile["stack"])
     if repo_parent:
         parent=repo_parent(board,pin,ranges)
@@ -69,18 +85,22 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
     assert parent["identity"]["source_sha256"]==pin["source_sha256"]
     root,original=parent["source"]["root"],parent["source"]["subgame"]
     parent_job,root_sha=parent["job"],parent["identity"]["root_sha256"]
-    assert (original["line0"], original["turn"], board["actual_exact_action_line"], board["acting_seat"]) == (flop_line, public[-2:], line, 0)
-    bet_pct = {"x x":0, "b100 c":100, "b75 c":75, "b50 c":50}[flop_line]
+    assert (original["line0"], original["turn"], board["actual_exact_action_line"], board["acting_seat"]) == (flop_line, public[-2:], line, seat)
+    bet_pct = 0 if flop_line=="x x" else int(next(token[1:] for token in flop_line.split() if token.startswith("b")))
+    if seat:
+        assert parent_job["root_no_bet"] and model["solver_profile"] in ("BTN_BB","CO_BB")
+        forced, = (n for n in original["nodes"] if (n["board"],n["line"],n["player"])==(public,turn_root,0))
+        assert forced["acts"]==["x"]
     investment = (pot * bet_pct + 50) // 100
     assert (root["pot"], root["stack"], parent_job["pot"], parent_job["stack"]) == (pot, stack, pot+2*investment, stack-investment)
     assert (parent_job["rake_rate"], parent_job["rake_cap"], parent_job["line0"]) == (.05, 1000, [*flop_line.split(), "/"])
     assert not parent_job.get("locks") and parent_job.get("hero") is None and not original["info"].get("lock_stats")
     assert (original["pot"]/100, original["stack"]/100) == (board["actual_pot_bb"], board["actual_effective_stack_bb"])
-    root_node, = (n for n in original["nodes"] if (n["board"],n["line"],n["player"]) == (public,line,0))
+    root_node, = (n for n in original["nodes"] if (n["board"],n["line"],n["player"]) == (public,line,seat))
     actions = root_node["acts"]
     assert actions == board["exact_node_actions"]
     rules = reply_rules(pool, flop_line, profile["pfr"], profile["kind"], actions)
-    job = dict(parent_job, hero=0, iters=2500, target_pct=.35, rank_pct=.35, out="result.json",
+    job = dict(parent_job, hero=seat, iters=2500, target_pct=.35, rank_pct=.35, out="result.json",
                locks=[dict(pat=r["pattern"], fold=r["fold"]/100, **{"raise":r["raise"]/100}) for r in rules])
     key = public+"/result.json"
     if driver or verification_driver:
@@ -111,12 +131,12 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
         r["applied_raise"] = stat["agg"]
 
     def decision(game):
-        node, = (n for n in game["nodes"] if (n["board"],n["line"],n["player"])==(public,line,0))
+        node, = (n for n in game["nodes"] if (n["board"],n["line"],n["player"])==(public,line,seat))
         assert node["acts"] == actions and (profile["kind"] == "3BP" or actions == ["x","b50","b100"])
         masks=game_reach(root,game)[0]
         row=proof(root,game,node,masks)
         legal=base64.b64decode(row["compatible_action_mask_b64"],validate=True)
-        hands={h:round(node["strat"][len(legal)+i],6) for i,(h,m) in enumerate(zip(game["hands"][0],legal,strict=True)) if m & 2}
+        hands={h:round(node["strat"][len(legal)+i],6) for i,(h,m) in enumerate(zip(game["hands"][seat],legal,strict=True)) if m & 2}
         assert len(hands)==row["b50"]["eligible"] and row["compatible_hole_card_pairs"]>=row["strict_legal_combos"]>0
         return dict(legal_combos=row["strict_legal_combos"],compatible_pairs=row["compatible_hole_card_pairs"],
                     actions=node["acts"],half_pot=row["b50"],eligible_hand_frequencies=hands)
@@ -125,7 +145,7 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
     assert before["legal_combos"]==after["legal_combos"] and before["compatible_pairs"]==after["compatible_pairs"]
     assert before["half_pot"]["eligible"]==board["medium_50pct_eligible_combos"]
     assert before["half_pot"]["candidate"]==board["b50_nonpolarized_relative_equity_research_candidate"]
-    return dict(rank=model["frequency_rank"],model_id=model["model_id"],public_board=public,line=line,seat=0,pot_bb=original["pot"]/100,stack_bb=original["stack"]/100,
+    return dict(rank=model["frequency_rank"],model_id=model["model_id"],public_board=public,line=line,seat=seat,pot_bb=original["pot"]/100,stack_bb=original["stack"]/100,
                 original=pin,root_sha256=root_sha,job_sha256=sha(compact(job)),output_sha256=sha(payload),
                 gto=before,locked=after,gto_gap_pct=locked["info"]["gto_expl_pct"],hero_gap_pct=locked["info"]["hero_gap_pct"],rules=rules)
 

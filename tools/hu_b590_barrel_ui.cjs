@@ -32,7 +32,14 @@ async function main() {
       assert.equal(Boolean(group),hands.length>0);
       for(const [hand,freq] of hands)assert.ok(group.children[1].textContent.includes(hand+' '+(100*freq).toFixed(1)+'%'));
     }
-    if(model.solver_profile==='BTN_BB')assert.ok(content.includes('探測下注') && content.includes('位置內'));
+    if(model.solver_profile==='LMP_CO_BB'){
+      for(const phrase of ['未加注底池','大盲','CO','各位置和尺寸合計','假設翻前範圍','63,420'])assert.ok(content.includes(phrase));
+      assert.ok(!content.includes('翻前加注者'));
+    }
+    if(row.seat===1){
+      for(const phrase of ['大盲尺寸回應鎖','位置內翻前加注者','34-55%','81-110%','15,700','4,480'])assert.ok(content.includes(phrase));
+    }
+    if(row.seat===0 && model.solver_profile==='BTN_BB')assert.ok(content.includes('探測下注') && content.includes('位置內'));
     if(model.solver_profile==='BB3_BTN' && row.line!=='x x/')assert.ok(content.includes('大盲三次加注') && content.includes('按鈕位') && content.includes('半池、滿池或全下'));
     if(model.solver_profile==='SB3_BTN' && row.line!=='x x/')assert.ok(content.includes('三次加注') && content.includes('按鈕位') && content.includes('半池或全下'));
     if(model.family==='3BP' && row.line==='x x/')assert.ok(content.includes('三次加注') && content.includes(model.solver_profile==='CO3_BTN'?'探測下注':'延遲持續下注') && content.includes('下半池或滿池'));

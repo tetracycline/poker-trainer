@@ -1,0 +1,121 @@
+name: B636 reproduce a third rank58 SB river decision
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b636-rank58-checks.yml'
+      - 'tools/hu_b636_rank58.py'
+      - 'data/nl2_hu_b617_rank58_sources.json'
+      - 'tools/hu_b617_sb_routes.cjs'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    outputs:
+      artifact: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile the pinned Rust solver and verify the named original GTO boundary
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLOP: Kh8d5h
+          RAYON_NUM_THREADS: 2
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          dir="$RUNNER_TEMP/originals"
+          mkdir -p "$dir"
+          aid=$(python -c 'import json,os;print(json.load(open("data/nl2_hu_b617_rank58_sources.json"))[os.environ["FLOP"]]["artifact_id"])')
+          api="repos/$GITHUB_REPOSITORY/actions/artifacts/$aid"
+          gh api "$api" > "$dir/$aid.json"
+          gh api "$api/zip" > "$dir/$aid.zip"
+          python tools/hu_b636_rank58.py --solver pinned-solver --originals "$dir" \
+            --output "$RUNNER_TEMP/sources/$FLOP" --run "$GITHUB_RUN_ID" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          output="$RUNNER_TEMP/sources/$FLOP"
+          cp "$output/proof.json" "$RUNNER_TEMP/native-proof.json"
+          python tools/hu_b636_rank58.py --solver pinned-solver --originals "$dir" \
+            --output "$output" --run "$GITHUB_RUN_ID"
+          cmp "$RUNNER_TEMP/native-proof.json" "$output/proof.json"
+      - id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: B636-R58-Kh8d5h
+          path: ${{ runner.temp }}/sources/Kh8d5h
+          if-no-files-found: error
+          retention-days: 90
+  verify:
+    needs: solve
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Bind both native policies to the authenticated worker receipt and the two earlier boards
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKER: ${{ needs.solve.outputs.artifact }}
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          orig=$(jq -r '.Kh8d5h.artifact_id' data/nl2_hu_b617_rank58_sources.json)
+          for pair in "source/$orig" "worker/$WORKER"; do
+            place="$RUNNER_TEMP/${pair%/*}"
+            id="${pair#*/}"
+            mkdir -p "$place"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$place/$id.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$place/$id.zip"
+          done
+          python tools/hu_b636_rank58.py --solver ../solver --originals "$RUNNER_TEMP/source" \
+            --run "$GITHUB_RUN_ID" --head "$GITHUB_SHA" --receipt "$RUNNER_TEMP/worker/$WORKER.json"
+          if test ! -f data/nl2_hu_b636_locked_medium.json; then
+            echo "The native worker found zero shared river checks."
+            exit 0
+          fi
+          registry=data/nl2_hu_multiboard_status_current.json
+          cp "$registry" "$RUNNER_TEMP/before.json"
+          python tools/hu_apply_cert_extensions.py --out "$registry"
+          python - "$RUNNER_TEMP/before.json" "$registry" <<'PYCODE'
+          import json, sys
+          before, after = (json.load(open(f))["records"] for f in sys.argv[1:])
+          mid = "ln-opfr-r_model-aumml6"
+          assert before.keys() == after.keys() and all(before[k] == after[k] for k in before if k != mid)
+          assert after[mid]["label"] == "CERT-MULTIBOARD"
+          assert {b["flop"] for b in after[mid]["certified_3_to_5_exact_flop_boards"]} == {"Kh8d5h", "Ks7h2d", "Jh8s5d"}
+          PYCODE
+          node tools/hu_extension_runtime_test.cjs "$registry"
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+          bash tools/hu_exact_batch_audit.sh "$registry"
+      - uses: actions/upload-artifact@v4
+        if: hashFiles('trainer/data/nl2_hu_b636_locked_medium.json') != ''
+        with:
+          name: B636-authenticated-rank58
+          if-no-files-found: error
+          path: |
+            trainer/data/nl2_hu_b636_locked_medium.json
+            trainer/data/solver_evidence/reverified/rank58.json
+            trainer/data/solver_evidence/NL2_B636_R58_KH8D5H.zip
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B636_R58_KH8D5H.json.gz

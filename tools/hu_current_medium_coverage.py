@@ -91,7 +91,7 @@ def coverage(registry):
     barrel_rows={}
     for barrel_file in sorted(Path('data').glob('nl2_hu_b*_rank*_barrels.json')):
         report=json.loads(barrel_file.read_bytes())
-        assert report['schema'] in ('NL2_HU_B590_SB_BB_BARREL_REPLIES_V1','NL2_HU_B609_BB_PROBE_RESPONSES_V1','NL2_HU_B628_3BP_TURN_BARREL_RESPONSES_V1')
+        assert report['schema'] in ('NL2_HU_B590_SB_BB_BARREL_REPLIES_V1','NL2_HU_B609_BB_PROBE_RESPONSES_V1','NL2_HU_B628_3BP_TURN_BARREL_RESPONSES_V1','NL2_HU_B638_LIMPED_TURN_RESPONSES_V1','NL2_HU_B640_IP_TURN_BARRELS_V1')
         for barrel in report['records']:
             key=(barrel['model_id'],barrel['public_board'],barrel['line'],barrel['seat'],barrel['original']['run'],barrel['original']['source_sha256'])
             assert key not in barrel_rows
@@ -192,7 +192,20 @@ def coverage(registry):
                 assert (baseline['compatible_pairs'],baseline['legal_combos'])==(conditional['compatible_pairs'],conditional['legal_combos'])
                 assert len(conditional['eligible_hand_frequencies'])==conditional['half_pot']['eligible']
                 assert (barrel['pot_bb'],barrel['stack_bb'])==(pot,stack)
-                if row['line']=='x x/':
+                if row['seat']==1:
+                    assert model['solver_profile'] in ('BTN_BB','CO_BB') and row['line'] in ('x b33 c/x','x b50 c/x','x b75 c/x','x b100 c/x')
+                    assert baseline['actions']==conditional['actions']==['x','b50','b100']
+                    rules=barrel['rules']
+                    assert [(r['size'],r['n'],r['applied_nodes']) for r in rules]==[('34-55%',15700,1),('81-110%',4480,1)]
+                    for rule, action in zip(rules, ('b50','b100'), strict=True):
+                        assert (rule['table'],rule['pattern'])==('vs_turn_barrel_by_size','^'+row['line']+' '+action+'$')
+                elif model['solver_profile']=='LMP_CO_BB':
+                    rule, = barrel['rules']
+                    assert row['line'] in ('b50 c/', 'x x/') and row['seat']==0
+                    assert baseline['actions']==conditional['actions']==['x','b50','b100']
+                    assert (rule['table'],rule['size'],rule['n'],rule['applied_nodes'])==('HU_facing_bet[2].by_pot[limped]','all',63420,2)
+                    assert rule['pattern']=='^'+row['line']+'b(50|100)$'
+                elif row['line']=='x x/':
                     rule, = barrel['rules']
                     if model['solver_profile'] in ('BTN_BB','CO3_BTN'):
                         field, n = 'vs_probe', 6093 if model['family']=='3BP' else 49952
