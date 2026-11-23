@@ -225,7 +225,44 @@
       slot.appendChild(details);
     }).catch(()=>{slot.textContent='目前無法核對河牌半池對照來源。';});
   }
+  async function showMatchedBarrels(parent,model,board,source){
+    if(model.model_id!=='ln-opfr-t_model-1wej9w5' || (source && source!==board.source_sha256))return;
+    const slot=document.createElement('div');
+    parent.appendChild(slot);
+    try{
+      const response=await fetch('data/nl2_hu_b590_rank3_barrels.json',{cache:'no-store'});
+      if(!response.ok)throw Error('HTTP '+response.status);
+      const report=await response.json();
+      if(report.schema!=='NL2_HU_B590_SB_BB_BARREL_REPLIES_V1')throw Error('來源格式不符');
+      const row=report.records.find(r=>r.model_id===model.model_id && r.public_board===board.public_board &&
+        r.line===board.actual_exact_action_line && r.seat===board.acting_seat && r.original.version==='gto' &&
+        r.original.run===board.source_run_id && r.original.source_sha256===board.source_sha256 &&
+        r.pot_bb===board.actual_pot_bb && r.stack_bb===board.actual_effective_stack_bb);
+      if(!row)return;
+      if(!sha(row.output_sha256) || !sha(row.job_sha256) || !sha(report.archive_sha256) ||
+         !(row.locked.legal_combos>0 && row.locked.compatible_pairs>=row.locked.legal_combos) ||
+         row.locked.legal_combos!==row.gto.legal_combos || row.locked.compatible_pairs!==row.gto.compatible_pairs ||
+         row.rules.length!==4 || !row.rules.every(r=>r.n>0 && r.applied_nodes>0))throw Error('來源核對失敗');
+      const details=document.createElement('details');
+      const summary=document.createElement('summary');
+      summary.textContent='小盲連續下注：按轉牌、河牌與尺寸實測大盲回應';details.appendChild(summary);
+      const add=text=>{const p=document.createElement('p');p.textContent=text;details.appendChild(p);};
+      add('沿用原 GTO 翻牌範圍。轉牌可過牌、下半池或滿池。');
+      for(const [name,p] of [['原 GTO',row.gto],['實測回應鎖',row.locked]]){
+        const mid=p.half_pot.middle_count??0;
+        add(name+' 的半池合格手牌有 '+p.half_pot.eligible+' / '+p.legal_combos+
+          ' 組，其中 '+mid+' 組屬中段勝率。'+(p.half_pot.candidate?'符合非極化研究門檻。':'未達非極化研究門檻。'));
+      }
+      for(const r of row.rules){
+        const street=r.table==='vs_turn_barrel_by_size'?'轉牌':'河牌';
+        add(street+'面對 '+r.size+' 底池的下注，共 '+r.n.toLocaleString('zh-TW')+' 次。棄牌 '+r.fold+
+          '%、跟注 '+r.call+'%、加注 '+r.raise+'%。');
+      }
+      slot.appendChild(details);
+    }catch{slot.textContent='目前無法核對連續下注的鎖頻資料。';}
+  }
   function showRestrictedTurn(parent,model,board,source){
+    showMatchedBarrels(parent,model,board,source);
     showFrozenPolicies(parent,model,board,source);
     const sb=model.model_id==='ln-opfr-t_model-19esov6' && board.public_board==='2d9hAsKd';
     const utg=model.model_id==='ln-opfr-t_model-1ocorr7' && ['3d6h9sTs','3dKhAsQh'].includes(board.public_board);

@@ -88,6 +88,15 @@ def coverage(registry):
             assert p['prior_unresolved_output_sha256']==policies[i]['output_sha256'] and p['original_node_count']>0
             assert all(e['max_abs']==0 and e['relative_sum']==0 for e in p['range_errors'])
             policies[i]=p
+    barrel_file=Path('data/nl2_hu_b590_rank3_barrels.json')
+    barrel_rows={}
+    if barrel_file.exists():
+        report=json.loads(barrel_file.read_bytes())
+        assert report['schema']=='NL2_HU_B590_SB_BB_BARREL_REPLIES_V1'
+        for barrel in report['records']:
+            key=(barrel['model_id'],barrel['public_board'],barrel['line'],barrel['seat'],barrel['original']['run'],barrel['original']['source_sha256'])
+            assert key not in barrel_rows
+            barrel_rows[key]=barrel
     boards=[]
     for model in sorted(registry['records'].values(),key=lambda m:m['frequency_rank']):
         if model['label']!='CERT-MULTIBOARD':
@@ -175,6 +184,19 @@ def coverage(registry):
                     snapshots.append(summary)
                 if snapshots:
                     row['frozen_river_policies']=snapshots
+            barrel=barrel_rows.get((mid,row['public_board'],row['line'],row['seat'],original['run'],original['sha256']))
+            if barrel:
+                baseline=barrel['gto']
+                conditional=barrel['locked']
+                assert (baseline['compatible_pairs'],baseline['legal_combos'],baseline['half_pot']['eligible'])==(
+                    original['compatible_pairs'],original['legal_combos'],original['half_pot_eligible_combos'])
+                assert (baseline['compatible_pairs'],baseline['legal_combos'])==(conditional['compatible_pairs'],conditional['legal_combos'])
+                assert len(conditional['eligible_hand_frequencies'])==conditional['half_pot']['eligible']
+                assert (barrel['pot_bb'],barrel['stack_bb'])==(pot,stack)
+                assert len(barrel['rules'])==4 and all(r['n']>0 and r['applied_nodes']>0 for r in barrel['rules'])
+                row['measured_barrel_reply_policy']=dict(source_sha256=barrel['output_sha256'],
+                    eligible_combos=conditional['half_pot']['eligible'],nonpolarized_candidate=conditional['half_pot']['candidate'],
+                    legal_combos=conditional['legal_combos'],compatible_pairs=conditional['compatible_pairs'])
             row['medium_policy_usage']=medium_usage(row, alt, frozen)
             boards.append(row)
     totals=dict(Counter(r['half_pot_status'] for r in boards))
