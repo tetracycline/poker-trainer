@@ -1,0 +1,72 @@
+name: B535 register four completed B526 opponent locks at their verified board stage
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b535-apply-verified-opponent-locks.yml']
+permissions: {contents: write, actions: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify the original archive and replay its four native policies on the current registry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          id=14792776504
+          archive="$RUNNER_TEMP/b526.zip"
+          api="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+          gh api "$api" | jq -e '.name=="B526-verified-certified-decisions" and .workflow_run.id==45118248410 and .workflow_run.head_sha=="c20d96f78516dfc2f335760af4c9a13ed0122826"'
+          gh api "$api/zip" > "$archive"
+          echo "722459bb8ce916c13c213232e8517aad52171f0f5e26947da5176ee4012731a8  $archive" | sha256sum -c -
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            (
+              cd "$live"
+              unzip -qn "$archive"
+              python - <<'PY'
+          from pathlib import Path
+          import json
+          root=Path('data/solver_evidence')
+          variants=sorted((root/'lock_variants').glob('*_b526_*.json'))
+          assert len(variants)==4
+          groups={v['model_id']:v for p in (root/'reverified').glob('rank*.json') for v in [json.loads(p.read_bytes())]}
+          for path in variants:
+              item=json.loads(path.read_bytes())
+              group=groups.get(item['model_id'])
+              if group is None:
+                  continue
+              assert any(b['public_board']==item['public_board'] and b['actual_exact_action_line']==item['line']
+                         and b['source_sha256']==item['gto_sha256'] and b['source_run_id']==item['gto_run']
+                         and any(k['sha256']==item['parent_lock_sha256'] and k['run_id']==item['parent_lock_run']
+                                 for k in b['nl2_locked_variants']) for b in group['boards'])
+              item['after_reverification']=True
+              path.write_text(json.dumps(item,indent=2,ensure_ascii=False)+'\n')
+          PY
+              status=data/nl2_hu_multiboard_status_current.json
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b485_medium_viewers.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              bash tools/hu_exact_batch_audit.sh "$status"
+              mapfile -t originals < <(unzip -Z1 "$archive" | sed '/\/$/d')
+              git add -f -- "${originals[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B535: register four authenticated B526 policies on their exact named boards'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
