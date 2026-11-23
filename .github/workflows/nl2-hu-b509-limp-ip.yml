@@ -1,0 +1,135 @@
+name: B509 solve measured CO-IP locks on four original limped flop continuations
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b509-limp-ip.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {flop: 3c3d4h, artifact: 14787238707}
+          - {flop: 5c5d2h, artifact: 14787935838}
+          - {flop: 2c2d4h, artifact: 14787866823}
+          - {flop: 7s5h3d, artifact: 14648360341}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Authenticate and solve the original flop range with the new per-street NL2 lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ORIGINAL: ${{ matrix.artifact }}
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          originals="$RUNNER_TEMP/originals"
+          mkdir -p "$originals"
+          api="repos/$GITHUB_REPOSITORY/actions/artifacts/$ORIGINAL"
+          gh api "$api" > "$originals/$ORIGINAL.json"
+          if [[ -f "data/solver_evidence/B496_${ORIGINAL}.zip" ]]; then
+            ln -s "$GITHUB_WORKSPACE/data/solver_evidence/B496_${ORIGINAL}.zip" "$originals/$ORIGINAL.zip"
+          else
+            gh api "$api/zip" > "$originals/$ORIGINAL.zip"
+          fi
+          args=(--originals "$originals" --solver pinned-solver --flop "$FLOP")
+          python tools/hu_b509_limp_ip.py "${args[@]}"
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          python tools/hu_b509_limp_ip.py "${args[@]}" --run "$GITHUB_RUN_ID" --results "$RUNNER_TEMP/result" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B509-native-${{ matrix.flop }}
+          path: ${{ runner.temp }}/result/NL2_B509_*.json.gz
+          if-no-files-found: error
+          retention-days: 90
+  verify:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 'B509-native-*'
+          path: ${{ runner.temp }}/results
+      - name: Rebuild both private-hand ranges, exact bet menus and half-pot equity from original files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          originals="$RUNNER_TEMP/originals"
+          mkdir -p "$originals" "$RUNNER_TEMP/results"
+          for id in 14787238707 14787935838 14787866823 14648360341; do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+            gh api "$api" > "$originals/$id.json"
+            if [[ -f "data/solver_evidence/B496_${id}.zip" ]]; then
+              ln -s "$GITHUB_WORKSPACE/data/solver_evidence/B496_${id}.zip" "$originals/$id.zip"
+            else
+              gh api "$api/zip" > "$originals/$id.zip"
+            fi
+          done
+          python tools/hu_b509_limp_ip.py --originals "$originals" --solver pinned-solver --results "$RUNNER_TEMP/results" --run "$GITHUB_RUN_ID"
+      - name: Audit all current routes and register only verified paired boards
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          files=(data/nl2_hu_b509_limp_ip_outcomes.json data/nl2_hu_b509_locked_medium.json data/solver_evidence/NL2_B509_*.json.gz)
+          for rank in 10 63 81 117 118; do
+            record="data/solver_evidence/reverified/rank${rank}.json"
+            if [[ -f "$record" ]]; then
+              files+=("$record" data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R"${rank}"_*.json.gz)
+            fi
+          done
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$status"
+                  node tools/hu_extension_runtime_test.cjs "$status"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B509: publish original limped flop continuations, measured CO-IP locks and audited positive models'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
