@@ -16822,14 +16822,55 @@
       "solver_profile": "ISO_BTN_CO",
       "model_root_spr": 10.105,
       "model_node_spr": 5.885,
-      "reference_count": 0,
-      "references": [],
+      "reference_count": 3,
+      "references": [
+        {
+          "source_run_id": 45176302891,
+          "source_sha256": "0f03ce4d043ef3d65bfc2574b7d27da235748009553a9e1261805417400751d4",
+          "spot": "ISO_BTN_CO",
+          "family": "ISO",
+          "version": "gto",
+          "flop": "8s5h3d",
+          "turn": "2c",
+          "exact_solver_node_line": "x b33 c/",
+          "flop_line": "x b33 c",
+          "turn_spr": 5.884664,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
+        {
+          "source_run_id": 45176302891,
+          "source_sha256": "2ca012453ddbb5d1d1f21d25275203494fbb58c032d01e0d230bb4b460e5762e",
+          "spot": "ISO_BTN_CO",
+          "family": "ISO",
+          "version": "gto",
+          "flop": "9c6h4s",
+          "turn": "2d",
+          "exact_solver_node_line": "x b33 c/",
+          "flop_line": "x b33 c",
+          "turn_spr": 5.884664,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
+        {
+          "source_run_id": 45176302891,
+          "source_sha256": "a5b60c932ca243617aa3750018d3c99bbfbc3bb224afcabc4f856902f78faf64",
+          "spot": "ISO_BTN_CO",
+          "family": "ISO",
+          "version": "gto",
+          "flop": "7h5h2h",
+          "turn": "4h",
+          "exact_solver_node_line": "x b33 c/",
+          "flop_line": "x b33 c",
+          "turn_spr": 5.884664,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        }
+      ],
       "status": "REFERENCE_ONLY_NOT_CERTIFIED",
       "blockers": [
         "MODEL_HAS_NO_EXACT_FLOP_TURN_RIVER",
         "MODEL_ACTION_AND_POT_HISTORY_NOT_MATCHED_TO_SOLVER",
         "MODEL_COMBO_REACH_NOT_DERIVED_FROM_EXACT_BOARD"
-      ]
+      ],
+      "note": "Exact GTO and separately solved hero lock on each named board. Generic texture rows remain approximate."
     },
     "ln-iso-iso_t_model-1x553s3": {
       "model_id": "ln-iso-iso_t_model-1x553s3",
