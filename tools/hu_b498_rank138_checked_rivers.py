@@ -9,15 +9,13 @@ from hu_b467_river_source_gate import EVIDENCE, compact, json_bytes, sha
 from hu_b483_locked_medium import POOL, proof
 from hu_board_reach_corrections import source_key
 from hu_multiboard_promote import texture
-from hu_reverified_board_pair import emit_board
+from hu_reverified_board_pair import emit_board, source_case
 from hu_sequential_cfr_reach import game_reach
 from verify_hu_multiboard_100bb import lock_scope
 
 MID = 'ln-ipfr-r_model-hqu5je'
 LINE = 'x x/x x/x'
 PINS = Path('data/nl2_hu_b498_rank138_artifacts.json')
-OUTPUT = EVIDENCE / 'reverified/rank138.json'
-REPORT = Path('data/nl2_hu_b498_locked_medium.json')
 SELECTION = (
     ('Js9h4d','4d9hJsTsAh',14597934573,14693877001),
     ('8s8h3d','3d8h8s5s4s',14593700327,14694335674),
@@ -25,7 +23,26 @@ SELECTION = (
 )
 
 
-def read_source(folder, artifact, ref, flop, public, version):
+RANK166 = (
+    ('Js9h4d','4d9hJsTs9c',14597934573,14598807546),
+    ('QhTc5d','5dTcQh7sJc',14756925909,14757207861),
+    ('KcJh7d','7dJhKc2h4c',14756653269,14757611512),
+    ('KsQh4d','4dQhKsTc4c',14756226703,14756558535),
+)
+
+
+def rank166_pins():
+    ids={item for _,_,g,e in RANK166 for item in (g,e)}
+    originals=json.loads(Path('data/nl2_hu_b490_original_artifacts.json').read_bytes())
+    pins={str(r['id']):dict(name=r['name'],run=r['run'],sha256=r['sha256'],head=r['commit'])
+          for r in originals if r['id'] in ids}
+    assert len(pins)==len(ids)
+    return pins
+
+
+def read_source(folder, artifact, ref, flop, public, version, line=LINE):
+    flop_line=line.split('/')[0]
+    boundary={'x x':(550,9750), 'x b100 c':(1650,9200)}[flop_line]
     archive=folder/f'{artifact}.zip'
     assert sha(archive.read_bytes())==ref['sha256']
     with zipfile.ZipFile(archive) as z:
@@ -34,7 +51,7 @@ def read_source(folder, artifact, ref, flop, public, version):
         assert {SOLVER,RUST} <= pins
         m=json.loads(z.read(name))
         assert (m['spot'],m['version'],m['failures'])==('CO_BB',version,[])
-        case,=[c for c in m['cases'] if c['turn']==public[6:8] and c['line']=='x x']
+        case,=[c for c in m['cases'] if c['turn']==public[6:8] and c['line']==flop_line]
         legacy=m['schema']=='HU_MISSING_ACTION_HISTORY_CFR_V1'
         if legacy:
             assert version=='gto' and m['selected_flops']==[flop]
@@ -50,9 +67,12 @@ def read_source(folder, artifact, ref, flop, public, version):
             assert sha(raw)==digest
             return json.loads(raw),json.loads(jb),sha(jb)
         root,rj,rjobsha=game(rp,rsha);sub,j,jsha=game(sp,ssha)
-    assert (root['flop'],sub['turn'],sub['line0'],j['line0'])==(flop,public[6:8],'x x',['x','x','/'])
-    assert all((job['pot'],job['stack'],job['rake_rate'],job['rake_cap'])==(550,9750,.05,1000) for job in (rj,j))
-    parent,=[n for n in root['nodes'] if n['line']=='x x/' and n['board']==public[:8]]
+    assert (root['flop'],sub['turn'],sub['line0'],j['line0'])==(flop,public[6:8],flop_line,flop_line.split()+['/'])
+    assert (rj['pot'],rj['stack'],root['pot'],root['stack'])==(550,9750,550,9750)
+    assert (j['pot'],j['stack'])==boundary==(sub['pot'],sub['stack'])
+    assert all((job['rake_rate'],job['rake_cap'])==(.05,1000) for job in (rj,j))
+    parent,=[n for n in root['nodes'] if n['line']==flop_line+'/' and n['board']==public[:8]]
+    assert (parent['pot'],root['stack']-max(parent['bets']))==boundary
     for seat,side in enumerate(('oop_w','ip_w')):
         assert j[side]==[[h,w] for h,w in zip(root['hands'][seat],parent['wr'][seat],strict=True) if w>1e-4]
     patterns=m.get('locks',[])
@@ -64,11 +84,11 @@ def read_source(folder, artifact, ref, flop, public, version):
         manifest.update(gto_parent_source_run_id=m['gto_parent_source_run_id'],gto_parent_source_sha256=rsha)
     else:
         assert rj.get('hero')==j.get('hero') and rj.get('locks',[])==j.get('locks',[])
-    node,=[n for n in sub['nodes'] if (n['board'],n['line'],n['player'])==(public,LINE,1)]
-    assert node['pot']==550 and node['bets']==[0,0]
+    node,=[n for n in sub['nodes'] if (n['board'],n['line'],n['player'])==(public,line,1)]
+    assert node['pot']==boundary[0] and node['bets']==[0,0]
     row=proof(root,sub,node,game_reach(root,sub)[0])
     row.update(source_run_id=ref['run'],source_sha256=ssha,archive_sha256=ref['sha256'],source_archive=ref['name'],
-               spot='CO_BB',family='SRP',flop=flop,turn=sub['turn'],version=version,public_board=public,line=LINE,acting_seat=1,
+               spot='CO_BB',family='SRP',flop=flop,turn=sub['turn'],version=version,public_board=public,line=line,acting_seat=1,
                source_actions=node['acts'],root_sha256=rsha,gto_gap_pct=sub['info']['gto_expl_pct'],
                locked_hero_gap_pct=sub['info'].get('hero_gap_pct'),root_gto_stage_gap_pct=root['info']['gto_expl_pct'],
                root_applied_rust_lock_nodes=sum(x['nodes'] for x in root['info'].get('lock_stats',{}).values()),
@@ -86,21 +106,40 @@ def read_source(folder, artifact, ref, flop, public, version):
 
 def main():
     cli=argparse.ArgumentParser(description=__doc__)
-    cli.add_argument('downloads',type=Path)
+    cli.add_argument('downloads',type=Path,nargs='?')
+    cli.add_argument('--rank',type=int,choices=(138,166),default=138)
+    cli.add_argument('--list-pins',action='store_true')
     args=cli.parse_args()
-    refs=json.loads(PINS.read_bytes())
-    reg=json.loads(Path('data/nl2_hu_multiboard_status_current.json').read_bytes());model=reg['records'][MID]
-    assert (model['frequency_rank'],model['solver_profile'],model['family'],model['street'])==(138,'CO_BB','SRP',2)
-    group=dict(rank=138,model_id=MID,boards=[],pins=[])
-    report=dict(schema='NL2_HU_B498_ORIGINAL_LOCKED_MEDIUM_V1',references={},gto_references={})
-    for flop,public,gid,eid in SELECTION:
-        g,gr,gp=read_source(args.downloads,gid,refs[str(gid)],flop,public,'gto')
-        e,er,ep=read_source(args.downloads,eid,refs[str(eid)],flop,public,'exp_ip')
+    if args.rank==138:
+        mid,line,selection,batch = MID,LINE,SELECTION,'B498'
+        refs=json.loads(PINS.read_bytes())
+    else:
+        mid,line,selection,batch = 'ln-ipfr-r_model-1spq1ko','x b100 c/x x/x',RANK166,'B507'
+        refs=rank166_pins()
+    if args.list_pins:
+        print(json.dumps(refs))
+        return
+    if not args.downloads:cli.error('Missing directory of original artifacts')
+    reg=json.loads(Path('data/nl2_hu_multiboard_status_current.json').read_bytes());model=reg['records'][mid]
+    assert (model['frequency_rank'],model['solver_profile'],model['family'],model['street'])==(args.rank,'CO_BB','SRP',2)
+    group=dict(rank=args.rank,model_id=mid,boards=[],pins=[])
+    report=dict(schema=f'NL2_HU_{batch}_ORIGINAL_LOCKED_MEDIUM_V1',references={},gto_references={})
+    for flop,public,gid,eid in selection:
+        g,gr,gp=read_source(args.downloads,gid,refs[str(gid)],flop,public,'gto',line)
+        e,er,ep=read_source(args.downloads,eid,refs[str(eid)],flop,public,'exp_ip',line)
         assert gr['source_actions']==er['source_actions']
         if 'gto_parent_source_run_id' in e['manifest']:
             assert e['root']==g['root'] and ep['root_sha256']==gp['root_sha256']
             e['verified_gto_parent']=dict(run=g['run'],sha256=gp['root_sha256'])
-        board,pin=emit_board(model,g,e,public,LINE,texture(flop))
+        if args.rank==166:
+            _,gh,gpairs=source_case(model,g,public,line,1)
+            _,eh,epairs=source_case(model,e,public,line,1)
+            if not gh.intersection(eh):
+                group.setdefault('excluded_without_common_hero_hand',[]).append(dict(flop=flop,public_board=public,
+                    gto_archive=gp,lock_archive=ep,gto_legal_hands=len(gh),lock_legal_hands=len(eh),
+                    gto_compatible_hole_card_pairs=gpairs,lock_compatible_hole_card_pairs=epairs))
+                continue
+        board,pin=emit_board(model,g,e,public,line,texture(flop))
         assert pin['GTO_strict_combos']==gr['strict_legal_combos'] and pin['NL2_strict_combos']==er['strict_legal_combos']
         pin.update(original_gto_archive=gp,original_lock_archive=ep)
         if e.get('verified_gto_parent'):
@@ -112,11 +151,17 @@ def main():
             blob=viewer.read_bytes();blob=blob[:9]+bytes([255])+blob[10:]
             viewer.write_bytes(blob);pin[field]=sha(blob)
         group['boards'].append(board);group['pins'].append(pin)
-        report['references'][source_key(MID,er)]=er
-        report['gto_references'][source_key(MID,gr)]=gr
-    OUTPUT.parent.mkdir(exist_ok=True)
-    OUTPUT.write_bytes(json_bytes(group));REPORT.write_bytes(json_bytes(report))
-    print('Three independently reachable CO checked rivers verified')
+        report['references'][source_key(mid,er)]=er
+        report['gto_references'][source_key(mid,gr)]=gr
+    assert len(group['boards'])==len({b['flop'] for b in group['boards']})==3
+    if args.rank==166:
+        assert [b['flop'] for b in group['excluded_without_common_hero_hand']]==['KsQh4d']
+        assert all(p['common_legal_hero_combos']>0 for p in group['pins'])
+    output=EVIDENCE/f'reverified/rank{args.rank}.json'
+    output.parent.mkdir(exist_ok=True)
+    output.write_bytes(json_bytes(group))
+    Path(f'data/nl2_hu_{batch.lower()}_locked_medium.json').write_bytes(json_bytes(report))
+    print(f'Rank {args.rank}: verified three independently reachable CO river pairs')
 
 
 if __name__=='__main__':

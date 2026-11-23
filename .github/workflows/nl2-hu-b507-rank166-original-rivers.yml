@@ -1,0 +1,73 @@
+name: B507 rank166 full audit and original CO river replay
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b507-rank166-original-rivers.yml'
+permissions:
+  actions: read
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Download the original GTO and CO-IP lock pairs by ID and GitHub digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/b507"
+          mkdir -p "$dir"
+          python tools/hu_b498_rank138_checked_rivers.py --rank 166 --list-pins > "$dir/pins.json"
+          for id in $(jq -r 'keys[]' "$dir/pins.json"); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" |
+              jq -e --arg id "$id" --slurpfile p "$dir/pins.json" '
+                ($p[0][$id]) as $pin |
+                .id==($id|tonumber) and .name==$pin.name and .digest==("sha256:"+$pin.sha256)
+                and .workflow_run.id==$pin.run and .workflow_run.head_sha==$pin.head
+                and .workflow_run.repository_id==1438346845' > /dev/null
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$dir/$id.zip"
+          done
+          python tools/hu_b498_rank138_checked_rivers.py --rank 166 "$dir"
+      - name: Rebuild current registry, audit both views and publish the exact three-board group
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          files=(data/solver_evidence/reverified/rank166.json data/nl2_hu_b507_locked_medium.json data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R166_*.json.gz)
+          test "${#files[@]}" = 7
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              python - "$status" <<'PYVERIFY'
+          import json, sys
+          proof=json.load(open('data/solver_evidence/reverified/rank166.json'))
+          model=json.load(open(sys.argv[1]))['records'][proof['model_id']]
+          assert model['label']=='CERT-MULTIBOARD' and model['frequency_rank']==166
+          assert {b['public_board'] for b in proof['boards']}=={b['public_board'] for b in model['certified_3_to_5_exact_flop_boards']}
+          PYVERIFY
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              bash tools/hu_exact_batch_audit.sh "$status"
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B507: restore rank166 on three distinct original GTO and CO-IP lock river decisions'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
