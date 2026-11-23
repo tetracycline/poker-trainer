@@ -1,7 +1,7 @@
 {
   "schema": "NL2_HU_392_MULTIBOARD_CERT_STATUS_VERIFIED_EXTENSIONS_V1",
-  "CERT_MULTIBOARD": 135,
-  "APPROX": 257,
+  "CERT_MULTIBOARD": 137,
+  "APPROX": 255,
   "TOTAL": 392,
   "top_N_rank_cutoff": 24,
   "exact_board_min": 3,
@@ -23227,7 +23227,7 @@
     "ln-opfr-r_model-aumml6": {
       "model_id": "ln-opfr-r_model-aumml6",
       "source_model_id": "ln-opfr-t_model-4t8fsk",
-      "label": "APPROX",
+      "label": "CERT-MULTIBOARD",
       "must_not_extrapolate_to_all_texture_cards": true,
       "model_frequencies_are_not_observed_combo_counts": true,
       "frequency_rank": 58,
@@ -23239,9 +23239,340 @@
       "preflop_text": "翻前： 你 SB 開 ，BB 跟",
       "abstract_action_history": "你過、對手下注、你跟|你下注、對手跟|",
       "assumed_model_node_spr": 4.35,
-      "certified_3_to_5_exact_flop_boards": [],
-      "proven_exact_board_count": 0,
-      "blocked_reason": "LOWER_FREQUENCY_BELOW_PREREGISTERED_TOP24_CUTOFF",
+      "certified_3_to_5_exact_flop_boards": [
+        {
+          "flop": "Jh8s5d",
+          "turn": "6c",
+          "public_board": "5d8sJh6c2c",
+          "actual_exact_action_line": "x b50 c/b33 c/",
+          "acting_seat": 0,
+          "exact_flop_action": "x b50 c",
+          "actual_pot_bb": 19.92,
+          "actual_effective_stack_bb": 90.04,
+          "actual_spr": 4.52008,
+          "model_assumed_spr": 4.35,
+          "relative_spr_error_pct": 3.909885,
+          "genuine_gto_exploitability_pct": 0.3793427348136902,
+          "source_run_id": 45178881600,
+          "source_sha256": "7f6b12b62b1747cf7bdd0a3918e66ba2c7ef1d226681cb3120afdbea9351d205",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 400,
+          "strict_full_street_combo_reachable": 237,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b75",
+            "b100"
+          ],
+          "medium_50pct_eligible_combos": 31,
+          "b50_nonpolarized_relative_equity_research_candidate": false,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 45178881600,
+              "sha256": "a3016a77df1cc5a5d49f764a43d2889446c90708a86b502fff37c97790bd36a8",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "observed_marginal_source_nodes": 99,
+              "assumed_default_source_nodes": 33,
+              "unlocked_source_nodes": 64,
+              "unknown_history_frequency_filled_with_default": true,
+              "source_not_real_per_combo_observation": true,
+              "villain_observed_pattern_node_share_pct": 67.347,
+              "true_hero_gap_pct": 0.38388824462890625,
+              "hero_model_gain_bb": 1.97328,
+              "medium_50pct_eligible_combos": 4,
+              "b50_nonpolarized_relative_equity_research_candidate": false,
+              "variant_label": "原始 GTO 翻牌策略及 NL2 轉、河牌玩家池節點鎖",
+              "applied_street_rates": [
+                {
+                  "street": 2,
+                  "token": "b33",
+                  "n": 71741,
+                  "nodes": 1,
+                  "fold_pct": 29.90000316326558,
+                  "raise_pct": 12.899996770473793
+                },
+                {
+                  "street": 2,
+                  "token": "b50",
+                  "n": 144567,
+                  "nodes": 1,
+                  "fold_pct": 43.9999999210692,
+                  "raise_pct": 8.299997814475404
+                },
+                {
+                  "street": 2,
+                  "token": "b100",
+                  "n": 43254,
+                  "nodes": 1,
+                  "fold_pct": 57.79999802983018,
+                  "raise_pct": 6.699998676704796
+                },
+                {
+                  "street": 3,
+                  "token": "b50",
+                  "n": 64272,
+                  "nodes": 192,
+                  "fold_pct": 53.099999960252454,
+                  "raise_pct": 9.299998102652374
+                },
+                {
+                  "street": 3,
+                  "token": "b75",
+                  "n": 58736,
+                  "nodes": 192,
+                  "fold_pct": 58.69999814104402,
+                  "raise_pct": 7.599998045564438
+                },
+                {
+                  "street": 3,
+                  "token": "b100",
+                  "n": 43634,
+                  "nodes": 192,
+                  "fold_pct": 64.59999834610741,
+                  "raise_pct": 6.199998474490952
+                }
+              ],
+              "measurement_policy": "STREET_SPECIFIC_POOL_MARGINALS",
+              "pool_sha256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+              "gto_parent_source_run_id": 45178881600,
+              "gto_parent_source_sha256": "e42cae203119d477e33ae20c9c5464650a61771aed7a0075b6d53f401cad80be",
+              "viewer_archive_code": "B617_R58_JH8S5D",
+              "viewer_sha256": "d59aea145d447d76998e59dbdcb87b91ed245f5de81c9bd79ff373bb4f851923",
+              "root_applied_rust_lock_nodes": 0,
+              "subgame_applied_rust_lock_nodes": 868,
+              "strictly_reachable_combos": 73,
+              "compatible_hole_card_pairs": 839
+            }
+          ],
+          "flop_texture": "JT_HIGH",
+          "river": "2c",
+          "compatible_hole_card_pairs": 2943
+        },
+        {
+          "flop": "Ks7h2d",
+          "turn": "9d",
+          "public_board": "2d7hKs9d3h",
+          "actual_exact_action_line": "x b50 c/b33 c/",
+          "acting_seat": 0,
+          "exact_flop_action": "x b50 c",
+          "actual_pot_bb": 19.92,
+          "actual_effective_stack_bb": 90.04,
+          "actual_spr": 4.52008,
+          "model_assumed_spr": 4.35,
+          "relative_spr_error_pct": 3.909885,
+          "genuine_gto_exploitability_pct": 0.38514024019241333,
+          "source_run_id": 45178881600,
+          "source_sha256": "951cf5ff20984440e9f0f93ba2b9e3e61a2b85e8d33403cdf9b3048c115bc1f1",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 322,
+          "strict_full_street_combo_reachable": 99,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b75",
+            "b100"
+          ],
+          "medium_50pct_eligible_combos": 46,
+          "b50_nonpolarized_relative_equity_research_candidate": false,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 45178881600,
+              "sha256": "457291b559252829ca9732ed0543554d53c8b86cbdccdfb0d6658ec766d2fa86",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "observed_marginal_source_nodes": 75,
+              "assumed_default_source_nodes": 25,
+              "unlocked_source_nodes": 50,
+              "unknown_history_frequency_filled_with_default": true,
+              "source_not_real_per_combo_observation": true,
+              "villain_observed_pattern_node_share_pct": 66.667,
+              "true_hero_gap_pct": 0.44741058349609375,
+              "hero_model_gain_bb": 2.27999,
+              "medium_50pct_eligible_combos": 4,
+              "b50_nonpolarized_relative_equity_research_candidate": false,
+              "variant_label": "原始 GTO 翻牌策略及 NL2 轉、河牌玩家池節點鎖",
+              "applied_street_rates": [
+                {
+                  "street": 2,
+                  "token": "b33",
+                  "n": 71741,
+                  "nodes": 1,
+                  "fold_pct": 29.900002441731804,
+                  "raise_pct": 12.899996464511258
+                },
+                {
+                  "street": 2,
+                  "token": "b50",
+                  "n": 144567,
+                  "nodes": 1,
+                  "fold_pct": 44.000000065162666,
+                  "raise_pct": 8.29999774272714
+                },
+                {
+                  "street": 2,
+                  "token": "b100",
+                  "n": 43254,
+                  "nodes": 1,
+                  "fold_pct": 57.79999818967354,
+                  "raise_pct": 6.699998580648813
+                },
+                {
+                  "street": 3,
+                  "token": "b50",
+                  "n": 64272,
+                  "nodes": 192,
+                  "fold_pct": 53.10000023407439,
+                  "raise_pct": 9.299998053159463
+                },
+                {
+                  "street": 3,
+                  "token": "b75",
+                  "n": 58736,
+                  "nodes": 192,
+                  "fold_pct": 58.699998427334265,
+                  "raise_pct": 7.599998008675664
+                },
+                {
+                  "street": 3,
+                  "token": "b100",
+                  "n": 43634,
+                  "nodes": 192,
+                  "fold_pct": 64.59999868225927,
+                  "raise_pct": 6.199998466325821
+                }
+              ],
+              "measurement_policy": "STREET_SPECIFIC_POOL_MARGINALS",
+              "pool_sha256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+              "gto_parent_source_run_id": 45178881600,
+              "gto_parent_source_sha256": "8765d6b5ddfc47fdb29ac38c3675941e6fcaf51371b8f569c59ed3c3c5065897",
+              "viewer_archive_code": "B617_R58_KS7H2D",
+              "viewer_sha256": "c475f1a8559b19e2956bafa35a1d685d6cd73298743a53cf16a3b8ec0dad8087",
+              "root_applied_rust_lock_nodes": 0,
+              "subgame_applied_rust_lock_nodes": 868,
+              "strictly_reachable_combos": 29,
+              "compatible_hole_card_pairs": 1086
+            }
+          ],
+          "flop_texture": "KQ_HIGH",
+          "river": "3h",
+          "compatible_hole_card_pairs": 4019
+        },
+        {
+          "flop": "Kh8d5h",
+          "turn": "7d",
+          "public_board": "5h8dKh7d2c",
+          "actual_exact_action_line": "x b50 c/b33 c/",
+          "acting_seat": 0,
+          "exact_flop_action": "x b50 c",
+          "actual_pot_bb": 19.92,
+          "actual_effective_stack_bb": 90.04,
+          "actual_spr": 4.52008,
+          "model_assumed_spr": 4.35,
+          "relative_spr_error_pct": 3.909885,
+          "genuine_gto_exploitability_pct": 0.342252254486084,
+          "source_run_id": 45230117917,
+          "source_sha256": "0e66b7cf551706369769befa4b500c0d42220e46e4a75d66d69c0252a20bbc03",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 277,
+          "strict_full_street_combo_reachable": 120,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b75",
+            "b100"
+          ],
+          "medium_50pct_eligible_combos": 28,
+          "b50_nonpolarized_relative_equity_research_candidate": false,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 45230117917,
+              "sha256": "8365efd036f39dca77348e42c52a40b54e34005dafc58601dd7d776c2a82ff1d",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "observed_marginal_source_nodes": 51,
+              "assumed_default_source_nodes": 17,
+              "unlocked_source_nodes": 34,
+              "unknown_history_frequency_filled_with_default": true,
+              "source_not_real_per_combo_observation": true,
+              "villain_observed_pattern_node_share_pct": 66.667,
+              "true_hero_gap_pct": 0.44662413001060486,
+              "hero_model_gain_bb": 2.1254,
+              "medium_50pct_eligible_combos": 2,
+              "b50_nonpolarized_relative_equity_research_candidate": false,
+              "variant_label": "原始 GTO 翻牌策略及 NL2 轉、河牌玩家池節點鎖",
+              "applied_street_rates": [
+                {
+                  "street": 2,
+                  "token": "b33",
+                  "n": 71741,
+                  "nodes": 1,
+                  "fold_pct": 29.9000024150954,
+                  "raise_pct": 12.899995973847355
+                },
+                {
+                  "street": 2,
+                  "token": "b50",
+                  "n": 144567,
+                  "nodes": 1,
+                  "fold_pct": 43.99999982576902,
+                  "raise_pct": 8.29999781086915
+                },
+                {
+                  "street": 2,
+                  "token": "b100",
+                  "n": 43254,
+                  "nodes": 1,
+                  "fold_pct": 57.799997924412885,
+                  "raise_pct": 6.6999986790564945
+                },
+                {
+                  "street": 3,
+                  "token": "b50",
+                  "n": 64272,
+                  "nodes": 140,
+                  "fold_pct": 53.09999998925783,
+                  "raise_pct": 9.29999804339423
+                },
+                {
+                  "street": 3,
+                  "token": "b75",
+                  "n": 58736,
+                  "nodes": 140,
+                  "fold_pct": 58.69999818037547,
+                  "raise_pct": 7.599998000300594
+                },
+                {
+                  "street": 3,
+                  "token": "b100",
+                  "n": 43634,
+                  "nodes": 140,
+                  "fold_pct": 64.59999840626463,
+                  "raise_pct": 6.199998468185449
+                }
+              ],
+              "measurement_policy": "STREET_SPECIFIC_POOL_MARGINALS",
+              "pool_sha256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+              "gto_parent_source_run_id": 45230117917,
+              "gto_parent_source_sha256": "2f69d6e682bac5f125d85737a8852ad3c038b65ba5909eb3e7a75e359adf7f7c",
+              "viewer_archive_code": "B636_R58_KH8D5H",
+              "viewer_sha256": "ed19b342c3da2a91a9b5f2fa09cfc48049922de619eef335cd49fd7e105100a4",
+              "root_applied_rust_lock_nodes": 0,
+              "subgame_applied_rust_lock_nodes": 634,
+              "strictly_reachable_combos": 20,
+              "compatible_hole_card_pairs": 615
+            }
+          ],
+          "flop_texture": "KQ_HIGH",
+          "river": "2c",
+          "compatible_hole_card_pairs": 3813
+        }
+      ],
+      "proven_exact_board_count": 3,
+      "blocked_reason": null,
       "source_credibility": "GITHUB_ACTIONS_AUTHENTIC_CFR_SHA256_AND_FULL_STREET_COMBO_REACH"
     },
     "ln-ipfr-t_model-1h05w49": {
@@ -54386,7 +54717,7 @@
     "ln-3bp-3b_t_model-3sv4e8": {
       "model_id": "ln-3bp-3b_t_model-3sv4e8",
       "source_model_id": "ln-3bp-3b_f_cbet-1h4do36",
-      "label": "APPROX",
+      "label": "CERT-MULTIBOARD",
       "must_not_extrapolate_to_all_texture_cards": true,
       "model_frequencies_are_not_observed_combo_counts": true,
       "frequency_rank": 173,
@@ -54398,9 +54729,346 @@
       "preflop_text": "翻前：CO 開， 你 BTN 3-bet ，CO 跟",
       "abstract_action_history": "對手過、你下注、對手跟|對手過",
       "assumed_model_node_spr": 1.942,
-      "certified_3_to_5_exact_flop_boards": [],
-      "proven_exact_board_count": 0,
-      "blocked_reason": "LOWER_FREQUENCY_BELOW_PREREGISTERED_TOP24_CUTOFF",
+      "certified_3_to_5_exact_flop_boards": [
+        {
+          "flop": "8c6h3d",
+          "turn": "2s",
+          "public_board": "3d6h8c2s",
+          "actual_exact_action_line": "x b75 c/x",
+          "acting_seat": 1,
+          "exact_flop_action": "x b75 c",
+          "actual_pot_bb": 41.26,
+          "actual_effective_stack_bb": 80.12,
+          "actual_spr": 1.941832,
+          "model_assumed_spr": 1.942,
+          "relative_spr_error_pct": 0.008651,
+          "genuine_gto_exploitability_pct": 0.32939398288726807,
+          "source_run_id": 45231188172,
+          "source_sha256": "bf82397ba3a9a1683017cb6ac53e7a2cc990e49ec66a5f6c56c841b168e63cf4",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 111,
+          "strict_full_street_combo_reachable": 111,
+          "exact_node_actions": [
+            "x",
+            "b33",
+            "b50",
+            "b75"
+          ],
+          "medium_50pct_eligible_combos": 0,
+          "b50_nonpolarized_relative_equity_research_candidate": false,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_ip",
+              "run_id": 45231188172,
+              "sha256": "0bf8ea0d86e91e04d6a05c1e76ff96691d9720e8de2722f9e7e0f22b4b205ee6",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "observed_marginal_source_nodes": 3,
+              "assumed_default_source_nodes": 1,
+              "unlocked_source_nodes": 3,
+              "unknown_history_frequency_filled_with_default": true,
+              "source_not_real_per_combo_observation": true,
+              "villain_observed_pattern_node_share_pct": 57.143,
+              "true_hero_gap_pct": 0.4318614602088928,
+              "hero_model_gain_bb": 6.37252,
+              "medium_50pct_eligible_combos": 0,
+              "b50_nonpolarized_relative_equity_research_candidate": false,
+              "source_run_role": "VERIFICATION_OF_LOCAL_NATIVE_RESULTS",
+              "origin_solve_run_id": null,
+              "variant_label": "BTN 翻牌下注四分之三底池、CO 跟注；轉河牌按 NL2 分街頻率鎖定 CO 回應",
+              "pool_sha256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+              "measurement_policy": "STREET_SPECIFIC_POOL_MARGINALS",
+              "gto_parent_source_run_id": 45231188172,
+              "gto_parent_source_sha256": "154e1930171aaa579b2522cadac6284646c45e84286017571d458e5f3855488b",
+              "applied_street_rates": [
+                {
+                  "street": 2,
+                  "token": "b33",
+                  "n": 71741,
+                  "nodes": 1,
+                  "fold_pct": 29.900002801463266,
+                  "raise_pct": 12.899996227191554
+                },
+                {
+                  "street": 2,
+                  "token": "b75",
+                  "n": 112817,
+                  "nodes": 1,
+                  "fold_pct": 51.39999849725966,
+                  "raise_pct": 7.299997905617045
+                },
+                {
+                  "street": 3,
+                  "token": "b50",
+                  "n": 64272,
+                  "nodes": 144,
+                  "fold_pct": 53.099999978877136,
+                  "raise_pct": 9.299998116831611
+                },
+                {
+                  "street": 3,
+                  "token": "b100",
+                  "n": 43634,
+                  "nodes": 48,
+                  "fold_pct": 64.59999848146975,
+                  "raise_pct": 6.199998434320963
+                }
+              ],
+              "viewer_archive_code": "B641_R173_8C6H3D",
+              "viewer_sha256": "af2ab00dc8b25602bf2527c444d92afd8e963c1b80e805031700cac397b1644e",
+              "root_applied_rust_lock_nodes": 0,
+              "subgame_applied_rust_lock_nodes": 532,
+              "strictly_reachable_combos": 111,
+              "compatible_hole_card_pairs": 2792
+            }
+          ],
+          "flop_texture": "LOW",
+          "source_run_role": "VERIFICATION_OF_LOCAL_NATIVE_RESULTS",
+          "origin_solve_run_id": null,
+          "flop_bet_size_menu": "OOP 50%, IP 75%",
+          "restricted_flop_bet_sizes_pct": [
+            50,
+            75
+          ],
+          "conditional_turn_oop_bet_sizes_pct": [
+            33,
+            50,
+            75
+          ],
+          "conditional_turn_ip_bet_sizes_pct": [
+            33,
+            50,
+            75
+          ],
+          "compatible_hole_card_pairs": 1083
+        },
+        {
+          "flop": "Jh9c4d",
+          "turn": "2c",
+          "public_board": "4d9cJh2c",
+          "actual_exact_action_line": "x b75 c/x",
+          "acting_seat": 1,
+          "exact_flop_action": "x b75 c",
+          "actual_pot_bb": 41.26,
+          "actual_effective_stack_bb": 80.12,
+          "actual_spr": 1.941832,
+          "model_assumed_spr": 1.942,
+          "relative_spr_error_pct": 0.008651,
+          "genuine_gto_exploitability_pct": 0.41000470519065857,
+          "source_run_id": 45231188172,
+          "source_sha256": "c6879d3a1cab0305bf887d0ba6b6edff2ea1153658c782d1b438054d40c4b3c3",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 98,
+          "strict_full_street_combo_reachable": 98,
+          "exact_node_actions": [
+            "x",
+            "b33",
+            "b50",
+            "b75"
+          ],
+          "medium_50pct_eligible_combos": 0,
+          "b50_nonpolarized_relative_equity_research_candidate": false,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_ip",
+              "run_id": 45231188172,
+              "sha256": "7b338a7c609441f24c0ea841aac520ebb5f83383ad9cc13534b8547f71feaffe",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "observed_marginal_source_nodes": 3,
+              "assumed_default_source_nodes": 1,
+              "unlocked_source_nodes": 3,
+              "unknown_history_frequency_filled_with_default": true,
+              "source_not_real_per_combo_observation": true,
+              "villain_observed_pattern_node_share_pct": 57.143,
+              "true_hero_gap_pct": 0.3753114640712738,
+              "hero_model_gain_bb": 4.55126,
+              "medium_50pct_eligible_combos": 0,
+              "b50_nonpolarized_relative_equity_research_candidate": false,
+              "source_run_role": "VERIFICATION_OF_LOCAL_NATIVE_RESULTS",
+              "origin_solve_run_id": null,
+              "variant_label": "BTN 翻牌下注四分之三底池、CO 跟注；轉河牌按 NL2 分街頻率鎖定 CO 回應",
+              "pool_sha256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+              "measurement_policy": "STREET_SPECIFIC_POOL_MARGINALS",
+              "gto_parent_source_run_id": 45231188172,
+              "gto_parent_source_sha256": "44cb89c5831bca6aea38e98ea40efe827d5ce4a91e24c122fbf4bd4609e6b4ab",
+              "applied_street_rates": [
+                {
+                  "street": 2,
+                  "token": "b33",
+                  "n": 71741,
+                  "nodes": 1,
+                  "fold_pct": 29.900002708881296,
+                  "raise_pct": 12.899996103414207
+                },
+                {
+                  "street": 2,
+                  "token": "b75",
+                  "n": 112817,
+                  "nodes": 1,
+                  "fold_pct": 51.3999984085887,
+                  "raise_pct": 7.299998201233943
+                },
+                {
+                  "street": 3,
+                  "token": "b50",
+                  "n": 64272,
+                  "nodes": 144,
+                  "fold_pct": 53.099999782634974,
+                  "raise_pct": 9.29999808909173
+                },
+                {
+                  "street": 3,
+                  "token": "b100",
+                  "n": 43634,
+                  "nodes": 48,
+                  "fold_pct": 64.59999809816786,
+                  "raise_pct": 6.199998440955519
+                }
+              ],
+              "viewer_archive_code": "B641_R173_JH9C4D",
+              "viewer_sha256": "72a5cb07f14d199e67bd0f521f96c518a47957651eb393afe4ed17a0cef436b3",
+              "root_applied_rust_lock_nodes": 0,
+              "subgame_applied_rust_lock_nodes": 532,
+              "strictly_reachable_combos": 98,
+              "compatible_hole_card_pairs": 2548
+            }
+          ],
+          "flop_texture": "JT_HIGH",
+          "source_run_role": "VERIFICATION_OF_LOCAL_NATIVE_RESULTS",
+          "origin_solve_run_id": null,
+          "flop_bet_size_menu": "OOP 50%, IP 75%",
+          "restricted_flop_bet_sizes_pct": [
+            50,
+            75
+          ],
+          "conditional_turn_oop_bet_sizes_pct": [
+            33,
+            50,
+            75
+          ],
+          "conditional_turn_ip_bet_sizes_pct": [
+            33,
+            50,
+            75
+          ],
+          "compatible_hole_card_pairs": 3007
+        },
+        {
+          "flop": "7c5d3h",
+          "turn": "2h",
+          "public_board": "3h5d7c2h",
+          "actual_exact_action_line": "x b75 c/x",
+          "acting_seat": 1,
+          "exact_flop_action": "x b75 c",
+          "actual_pot_bb": 41.26,
+          "actual_effective_stack_bb": 80.12,
+          "actual_spr": 1.941832,
+          "model_assumed_spr": 1.942,
+          "relative_spr_error_pct": 0.008651,
+          "genuine_gto_exploitability_pct": 0.37119758129119873,
+          "source_run_id": 45231188172,
+          "source_sha256": "2ce920cfedb5ecdf209f880e31db2913d64b8f47b85b7aeea6b3cfe608e2aa79",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 114,
+          "strict_full_street_combo_reachable": 110,
+          "exact_node_actions": [
+            "x",
+            "b33",
+            "b50",
+            "b75"
+          ],
+          "medium_50pct_eligible_combos": 18,
+          "b50_nonpolarized_relative_equity_research_candidate": false,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_ip",
+              "run_id": 45231188172,
+              "sha256": "0caf3a02469b5fe789da4718bb8e910db2d461a6de9c2f6e08961447179ce043",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "observed_marginal_source_nodes": 3,
+              "assumed_default_source_nodes": 1,
+              "unlocked_source_nodes": 3,
+              "unknown_history_frequency_filled_with_default": true,
+              "source_not_real_per_combo_observation": true,
+              "villain_observed_pattern_node_share_pct": 57.143,
+              "true_hero_gap_pct": 0.3816472291946411,
+              "hero_model_gain_bb": 5.0388,
+              "medium_50pct_eligible_combos": 0,
+              "b50_nonpolarized_relative_equity_research_candidate": false,
+              "source_run_role": "VERIFICATION_OF_LOCAL_NATIVE_RESULTS",
+              "origin_solve_run_id": null,
+              "variant_label": "BTN 翻牌下注四分之三底池、CO 跟注；轉河牌按 NL2 分街頻率鎖定 CO 回應",
+              "pool_sha256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+              "measurement_policy": "STREET_SPECIFIC_POOL_MARGINALS",
+              "gto_parent_source_run_id": 45231188172,
+              "gto_parent_source_sha256": "99f289ca74b762086e6acbb6632a27de0dfa6194b4f674133d9487ce27fefb11",
+              "applied_street_rates": [
+                {
+                  "street": 2,
+                  "token": "b33",
+                  "n": 71741,
+                  "nodes": 1,
+                  "fold_pct": 29.900002943939857,
+                  "raise_pct": 12.89999608316183
+                },
+                {
+                  "street": 2,
+                  "token": "b75",
+                  "n": 112817,
+                  "nodes": 1,
+                  "fold_pct": 51.399998703428274,
+                  "raise_pct": 7.299998065134253
+                },
+                {
+                  "street": 3,
+                  "token": "b50",
+                  "n": 64272,
+                  "nodes": 144,
+                  "fold_pct": 53.10000008128763,
+                  "raise_pct": 9.29999810551599
+                },
+                {
+                  "street": 3,
+                  "token": "b100",
+                  "n": 43634,
+                  "nodes": 48,
+                  "fold_pct": 64.59999864066798,
+                  "raise_pct": 6.199998446502652
+                }
+              ],
+              "viewer_archive_code": "B641_R173_7C5D3H",
+              "viewer_sha256": "5549a5c9dd0bdaacca9aa390e21057511bb98889337e23a54befb61ba1477944",
+              "root_applied_rust_lock_nodes": 0,
+              "subgame_applied_rust_lock_nodes": 532,
+              "strictly_reachable_combos": 110,
+              "compatible_hole_card_pairs": 2807
+            }
+          ],
+          "flop_texture": "LOW",
+          "source_run_role": "VERIFICATION_OF_LOCAL_NATIVE_RESULTS",
+          "origin_solve_run_id": null,
+          "flop_bet_size_menu": "OOP 50%, IP 75%",
+          "restricted_flop_bet_sizes_pct": [
+            50,
+            75
+          ],
+          "conditional_turn_oop_bet_sizes_pct": [
+            33,
+            50,
+            75
+          ],
+          "conditional_turn_ip_bet_sizes_pct": [
+            33,
+            50,
+            75
+          ],
+          "compatible_hole_card_pairs": 2162
+        }
+      ],
+      "proven_exact_board_count": 3,
+      "blocked_reason": null,
       "source_credibility": "GITHUB_ACTIONS_AUTHENTIC_CFR_SHA256_AND_FULL_STREET_COMBO_REACH"
     },
     "ln-opfr-r_model-1ll3vz4": {
@@ -93349,6 +94017,110 @@
           }
         ],
         "source_run_role": "VERIFICATION_OF_LOCAL_NATIVE_RESULTS"
+      }
+    ],
+    "ln-opfr-r_model-aumml6": [
+      {
+        "flop": "Jh8s5d",
+        "turn": "6c",
+        "public_board": "5d8sJh6c2c",
+        "source_run_id": 45178881600,
+        "archive_code": "B617_R58_JH8S5D",
+        "archive_sha256": "25e5e832870bf6cb74a633b5e6c99793823b54b5f6dd85131965f9f450f62c65",
+        "viewer_archive_code": "B617_R58_JH8S5D",
+        "viewer_sha256": "d59aea145d447d76998e59dbdcb87b91ed245f5de81c9bd79ff373bb4f851923",
+        "original_GTO_SHA256": "7f6b12b62b1747cf7bdd0a3918e66ba2c7ef1d226681cb3120afdbea9351d205",
+        "actual_NL2_SHA256": "a3016a77df1cc5a5d49f764a43d2889446c90708a86b502fff37c97790bd36a8",
+        "actual_spr": 4.52008,
+        "GTO_strict_combos": 237,
+        "NL2_strict_combos": 73,
+        "GTO_compatible_hole_card_pairs": 2943,
+        "NL2_compatible_hole_card_pairs": 839,
+        "common_legal_hero_combos": 70,
+        "pool_observed_marginal_lock_nodes": 99,
+        "pool_assumed_lock_nodes": 33,
+        "pool_unlocked_nodes": 64,
+        "medium50_exact_research_candidate": false,
+        "locked_original_archive_code": "B617_R58_JH8S5D",
+        "locked_original_archive_sha256": "25e5e832870bf6cb74a633b5e6c99793823b54b5f6dd85131965f9f450f62c65",
+        "river": "2c",
+        "shared_rendered_checks": [
+          "4cJc",
+          "4dJd",
+          "4sJs",
+          "7cJc",
+          "9dJc",
+          "9dJs",
+          "9hJd",
+          "9hJs",
+          "9sJc",
+          "9sJd"
+        ],
+        "worker_artifact": 14821251168,
+        "worker_sha256": "e069fd3b8aef8b2c95a71fedb9cbf983ce791d4c0d5da874a060acc89022cc83",
+        "original_flop_artifact": 14790353462
+      },
+      {
+        "flop": "Ks7h2d",
+        "turn": "9d",
+        "public_board": "2d7hKs9d3h",
+        "source_run_id": 45178881600,
+        "archive_code": "B617_R58_KS7H2D",
+        "archive_sha256": "9b96584bdcbd2ae70efd3b58c11a40de5f6b5b20e67531536a6198f15bf4bda8",
+        "viewer_archive_code": "B617_R58_KS7H2D",
+        "viewer_sha256": "c475f1a8559b19e2956bafa35a1d685d6cd73298743a53cf16a3b8ec0dad8087",
+        "original_GTO_SHA256": "951cf5ff20984440e9f0f93ba2b9e3e61a2b85e8d33403cdf9b3048c115bc1f1",
+        "actual_NL2_SHA256": "457291b559252829ca9732ed0543554d53c8b86cbdccdfb0d6658ec766d2fa86",
+        "actual_spr": 4.52008,
+        "GTO_strict_combos": 99,
+        "NL2_strict_combos": 29,
+        "GTO_compatible_hole_card_pairs": 4019,
+        "NL2_compatible_hole_card_pairs": 1086,
+        "common_legal_hero_combos": 12,
+        "pool_observed_marginal_lock_nodes": 75,
+        "pool_assumed_lock_nodes": 25,
+        "pool_unlocked_nodes": 50,
+        "medium50_exact_research_candidate": false,
+        "locked_original_archive_code": "B617_R58_KS7H2D",
+        "locked_original_archive_sha256": "9b96584bdcbd2ae70efd3b58c11a40de5f6b5b20e67531536a6198f15bf4bda8",
+        "river": "3h",
+        "shared_rendered_checks": [
+          "8dKd"
+        ],
+        "worker_artifact": 14819788838,
+        "worker_sha256": "56fd68bd2550c9b2bbbad0facfd423f5a514a43c3b7ad16f8c24018e86ec1499",
+        "original_flop_artifact": 14593610543
+      },
+      {
+        "flop": "Kh8d5h",
+        "turn": "7d",
+        "public_board": "5h8dKh7d2c",
+        "source_run_id": 45230117917,
+        "archive_code": "B636_R58_KH8D5H",
+        "archive_sha256": "ad25f3ba1e4129378045f642bffb1bca508670838a79bcb40e96f00247681f5f",
+        "viewer_archive_code": "B636_R58_KH8D5H",
+        "viewer_sha256": "ed19b342c3da2a91a9b5f2fa09cfc48049922de619eef335cd49fd7e105100a4",
+        "original_GTO_SHA256": "0e66b7cf551706369769befa4b500c0d42220e46e4a75d66d69c0252a20bbc03",
+        "actual_NL2_SHA256": "8365efd036f39dca77348e42c52a40b54e34005dafc58601dd7d776c2a82ff1d",
+        "actual_spr": 4.52008,
+        "GTO_strict_combos": 120,
+        "NL2_strict_combos": 20,
+        "GTO_compatible_hole_card_pairs": 3813,
+        "NL2_compatible_hole_card_pairs": 615,
+        "common_legal_hero_combos": 14,
+        "pool_observed_marginal_lock_nodes": 51,
+        "pool_assumed_lock_nodes": 17,
+        "pool_unlocked_nodes": 34,
+        "medium50_exact_research_candidate": false,
+        "locked_original_archive_code": "B636_R58_KH8D5H",
+        "locked_original_archive_sha256": "ad25f3ba1e4129378045f642bffb1bca508670838a79bcb40e96f00247681f5f",
+        "river": "2c",
+        "shared_rendered_checks": [
+          "6dKd"
+        ],
+        "worker_artifact": 14846059010,
+        "worker_sha256": "c9c959ab012ac043c1fd3d488df5ee26a433a8b72b204cc54b48c79d4b606fa9",
+        "original_flop_artifact": 14794796898
       }
     ],
     "ln-ipfr-t_model-snfiz2": [
@@ -154005,6 +154777,2588 @@
         }
       }
     ],
+    "ln-3bp-3b_t_model-3sv4e8": [
+      {
+        "flop": "8c6h3d",
+        "turn": "2s",
+        "public_board": "3d6h8c2s",
+        "source_run_id": 45231188172,
+        "archive_code": "B641_R173_8C6H3D",
+        "archive_sha256": "a35b6cccae405063b58289b328e9544c379b82296a1749e9be32ee440c9e3e51",
+        "viewer_archive_code": "B641_R173_8C6H3D",
+        "viewer_sha256": "af2ab00dc8b25602bf2527c444d92afd8e963c1b80e805031700cac397b1644e",
+        "original_GTO_SHA256": "bf82397ba3a9a1683017cb6ac53e7a2cc990e49ec66a5f6c56c841b168e63cf4",
+        "actual_NL2_SHA256": "0bf8ea0d86e91e04d6a05c1e76ff96691d9720e8de2722f9e7e0f22b4b205ee6",
+        "actual_spr": 1.941832,
+        "GTO_strict_combos": 111,
+        "NL2_strict_combos": 111,
+        "GTO_compatible_hole_card_pairs": 1083,
+        "NL2_compatible_hole_card_pairs": 2792,
+        "common_legal_hero_combos": 111,
+        "pool_observed_marginal_lock_nodes": 3,
+        "pool_assumed_lock_nodes": 1,
+        "pool_unlocked_nodes": 3,
+        "medium50_exact_research_candidate": false,
+        "locked_original_archive_code": "B641_R173_8C6H3D",
+        "locked_original_archive_sha256": "a35b6cccae405063b58289b328e9544c379b82296a1749e9be32ee440c9e3e51",
+        "rendered_decision_hands": [
+          {
+            "hand": "9dAs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.7629,
+                "b33": 0.0218,
+                "b50": 0.0819,
+                "b75": 0.1334
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9745975,
+                "b33": 0.0241024,
+                "b50": 0.0005001,
+                "b75": 0.0008001
+              }
+            }
+          },
+          {
+            "hand": "9hAc",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.8644,
+                "b33": 0.0004,
+                "b50": 0.023,
+                "b75": 0.1122
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9687,
+                "b33": 0.0302,
+                "b50": 0.0002,
+                "b75": 0.0009
+              }
+            }
+          },
+          {
+            "hand": "9hAd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9461,
+                "b33": 0.0024,
+                "b50": 0.0361,
+                "b75": 0.0154
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9991,
+                "b33": 0.0006,
+                "b50": 0.0002,
+                "b75": 0.0001
+              }
+            }
+          },
+          {
+            "hand": "9hAs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.6831,
+                "b33": 0.0298,
+                "b50": 0.0835,
+                "b75": 0.2036
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9979,
+                "b33": 0.0002,
+                "b50": 0.0005,
+                "b75": 0.0014
+              }
+            }
+          },
+          {
+            "hand": "AcJc",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.57,
+                "b33": 0.0003,
+                "b50": 0.0194,
+                "b75": 0.4103
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9685969,
+                "b33": 0.0272027,
+                "b50": 0.0001,
+                "b75": 0.0041004
+              }
+            }
+          },
+          {
+            "hand": "AcKc",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.6313,
+                "b33": 0.0004,
+                "b50": 0.0226,
+                "b75": 0.3457
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9963,
+                "b33": 0.0006,
+                "b50": 0.0001,
+                "b75": 0.003
+              }
+            }
+          },
+          {
+            "hand": "AcKd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.5997,
+                "b33": 0.0005,
+                "b50": 0.0363,
+                "b75": 0.3635
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9934993,
+                "b33": 0.0029003,
+                "b50": 0.0002,
+                "b75": 0.0034003
+              }
+            }
+          },
+          {
+            "hand": "AcKh",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.607,
+                "b33": 0.0004,
+                "b50": 0.0145,
+                "b75": 0.3781
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9920008,
+                "b33": 0.0041996,
+                "b50": 0.0001,
+                "b75": 0.0036996
+              }
+            }
+          },
+          {
+            "hand": "AcKs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.5407,
+                "b33": 0.0006,
+                "b50": 0.1104,
+                "b75": 0.3483
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9946,
+                "b33": 0.0016,
+                "b50": 0.0007,
+                "b75": 0.0031
+              }
+            }
+          },
+          {
+            "hand": "AcQd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 1.0,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9977,
+                "b33": 0.0023,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            }
+          },
+          {
+            "hand": "AcQs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9998,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.0002
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.7866,
+                "b33": 0.2134,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            }
+          },
+          {
+            "hand": "AdJc",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.510049,
+                "b33": 0.0005999,
+                "b50": 0.0139986,
+                "b75": 0.4753525
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9045905,
+                "b33": 0.0905091,
+                "b50": 0.0001,
+                "b75": 0.0048005
+              }
+            }
+          },
+          {
+            "hand": "AdKc",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.8538,
+                "b33": 0.0016,
+                "b50": 0.0024,
+                "b75": 0.1422
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9987,
+                "b33": 0.0004,
+                "b50": 0.0,
+                "b75": 0.0009
+              }
+            }
+          },
+          {
+            "hand": "AdKd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.8276172,
+                "b33": 0.0028997,
+                "b50": 0.0029997,
+                "b75": 0.1664834
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9967,
+                "b33": 0.0022,
+                "b50": 0.0,
+                "b75": 0.0011
+              }
+            }
+          },
+          {
+            "hand": "AdKh",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.8084,
+                "b33": 0.0015,
+                "b50": 0.002,
+                "b75": 0.1881
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9965,
+                "b33": 0.0022,
+                "b50": 0.0,
+                "b75": 0.0013
+              }
+            }
+          },
+          {
+            "hand": "AdKs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.8840116,
+                "b33": 0.0025997,
+                "b50": 0.0048995,
+                "b75": 0.1084892
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9968,
+                "b33": 0.0025,
+                "b50": 0.0,
+                "b75": 0.0007
+              }
+            }
+          },
+          {
+            "hand": "AhKc",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.5472,
+                "b33": 0.0006,
+                "b50": 0.0437,
+                "b75": 0.4085
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9938,
+                "b33": 0.0013,
+                "b50": 0.0002,
+                "b75": 0.0047
+              }
+            }
+          },
+          {
+            "hand": "AhKd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.5205,
+                "b33": 0.0008,
+                "b50": 0.0565,
+                "b75": 0.4222
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9917992,
+                "b33": 0.0029003,
+                "b50": 0.0003,
+                "b75": 0.0050005
+              }
+            }
+          },
+          {
+            "hand": "AhKh",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.5274473,
+                "b33": 0.0005,
+                "b50": 0.0332967,
+                "b75": 0.4387561
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9906,
+                "b33": 0.004,
+                "b50": 0.0002,
+                "b75": 0.0052
+              }
+            }
+          },
+          {
+            "hand": "AhKs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.4641,
+                "b33": 0.0009,
+                "b50": 0.1309,
+                "b75": 0.4041
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9927007,
+                "b33": 0.0016998,
+                "b50": 0.0008999,
+                "b75": 0.0046995
+              }
+            }
+          },
+          {
+            "hand": "AhQd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 1.0,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.7338,
+                "b33": 0.2658,
+                "b50": 0.0,
+                "b75": 0.0004
+              }
+            }
+          },
+          {
+            "hand": "AsJc",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.4236424,
+                "b33": 0.0006001,
+                "b50": 0.0653065,
+                "b75": 0.510451
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.989601,
+                "b33": 0.0056994,
+                "b50": 0.0005,
+                "b75": 0.0041996
+              }
+            }
+          },
+          {
+            "hand": "AsJd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.4435,
+                "b33": 0.0007,
+                "b50": 0.0502,
+                "b75": 0.5056
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.7019,
+                "b33": 0.2935,
+                "b50": 0.0004,
+                "b75": 0.0042
+              }
+            }
+          },
+          {
+            "hand": "AsJh",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.4441,
+                "b33": 0.0009,
+                "b50": 0.05,
+                "b75": 0.505
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.6472,
+                "b33": 0.3482,
+                "b50": 0.0004,
+                "b75": 0.0042
+              }
+            }
+          },
+          {
+            "hand": "AsKc",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9985999,
+                "b33": 0.0013001,
+                "b50": 0.0,
+                "b75": 0.0001
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 1.0,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            }
+          },
+          {
+            "hand": "AsKd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9986999,
+                "b33": 0.0012001,
+                "b50": 0.0,
+                "b75": 0.0001
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 1.0,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            }
+          },
+          {
+            "hand": "AsKh",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9983,
+                "b33": 0.0015,
+                "b50": 0.0,
+                "b75": 0.0002
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 1.0,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            }
+          },
+          {
+            "hand": "AsKs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9996,
+                "b33": 0.0003,
+                "b50": 0.0,
+                "b75": 0.0001
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 1.0,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            }
+          },
+          {
+            "hand": "AsQc",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9999,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.0001
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9992,
+                "b33": 0.0008,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            }
+          },
+          {
+            "hand": "AsQd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 1.0,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9997,
+                "b33": 0.0003,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            }
+          },
+          {
+            "hand": "AsQh",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 1.0,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9981,
+                "b33": 0.0019,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            }
+          },
+          {
+            "hand": "AsQs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.6114389,
+                "b33": 0.0015998,
+                "b50": 0.0088991,
+                "b75": 0.3780622
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9654,
+                "b33": 0.0314,
+                "b50": 0.0001,
+                "b75": 0.0031
+              }
+            }
+          },
+          {
+            "hand": "JcQd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.4272,
+                "b33": 0.0007,
+                "b50": 0.0067,
+                "b75": 0.5654
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9932007,
+                "b33": 0.0012999,
+                "b50": 0.0002,
+                "b75": 0.0052995
+              }
+            }
+          },
+          {
+            "hand": "JhQd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.4391,
+                "b33": 0.0008,
+                "b50": 0.0053,
+                "b75": 0.5548
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9831,
+                "b33": 0.0112,
+                "b50": 0.0002,
+                "b75": 0.0055
+              }
+            }
+          }
+        ],
+        "source_run_role": "VERIFICATION_OF_LOCAL_NATIVE_RESULTS"
+      },
+      {
+        "flop": "Jh9c4d",
+        "turn": "2c",
+        "public_board": "4d9cJh2c",
+        "source_run_id": 45231188172,
+        "archive_code": "B641_R173_JH9C4D",
+        "archive_sha256": "e6670a25982b16efd368d4b107935fa64528d22d499e801c4172aaa68487e3ac",
+        "viewer_archive_code": "B641_R173_JH9C4D",
+        "viewer_sha256": "72a5cb07f14d199e67bd0f521f96c518a47957651eb393afe4ed17a0cef436b3",
+        "original_GTO_SHA256": "c6879d3a1cab0305bf887d0ba6b6edff2ea1153658c782d1b438054d40c4b3c3",
+        "actual_NL2_SHA256": "7b338a7c609441f24c0ea841aac520ebb5f83383ad9cc13534b8547f71feaffe",
+        "actual_spr": 1.941832,
+        "GTO_strict_combos": 98,
+        "NL2_strict_combos": 98,
+        "GTO_compatible_hole_card_pairs": 3007,
+        "NL2_compatible_hole_card_pairs": 2548,
+        "common_legal_hero_combos": 98,
+        "pool_observed_marginal_lock_nodes": 3,
+        "pool_assumed_lock_nodes": 1,
+        "pool_unlocked_nodes": 3,
+        "medium50_exact_research_candidate": false,
+        "locked_original_archive_code": "B641_R173_JH9C4D",
+        "locked_original_archive_sha256": "e6670a25982b16efd368d4b107935fa64528d22d499e801c4172aaa68487e3ac",
+        "rendered_decision_hands": [
+          {
+            "hand": "AdKd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.7309,
+                "b33": 0.0004,
+                "b50": 0.0074,
+                "b75": 0.2613
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9943,
+                "b33": 0.0002,
+                "b50": 0.0001,
+                "b75": 0.0054
+              }
+            }
+          },
+          {
+            "hand": "AdQd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.7230277,
+                "b33": 0.0010999,
+                "b50": 0.0139986,
+                "b75": 0.2618738
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.7648,
+                "b33": 0.2273,
+                "b50": 0.0002,
+                "b75": 0.0077
+              }
+            }
+          },
+          {
+            "hand": "AhKd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.7326,
+                "b33": 0.0004,
+                "b50": 0.0095,
+                "b75": 0.2575
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9948,
+                "b33": 0.0,
+                "b50": 0.0001,
+                "b75": 0.0051
+              }
+            }
+          },
+          {
+            "hand": "AhQd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.748,
+                "b33": 0.0009,
+                "b50": 0.0091,
+                "b75": 0.242
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9946995,
+                "b33": 0.0,
+                "b50": 0.0001,
+                "b75": 0.0052005
+              }
+            }
+          },
+          {
+            "hand": "AhQs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.739974,
+                "b33": 0.0009001,
+                "b50": 0.0130013,
+                "b75": 0.2461246
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.622,
+                "b33": 0.0,
+                "b50": 0.0002,
+                "b75": 0.3778
+              }
+            }
+          },
+          {
+            "hand": "AsKd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.6683332,
+                "b33": 0.0007999,
+                "b50": 0.0146985,
+                "b75": 0.3161684
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9938,
+                "b33": 0.0004,
+                "b50": 0.0004,
+                "b75": 0.0054
+              }
+            }
+          },
+          {
+            "hand": "AsKh",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.6927,
+                "b33": 0.0006,
+                "b50": 0.0079,
+                "b75": 0.2988
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 3,
+              "accepted_actions": [
+                "x",
+                "b33"
+              ],
+              "strategy": {
+                "x": 0.5615,
+                "b33": 0.4329,
+                "b50": 0.0001,
+                "b75": 0.0055
+              }
+            }
+          },
+          {
+            "hand": "AsQd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.6232,
+                "b33": 0.0045,
+                "b50": 0.0464,
+                "b75": 0.3259
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9934993,
+                "b33": 0.0001,
+                "b50": 0.0006001,
+                "b75": 0.0058006
+              }
+            }
+          },
+          {
+            "hand": "AsQs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.6034,
+                "b33": 0.0086,
+                "b50": 0.0492,
+                "b75": 0.3388
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9925,
+                "b33": 0.0001,
+                "b50": 0.0007,
+                "b75": 0.0067
+              }
+            }
+          }
+        ],
+        "source_run_role": "VERIFICATION_OF_LOCAL_NATIVE_RESULTS"
+      },
+      {
+        "flop": "7c5d3h",
+        "turn": "2h",
+        "public_board": "3h5d7c2h",
+        "source_run_id": 45231188172,
+        "archive_code": "B641_R173_7C5D3H",
+        "archive_sha256": "c238067da4368ee621870fd9e3f411bdc4c6ea7dff4b7a3c8ab059e915bff76e",
+        "viewer_archive_code": "B641_R173_7C5D3H",
+        "viewer_sha256": "5549a5c9dd0bdaacca9aa390e21057511bb98889337e23a54befb61ba1477944",
+        "original_GTO_SHA256": "2ce920cfedb5ecdf209f880e31db2913d64b8f47b85b7aeea6b3cfe608e2aa79",
+        "actual_NL2_SHA256": "0caf3a02469b5fe789da4718bb8e910db2d461a6de9c2f6e08961447179ce043",
+        "actual_spr": 1.941832,
+        "GTO_strict_combos": 110,
+        "NL2_strict_combos": 110,
+        "GTO_compatible_hole_card_pairs": 2162,
+        "NL2_compatible_hole_card_pairs": 2807,
+        "common_legal_hero_combos": 110,
+        "pool_observed_marginal_lock_nodes": 3,
+        "pool_assumed_lock_nodes": 1,
+        "pool_unlocked_nodes": 3,
+        "medium50_exact_research_candidate": false,
+        "locked_original_archive_code": "B641_R173_7C5D3H",
+        "locked_original_archive_sha256": "c238067da4368ee621870fd9e3f411bdc4c6ea7dff4b7a3c8ab059e915bff76e",
+        "rendered_decision_hands": [
+          {
+            "hand": "9cAd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9845,
+                "b33": 0.0008,
+                "b50": 0.0021,
+                "b75": 0.0126
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.5959404,
+                "b33": 0.3974603,
+                "b50": 0.0059994,
+                "b75": 0.0005999
+              }
+            }
+          },
+          {
+            "hand": "9cAs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9926993,
+                "b33": 0.0,
+                "b50": 0.0035004,
+                "b75": 0.0038004
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 3,
+              "accepted_actions": [
+                "x",
+                "b33"
+              ],
+              "strategy": {
+                "x": 0.5327,
+                "b33": 0.467,
+                "b50": 0.0003,
+                "b75": 0.0
+              }
+            }
+          },
+          {
+            "hand": "9dAc",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9837,
+                "b33": 0.0,
+                "b50": 0.0128,
+                "b75": 0.0035
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.6318,
+                "b33": 0.3682,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            }
+          },
+          {
+            "hand": "9dAs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9666,
+                "b33": 0.0,
+                "b50": 0.0094,
+                "b75": 0.024
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 3,
+              "accepted_actions": [
+                "x",
+                "b33"
+              ],
+              "strategy": {
+                "x": 0.5818,
+                "b33": 0.4182,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            }
+          },
+          {
+            "hand": "9sAc",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9632,
+                "b33": 0.0,
+                "b50": 0.0207,
+                "b75": 0.0161
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 1.0,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.0
+              }
+            }
+          },
+          {
+            "hand": "9sAd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9593,
+                "b33": 0.0043,
+                "b50": 0.0091,
+                "b75": 0.0273
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.993,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.007
+              }
+            }
+          },
+          {
+            "hand": "AcKd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.7941,
+                "b33": 0.0011,
+                "b50": 0.1466,
+                "b75": 0.0582
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.5658,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.4342
+              }
+            }
+          },
+          {
+            "hand": "AcKh",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.7068293,
+                "b33": 0.0016998,
+                "b50": 0.2723728,
+                "b75": 0.0190981
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.7026297,
+                "b33": 0.039896,
+                "b50": 0.0036996,
+                "b75": 0.2537746
+              }
+            }
+          },
+          {
+            "hand": "AcKs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.8191,
+                "b33": 0.001,
+                "b50": 0.1291,
+                "b75": 0.0508
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.4527,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.5473
+              }
+            }
+          },
+          {
+            "hand": "AhKc",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 5,
+              "accepted_actions": [
+                "x",
+                "b50"
+              ],
+              "strategy": {
+                "x": 0.4834,
+                "b33": 0.0064,
+                "b50": 0.4956,
+                "b75": 0.0146
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.8728,
+                "b33": 0.0025,
+                "b50": 0.0041,
+                "b75": 0.1206
+              }
+            }
+          },
+          {
+            "hand": "AhKd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 5,
+              "accepted_actions": [
+                "x",
+                "b50"
+              ],
+              "strategy": {
+                "x": 0.4826483,
+                "b33": 0.0063006,
+                "b50": 0.4963496,
+                "b75": 0.0147015
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9905,
+                "b33": 0.0014,
+                "b50": 0.0014,
+                "b75": 0.0067
+              }
+            }
+          },
+          {
+            "hand": "AhKs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 5,
+              "accepted_actions": [
+                "x",
+                "b50"
+              ],
+              "strategy": {
+                "x": 0.5104,
+                "b33": 0.0065,
+                "b50": 0.4745,
+                "b75": 0.0086
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.8094,
+                "b33": 0.0023,
+                "b50": 0.0053,
+                "b75": 0.183
+              }
+            }
+          },
+          {
+            "hand": "AsKc",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.705,
+                "b33": 0.0011,
+                "b50": 0.2224,
+                "b75": 0.0715
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.548,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.452
+              }
+            }
+          },
+          {
+            "hand": "AsKd",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.7050705,
+                "b33": 0.0010001,
+                "b50": 0.2222222,
+                "b75": 0.0717072
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.6337,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.3663
+              }
+            }
+          },
+          {
+            "hand": "AsKh",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.6661,
+                "b33": 0.0016,
+                "b50": 0.3195,
+                "b75": 0.0128
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.7688231,
+                "b33": 0.0276972,
+                "b50": 0.0031997,
+                "b75": 0.20028
+              }
+            }
+          },
+          {
+            "hand": "AsKs",
+            "flop_class": "WDRAW",
+            "turn_class": "WDRAW",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.7143,
+                "b33": 0.001,
+                "b50": 0.2159,
+                "b75": 0.0688
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b33",
+                "b50",
+                "b75"
+              ],
+              "accepted_mask": 9,
+              "accepted_actions": [
+                "x",
+                "b75"
+              ],
+              "strategy": {
+                "x": 0.5068,
+                "b33": 0.0,
+                "b50": 0.0,
+                "b75": 0.4932
+              }
+            }
+          }
+        ],
+        "source_run_role": "VERIFICATION_OF_LOCAL_NATIVE_RESULTS"
+      }
+    ],
     "ln-3bp-3b_r_model-1mh38ma": [
       {
         "flop": "Ks7h2d",
@@ -167016,18 +170370,18 @@
   "base_registry": "nl2_hu_multiboard_status_v53_b465_rank218.json",
   "base_registry_sha256": "c774b2c3e44aadead2b4e12f4618796097336ae0669e2140674b338e22eb7ca1",
   "all_cert_lock_medium": {
-    "lock_variants_with_separately_audited_b50": 604,
+    "lock_variants_with_separately_audited_b50": 610,
     "lock_variants_with_b50_candidate": 234,
-    "paired_hero_locked_source_variants": 604,
-    "variants_with_assumed_defaults": 445,
-    "variants_with_measured_aggregate_marginals": 601,
-    "source_nodes_from_measured_NL2_marginals": 6535,
-    "source_nodes_from_assumed_defaults": 2798,
-    "source_villain_nodes_unmatched_unlocked": 7805,
-    "named_board_proofs": 474,
+    "paired_hero_locked_source_variants": 610,
+    "variants_with_assumed_defaults": 451,
+    "variants_with_measured_aggregate_marginals": 607,
+    "source_nodes_from_measured_NL2_marginals": 6769,
+    "source_nodes_from_assumed_defaults": 2876,
+    "source_villain_nodes_unmatched_unlocked": 7962,
+    "named_board_proofs": 480,
     "board_examples_with_b50_candidate": 104,
-    "strictly_reachable_combo_rows": 62455,
-    "board_examples_without_nonpolarized_evidence": 370,
-    "models_with_3_to_5_gto_and_hero_lock_source": 135
+    "strictly_reachable_combo_rows": 63230,
+    "board_examples_without_nonpolarized_evidence": 376,
+    "models_with_3_to_5_gto_and_hero_lock_source": 137
   }
 }

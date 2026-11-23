@@ -33,6 +33,11 @@ def reply_rules(pool, flop_line, pfr, family, actions, seat):
         return [dict(pattern="^"+flop_line+"/b(50|100)$", table="HU_facing_bet[2].by_pot[limped]",
                      size="all", **rate)]
     table = pool["postflop_HU"][family + "_PFR_" + pfr.upper()]
+    if seat and family=="SRP" and flop_line=="b50 c":
+        assert actions==["x","b50","b100"]
+        obs=pool["HU_facing_bet"]["2"]["by_pot"]["SRP"]
+        assert obs["n"]==268439
+        return [dict(pattern="^b50 c/x b(50|100)$",table="HU_facing_bet[2].by_pot[SRP]",size="all",**obs)]
     if seat and flop_line == "x x" and family=="3BP":
         if pfr=="oop":
             assert actions==["x","b50","b100"]
@@ -103,7 +108,7 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
     parent_job,root_sha=parent["job"],parent["identity"]["root_sha256"]
     assert (original["line0"], original["turn"], board["actual_exact_action_line"], board["acting_seat"]) == (flop_line, public[-2:], line, seat)
     bet_pct = 0 if flop_line=="x x" else int(next(token[1:] for token in flop_line.split() if token.startswith("b")))
-    if seat and flop_line != "x x":
+    if seat and flop_line.startswith("x b"):
         assert parent_job["root_no_bet"] and model["solver_profile"] in ("BTN_BB","CO_BB")
         forced, = (n for n in original["nodes"] if (n["board"],n["line"],n["player"])==(public,turn_root,0))
         assert forced["acts"]==["x"]
@@ -155,12 +160,16 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
         medium_index=actions.index("b50")
         hands={h:round(node["strat"][medium_index*len(legal)+i],6)
                for i,(h,m) in enumerate(zip(game["hands"][seat],legal,strict=True)) if m & (1<<medium_index)}
-        assert len(hands)==row["b50"]["eligible"] and row["compatible_hole_card_pairs"]>=row["strict_legal_combos"]>0
+        if row["strict_legal_combos"]==0:
+            assert game is locked and seat==1 and flop_line=="b50 c"
+            assert not hands and row["compatible_hole_card_pairs"]==0 and row["b50"] is None
+        else:
+            assert len(hands)==row["b50"]["eligible"] and row["compatible_hole_card_pairs"]>=row["strict_legal_combos"]
         return dict(legal_combos=row["strict_legal_combos"],compatible_pairs=row["compatible_hole_card_pairs"],
                     actions=node["acts"],half_pot=row["b50"],eligible_hand_frequencies=hands)
 
     before, after = decision(original), decision(locked)
-    if seat == 1 and flop_line == "x x":
+    if seat == 1 and flop_line in ("x x","b50 c"):
         assert parent_job["root_no_bet"] is False
         for game in (original, locked):
             opener, = (n for n in game["nodes"] if (n["board"],n["line"],n["player"])==(public,turn_root,0))

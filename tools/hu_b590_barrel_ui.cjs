@@ -24,7 +24,8 @@ async function main() {
     ctx.nl2HalfPotLeads.showMatchedBarrels(other,model,board,'wrong-source');
     await new Promise(resolve => setImmediate(resolve));
     const content = ok.children[0].children[0].children.map(child => child.textContent).join('\n');
-    assert.ok(content.includes(row.locked.half_pot.eligible+' / '+row.locked.legal_combos));
+    if(row.locked.legal_combos)assert.ok(content.includes(row.locked.half_pot.eligible+' / '+row.locked.legal_combos));
+    else assert.ok(content.includes('可達的雙方配牌為 0 組') && !row.locked.half_pot);
     const groups=ok.children[0].children[0].children.filter(x=>x.children.length===2);
     for(const [label,p] of [['原 GTO',row.gto],['實測回應鎖',row.locked]]){
       const group=groups.find(x=>x.children[0].textContent===label+' 的逐手半池頻率');
@@ -36,7 +37,9 @@ async function main() {
       for(const phrase of ['未加注底池','大盲','CO','各位置和尺寸合計','假設翻前範圍','63,420'])assert.ok(content.includes(phrase));
       assert.ok(!content.includes('翻前加注者'));
     }
-    if(row.line==='x x/x' && model.family==='3BP'){
+    if(row.line==='b50 c/x'){
+      for(const phrase of ['各自計算','268,439','各位置與下注尺寸合計',model.solver_profile==='SB_BB'?'小盲回應鎖':'大盲回應鎖'])assert.ok(content.includes(phrase));
+    }else if(row.line==='x x/x' && model.family==='3BP'){
       const labels=model.solver_profile==='SB3_BTN'?['小盲回應鎖','53,669','各位置與尺寸合計']:['CO 回應鎖','3,776','四分之三池'];
       for(const phrase of [...labels,'各自計算','河牌自由求解'])assert.ok(content.includes(phrase));
     }else if(row.line==='x x/x'){
