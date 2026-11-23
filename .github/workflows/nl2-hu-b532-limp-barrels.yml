@@ -1,0 +1,143 @@
+name: B532 rank134 BTN river on monotone flops after a half-pot bet and two turn checks
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b532-limp-barrels.yml'
+      - 'tools/hu_b532_limp_barrels.py'
+      - 'tools/hu_b532_limp_routes.cjs'
+      - 'data/nl2_hu_b532_flops.json'
+permissions:
+  contents: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [6s5h4c, 7h6d4s, 8c6s5d, 9h7c6d, Qc7s4d, 6s4s2s, 7h5h3h, 8c5c4c, 9d7d5d, 5h4h2h]
+        version: [gto, exp_oop]
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned Rust solver
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          mkdir -p trainer/evidence
+          cp solver/inputs/pool_stats.json trainer/evidence/pool_stats.json
+          git -C solver rev-parse HEAD > trainer/evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > trainer/evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve the half-pot BB lead and the exact native turn continuation
+        working-directory: trainer
+        env:
+          FLOP: ${{ matrix.flop }}
+          VERSION: ${{ matrix.version }}
+        run: |
+          set -euo pipefail
+          status=0
+          python3 tools/solve_hu_multiboard_100bb.py --solver-root ../solver --spot LMP_CO_BB \
+            --flop "$FLOP" --version "$VERSION" --flop-size-profile lmp-50-only --flop-line-policy oop-b50only \
+            --turn-size-menu 33-50-75-100 --archive-empty-river-extraction --lock-marginals-by-street --turn-count 3 --manifest "evidence/$FLOP-$VERSION.json" || status=$?
+          python3 - "$status" "evidence/$FLOP-$VERSION.json" <<'PY'
+          import json,sys
+          m=json.load(open(sys.argv[2]))
+          assert not m["failures"] and len(m["cases"]) == m["solved_cases"] <= 3
+          assert int(sys.argv[1]) == (0 if m["cases"] else 1)
+          assert len(m["cases"]) + len(m["skipped"]) == 3
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NL2-B532-${{ matrix.flop }}-${{ matrix.version }}
+          path: |
+            trainer/evidence
+            solver/postflop/out/LMP_CO_BB/${{ matrix.version }}
+          if-no-files-found: error
+          retention-days: 90
+
+  verify:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 'NL2-B532-*'
+          path: downloads
+      - run: python -m pip install phevaluator==0.5.3.1
+      - name: Verify source hands and both rendered predecessor actions
+        run: python tools/hu_b532_limp_barrels.py --downloads downloads --run "$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B532-limp-verified-decisions
+          path: |
+            data/nl2_hu_b532_*.json
+            data/solver_evidence/reverified/rank27.json
+            data/solver_evidence/reverified/rank29.json
+            data/solver_evidence/NL2_B532_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R27_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R29_*.json.gz
+          if-no-files-found: error
+          retention-days: 90
+      - name: Audit all current routes and register only verified paired boards
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          files=(data/nl2_hu_b532_rendered_barrels.json data/nl2_hu_b532_rank*_pairs.json data/nl2_hu_b532_locked_medium.json data/solver_evidence/NL2_B532_*.json.gz)
+          for rank in 27 29; do
+            files+=(data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R"${rank}"_"${GITHUB_RUN_ID}"_*.json.gz)
+            if [[ -f data/solver_evidence/reverified/rank"${rank}".json ]]; then files+=(data/solver_evidence/reverified/rank"${rank}".json); fi
+          done
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            for file in "${files[@]}"; do
+              if test -e "$live/$file"; then cmp "$file" "$live/$file"; fi
+            done
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              bash tools/hu_exact_batch_audit.sh "$status"
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B532: publish limped double-barrel river evidence and certified rendered routes'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then
+              exit 0
+            fi
+            git worktree remove "$live"
+          done
+          exit 1
