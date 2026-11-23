@@ -1,0 +1,150 @@
+name: B545 verify SB half-pot flops and sized turn barrels from original CFR arrays
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b545-sb-half-pot.yml'
+      - 'tools/hu_b545_sb_half_pot.py'
+      - 'tools/hu_b545_sb_routes.cjs'
+permissions:
+  contents: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [8s8d3h, 6c6d3s, TdTs4h]
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned Rust solver
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib phevaluator==0.5.3.1
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          mkdir -p trainer/evidence
+          cp solver/inputs/pool_stats.json trainer/evidence/pool_stats.json
+          git -C solver rev-parse HEAD > trainer/evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > trainer/evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve the remaining frozen flops and conditional opponent policies
+        working-directory: trainer
+        env:
+          FLOP: ${{ matrix.flop }}
+          RAYON_NUM_THREADS: 2
+        run: |
+          set -euo pipefail
+          inputs="$RUNNER_TEMP/originals"
+          mkdir -p "$inputs"
+          if test -f data/solver_evidence/NL2_B545_R18_"${FLOP^^}".zip; then
+            cp data/solver_evidence/NL2_B545_R18_"${FLOP^^}".zip "$inputs/"
+          else
+            manifest="$RUNNER_TEMP/$FLOP-gto.json"
+            status=0
+            python tools/solve_hu_multiboard_100bb.py --solver-root ../solver --spot SB_BB --flop "$FLOP" \
+              --version gto --flop-size-profile sb-50-only --flop-line-policy oop-b50only --turn-size-menu 33-50-75-100 \
+              --turn-count 1 --lock-marginals-by-street --archive-empty-river-extraction --manifest "$manifest" || status=$?
+            python -c 'import json,sys; m=json.load(open(sys.argv[2])); assert not m["failures"] and len(m["cases"])+len(m["skipped"])==1 and int(sys.argv[1])==(0 if m["cases"] else 1)' "$status" "$manifest"
+            python tools/hu_b545_sb_half_pot.py --solver ../solver --inputs "$inputs" --flop "$FLOP" \
+              --manifest "$manifest" --out "$RUNNER_TEMP/reach.json"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B545-native-${{ matrix.flop }}
+          path: ${{ runner.temp }}/originals/NL2_B545_*.zip
+          if-no-files-found: error
+          retention-days: 90
+
+  verify:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 'B545-native-*'
+          path: data/solver_evidence
+          merge-multiple: true
+      - run: python -m pip install phevaluator==0.5.3.1
+      - name: Verify source hands and both rendered predecessor actions
+        run: python tools/hu_b545_sb_half_pot.py --solver pinned-solver --inputs data/solver_evidence --run "$GITHUB_RUN_ID" --pins data/nl2_hu_b545_local_originals.json --out data/nl2_hu_b545_sb_half_pot.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B545-verified-SB-half-pot-originals
+          path: |
+            data/nl2_hu_b545_*.json
+            data/solver_evidence/reverified/rank17.json
+            data/solver_evidence/reverified/rank18.json
+            data/solver_evidence/NL2_B545_*.zip
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R17_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R18_*.json.gz
+          if-no-files-found: error
+          retention-days: 90
+      - name: Audit all current routes and register only verified paired boards
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          files=(data/nl2_hu_b545_sb_half_pot.json data/solver_evidence/NL2_B545_*.zip)
+          files+=(data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R{17,18}_*.json.gz)
+          if test -f data/nl2_hu_b545_locked_medium.json; then
+            files+=(data/nl2_hu_b545_locked_medium.json)
+            for rank in 17 18; do file="data/solver_evidence/reverified/rank$rank.json"; if test -f "$file"; then files+=("$file"); fi; done
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            for file in "${files[@]}"; do
+              if test -e "$live/$file"; then cmp "$file" "$live/$file"; fi
+            done
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              bash tools/hu_exact_batch_audit.sh "$status"
+              python -c 'import json; g=json.load(open("data/nl2_hu_b545_sb_half_pot.json"))["verified_pairs"]; r=json.load(open("data/nl2_hu_multiboard_status_current.json"))["records"]; assert all(len(v["boards"])<3 or (r[v["model_id"]]["label"]=="CERT-MULTIBOARD" and {b["source_sha256"] for b in v["boards"]}<={b["source_sha256"] for b in r[v["model_id"]]["certified_3_to_5_exact_flop_boards"]}) for v in g.values())'
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B545: publish original SB half-pot river sources and full reach audit'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then
+              exit 0
+            fi
+            git worktree remove "$live"
+          done
+          exit 1

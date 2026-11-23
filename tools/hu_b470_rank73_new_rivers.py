@@ -84,7 +84,7 @@ def original(directory, flop, turn, version, *, batch="B470", spot=SPOT, flop_li
     m = json.loads((evidence / f"{flop}-{version}.json").read_bytes())
     assert (m["schema"], m["spot"], m["flop"], m["version"]) == ("NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1", spot, flop, version)
     assert m["preflop_ranges"]["source"] == preflop_source
-    flop_sizes = {"full":"33%,50%,75%,100%","lmp-50-only":"50%","utg-50-only":"50%"}[flop_profile]
+    flop_sizes = {"full":"33%,50%,75%,100%","lmp-50-only":"50%","utg-50-only":"50%","sb-50-only":"50%"}[flop_profile]
     assert m["flop_size_profile"] == flop_profile and m["restricted_tree_assumption"] == (flop_profile != "full")
     assert m["flop_action_sizes"] == flop_sizes.split(",")
     assert m["flop_line_policy"] == flop_policy and m["selected_lines"] == expected_flop
