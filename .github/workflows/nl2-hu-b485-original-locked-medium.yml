@@ -1,0 +1,64 @@
+name: B485 exact two-seat reach and half-pot bets across seven original solver runs
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b485-original-locked-medium.yml'
+      - 'data/nl2_hu_b485_*.json'
+      - 'tools/hu_b485_locked_medium.py'
+permissions:
+  actions: read
+  contents: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    strategy:
+      fail-fast: false
+      matrix:
+        run: [44521980749, 44522421850, 44525865923, 44653774402, 44654973894, 44732810327, 44736420272]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - name: Authenticate the original GitHub attachments and replay exact strategies
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ matrix.run }}
+        run: |
+          set -euo pipefail
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522 e33eb6200a79be505804028059c8a7f6b28f62fd
+          mkdir -p "$RUNNER_TEMP/originals"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN/artifacts?per_page=100" > "$RUNNER_TEMP/originals/$SOURCE_RUN.json"
+          for id in $(python3 tools/hu_b485_locked_medium.py --list-artifacts --run "$SOURCE_RUN"); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/originals/$id.zip"
+          done
+          python3 tools/hu_b485_locked_medium.py --run "$SOURCE_RUN" --downloads "$RUNNER_TEMP/originals" --solver pinned-solver --out "$RUNNER_TEMP/$SOURCE_RUN.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B485-source-${{ matrix.run }}
+          path: ${{ runner.temp }}/${{ matrix.run }}.json
+          if-no-files-found: error
+          retention-days: 30
+  verify:
+    needs: replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: B485-source-*
+          merge-multiple: true
+          path: shards
+      - name: Compare every original source to the evidence and audit the full cumulative registry
+        run: |
+          set -euo pipefail
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python3 tools/hu_b485_locked_medium.py --assemble shards/*.json --out "$RUNNER_TEMP/combined.json"
+          cmp "$RUNNER_TEMP/combined.json" data/nl2_hu_b485_locked_medium.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
