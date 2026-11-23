@@ -36,7 +36,9 @@ async function main() {
       for(const phrase of ['未加注底池','大盲','CO','各位置和尺寸合計','假設翻前範圍','63,420'])assert.ok(content.includes(phrase));
       assert.ok(!content.includes('翻前加注者'));
     }
-    if(row.seat===1){
+    if(row.line==='x x/x'){
+      for(const phrase of ['延遲持續下注','大盲在轉牌可以領打','各自計算','32,036'])assert.ok(content.includes(phrase));
+    }else if(row.seat===1){
       for(const phrase of ['大盲尺寸回應鎖','位置內翻前加注者','34-55%','81-110%','15,700','4,480'])assert.ok(content.includes(phrase));
     }
     if(row.seat===0 && model.solver_profile==='BTN_BB')assert.ok(content.includes('探測下注') && content.includes('位置內'));

@@ -185,7 +185,7 @@ def reproduce(study, spec, driver):
             assert fresh == expected, (spec["flop"], name)
 
 
-def main(study):
+def main(study, displayed_actions=None):
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument("--solver", required=True, type=Path)
     cli.add_argument("--run", type=int)
@@ -231,6 +231,10 @@ def main(study):
     assert 3<=len(inputs)==len({s["flop"] for s in inputs})<=5
     for spec in inputs:
         public,(g,e),rows,hands,root_sha=replay(study,spec,template,pool,pipeline,args.run,routes,model)
+        if displayed_actions is not None:
+            hands = [hand for hand in hands if all(
+                displayed_actions[hand["displayed_suggestion"]] in hand[v]["accepted_actions"]
+                for v in ("gto", "nl2"))]
         assert compatible(registry_route,dict(public_board=public,actual_exact_action_line=study.line,acting_seat=study.acting_seat))
         result.append(dict(flop=spec["flop"],public_board=public,common_hands=len(hands),
                            strict_pairs=[r["compatible_hole_card_pairs"] for r in rows],

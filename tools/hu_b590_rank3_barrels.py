@@ -24,7 +24,7 @@ CASES = {
 }
 
 
-def reply_rules(pool, flop_line, pfr, family, actions):
+def reply_rules(pool, flop_line, pfr, family, actions, seat):
     rows = []
     if family == "LMP":
         assert flop_line in ("b50 c", "x x") and actions == ["x", "b50", "b100"]
@@ -33,6 +33,11 @@ def reply_rules(pool, flop_line, pfr, family, actions):
         return [dict(pattern="^"+flop_line+"/b(50|100)$", table="HU_facing_bet[2].by_pot[limped]",
                      size="all", **rate)]
     table = pool["postflop_HU"][family + "_PFR_" + pfr.upper()]
+    if seat and flop_line == "x x":
+        assert family == "SRP" and pfr == "ip" and actions == ["x","b50","b100"]
+        rate = table["vs_delayed_cbet"]
+        assert rate["n"] == 32036
+        return [dict(pattern="^x x/x b(50|100)$",table="vs_delayed_cbet",size="all",**rate)]
     if flop_line.startswith("x b"):
         assert family == "SRP" and pfr == "ip" and actions == ["x","b50","b100"]
         for action, interval, count in (("b50","34-55%",15700),("b100","81-110%",4480)):
@@ -67,7 +72,8 @@ def reply_rules(pool, flop_line, pfr, family, actions):
 
 def calculate(board, pin, originals, pool, archive, driver, verification_driver, pipeline, ranges, model, flop_line, repo_parent=None):
     public = board["public_board"]
-    seat = int(flop_line.startswith("x b"))
+    seat = board["acting_seat"]
+    assert seat in (0, 1)
     turn_root = flop_line+"/"
     line = turn_root+("x" if seat else "")
     spot = model["solver_profile"]
@@ -87,7 +93,7 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
     parent_job,root_sha=parent["job"],parent["identity"]["root_sha256"]
     assert (original["line0"], original["turn"], board["actual_exact_action_line"], board["acting_seat"]) == (flop_line, public[-2:], line, seat)
     bet_pct = 0 if flop_line=="x x" else int(next(token[1:] for token in flop_line.split() if token.startswith("b")))
-    if seat:
+    if seat and flop_line != "x x":
         assert parent_job["root_no_bet"] and model["solver_profile"] in ("BTN_BB","CO_BB")
         forced, = (n for n in original["nodes"] if (n["board"],n["line"],n["player"])==(public,turn_root,0))
         assert forced["acts"]==["x"]
@@ -99,7 +105,7 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
     root_node, = (n for n in original["nodes"] if (n["board"],n["line"],n["player"]) == (public,line,seat))
     actions = root_node["acts"]
     assert actions == board["exact_node_actions"]
-    rules = reply_rules(pool, flop_line, profile["pfr"], profile["kind"], actions)
+    rules = reply_rules(pool, flop_line, profile["pfr"], profile["kind"], actions, seat)
     job = dict(parent_job, hero=seat, iters=2500, target_pct=.35, rank_pct=.35, out="result.json",
                locks=[dict(pat=r["pattern"], fold=r["fold"]/100, **{"raise":r["raise"]/100}) for r in rules])
     key = public+"/result.json"
@@ -142,7 +148,13 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
                     actions=node["acts"],half_pot=row["b50"],eligible_hand_frequencies=hands)
 
     before, after = decision(original), decision(locked)
-    assert before["legal_combos"]==after["legal_combos"] and before["compatible_pairs"]==after["compatible_pairs"]
+    if seat == 1 and flop_line == "x x":
+        assert parent_job["root_no_bet"] is False
+        for game in (original, locked):
+            opener, = (n for n in game["nodes"] if (n["board"],n["line"],n["player"])==(public,turn_root,0))
+            assert opener["acts"] == ["x","b50","b100"]
+    else:
+        assert before["legal_combos"]==after["legal_combos"] and before["compatible_pairs"]==after["compatible_pairs"]
     assert before["half_pot"]["eligible"]==board["medium_50pct_eligible_combos"]
     assert before["half_pot"]["candidate"]==board["b50_nonpolarized_relative_equity_research_candidate"]
     return dict(rank=model["frequency_rank"],model_id=model["model_id"],public_board=public,line=line,seat=seat,pot_bb=original["pot"]/100,stack_bb=original["stack"]/100,
