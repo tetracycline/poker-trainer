@@ -22,26 +22,38 @@ PINS = Path("data/nl2_hu_b573_turn_inputs.json")
 ARCHIVE = EVIDENCE / "NL2_B573_R2_AS9H2D_KD.zip"
 
 
-def replay(parent, version, pool, pipeline, archive):
+def replay(parent, version, pool, pipeline, archive, *, stem=None, public=PUBLIC, line=LINE):
+    stem = stem or version
     source = parent["source"]
     root, original = source["root"], source["subgame"]
+    spot = source["manifest"]["spot"]
+    flop = root["flop"]
+    assert (spot,line) in {("SB_BB","b100 c/"),("UTG_CO","x x/")}
     job = dict(parent["job"])
-    job.update(turn_oop="50%", out=version + ".json", target_pct=.35, iters=2000)
+    job.update(turn_oop="50%", out=stem + ".json", target_pct=.35, iters=2000)
     if version == "exp_oop":
-        rows, _ = make_fallbacks("SB_BB", version, pool, pipeline.lock_list, "As9h2d", by_street=True)
-        measure = pool["postflop_HU"]["SRP_PFR_OOP"]["vs_turn_barrel_by_size"]["34-55%"]
-        rows.insert(0, dict(pat="^b100 c/b50$", fold=measure["fold"]/100, **{"raise":measure["raise"]/100}))
-        job.update(locks=rows, rank_pct=.35)
-    assert json.loads(archive.read(version + ".job.json")) == job
-    raw = archive.read(version + ".json")
+        rows, _ = make_fallbacks(spot, version, pool, pipeline.lock_list, flop, by_street=True)
+        table = pool["postflop_HU"]["SRP_PFR_OOP"]
+        if line == "b100 c/":
+            measure = table["vs_turn_barrel_by_size"]["34-55%"]
+            label = "NL2.postflop_HU.SRP_PFR_OOP.vs_turn_barrel_by_size[34-55%]"
+            sample = 11019
+        else:
+            measure = table["vs_delayed_cbet"]
+            label = "NL2.postflop_HU.SRP_PFR_OOP.vs_delayed_cbet"
+            sample = 26780
+        rows.insert(0, dict(pat="^"+line+"b50$", fold=measure["fold"]/100, **{"raise":measure["raise"]/100}))
+        job.update(locks=rows, rank_pct=.35, hero=0)
+    assert json.loads(archive.read(stem + ".job.json")) == job
+    raw = archive.read(stem + ".json")
     game = json.loads(raw)
     info = game["info"]
     assert 0 <= info["gto_expl_pct"] <= .5
-    assert game["hands"] == original["hands"] and (game["pot"], game["stack"]) == (1800, 9100)
-    game.update(line0="b100 c", turn="Kd", rivers=original["rivers"])
+    assert game["hands"] == original["hands"] and (game["pot"], game["stack"]) == (original["pot"], original["stack"])
+    game.update(line0=line[:-1], turn=public[-2:], rivers=original["rivers"])
     observations = []
     for sub in (original, game):
-        n, = (n for n in sub["nodes"] if (n["line"], n["board"], n["player"]) == (LINE, PUBLIC, 0))
+        n, = (n for n in sub["nodes"] if (n["line"], n["board"], n["player"]) == (line, public, 0))
         masks = game_reach(root, sub)[0]
         row = proof(root, sub, n, masks)
         observations.append(row)
@@ -50,9 +62,10 @@ def replay(parent, version, pool, pipeline, archive):
     assert new["source_actions"] == ["x","b50"] and new["b50"]["eligible"] > 0
     assert new["compatible_hole_card_pairs"] == baseline["compatible_hole_card_pairs"] > 0
     assert new["strict_legal_combos"] == baseline["strict_legal_combos"] > 0
-    reply, = (n for n in game["nodes"] if (n["line"],n["board"],n["player"]) == (LINE+"b50",PUBLIC,1))
-    assert (reply["pot"],reply["bets"]) == (2700,[900,0]) and "c" in reply["acts"]
-    reach = compatible_node_reach(root, game, reply, masks["|".join((PUBLIC,LINE+"b50","1"))])
+    reply, = (n for n in game["nodes"] if (n["line"],n["board"],n["player"]) == (line+"b50",public,1))
+    half = (game["pot"] + 1) // 2
+    assert (reply["pot"],reply["bets"]) == (game["pot"]+half,[half,0]) and "c" in reply["acts"]
+    reach = compatible_node_reach(root, game, reply, masks["|".join((public,line+"b50","1"))])
     assert reach["compatible_hole_card_pairs"] > 0
     result = dict(version=version, parent=parent["identity"], source_sha256=sha(raw),
                   original_actions=baseline["source_actions"], original_half_pot_eligible=baseline["b50"]["eligible"],
@@ -62,11 +75,11 @@ def replay(parent, version, pool, pipeline, archive):
     if version == "exp_oop":
         assert 0 <= info["hero_gap_pct"] <= .5
         first = next(rule for rule in job["locks"] if re.search(rule["pat"],reply["line"]))
-        assert first["pat"] == "^b100 c/b50$" and measure["n"] == 11019
+        assert first["pat"] == "^"+line+"b50$" and measure["n"] == sample
         stat = info["lock_stats"][first["pat"]]
         assert stat["nodes"] > 0 and abs(stat["fold"]-first["fold"]) < .001 and abs(stat["agg"]-first["raise"]) < .001
         result.update(locked_hero_gap_pct=info["hero_gap_pct"], response=dict(
-            source="NL2.postflop_HU.SRP_PFR_OOP.vs_turn_barrel_by_size[34-55%]", n=measure["n"],
+            source=label, n=measure["n"],
             fold_pct=measure["fold"],call_pct=measure["call"],raise_pct=measure["raise"],native=stat))
     else:
         assert not info.get("lock_stats")

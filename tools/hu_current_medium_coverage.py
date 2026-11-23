@@ -63,7 +63,12 @@ def coverage(registry):
     frozen_path=Path('data/nl2_hu_b561_frozen_river.json')
     frozen=json.loads(frozen_path.read_bytes()) if frozen_path.exists() else None
     restricted_path=Path('data/nl2_hu_b573_restricted_turn.json')
-    restricted=json.loads(restricted_path.read_bytes()) if restricted_path.exists() else None
+    restricted_rows=[json.loads(restricted_path.read_bytes())] if restricted_path.exists() else []
+    delayed_path=Path('data/nl2_hu_b575_delayed_cbet.json')
+    if delayed_path.exists():
+        restricted_rows.extend(json.loads(delayed_path.read_bytes())['records'])
+    restricted_by_key={(r['model_id'],r['public_board'],r['line'],r['seat']):r for r in restricted_rows}
+    assert len(restricted_rows)==len(restricted_by_key)
     boards=[]
     for model in sorted(registry['records'].values(),key=lambda m:m['frequency_rank']):
         if model['label']!='CERT-MULTIBOARD':
@@ -108,11 +113,13 @@ def coverage(registry):
                                    'b50' in alt[v]['source_actions'] for v in ('gto','exp_oop'))
                 else:
                     row['half_pot_status']='NO_MATCHING_CONDITIONAL_SOURCE'
-            if restricted and (mid,row['public_board'],row['line'],row['seat']) == (
-                    restricted['model_id'], restricted['public_board'], restricted['line'], restricted['seat']):
+            restricted=restricted_by_key.get((mid,row['public_board'],row['line'],row['seat']))
+            if restricted:
                 parent_ids={(p['version'],p['run'],p['sha256']) for p in [original,*policies]}
-                if all((v,restricted['source_run'],p['parent']['source_sha256']) in parent_ids
-                       for v,p in restricted['policies'].items()):
+                lock_id=restricted.get('original_locked_sha256',restricted['policies']['exp_oop']['parent']['source_sha256'])
+                if ('exp_oop',restricted['source_run'],lock_id) in parent_ids and all(
+                        (p.get('parent_version',v),restricted['source_run'],p['parent']['source_sha256']) in parent_ids
+                        for v,p in restricted['policies'].items()):
                     assert all(p['original_half_pot_eligible']==0 and p['half_pot_reply_pairs']>0
                                for p in restricted['policies'].values())
                     row['restricted_turn_half_pot']={v:dict(source_sha256=p['source_sha256'],
