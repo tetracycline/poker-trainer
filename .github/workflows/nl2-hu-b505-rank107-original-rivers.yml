@@ -1,0 +1,63 @@
+name: B505 replay rank107 two-seat reach on the two retained BTN-BB flops
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b505-rank107-original-rivers.yml'
+      - 'tools/hu_b505_rank107_originals.py'
+      - 'data/nl2_hu_b505_rank107_artifacts.json'
+permissions:
+  actions: read
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Retrieve the four original GTO and NL2-IP artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/b505"
+          pins=data/nl2_hu_b505_rank107_artifacts.json
+          for id in $(jq -r 'keys[]' "$pins"); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$RUNNER_TEMP/b505/$id.json"
+            jq -e --arg id "$id" --slurpfile entries "$pins" '
+              ($entries[0][$id]) as $p | .id==($id|tonumber) and .digest==("sha256:"+$p.sha256)
+              and .name==$p.name and .workflow_run.id==$p.run
+              and .workflow_run.head_sha==$p.head' "$RUNNER_TEMP/b505/$id.json" >/dev/null
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/b505/$id.zip"
+          done
+      - name: Compute each mask and publish the source and audited live registry together
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          report=data/nl2_hu_b505_locked_medium.json
+          python3 tools/hu_b505_rank107_originals.py "$RUNNER_TEMP/b505"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add --detach "$live" FETCH_HEAD
+            if test -e "$live/$report"; then cmp "$report" "$live/$report"; fi
+            cp "$report" "$live/$report"
+            (
+              cd "$live"
+              python3 tools/hu_b505_rank107_originals.py "$RUNNER_TEMP/b505" --verify
+              status=data/nl2_hu_multiboard_status_current.json
+              python3 tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              git add "$report" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B505: remove both zero-reach rank107 river sources'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
