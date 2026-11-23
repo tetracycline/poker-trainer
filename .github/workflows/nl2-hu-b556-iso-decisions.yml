@@ -1,0 +1,109 @@
+name: B556 verify the original ISO turn decision and disclose both native policies
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b556-iso-decisions.yml'
+      - 'tools/hu_b556_iso_decisions.py'
+permissions: {contents: write, actions: read}
+jobs:
+  verify-and-register:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download the five completed source archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          dir="$RUNNER_TEMP/originals"
+          mkdir -p "$dir"
+          for aid in $(jq -r '.[]|.id' data/nl2_hu_b553_iso_archives.json); do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$aid"
+            gh api "$api" > "$dir/$aid.json"
+            gh api "$api/zip" > "$dir/$aid.zip"
+          done
+      - name: Register reachable named decisions and both source policies atomically
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          registry=data/nl2_hu_multiboard_status_current.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch -q --no-tags origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          for generation in 1 2 3 4 5; do
+            git fetch -q --no-tags origin "$branch"
+            base=$(git rev-parse FETCH_HEAD)
+            git merge-base --is-ancestor "$GITHUB_SHA" "$base"
+            live=$(mktemp -d "$RUNNER_TEMP/b556.XXXXXX")
+            git worktree add --quiet --detach "$live" "$base"
+            (
+              cd "$live"
+              python tools/hu_b556_iso_decisions.py --solver "$GITHUB_WORKSPACE/pinned-solver" \
+                --archives "$RUNNER_TEMP/originals" --downloads "$RUNNER_TEMP/b556-verified"
+              python tools/hu_apply_cert_extensions.py --out "$registry"
+              python - <<'PY'
+          import json
+          from pathlib import Path
+          mid='ln-iso-t_model-szsdgn'
+          reg=json.loads(Path('data/nl2_hu_multiboard_status_current.json').read_bytes())['records'][mid]
+          report=json.loads(Path('data/nl2_hu_b556_iso_decisions.json').read_bytes())
+          boards=report['groups']['125']['boards']
+          cross=json.loads(Path('data/nl2_hu_model_history_crosswalk.json').read_bytes())['records'][mid]
+          refs=json.loads(Path('data/nl2_hu_model_source_references.json').read_bytes())['items'][mid]
+          group=report['groups']['125']
+          assert len(boards)==len({b['flop'] for b in boards})==3
+          assert reg['label']=='CERT-MULTIBOARD' and cross['board_specific_certification_status']=='CERT_MULTIBOARD'
+          assert {b['public_board'] for b in boards}=={b['public_board'] for b in reg['certified_3_to_5_exact_flop_boards']}
+          assert refs['reference_count']==3
+          for pin in group['pins']:
+              hands=pin['rendered_decision_hands']
+              assert hands and all(h['gto']['accepted_mask'] and h['nl2']['accepted_mask'] for h in hands)
+              assert all(abs(sum(h[v]['strategy'].values())-1)<1.e-5 for h in hands for v in ('gto','nl2'))
+          PY
+              node tools/hu_extension_runtime_test.cjs "$registry"
+              bash tools/hu_exact_batch_audit.sh "$registry"
+              python tools/hu_b491_incremental_medium.py
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b483_lock_medium_ui.cjs
+              node tools/hu_b485_medium_viewers.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              if test -f data/nl2_hu_b530_locked_medium.json; then node tools/hu_b530_history_rates_ui.cjs; fi
+              python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/current-medium-coverage.json"
+              git add -A -- data
+              git diff --cached --check
+              if ! git diff --cached --quiet; then
+                git commit -m 'B556: verify rank125 from reachable named decisions and disclose the two independent native policies'
+              fi
+            )
+            candidate=$(git -C "$live" rev-parse HEAD)
+            for attempt in 1 2 3 4 5; do
+              git fetch -q --no-tags origin "$branch"
+              tip=$(git rev-parse FETCH_HEAD)
+              git merge-base --is-ancestor "$base" "$tip"
+              if test "$base" != "$tip"; then
+                if ! git diff --quiet "$base" "$tip" -- . ':(exclude).github/workflows/*'; then break; fi
+                if test "$candidate" = "$base"; then exit 0; fi
+                git -C "$live" switch --quiet --detach "$tip"
+                git -C "$live" cherry-pick "$candidate"
+              fi
+              if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            done
+            git worktree remove "$live"
+          done
+          exit 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B556-decision-coverage
+          path: ${{ runner.temp }}/current-medium-coverage.json
