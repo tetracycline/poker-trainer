@@ -1,0 +1,131 @@
+name: B620 reproduce reached BB river decisions after the turn stab
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b620-rank127-rivers.yml'
+      - 'tools/hu_b620_rank127*'
+      - 'data/nl2_hu_b620_rank127_inputs.json'
+      - 'data/solver_evidence/NL2_B620_R127_8S5D3C.zip'
+      - 'data/solver_evidence/NL2_B620_R127_9C6H2D.zip'
+permissions: {contents: read}
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {flop: 8s5d3c, mode: replay}
+          - {flop: 9c6h2d, mode: replay}
+          - {flop: 9h7s4d, mode: solve}
+          - {flop: 8h6d3s, mode: solve}
+          - {flop: As8c4s, mode: solve}
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the pinned native engine
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Reproduce the two native conditional policies
+        if: matrix.mode == 'replay'
+        working-directory: trainer
+        run: python tools/hu_b620_rank127_rivers.py --solver ../solver --reproduce-flop ${{ matrix.flop }}
+      - name: Solve fresh roots, condition on their actual weights and check joint river reach
+        if: matrix.mode == 'solve'
+        working-directory: trainer
+        run: python tools/hu_b620_rank127_rivers.py --solver ../solver --run "$GITHUB_RUN_ID" --search-flop "${{ matrix.flop }}" --search-results "$RUNNER_TEMP/fresh"
+      - uses: actions/upload-artifact@v4
+        if: matrix.mode == 'solve'
+        with:
+          name: B620-search-${{ matrix.flop }}
+          path: ${{ runner.temp }}/fresh/
+          if-no-files-found: error
+  verify:
+    needs: native
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: B620-search-*
+          path: ${{ runner.temp }}/fresh
+          merge-multiple: true
+      - name: Check shared flop-to-river hands, exact prices and every certification
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          registry=data/nl2_hu_multiboard_status_current.json
+          cp "$registry" "$RUNNER_TEMP/before.json"
+          python tools/hu_b620_rank127_rivers.py --solver ../solver --out "$RUNNER_TEMP/report.json"
+          cmp "$RUNNER_TEMP/report.json" data/nl2_hu_b620_rank127_preview.json
+          python - <<'PY'
+          import json, os, shutil
+          from pathlib import Path
+          fresh = Path(os.environ['RUNNER_TEMP'])/'fresh'
+          inputs = Path('data/nl2_hu_b620_rank127_inputs.json')
+          cases = json.loads(inputs.read_bytes())
+          for summary in sorted(fresh.glob('*.summary.json')):
+              spec = json.loads(summary.read_bytes())['selected']
+              if spec:
+                  assert spec['origin_solve_run_id'] == int(os.environ['GITHUB_RUN_ID'])
+                  shutil.copyfile(fresh/spec['archive'], Path('data/solver_evidence')/spec['archive'])
+                  cases.append(spec)
+          assert 2 <= len(cases) <= 5 and len({s['flop'] for s in cases}) == len(cases)
+          inputs.write_text(json.dumps(cases, indent=2)+'\n')
+          PY
+          n=$(jq length data/nl2_hu_b620_rank127_inputs.json)
+          if [ "$n" -ge 3 ]; then
+            python tools/hu_b620_rank127_rivers.py --solver ../solver --run "$GITHUB_RUN_ID" --out data/nl2_hu_b620_rank127_preview.json
+            node tools/hu_b558_river_policy_view.cjs data/solver_evidence/reverified/rank127.json
+          fi
+          python tools/hu_apply_cert_extensions.py --out "$registry"
+          python - "$RUNNER_TEMP/before.json" "$registry" <<'PY'
+          import json,sys
+          before,after=(json.load(open(p))['records'] for p in sys.argv[1:])
+          target='ln-ipc-r_model-ugjjw9'
+          assert before.keys()==after.keys() and all(after[k]==before[k] for k in before if k!=target)
+          count = len(json.load(open('data/nl2_hu_b620_rank127_inputs.json')))
+          assert after[target]['label'] == ('CERT-MULTIBOARD' if count >= 3 else before[target]['label'])
+          PY
+          node tools/hu_extension_runtime_test.cjs "$registry"
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+          bash tools/hu_exact_batch_audit.sh "$registry"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B620-authenticated-rank127
+          if-no-files-found: error
+          path: |
+            trainer/data/nl2_hu_b620_rank127_inputs.json
+            trainer/data/nl2_hu_b620_rank127_preview.json
+            trainer/data/solver_evidence/NL2_B620_R127_*.zip
+            trainer/data/nl2_hu_b620_locked_medium.json
+            trainer/data/solver_evidence/reverified/rank127.json
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B620_R127_*.json.gz

@@ -1,0 +1,46 @@
+name: B618 solve new monotone limp-pot flops for rank29
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b618-limp-monotone.yml'
+      - 'tools/hu_b618_limp_monotone.py'
+permissions: {contents: read}
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 27
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: ["Ks7s3s", "Qh8h4h", "Jc7c3c", "Kd9d4d", "Qs6s2s"]
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the pinned native engine
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve the complete native flop and the jointly reached river continuations
+        working-directory: trainer
+        run: python tools/hu_b618_limp_monotone.py --solver ../solver --flop ${{ matrix.flop }} --out "$RUNNER_TEMP/rank29"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B618-rank29-${{ matrix.flop }}
+          path: ${{ runner.temp }}/rank29
+          if-no-files-found: error
+          retention-days: 90
