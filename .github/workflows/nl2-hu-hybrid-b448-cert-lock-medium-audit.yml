@@ -1,4 +1,4 @@
-name: B448 audit all 163 CERT 618 real boards 710 NL2 locks 135 medium candidates and HU2475
+name: B448 corrected audit heterogeneous authentic NL2 source scopes, 618 boards 710 locks
 on:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
@@ -61,3 +61,5 @@ jobs:
             if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
           done
           exit 1
+
+# B448 corrected: compare each authentic lock source scope to frozen V50; no uniform proxy assumption.

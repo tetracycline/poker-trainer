@@ -49,7 +49,7 @@ def main():
                 assert z["not_empirical_villain_private_hand_conditional"] is True,key
                 assert z["unknown_action_rates_are_not_zero"] is True,key
                 assert z["empirical_frequency_scope"]=="OBSERVED_NL2_STREET_AND_SIZE_POOL_MARGINAL_ONLY",key
-                assert z["source_scope"]=="PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",key
+                assert isinstance(z["source_scope"],str) and z["source_scope"] and z["source_scope"]==v["source_scope"],key
                 counts["lock_variants"]+=1
                 counts["observed_pool_marginal_pattern_nodes"]+=n["observed_marginal"]
                 counts["assumed_default_pattern_nodes"]+=n["assumed_default"]
