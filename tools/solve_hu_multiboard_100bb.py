@@ -101,12 +101,25 @@ def make_fallbacks(spot,ver,p,orig,loc,by_street=False):
                      'observed_source_n':int(ph['cbet']['n']) if measured_opportunity else 0})
     return base+configs,meta
 
+def measured_caller_flop_lead(pool):
+    lead = pool['postflop_HU']['SRP_donk']
+    sizes = lead['sizes']
+    weights = [sizes['≤33%'], sizes['34-55%'], sizes['56-80%'], sizes['81-110%'] + sizes['>110%']]
+    assert lead['n'] >= 500 and 0 < lead['pct'] < 100 and abs(sum(weights)-100) < .2
+    rule = dict(pat='^$',bet=lead['pct']/100,sizes=[[size,share/sum(weights)] for size,share in zip((33,50,75,100),weights,strict=True)])
+    meta = dict(pat='^$',n=lead['n'],src='NL2.postflop_HU.SRP_donk.pct + sizes; >110% pooled into pot-sized menu option',
+                scope='NL2_SRP_CALLER_FLOP_LEAD_AGGREGATE')
+    return rule, meta
+
+
 def main():
     a=argparse.ArgumentParser()
     a.add_argument('--solver-root',required=True,type=pathlib.Path)
     a.add_argument('--spot',choices=SPOTS,required=True)
     a.add_argument('--version',choices=('gto','exp_ip','exp_oop'),default='gto')
     a.add_argument('--flop',required=True)
+    a.add_argument('--measured-bb-flop-lead',action='store_true',
+        help='Use the measured SRP caller lead rate and size distribution for the BB flop opening action')
     a.add_argument('--turn-count',type=int,default=1)
     a.add_argument('--flop-size-profile',choices=('full','lmp-50-only','utg-50-only'),default='full',
         help='Predeclared 50% flop menu for the named spot; other streets retain their configured sizes')
@@ -165,6 +178,8 @@ def main():
             a.error('Restricted half-pot flop tree requires a LMP half-pot bet-call line')
     if args.allow_turn_lead and args.flop_line_policy!='checked-b50only':
         a.error('The alternative turn lead requires the checked half-pot flop line')
+    if args.measured_bb_flop_lead and (args.spot,args.version,args.flop_size_profile)!=('BTN_BB','exp_ip','full'):
+        a.error('The measured BB opening lock requires the BTN_BB full-menu IP response game')
     flop=args.flop;cards=[flop[i:i+2] for i in (0,2,4)]
     if len(flop)!=6 or len(set(cards))!=3 or not all(re.fullmatch('[23456789TJQKA][cdhs]',t) for t in cards):
         a.error('Invalid explicit flop')
@@ -207,7 +222,12 @@ def main():
     spot=pipeline.SPOTS[args.spot]
     original_locks=pipeline.lock_list
     def lock_list(spot,ver,board):
-        return make_fallbacks(spot,ver,pool,original_locks,board,args.lock_marginals_by_street)
+        rules, records = make_fallbacks(spot,ver,pool,original_locks,board,args.lock_marginals_by_street)
+        if args.measured_bb_flop_lead:
+            index, = [i for i, rule in enumerate(rules) if rule['pat'] == '^$']
+            assert records[index]['pat'] == '^$'
+            rules[index], records[index] = measured_caller_flop_lead(pool)
+        return rules, records
     pipeline.lock_list=lock_list
     orig_make=pipeline.make_job
     def sized_make(*pos,**kwargs):
@@ -300,6 +320,8 @@ def main():
       no_generic_certification=True,not_observed_exact_NL2_hero_EV=True,
       file_flop=str(path.relative_to(pf)),file_flop_sha256=None,
       cases=[],failures=[],skipped=[],elapsed_seconds=0)
+    if args.measured_bb_flop_lead:
+        info["measured_bb_flop_lead"] = measured_caller_flop_lead(pool)[1]
     if args.lock_marginals_by_street:
         info["marginal_lock_matching"] = "RUST_FIRST_MATCH_POOLED_FALLBACK_EXACT_STREET"
         for record, original in zip(info["locks"], lock_src, strict=True):

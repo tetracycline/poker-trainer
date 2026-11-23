@@ -1,0 +1,152 @@
+name: B524 rank8 BTN turn after a measured BB half-pot lead on five new full-menu flops
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b524-rank8-low-flops.yml', 'tools/hu_b524_rank8_bb_leads.py']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  fresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [6s5h4d, 5h4h3s, 7d5c4c, 6d4c3h, 8h7h5c]
+        version: [gto, exp_ip]
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned Rust solver
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          mkdir -p trainer/evidence
+          cp solver/inputs/pool_stats.json trainer/evidence/pool_stats.json
+          git -C solver rev-parse HEAD > trainer/evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > trainer/evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve full BTN and BB ranges and both selected turns
+        working-directory: trainer
+        env:
+          FLOP: ${{ matrix.flop }}
+          VERSION: ${{ matrix.version }}
+        run: |
+          set -euo pipefail
+          lead=()
+          if test "$VERSION" = exp_ip; then lead+=(--measured-bb-flop-lead); fi
+          status=0
+          python3 tools/solve_hu_multiboard_100bb.py --solver-root ../solver --spot BTN_BB \
+            --flop "$FLOP" --version "$VERSION" --flop-size-profile full --flop-line-policy oop-b50only \
+            --lock-marginals-by-street --turn-count 2 --turn-line-policy checkcheck --archive-empty-river-extraction "${lead[@]}" --manifest "evidence/$FLOP-$VERSION.json" || status=$?
+          python3 - "$status" "evidence/$FLOP-$VERSION.json" <<'PY'
+          import json,sys
+          m=json.load(open(sys.argv[2]))
+          assert not m["failures"] and len(m["cases"]) == m["solved_cases"] <= 2
+          assert int(sys.argv[1]) == (0 if m["cases"] else 1)
+          assert m["cases"] or len(m["skipped"]) == 2
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B524-R8-${{ matrix.flop }}-${{ matrix.version }}
+          path: |
+            trainer/evidence
+            solver/postflop/out/BTN_BB/${{ matrix.version }}
+          if-no-files-found: error
+          retention-days: 90
+
+  verify:
+    needs: fresh
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Rebuild both private-hand ranges, exact bet menus and half-pot equity from original files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          originals="$RUNNER_TEMP/originals"
+          mkdir -p "$originals" "$RUNNER_TEMP/results"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq '.artifacts[]|select(.name|startswith("B524-R8-"))|.id' > "$RUNNER_TEMP/ids"
+          while read -r id; do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+            gh api "$api" > "$originals/$id.json"
+            gh api "$api/zip" > "$originals/$id.zip"
+          done < "$RUNNER_TEMP/ids"
+          python tools/hu_b524_rank8_bb_leads.py --originals "$originals" --solver pinned-solver --run "$GITHUB_RUN_ID" --head "$GITHUB_SHA"
+      - name: Audit all current routes and register only verified paired boards
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          files=(data/nl2_hu_b524_rank8_attempts.json data/solver_evidence/NL2_B524_R8_*.zip)
+          group=data/solver_evidence/reverified/rank8.json
+          if test -f data/nl2_hu_b524_locked_medium.json; then
+            files+=(data/nl2_hu_b524_locked_medium.json "$group" data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R8_*.json.gz)
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            for file in "${files[@]}"; do
+              if test -e "$live/$file"; then cmp "$file" "$live/$file"; fi
+            done
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              python - "$status" <<'PYREG'
+          import json, sys
+          from pathlib import Path
+          reg = json.loads(Path(sys.argv[1]).read_bytes())["records"]
+          assert len(reg) == 392
+          for rank in (8,):
+              group = Path(f"data/solver_evidence/reverified/rank{rank}.json")
+              if group.exists():
+                  g = json.loads(group.read_bytes())
+                  r = reg[g["model_id"]]
+                  assert r["label"] == "CERT-MULTIBOARD"
+                  assert {b["flop"] for b in g["boards"]} <= {b["flop"] for b in r["certified_3_to_5_exact_flop_boards"]}
+          PYREG
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B524: publish fresh rank8 BTN turn reach after measured BB leads on low boards'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
