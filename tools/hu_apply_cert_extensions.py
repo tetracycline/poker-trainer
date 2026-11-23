@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 
 from hu_cert_lock_medium_audit import audit
+from copy import deepcopy
 
 DATA = Path("data")
 SOURCE = DATA / "solver_evidence"
@@ -54,6 +55,33 @@ def verify_case(code, archive_sha, run, model, board, version, sha, count):
         assert node["b50_nonpolarized_relative_equity_research_candidate"] is board["b50_nonpolarized_relative_equity_research_candidate"]
     else:
         assert 0 <= case["locked_hero_gap_pct"] <= .5
+
+    return case, node
+
+
+def append_lock(registry, item):
+    model=registry["records"][item["model_id"]]
+    assert model["label"]=="CERT-MULTIBOARD"
+    board,=(b for b in model["certified_3_to_5_exact_flop_boards"]
+            if (b["flop"],b["turn"],b["public_board"],b["actual_exact_action_line"],b["acting_seat"])==
+               (item["flop"],item["turn"],item["public_board"],item["line"],item["acting_seat"]))
+    assert (board["source_run_id"],board["source_sha256"])==(item["gto_run"],item["gto_sha256"])
+    locks=board["nl2_locked_variants"]
+    assert any((v["run_id"],v["sha256"])==(item["parent_lock_run"],item["parent_lock_sha256"]) for v in locks)
+    lock=item["lock"]
+    assert lock["version"]==("exp_ip" if board["acting_seat"] else "exp_oop")
+    assert lock["sha256"] not in {v["sha256"] for v in locks}
+    assert re.fullmatch(r"[A-Za-z0-9_]+\.json\.gz",item["original_package"])
+    assert hashlib.sha256((SOURCE/item["original_package"]).read_bytes()).hexdigest()==item["original_package_sha256"]
+    case,node=verify_case(lock["viewer_archive_code"],lock["viewer_sha256"],lock["run_id"],model,board,
+                          lock["version"],lock["sha256"],lock["strictly_reachable_combos"])
+    assert lock["true_hero_gap_pct"]==case["locked_hero_gap_pct"]
+    stats=case["villain_lock_scope"]
+    assert (lock["observed_marginal_source_nodes"],lock["assumed_default_source_nodes"],lock["unlocked_source_nodes"])==(
+        stats["observed_marginal_source_nodes"],stats["imputed_assumption_nodes"],stats["unmatched_nodes"])
+    assert (lock["medium_50pct_eligible_combos"],lock["b50_nonpolarized_relative_equity_research_candidate"])==(
+        node["medium_50pct_eligible_combos"],node["b50_nonpolarized_relative_equity_research_candidate"])
+    locks.append(lock)
 
 
 def promote(registry, extension):
@@ -116,10 +144,13 @@ def main():
     xwalk, refs = read(x_path), read(r_path)
     ordered = sorted(loaded, key=lambda x: x["rank"])
     for ext in ordered:
-        update_references(promote(registry, ext), xwalk, refs)
+        update_references(promote(registry, deepcopy(ext)), xwalk, refs)
+    variants = [read(p) for p in sorted((SOURCE/"lock_variants").glob("*.json"))]
+    for item in variants:
+        append_lock(registry,item)
     labels = collections.Counter(r["label"] for r in registry["records"].values())
     registry.update(CERT_MULTIBOARD=labels["CERT-MULTIBOARD"], APPROX=labels["APPROX"])
-    view = dict(schema="NL2_EXACT_VERIFIED_EXTENSIONS_V1", models=ordered)
+    view = dict(schema="NL2_EXACT_VERIFIED_EXTENSIONS_V1", models=ordered, lock_variants=variants)
     registry["exact_source_extensions"] = {e["model_id"]: e["pins"] for e in ordered}
     registry["base_registry_schema"] = registry["schema"]
     registry["schema"] = "NL2_HU_392_MULTIBOARD_CERT_STATUS_VERIFIED_EXTENSIONS_V1"

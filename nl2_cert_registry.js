@@ -79,6 +79,21 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
       proven_exact_board_count:e.boards.length, certified_3_to_5_exact_flop_boards:e.boards};
     extensions[e.model_id] = e.pins;
   }
+  for (const item of manifest.lock_variants || []) {
+    const m=records[item.model_id], v=item.lock;
+    if(m?.label!=='CERT-MULTIBOARD') throw Error('附加鎖頻缺少原始認證模型');
+    const boards=m.certified_3_to_5_exact_flop_boards;
+    const b=boards.find(x=>x.flop===item.flop && x.turn===item.turn && x.public_board===item.public_board &&
+      x.actual_exact_action_line===item.line && x.acting_seat===item.acting_seat);
+    if(!b || b.source_run_id!==item.gto_run || b.source_sha256!==item.gto_sha256 ||
+       !b.nl2_locked_variants.some(x=>x.run_id===item.parent_lock_run && x.sha256===item.parent_lock_sha256) ||
+       b.nl2_locked_variants.some(x=>x.sha256===v?.sha256) || v?.version!==(b.acting_seat?'exp_ip':'exp_oop') ||
+       !positive(v.run_id) || !positive(v.strictly_reachable_combos) || !digest(v.sha256) || !digest(v.viewer_sha256) ||
+       !/^[A-Za-z0-9_]+$/.test(v.viewer_archive_code||'') || !Number.isFinite(v.true_hero_gap_pct) || v.true_hero_gap_pct<0 || v.true_hero_gap_pct>.5)
+      throw Error('附加鎖頻的公牌、原始 GTO 或獨立求解來源不符');
+    records[item.model_id]={...m,certified_3_to_5_exact_flop_boards:boards.map(x=>
+      x===b?{...x,nl2_locked_variants:[...x.nl2_locked_variants,v]}:x)};
+  }
   const models = Object.values(records);
   const cert = models.filter(m=>m.label==='CERT-MULTIBOARD').length;
   const approx = models.filter(m=>m.label==='APPROX').length;

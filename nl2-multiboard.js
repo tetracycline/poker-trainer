@@ -37,7 +37,7 @@ function selectBoard(){
  el('version').replaceChildren();
  opt(el('version'),'gto','本公牌 GTO CERT');
  if(chosenBoard)chosenBoard.nl2_locked_variants.forEach((b,i)=>{
-   opt(el('version'),b.version+'@'+i,b.version+'｜Run '+b.run_id+
+   opt(el('version'),b.version+'@'+i,(b.variant_label||b.version)+'｜Run '+b.run_id+
      '｜觀測聚合節點 '+nodeCount(b,'observed_marginal_source_nodes')+
      '／假設 '+nodeCount(b,'assumed_default_source_nodes')+
      '（局部 NL2 lock，非 GTO）');
@@ -66,10 +66,20 @@ function sourceCase(version){
  return chosenBoard.nl2_locked_variants.find(v=>v.version===kind)||null;
 }
 async function getProof(run){
+ return getProofForSource(run,null);
+}
+async function getProofForSource(run,source){
  const pin=status.exact_source_extensions?.[chosenModel?.model_id]?.find(p=>
    p.flop===chosenBoard.flop && p.turn===chosenBoard.turn && p.public_board===chosenBoard.public_board);
  let batch, expectedDigest;
- if(pin){
+ const extra=source && chosenBoard.nl2_locked_variants.find(v=>
+   v.viewer_archive_code && v.run_id===run && v.sha256===sourceSha(source) && v.version===source.version);
+ if(extra){
+   batch=[extra.viewer_archive_code,{run_id:run,status:'VERIFIED'}];
+   expectedDigest=extra.viewer_sha256;
+ }
+
+ if(!batch && pin){
    if(run===chosenBoard.source_run_id){
      batch=[pin.viewer_archive_code,{run_id:run,status:'VERIFIED'}];
      expectedDigest=pin.viewer_sha256;
@@ -293,7 +303,7 @@ async function selectVersion(){
       el('details').appendChild(link);el('combo-rows').replaceChildren();return;
    }
  }
- if(chosenBoard.source_kind?.includes('OFFICIAL')&&!hasVerifiedBatch){
+ if(chosenBoard.source_kind?.includes('OFFICIAL')&&!hasVerifiedBatch&&!source.viewer_archive_code){
    const link=document.createElement('a');
    link.href='nl2-cfr.html?spot='+encodeURIComponent(chosenModel.solver_profile)
       +'&version='+encodeURIComponent(source.version||version)+'&sha='+encodeURIComponent(digest)
@@ -307,7 +317,7 @@ async function selectVersion(){
  const url=sourceUrl(run);
  setMessage('正在檢查真正的 GitHub Rust CFR run '+run+' 與來源 SHA……');
  try{
-   const proof=await getProof(run);
+   const proof=await getProofForSource(run,source);
    if(request!==versionRequest)return;
    if(!proof){setMessage('來源未由獨立 GitHub Actions 驗證；不可將本頁標示為 CERT。'+url);return;}
    const actual=verifiedCase(source,proof);
@@ -367,7 +377,7 @@ function selectNode(){
  if(chosenModel.frequency_rank===218&&status.B465_rank218_four_original_sources){
    lines.push('四組彩虹翻牌驗證此下注線。練習表僅啟用單色面／強聽牌，該格仍為 APPROX。');
  }
- const pin=status.exact_source_extensions?.[chosenModel.model_id]?.find(v=>
+ const pin=origin?.reach_comparison || status.exact_source_extensions?.[chosenModel.model_id]?.find(v=>
    v.public_board===node.public_board && v.flop===chosenBoard.flop && v.turn===chosenBoard.turn &&
    node.exact_node_line===chosenBoard.actual_exact_action_line && node.acting_seat===chosenBoard.acting_seat);
  if(pin && Number.isSafeInteger(pin.GTO_strict_combos) && Number.isSafeInteger(pin.NL2_strict_combos)){
@@ -375,6 +385,9 @@ function selectNode(){
    const common=pin.common_legal_hero_combos;
    if(Number.isSafeInteger(common) && common>=0 && common<=Math.min(pin.GTO_strict_combos,pin.NL2_strict_combos)){
      comparison+='，兩解共同 '+common+' 組'+(common===0?'，此牌面沒有可逐手比較的組合':'');
+   }
+   if(Number.isSafeInteger(pin.prior_NL2_strict_combos)&&Number.isSafeInteger(pin.prior_and_new_common_combos)){
+     comparison+='。原鎖 '+pin.prior_NL2_strict_combos+' 組，其中與此重算共同 '+pin.prior_and_new_common_combos+' 組';
    }
    lines.push(comparison+'。');
  }

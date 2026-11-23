@@ -1,0 +1,79 @@
+name: B478 publish selectable original and measured rank1 locks
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b478-rank1-lock-variant.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+concurrency:
+  group: b478-audit-rank1-lock-variant
+  cancel-in-progress: false
+jobs:
+  authenticate-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Retrieve both original B19 solver artifacts and verify GitHub digests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14643520614/zip" > gto.zip
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14643500832/zip" > exp.zip
+          echo '72edc1b5a75c1a81f89f85efb5daffcdf24b5b1cec45ff4428a5c105caeaab65  gto.zip' | sha256sum -c -
+          echo 'ba0d60853510ba4735dbdac1e2d9d99734523c6304e3820e9879427749cfe276  exp.zip' | sha256sum -c -
+          unzip -q gto.zip -d b19-gto
+          unzip -q exp.zip -d b19-exp
+      - name: Reconstruct the original and corrected private hand masks
+        run: |
+          set -euo pipefail
+          rebuild="$RUNNER_TEMP/b478-replay"
+          python3 tools/hu_b478_rank1_lock_variant.py --old-gto "$RUNNER_TEMP/b19-gto" --old-exp "$RUNNER_TEMP/b19-exp" --out-dir "$rebuild"
+          python3 - "$rebuild" <<'PY'
+          from pathlib import Path
+          import gzip, hashlib, json, sys
+          def verified(folder):
+              row = json.loads((folder/"lock_variants/rank1_b472.json").read_text())
+              blob = (folder/("NL2_MULTIBOARD_" + row["lock"]["viewer_archive_code"] + ".json.gz")).read_bytes()
+              assert hashlib.sha256(blob).hexdigest() == row["lock"].pop("viewer_sha256")
+              return row, json.loads(gzip.decompress(blob))
+          assert verified(Path(sys.argv[1])) == verified(Path("data/solver_evidence"))
+          PY
+      - name: Publish verified variant on the current branch base and audit all HU routes
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          branch=fix/nl2-hu-lines-audit-20261118
+          for attempt in {1..10}; do
+            git fetch --no-tags origin "$branch"
+            candidate="$RUNNER_TEMP/b478-current-$attempt"
+            git worktree add --quiet --detach "$candidate" FETCH_HEAD
+            (
+              cd "$candidate"
+              registry=data/nl2_hu_multiboard_status_current.json
+              python3 tools/hu_apply_cert_extensions.py --out "$registry" || exit 2
+              node tools/hu_extension_runtime_test.cjs "$registry" || exit 2
+              node tools/hu_b478_lock_variant_ui.cjs "$registry" || exit 2
+              git add "$registry" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json || exit 2
+              if ! git diff --cached --quiet; then
+                git commit -m 'B478: publish separately selectable rank1 street-specific lock in the current registry' || exit 2
+              fi
+              git push origin "HEAD:refs/heads/$branch" || exit 3
+            ) && result=0 || result=$?
+            if [ "$result" -eq 0 ]; then
+              cd "$candidate"
+              bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+              exit 0
+            fi
+            git worktree remove --force "$candidate"
+            if [ "$result" -ne 3 ]; then exit "$result"; fi
+          done
+          exit 1

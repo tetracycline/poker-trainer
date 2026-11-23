@@ -93,6 +93,12 @@ function render(){
            rates.href='https://github.com/tetracycline/poker-trainer/blob/fix/nl2-hu-lines-audit-20261118/docs/NL2_HU_B472_RANK1_STREET_POOL_RATES.md';
            rates.target='_blank';rates.rel='noopener';li.appendChild(rates);
          }
+         b.nl2_locked_variants.forEach((v,i)=>{
+           if(!v.viewer_archive_code) return;
+           const href=new URLSearchParams({model:item.model_id,board:b.public_board,version:v.version+'@'+i,sha:v.sha256});
+           const extra=make('a','','｜查看'+(v.variant_label||v.version)+'逐組合行動');
+           extra.href='nl2-multiboard.html?'+href;li.appendChild(extra);
+         });
          globalThis.nl2PoolRateScope?.show(li,item,b,b.nl2_locked_variants);
          ul.appendChild(li);
        }

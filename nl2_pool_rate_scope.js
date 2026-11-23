@@ -21,6 +21,17 @@
   function render(parent,report,model,board,lock) {
     const row=select(report,model,board,lock);
     const details=element('details');
+    if(lock.measurement_policy==='STREET_SPECIFIC_POOL_MARGINALS' && lock.viewer_sha256 &&
+       lock.pool_sha256===report.pool_sha256 && Array.isArray(lock.applied_street_rates)){
+      details.appendChild(element('summary','NL2 鎖 '+lock.run_id+'｜已核實逐街池頻率'));
+      for(const r of lock.applied_street_rates){
+        const rate=report.pool_by_action_and_street[r.token]?.[r.street-1];
+        if(rate) details.appendChild(element('p',streets[r.street-1]+' '+r.token.slice(1)+'% pot：'+
+          rate.n.toLocaleString('zh-TW')+' 次池決策，Rust 鎖後棄／加 '+r.fold_pct+'%／'+r.raise_pct+'%。'));
+      }
+      parent.appendChild(details);return;
+    }
+
     const prefix='NL2 鎖 '+lock.run_id+'｜';
     const title=row?.scope==='CONFIRMED' ? '已核實跨街沿用翻牌頻率' :
       row ? '已檢查封存，本輪未確認跨街沿用' : '本輪未核對此來源';

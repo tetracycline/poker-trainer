@@ -95,6 +95,15 @@ def audit(data):
                    'hero_model_gain_bb':v.get('hero_model_gain_bb'),
                    'model_based_not_actual_winnings':True
                 })
+                if 'medium_50pct_eligible_combos' in v:
+                    count=v['medium_50pct_eligible_combos']
+                    candidate=v['b50_nonpolarized_relative_equity_research_candidate']
+                    if type(count) is not int or count<0 or type(candidate) is not bool or (candidate and count==0):
+                        raise ValueError('Invalid locked-source medium evidence')
+                    valid_locked[-1].update(medium_50pct_eligible_combos=count,
+                        b50_nonpolarized_relative_equity_research_candidate=candidate)
+                    tot['lock_variants_with_separately_audited_b50']+=1
+                    tot['lock_variants_with_b50_candidate']+=int(candidate)
                 tot['paired_hero_locked_source_variants']+=1
                 if v.get('unknown_history_frequency_filled_with_default'):
                     tot['variants_with_assumed_defaults']+=1
