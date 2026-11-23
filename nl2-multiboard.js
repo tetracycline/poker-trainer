@@ -15,7 +15,8 @@ function nodeCount(v,field){const n=v?.[field];return Number.isInteger(n)&&n>=0?
 function buildLinks(caseInfo,actual){
  const base=sourceUrl(sourceRun(caseInfo));
  const src=document.createElement('a');src.href=base;src.target='_blank';src.rel='noopener';
- src.textContent='原始 GitHub Actions run '+sourceRun(caseInfo);
+ src.textContent=(caseInfo?.source_run_role==='VERIFICATION_OF_LOCAL_NATIVE_RESULTS'
+   ?'本機 Rust 解算的 GitHub Actions 驗證紀錄 ':'原始 GitHub Actions run ')+sourceRun(caseInfo);
  return src;
 }
 function namedRiverChoices(model) {
@@ -97,7 +98,7 @@ function fillVersions(){
  const baseline=streets.length?'本公牌 GTO CERT（'+streets.join('，')+'）':'本公牌 GTO CERT';
  opt(el('version'),'gto',chosenBoard?.leadComparison?'開放領打的條件 GTO 對照':baseline);
  if(chosenBoard)chosenBoard.nl2_locked_variants.forEach((b,i)=>{
-   opt(el('version'),b.version+'@'+i,(b.variant_label||b.version)+'｜Run '+b.run_id+
+   opt(el('version'),b.version+'@'+i,(b.variant_label||b.version)+(b.source_run_role==='VERIFICATION_OF_LOCAL_NATIVE_RESULTS'?'｜本機解算驗證 Run ':'｜Run ')+b.run_id+
      '｜觀測聚合節點 '+nodeCount(b,'observed_marginal_source_nodes')+
      '／假設 '+nodeCount(b,'assumed_default_source_nodes')+
      '（局部 NL2 lock，非 GTO）');
@@ -121,6 +122,7 @@ function sourceCase(version){
  if(!chosenBoard)return null;
  if(version==='gto')return {
    source_run_id:chosenBoard.source_run_id,
+   source_run_role:chosenBoard.source_run_role,
    source_sha256:chosenBoard.source_sha256,
    version:'gto',status:'CERT_EXACT_BOARD_GTO'};
  const [kind,index]=String(version).split('@');

@@ -68,7 +68,8 @@ function render(){
            +(b.restricted_flop_bet_sizes_by_seat?'｜翻牌先手下注 '+b.restricted_flop_bet_sizes_by_seat.oop.join(' / ')+'%，後手下注 '+b.restricted_flop_bet_sizes_by_seat.ip.join(' / ')+'%':'')
            +(b.conditional_turn_oop_bet_sizes_pct?.length?'｜轉牌先手下注尺寸 '+b.conditional_turn_oop_bet_sizes_pct.join(' / ')+'%':'')
            +'｜GTO exploitability '+b.genuine_gto_exploitability_pct.toFixed(3)+'%｜'));
-         const link=make('a','', '真實 CFR Run '+b.source_run_id);
+         const localRun=b.source_run_role==='VERIFICATION_OF_LOCAL_NATIVE_RESULTS';
+         const link=make('a','', (localRun?'本機 CFR 解算驗證 Run ':'真實 CFR Run ')+b.source_run_id);
          if(b.source_kind.includes('OFFICIAL')){
            link.href='nl2-cfr.html?spot='+encodeURIComponent(item.solver_profile)
               +'&version=gto&run='+encodeURIComponent(b.source_run_id)+'&seat='+b.acting_seat+'&sha='+encodeURIComponent(b.source_sha256)
@@ -77,12 +78,12 @@ function render(){
          }else{
            link.href='nl2-multiboard.html?model='+encodeURIComponent(item.model_id)+
                '&board='+encodeURIComponent(b.public_board)+'&sha='+encodeURIComponent(b.source_sha256);
-           link.textContent='本公牌真實 GTO 與 NL2 局部鎖頻逐 combo 檢視（Run '+b.source_run_id+'）';
+           link.textContent='本公牌真實 GTO 與 NL2 局部鎖頻逐 combo 檢視（'+(localRun?'本機解算，驗證 Run ':'Run ')+b.source_run_id+'）';
          }
          li.appendChild(link);
          const countText=(v,k)=>Number.isInteger(v?.[k])&&v[k]>=0?String(v[k]):'來源未記錄';
          const lockLines=b.nl2_locked_variants.map(v=>
-           'Run '+v.run_id+
+           (v.source_run_role==='VERIFICATION_OF_LOCAL_NATIVE_RESULTS'?'本機解算驗證 Run ':'Run ')+v.run_id+
            '：實測聚合節點 '+countText(v,'observed_marginal_source_nodes')+
            '／假設補值 '+countText(v,'assumed_default_source_nodes')+
            '／未匹配 '+countText(v,'unlocked_source_nodes')+

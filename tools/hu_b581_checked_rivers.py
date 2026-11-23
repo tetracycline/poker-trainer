@@ -188,7 +188,9 @@ def main():
             continue
         assert args.run > 0
         board,pin = emit_board(model,g,e,pub,LINE,texture(spec['flop']),viewer_code='B581_R261_'+spec['flop'].upper())
+        board.update(source_run_role='VERIFICATION_OF_LOCAL_NATIVE_RESULTS', origin_solve_run_id=None)
         variant = board['nl2_locked_variants'][0]
+        variant.update(source_run_role=board['source_run_role'], origin_solve_run_id=None)
         variant.update(variant_label='翻牌 GTO 範圍，轉河牌依 NL2 下注頻率鎖定對手',pool_sha256=POOL,
             gto_parent_source_run_id=old_run,gto_parent_source_sha256=g['root_sha256'],applied_street_rates=rates(e),
             measurement_policy='STREET_SPECIFIC_POOL_MARGINALS', viewer_archive_code=pin['viewer_archive_code'],viewer_sha256=pin['viewer_sha256'])

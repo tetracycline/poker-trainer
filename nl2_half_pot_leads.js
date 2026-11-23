@@ -249,11 +249,11 @@
   }
   function showBoard(parent,model,board){
     if(board.exact_node_actions.includes('b50'))return showRestrictedTurn(parent,model,board);
-    showFrozenPolicies(parent,model,board);
     const line=document.createElement('div');parent.appendChild(line);
     if(board.actual_spr<.5){
       line.textContent='剩餘有效籌碼不足半個底池。';return;
     }
+    showFrozenPolicies(parent,model,board);
     load().then(rows=>{
       const r=match(rows,model,board);
       if(!r)return;

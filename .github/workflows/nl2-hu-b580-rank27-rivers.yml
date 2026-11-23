@@ -1,0 +1,68 @@
+name: B580 verify three exact BB limped rivers, both policies and registry
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b580-rank27-rivers.yml'
+      - 'tools/hu_b580_rank27*'
+      - 'data/nl2_hu_b580_rank27_preview.json'
+      - 'data/nl2_hu_b580_frozen.json'
+      - 'data/solver_evidence/NL2_B580_R27_*.zip'
+permissions: {contents: read, actions: read}
+jobs:
+  verify-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Authenticate the original flop archive and replay each pair of native policies
+        working-directory: trainer
+        env: {GH_TOKEN: "${{ github.token }}"}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/receipts"
+          id=14793354999
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$RUNNER_TEMP/receipts/$id.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/receipts/$id.zip"
+          python tools/hu_b580_rank27_rivers.py --solver ../solver --receipts "$RUNNER_TEMP/receipts" --out "$RUNNER_TEMP/preview.json"
+          cmp "$RUNNER_TEMP/preview.json" data/nl2_hu_b580_rank27_preview.json
+      - name: Build an authenticated publication from original private-hand policies
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python tools/hu_b580_rank27_rivers.py --solver ../solver --receipts "$RUNNER_TEMP/receipts" --run "$GITHUB_RUN_ID"
+          python - <<'PYCODE'
+          import json
+          from pathlib import Path
+          evidence = json.loads(Path("data/solver_evidence/reverified/rank27.json").read_bytes())
+          assert len(evidence["pins"]) == 3
+          for pin in evidence["pins"]:
+              hands = [row["hand"] for row in pin["rendered_decision_hands"]]
+              assert hands
+              print(pin["public_board"], "shared GTO/NL2 hands:", ", ".join(hands), "accept displayed check:", pin["hands_accepting_displayed_suggestion"])
+          PYCODE
+          python tools/hu_apply_cert_extensions.py --out data/nl2_hu_multiboard_status_current.json
+          node tools/hu_b558_river_policy_view.cjs data/solver_evidence/reverified/rank27.json
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B580-rank27-authenticated-publication
+          path: |
+            trainer/data/nl2_hu_b580_rank27_checkpoint.json
+            trainer/data/nl2_hu_b580_locked_medium.json
+            trainer/data/solver_evidence/reverified/rank27.json
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B580_R27_*.json.gz
+          if-no-files-found: error
+          retention-days: 90
