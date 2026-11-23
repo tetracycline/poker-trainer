@@ -33,16 +33,22 @@ def originals(directory, pipeline, ranges):
                                   pot=2050, stack=9000, pipeline=pipeline, ranges=ranges)
 
 
+def rendered_middle_hand(hand, public):
+    return (current_texture(public[:6]) in ("A_high", "KQ_high", "paired", "mono")
+            and current_texture(public[:8]) in ("KQ_high", "mono")
+            and current_texture(public) in ("KQ_high", "mono")
+            and hcls(hand, public[:6]) == hcls(hand, public[:8]) == classes(hand, public)[0] == "MID")
+
+
 def reached(game, root, public, masks):
     node, = (n for n in game["nodes"] if (n["board"], n["line"], n["player"]) == (public, LINE, 0))
     assert (node["bets"], node["pot"]) == ([0, 0], 2050) and "b50" in node["acts"]
     key = "|".join([public, LINE, "0"])
     proof = compatible_node_reach(root, game, node, masks[key])
     eligible = set()
-    if current_texture(public[:8]) in ("KQ_high", "mono") and current_texture(public) in ("KQ_high", "mono"):
-        for h, mask in zip(game["hands"][0], base64.b64decode(proof["mask"], validate=True), strict=True):
-            if mask and hcls(h, public[:8]) == "MID" and classes(h, public)[0] == "MID":
-                eligible.add("".join(cardkey(h)))
+    for h, mask in zip(game["hands"][0], base64.b64decode(proof["mask"], validate=True), strict=True):
+        if mask and rendered_middle_hand(h, public):
+            eligible.add("".join(cardkey(h)))
     return dict(legal_deals=proof["compatible_hole_card_pairs"], eligible_hands=sorted(eligible))
 
 
