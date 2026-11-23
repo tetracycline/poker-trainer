@@ -45,6 +45,7 @@ class TurnStudy:
     acting_seat: int = 1
     oop_bet_pct: int = 50
     root_threads: int = 2
+    target_flop_branch: str | None = None
 
     @property
     def bet(self):
@@ -60,6 +61,9 @@ class TurnStudy:
 
     @property
     def flop_line(self):
+        if self.target_flop_branch is not None:
+            assert self.target_flop_branch in self.root_branches
+            return self.target_flop_branch
         return self.root_branches[-1]
 
     @property

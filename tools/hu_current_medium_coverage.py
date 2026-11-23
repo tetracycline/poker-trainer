@@ -91,7 +91,7 @@ def coverage(registry):
     barrel_rows={}
     for barrel_file in sorted(Path('data').glob('nl2_hu_b*_rank*_barrels.json')):
         report=json.loads(barrel_file.read_bytes())
-        assert report['schema'] in ('NL2_HU_B590_SB_BB_BARREL_REPLIES_V1','NL2_HU_B609_BB_PROBE_RESPONSES_V1')
+        assert report['schema'] in ('NL2_HU_B590_SB_BB_BARREL_REPLIES_V1','NL2_HU_B609_BB_PROBE_RESPONSES_V1','NL2_HU_B628_3BP_TURN_BARREL_RESPONSES_V1')
         for barrel in report['records']:
             key=(barrel['model_id'],barrel['public_board'],barrel['line'],barrel['seat'],barrel['original']['run'],barrel['original']['source_sha256'])
             assert key not in barrel_rows
@@ -196,6 +196,14 @@ def coverage(registry):
                     rule, = barrel['rules']
                     field, n = ('vs_probe',49952) if model['solver_profile']=='BTN_BB' else ('vs_delayed_cbet',26780)
                     assert (rule['table'],rule['size'],rule['n'],rule['applied_nodes'])==(field,'all',n,2)
+                elif model['solver_profile'] in ('SB3_BTN','BB3_BTN'):
+                    actions=baseline['actions']
+                    assert row['line']=='b75 c/' and conditional['actions']==actions==original['actions']
+                    expected=[('^b75 c/b50$','34-55%',3647)]
+                    if 'b100' in actions:
+                        expected.append(('^b75 c/b100$','81-110%',1175))
+                    assert [(r['pattern'],r['size'],r['n']) for r in barrel['rules']]==expected
+                    assert all(r['table']=='vs_turn_barrel_by_size' and r['applied_nodes']==1 for r in barrel['rules'])
                 else:
                     assert len(barrel['rules'])==4
                 assert all(r['n']>0 and r['applied_nodes']>0 for r in barrel['rules'])

@@ -13,6 +13,7 @@ for (const file of ['lines_data.js', 'nl2_rules.js', 'hwrange.js', 'nl2_reach.js
 }
 const rank=process.argv[2] || '124';
 const config={
+  56:{section:'iso',id:'ln-iso-t_model-1xvw4lk',pot:9.5,stack:96,label:'跟'},
   67:{section:'iso',id:'ln-iso-iso_t_model-q429lu',pot:9.5,stack:96,label:'跟'},
   124:{section:'iso', id:'ln-iso-t_model-1gjwm8f',pot:9.5,stack:96,label:'下注 ½'},
   133:{section:'ipc', id:'ln-ipc-t_model-day18r',pot:6.5,stack:97.5,label:'下注 1'},

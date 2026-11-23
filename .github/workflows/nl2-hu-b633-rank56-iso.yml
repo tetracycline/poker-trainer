@@ -1,0 +1,100 @@
+name: B633 reproduce rank56 after the CO flop lead and turn check
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b633-rank56-iso.yml'
+      - 'tools/hu_b633_rank56_iso.py'
+      - 'data/nl2_hu_b633_iso_inputs.json'
+      - 'data/solver_evidence/NL2_B633_R56_*.zip'
+permissions: {contents: read}
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    outputs:
+      flops: ${{ steps.inputs.outputs.flops }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: inputs
+        run: |
+          echo "flops=$(jq -c '[.[].flop]' data/nl2_hu_b633_iso_inputs.json)" >> "$GITHUB_OUTPUT"
+  reproduce:
+    needs: select
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: ${{ fromJSON(needs.select.outputs.flops) }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the pinned native engine
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Re-solve the complete native flop and both turn policies
+        working-directory: trainer
+        run: python tools/hu_b633_rank56_iso.py --solver ../solver --reproduce-flop ${{ matrix.flop }}
+  verify:
+    needs: reproduce
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Check shared private hands, branch prices and existing certifications
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          registry=data/nl2_hu_multiboard_status_current.json
+          cp "$registry" "$RUNNER_TEMP/before.json"
+          python tools/hu_b633_rank56_iso.py --solver ../solver --run "$GITHUB_RUN_ID" --out "$RUNNER_TEMP/report.json"
+          cmp "$RUNNER_TEMP/report.json" data/nl2_hu_b633_iso_preview.json
+          python tools/hu_apply_cert_extensions.py --out "$registry"
+          python - "$RUNNER_TEMP/before.json" "$registry" <<'PY'
+          import json,sys
+          before,after=(json.load(open(p))['records'] for p in sys.argv[1:])
+          target='ln-iso-t_model-1xvw4lk'
+          assert before.keys()==after.keys() and all(after[k]==before[k] for k in before if k!=target)
+          assert after[target]['label']=='CERT-MULTIBOARD'
+          assert after[target]['assumed_model_node_spr']==5.885
+          boards=after[target]['certified_3_to_5_exact_flop_boards']
+          assert 3 <= len(boards) <= 5 and all(b['actual_pot_bb']==15.78 and b['actual_effective_stack_bb']==92.86 for b in boards)
+          assert all(b['actual_exact_action_line']=='b33 c/x' and b['acting_seat']==1 for b in boards)
+          PY
+          node tools/hu_b558_river_policy_view.cjs data/solver_evidence/reverified/rank56.json
+          node tools/hu_extension_runtime_test.cjs "$registry"
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+          bash tools/hu_exact_batch_audit.sh "$registry"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B633-authenticated-rank56
+          if-no-files-found: error
+          path: |
+            trainer/data/nl2_hu_b633_locked_medium.json
+            trainer/data/solver_evidence/reverified/rank56.json
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B633_R56_*.json.gz

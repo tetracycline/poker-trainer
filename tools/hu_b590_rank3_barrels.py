@@ -23,9 +23,18 @@ CASES = {
 }
 
 
-def reply_rules(pool, flop_line, pfr):
+def reply_rules(pool, flop_line, pfr, family, actions):
     rows = []
-    table = pool["postflop_HU"]["SRP_PFR_" + pfr.upper()]
+    table = pool["postflop_HU"][family + "_PFR_" + pfr.upper()]
+    if family == "3BP":
+        assert pfr == "oop" and flop_line == "b75 c"
+        assert actions in (["x","b50","a"], ["x","b50","b100","a"])
+        for action, interval, count in (("b50","34-55%",3647), ("b100","81-110%",1175)):
+            if action in actions:
+                rate = table["vs_turn_barrel_by_size"][interval]
+                assert rate["n"] == count
+                rows.append(dict(pattern="^b75 c/"+action+"$", table="vs_turn_barrel_by_size", size=interval, **rate))
+        return rows
     if flop_line=="x x":
         metric = "vs_probe" if pfr == "ip" else "vs_delayed_cbet"
         rate = table[metric]
@@ -49,7 +58,7 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
     parent_pin=dict(name=receipt["name"],head=receipt["workflow_run"]["head_sha"],run=pin["run"],sha256=pin["archive_sha256"])
     spot = model["solver_profile"]
     profile = ranges.SPOTS[spot]
-    assert profile["kind"] == "SRP" and profile["pfr"] in ("ip", "oop")
+    assert profile["kind"] in ("SRP", "3BP") and profile["pfr"] in ("ip", "oop")
     pot, stack = round(100*profile["pot"]), round(100*profile["stack"])
     parent=load_original(originals,aid,parent_pin,spot,board["flop"],board["turn"],"gto",pot=pot,stack=stack,
                          pipeline=pipeline,ranges=ranges,flop_line=flop_line)
@@ -63,7 +72,10 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
     assert (parent_job["rake_rate"], parent_job["rake_cap"], parent_job["line0"]) == (.05, 1000, [*flop_line.split(), "/"])
     assert not parent_job.get("locks") and parent_job.get("hero") is None and not original["info"].get("lock_stats")
     assert (original["pot"]/100, original["stack"]/100) == (board["actual_pot_bb"], board["actual_effective_stack_bb"])
-    rules = reply_rules(pool, flop_line, profile["pfr"])
+    root_node, = (n for n in original["nodes"] if (n["board"],n["line"],n["player"]) == (public,line,0))
+    actions = root_node["acts"]
+    assert actions == board["exact_node_actions"]
+    rules = reply_rules(pool, flop_line, profile["pfr"], profile["kind"], actions)
     job = dict(parent_job, hero=0, iters=2500, target_pct=.35, rank_pct=.35, out="result.json",
                locks=[dict(pat=r["pattern"], fold=r["fold"]/100, **{"raise":r["raise"]/100}) for r in rules])
     key = public+"/result.json"
@@ -96,7 +108,7 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
 
     def decision(game):
         node, = (n for n in game["nodes"] if (n["board"],n["line"],n["player"])==(public,line,0))
-        assert node["acts"] == ["x","b50","b100"]
+        assert node["acts"] == actions and (profile["kind"] == "3BP" or actions == ["x","b50","b100"])
         masks=game_reach(root,game)[0]
         row=proof(root,game,node,masks)
         legal=base64.b64decode(row["compatible_action_mask_b64"],validate=True)
