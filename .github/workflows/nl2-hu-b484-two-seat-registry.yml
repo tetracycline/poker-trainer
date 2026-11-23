@@ -1,0 +1,26 @@
+name: B484 enforce original two-seat reach in the cumulative exact-board registry
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b484-two-seat-registry.yml'
+      - 'tools/hu_board_reach_corrections.py'
+      - 'data/nl2_hu_b485_locked_medium.json'
+permissions:
+  contents: write
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Regenerate both training views from exact original board and lock masks
+        run: |
+          python3 tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/reconciled.json"
+          node tools/hu_extension_runtime_test.cjs "$RUNNER_TEMP/reconciled.json"
+          bash tools/hu_exact_batch_audit.sh "$RUNNER_TEMP/reconciled.json"
+      - name: Publish verified counts, remaining named boards and source references
+        run: bash tools/hu_publish_cert_extensions.sh

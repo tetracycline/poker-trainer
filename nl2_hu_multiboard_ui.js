@@ -9,6 +9,7 @@ if(!app)return;
 let registry=null,pending=false;
 const safe=(x)=>String(x??'');
 const approxReasons={
+ FEWER_THAN_THREE_FLOPS_AFTER_TWO_SEAT_REPLAY:'按雙方私牌與完整行動線重驗後，符合條件的不同翻牌少於三個',
  LOW_FREQUENCY_BELOW_PREREGISTERED_TOP24_CUTOFF:'低於依 NL2 池頻率估算的前 24／392 高頻截斷點；保留近似策略',
  NOT_ENOUGH_DISTINCT_AUTHENTIC_FLOPS_WITH_HERO_LOCKED_SOURCE:'尚無三個以上不同代表翻牌，同時符合完整行動歷史、實際 SPR、合法 combo 與英雄節點鎖來源',
  NO_TRUSTED_ACTING_SEAT_IN_PREFLOP:'翻前角色來源不足，不能驗證 OOP／IP 真實動作順序',

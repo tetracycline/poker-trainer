@@ -40,19 +40,18 @@ globalThis.nl2ValidateRank45 = function validateRank45(registry) {
 
 // Exact-source additions are independent of older immutable registry snapshots.
 globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(base) {
-  if (base.records?.['ln-opfr-t_model-qx9t0u']?.label !== 'CERT-MULTIBOARD') return base;
+  if (base.records?.['ln-opfr-t_model-qx9t0u']?.label !== 'CERT-MULTIBOARD') throw Error('基礎資料未達雙方可達性稽核版本');
   const response = await fetch('data/nl2_hu_verified_extensions.json', {cache:'no-store'});
-  if (response.status === 404) return base;
   if (!response.ok) throw Error('無法讀取具名公牌來源');
   const manifest = await response.json();
-  if (manifest.schema !== 'NL2_EXACT_VERIFIED_EXTENSIONS_V1' || !Array.isArray(manifest.models)) {
+  if (manifest.schema !== 'NL2_EXACT_VERIFIED_EXTENSIONS_V1' || !Array.isArray(manifest.models) || !manifest.board_reach_updates || !Array.isArray(manifest.reverified_models)) {
     throw Error('具名來源格式不符');
   }
   const records = {...base.records};
   const extensions = {};
   const digest = x => typeof x === 'string' && /^[0-9a-f]{64}$/.test(x);
   const positive = x => Number.isSafeInteger(x) && x > 0;
-  for (const e of manifest.models) {
+  function promote(e) {
     const m = records[e.model_id];
     if (!m || m.label !== 'APPROX' || e.rank !== m.frequency_rank || !Array.isArray(e.boards) ||
         e.boards.length < 3 || e.boards.length > 5 || e.pins?.length !== e.boards.length ||
@@ -79,6 +78,7 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
       proven_exact_board_count:e.boards.length, certified_3_to_5_exact_flop_boards:e.boards};
     extensions[e.model_id] = e.pins;
   }
+  for (const e of manifest.models) promote(e);
   for (const item of manifest.lock_variants || []) {
     const m=records[item.model_id], v=item.lock;
     if(m?.label!=='CERT-MULTIBOARD') throw Error('附加鎖頻缺少原始認證模型');
@@ -93,6 +93,63 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
       throw Error('附加鎖頻的公牌、原始 GTO 或獨立求解來源不符');
     records[item.model_id]={...m,certified_3_to_5_exact_flop_boards:boards.map(x=>
       x===b?{...x,nl2_locked_variants:[...x.nl2_locked_variants,v]}:x)};
+  }
+  for (const [id, updates] of Object.entries(manifest.board_reach_updates || {})) {
+    const m=records[id];
+    if(m?.label!=='CERT-MULTIBOARD') throw Error('可達性重算缺少原始認證模型');
+    const key=(board,line,seat)=>JSON.stringify([board,line,seat]);
+    const byBoard=new Map(updates.map(r=>[key(r.public_board,r.line,r.seat),r]));
+    if(byBoard.size!==updates.length) throw Error('公牌可達性來源重複');
+    const kept=[];
+    for(const board of m.certified_3_to_5_exact_flop_boards){
+      const k=key(board.public_board,board.actual_exact_action_line,board.acting_seat);
+      const row=byBoard.get(k);
+      if(!row){kept.push(board);continue;}
+      byBoard.delete(k);
+      if(row.gto_run!==board.source_run_id || row.gto_sha256!==board.source_sha256) throw Error('原始 GTO 來源不符');
+      const valid=v=>typeof v==='object' && v!==null && positive(v.run_id) && digest(v.sha256) &&
+        Number.isSafeInteger(v.strictly_reachable_combos) && v.strictly_reachable_combos>=0 &&
+        Number.isSafeInteger(v.compatible_hole_card_pairs) && v.compatible_hole_card_pairs>=v.strictly_reachable_combos &&
+        Boolean(v.compatible_hole_card_pairs)===Boolean(v.strictly_reachable_combos) &&
+        Number.isSafeInteger(v.medium_50pct_eligible_combos) && v.medium_50pct_eligible_combos>=0 &&
+        v.medium_50pct_eligible_combos<=v.strictly_reachable_combos &&
+        typeof v.b50_nonpolarized_relative_equity_research_candidate==='boolean' &&
+        (!v.b50_nonpolarized_relative_equity_research_candidate || v.medium_50pct_eligible_combos>=20);
+      if(!Array.isArray(row.locks) || (!row.locks.length && row.gto==null) || !row.locks.every(valid) ||
+        (row.gto!==null && (!valid(row.gto) || row.gto.sha256!==row.gto_sha256 || row.gto.run_id!==row.gto_run))) {
+        throw Error('原始組合或半池證據不符');
+      }
+      const byLock=new Map(row.locks.map(v=>[v.run_id+'/'+v.sha256,v]));
+      if(byLock.size!==row.locks.length) throw Error('重複的鎖頻重算來源');
+      const locks=[];
+      for(const lock of board.nl2_locked_variants){
+        const lockKey=lock.run_id+'/'+lock.sha256, result=byLock.get(lockKey);
+        if(!result){locks.push(lock);continue;}
+        byLock.delete(lockKey);
+        if(result.strictly_reachable_combos) locks.push({...lock,...result});
+      }
+      if(byLock.size) throw Error('重算缺少原始鎖頻決策');
+      if(!locks.length || row.gto?.strictly_reachable_combos===0) continue;
+      const b={...board,nl2_locked_variants:locks};
+      if(row.gto){
+        b.strict_full_street_combo_reachable=row.gto.strictly_reachable_combos;
+        b.compatible_hole_card_pairs=row.gto.compatible_hole_card_pairs;
+        b.medium_50pct_eligible_combos=row.gto.medium_50pct_eligible_combos;
+        b.b50_nonpolarized_relative_equity_research_candidate=row.gto.b50_nonpolarized_relative_equity_research_candidate;
+      }
+      kept.push(b);
+    }
+    if(byBoard.size) throw Error('可達性重算與目前牌面不符');
+    const updated={...m,proven_exact_board_count:kept.length,certified_3_to_5_exact_flop_boards:kept};
+    if(kept.length<3) Object.assign(updated,{label:'APPROX',blocked_reason:'FEWER_THAN_THREE_FLOPS_AFTER_TWO_SEAT_REPLAY',
+      certified_3_to_5_exact_flop_boards:[],remaining_exact_board_evidence:kept});
+    records[id]=updated;
+  }
+  for(const repair of manifest.reverified_models){
+    if(!repair.pins.every(p=>positive(p.GTO_compatible_hole_card_pairs) && p.GTO_compatible_hole_card_pairs>=p.GTO_strict_combos &&
+      positive(p.NL2_compatible_hole_card_pairs) && p.NL2_compatible_hole_card_pairs>=p.NL2_strict_combos)) throw Error('缺少雙方合法配牌');
+    promote(repair);
+    delete records[repair.model_id].remaining_exact_board_evidence;
   }
   const models = Object.values(records);
   const cert = models.filter(m=>m.label==='CERT-MULTIBOARD').length;

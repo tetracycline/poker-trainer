@@ -12,9 +12,17 @@ async function run() {
   const result=await ctx.nl2ApplyVerifiedExtensions(base);
   assert.equal(result.CERT_MULTIBOARD,registry.CERT_MULTIBOARD);
   assert.equal(result.APPROX,registry.APPROX);
+  for(const id of Object.keys(manifest.board_reach_updates || {})){
+    const browserRecord=JSON.parse(JSON.stringify(result.records[id]));
+    assert.deepEqual(browserRecord,registry.records[id],id);
+    if(browserRecord.label==='APPROX'){
+      assert.ok(browserRecord.remaining_exact_board_evidence.length<3);
+      assert.equal(browserRecord.certified_3_to_5_exact_flop_boards.length,0);
+    }
+  }
   const viewer=fs.readFileSync('nl2-multiboard.js','utf8');
   const proof=viewer.slice(viewer.indexOf('async function getProof(run){'),viewer.indexOf('function verifiedCase('));
-  const cases=manifest.models.slice();
+  const cases=manifest.models.concat(manifest.reverified_models || []);
   // Exercise both genuine historical sources even before a third rank146 board qualifies.
   if (!cases.some(e=>e.rank===146)) {
     cases.push(JSON.parse(fs.readFileSync('data/nl2_hu_b471_rank146_original_pairs.json','utf8')));
@@ -41,6 +49,13 @@ async function run() {
   bad.models[0].pins[0].NL2_strict_combos=0;
   ctx.fetch=async()=>({ok:true,json:async()=>bad});
   await assert.rejects(()=>ctx.nl2ApplyVerifiedExtensions(base));
+  if(manifest.board_reach_updates){
+    const wrong=structuredClone(manifest);
+    const audited=Object.values(wrong.board_reach_updates).flat().find(r=>r.locks.length);
+    audited.locks[0].compatible_hole_card_pairs=-1;
+    ctx.fetch=async()=>({ok:true,json:async()=>wrong});
+    await assert.rejects(()=>ctx.nl2ApplyVerifiedExtensions(base));
+  }
   for(const file of ['nl2-multiboard.js','nl2_hu_multiboard_ui.js']) {
     assert.ok(fs.readFileSync(file,'utf8').includes('.then(globalThis.nl2ApplyVerifiedExtensions)'));
   }
