@@ -91,6 +91,13 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
        !positive(v.run_id) || !positive(v.strictly_reachable_combos) || !digest(v.sha256) || !digest(v.viewer_sha256) ||
        !/^[A-Za-z0-9_]+$/.test(v.viewer_archive_code||'') || !Number.isFinite(v.true_hero_gap_pct) || v.true_hero_gap_pct<0 || v.true_hero_gap_pct>.5)
       throw Error('附加鎖頻的公牌、原始 GTO 或獨立求解來源不符');
+    if(v.requires_native_joint_replay){
+      const replay=manifest.board_reach_updates[item.model_id]?.find(r=>r.public_board===b.public_board &&
+        r.line===b.actual_exact_action_line && r.seat===b.acting_seat && r.gto_run===b.source_run_id && r.gto_sha256===b.source_sha256);
+      const lock=replay?.locks.find(l=>l.run_id===v.run_id && l.sha256===v.sha256);
+      if(!positive(replay?.gto?.strictly_reachable_combos) || !lock || lock.strictly_reachable_combos!==v.strictly_reachable_combos ||
+         !positive(lock.subgame_applied_rust_lock_nodes))throw Error('附加鎖頻缺少雙方可達的原始下注選單或實際套鎖證據');
+    }
     records[item.model_id]={...m,certified_3_to_5_exact_flop_boards:boards.map(x=>
       x===b?{...x,nl2_locked_variants:[...x.nl2_locked_variants,v]}:x)};
   }

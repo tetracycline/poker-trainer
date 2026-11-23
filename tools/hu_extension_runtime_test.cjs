@@ -45,6 +45,32 @@ async function run() {
       }
     }
   }
+  for(const item of manifest.lock_variants.filter(e=>e.lock.requires_native_joint_replay)){
+    const model=result.records[item.model_id], source=item.lock;
+    const board=model.certified_3_to_5_exact_flop_boards.find(b=>b.public_board===item.public_board);
+    assert.ok(board.nl2_locked_variants.some(v=>v.sha256===source.sha256));
+    Object.assign(ctx,{chosenModel:model,chosenBoard:board,status:result,proofCache:{},Response,DecompressionStream,
+      crypto:require('node:crypto').webcrypto,TextEncoder,TextDecoder,atob,fetch:async path=>new Response(fs.readFileSync(path))});
+    vm.runInContext(fs.readFileSync('nl2_locked_medium.js','utf8'),ctx);
+    const medium=ctx.nl2LockedMedium, report=await medium.load(), observed=medium.lookup(report,model,board,source);
+    assert.equal(observed.status,'POSITIVE_JOINT_REACH');
+    assert.deepEqual([...observed.source_actions],board.exact_node_actions);
+    assert.throws(()=>medium.lookup({...report,references:{}},model,board,source));
+    ctx.jointReach={row:observed};
+    vm.runInContext(viewer.slice(viewer.indexOf('async function getProof(run){'),viewer.indexOf('let versionRequest=')),ctx);
+    ctx.sourceSha=s=>s.source_sha256??s.sha256;ctx.sourceRun=s=>s.source_run_id??s.run_id;
+    const original=await ctx.getProofForSource(source.run_id,source), actual=ctx.verifiedCase(source,original);
+    const node=actual.nodes.find(n=>n.public_board===board.public_board && n.exact_node_line===item.line && n.acting_seat===item.acting_seat);
+    const bound=await medium.bindCase(report,actual,source.run_id);
+    assert.equal(bound.get(node).mask,Buffer.from(observed.compatible_action_mask_b64,'base64').toString('latin1'));
+    ctx.jointReach={row:{...observed,compatible_action_mask_b64:''}};
+    assert.throws(()=>ctx.verifiedCase(source,original));
+    const missing=structuredClone(manifest);
+    const updates=missing.board_reach_updates[item.model_id].find(r=>r.public_board===item.public_board&&r.line===item.line&&r.seat===item.acting_seat);
+    updates.locks=updates.locks.filter(r=>r.sha256!==source.sha256);
+    ctx.fetch=async()=>({ok:true,json:async()=>missing});
+    await assert.rejects(()=>ctx.nl2ApplyVerifiedExtensions(base));
+  }
   const bad=structuredClone(manifest);
   bad.models[0].pins[0].NL2_strict_combos=0;
   ctx.fetch=async()=>({ok:true,json:async()=>bad});

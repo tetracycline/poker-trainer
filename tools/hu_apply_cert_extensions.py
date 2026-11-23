@@ -9,7 +9,9 @@ from pathlib import Path
 import re
 
 from hu_cert_lock_medium_audit import audit
-from hu_board_reach_corrections import apply_updates, read_replays, replay_updates
+from hu_b483_locked_medium import proof as original_reach
+from hu_sequential_cfr_reach import game_reach
+from hu_board_reach_corrections import apply_updates, read_replays, replay_updates, source_key
 from copy import deepcopy
 
 DATA = Path("data")
@@ -60,7 +62,50 @@ def verify_case(code, archive_sha, run, model, board, version, sha, count):
     return case, node
 
 
-def append_lock(registry, item):
+def verify_native_lock(model, board, item, case, node, locked, originals, package):
+    lock = item["lock"]
+    key = dict(public_board=board["public_board"], line=board["actual_exact_action_line"], acting_seat=board["acting_seat"])
+    def observation(refs, run, sha):
+        identity = dict(key, source_run_id=run, source_sha256=sha)
+        row = refs.get(source_key(model["model_id"], identity))
+        assert row and row["status"] == "POSITIVE_JOINT_REACH", "Native-menu variant needs both exact positive original replays"
+        assert row["compatible_hole_card_pairs"] >= row["strict_legal_combos"] > 0
+        assert row["source_actions"] == board["exact_node_actions"] and "b50" in row["source_actions"]
+        return row
+    observation(originals, board["source_run_id"], board["source_sha256"])
+    row = observation(locked, lock["run_id"], lock["sha256"])
+    assert row["archive_sha256"] == hashlib.sha256(package).hexdigest()
+    packed = json.loads(gzip.decompress(package))
+    raw = base64.b64decode(packed["source_file_b64"], validate=True)
+    root = base64.b64decode(packed["conditional_root_file_b64"], validate=True)
+    assert hashlib.sha256(raw).hexdigest() == packed["source_sha256"] == lock["sha256"]
+    assert hashlib.sha256(root).hexdigest() == packed["conditional_root_sha256"] and packed["run"] == lock["run_id"]
+    parent_key = source_key(model["model_id"], dict(key, source_run_id=item["parent_lock_run"], source_sha256=item["parent_lock_sha256"]))
+    parent = locked[parent_key]
+    assert packed["conditional_root_sha256"] == (parent.get("original_root_sha256") or parent.get("root_sha256"))
+    root, game = json.loads(root), json.loads(raw)
+    job = packed["job"]
+    assert (job["flop"], job["turn"], job["line0"]) == (
+        board["flop"], board["turn"], [*board["exact_flop_action"].split(), "/"])
+    assert game["flop"] == job["flop"] and (game["pot"], game["stack"]) == (job["pot"], job["stack"])
+    game.update(turn=job["turn"], line0=board["exact_flop_action"])
+    exact, = (n for n in game["nodes"] if (n["board"], n["line"], n["player"]) ==
+              (key["public_board"], key["line"], key["acting_seat"]))
+    assert (exact["pot"]/100, (game["stack"]-max(exact["bets"]))/100) == (board["actual_pot_bb"], board["actual_effective_stack_bb"])
+    replay = original_reach(root, game, exact, game_reach(root, game)[0])
+    assert all(row[field] == value for field, value in replay.items())
+    assert sum(v["nodes"] for v in game["info"]["lock_stats"].values()) == row["subgame_applied_rust_lock_nodes"] > 0
+    assert (game["info"]["gto_expl_pct"], game["info"]["hero_gap_pct"]) == (row["gto_gap_pct"], row["locked_hero_gap_pct"])
+    hands = case["hands_by_seat"][board["acting_seat"]]
+    order = json.dumps(hands, ensure_ascii=False, separators=(",", ":")).encode()
+    assert row["source_hand_order_sha256"] == hashlib.sha256(order).hexdigest()
+    assert (row["source_hand_count"], row["source_actions"], row["strict_legal_combos"], row["compatible_action_mask_b64"]) == (
+        len(hands), node["source_actions"], node["strictly_reachable_combos"], node["strictly_reachable_masks_b64"])
+    assert row["b50"] == node["medium_50pct_strict_evidence"]
+    assert row["locked_hero_gap_pct"] == case["locked_hero_gap_pct"] and row["gto_gap_pct"] == case["gto_exploitability_pct"]
+
+
+def append_lock(registry, item, locked, originals):
     model=registry["records"][item["model_id"]]
     assert model["label"]=="CERT-MULTIBOARD"
     board,=(b for b in model["certified_3_to_5_exact_flop_boards"]
@@ -73,7 +118,8 @@ def append_lock(registry, item):
     assert lock["version"]==("exp_ip" if board["acting_seat"] else "exp_oop")
     assert lock["sha256"] not in {v["sha256"] for v in locks}
     assert re.fullmatch(r"[A-Za-z0-9_]+\.json\.gz",item["original_package"])
-    assert hashlib.sha256((SOURCE/item["original_package"]).read_bytes()).hexdigest()==item["original_package_sha256"]
+    package=(SOURCE/item["original_package"]).read_bytes()
+    assert hashlib.sha256(package).hexdigest()==item["original_package_sha256"]
     case,node=verify_case(lock["viewer_archive_code"],lock["viewer_sha256"],lock["run_id"],model,board,
                           lock["version"],lock["sha256"],lock["strictly_reachable_combos"])
     assert lock["true_hero_gap_pct"]==case["locked_hero_gap_pct"]
@@ -82,6 +128,8 @@ def append_lock(registry, item):
         stats["observed_marginal_source_nodes"],stats["imputed_assumption_nodes"],stats["unmatched_nodes"])
     assert (lock["medium_50pct_eligible_combos"],lock["b50_nonpolarized_relative_equity_research_candidate"])==(
         node["medium_50pct_eligible_combos"],node["b50_nonpolarized_relative_equity_research_candidate"])
+    if lock.get("requires_native_joint_replay"):
+        verify_native_lock(model, board, item, case, node, locked, originals, package)
     locks.append(lock)
 
 
@@ -147,9 +195,9 @@ def main():
     for ext in ordered:
         update_references(promote(registry, deepcopy(ext)), xwalk, refs)
     variants = [read(p) for p in sorted((SOURCE/"lock_variants").glob("*.json"))]
-    for item in variants:
-        append_lock(registry,item)
     sources, locked, originals, links = read_replays()
+    for item in variants:
+        append_lock(registry, item, locked, originals)
     seen, seen_gto = set(), set()
 
     def apply_replays(model_ids=None):

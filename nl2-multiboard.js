@@ -195,6 +195,13 @@ function verifiedCase(source,proof){
  if(item.flop!==chosenBoard.flop||item.turn!==chosenBoard.turn||
     item.flop_line!==chosenBoard.exact_flop_action)
     throw Error('試算來源具體公牌／行動歷史不符');
+ if(source.requires_native_joint_replay){
+   const node=item.nodes.find(n=>n.public_board===chosenBoard.public_board && n.exact_node_line===chosenBoard.actual_exact_action_line &&
+     n.acting_seat===chosenBoard.acting_seat);
+   if(!jointReach || !node || node.strictly_reachable_masks_b64!==jointReach.row.compatible_action_mask_b64 ||
+     JSON.stringify(node.source_actions)!==JSON.stringify(chosenBoard.exact_node_actions))
+     throw Error('附加鎖頻與原始逐手遮罩或下注選單不符');
+ }
  return item;
 }
 let versionRequest=0;

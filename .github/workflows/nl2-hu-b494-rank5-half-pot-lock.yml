@@ -1,0 +1,104 @@
+name: B494 rank5 native half-pot SB turn with measured BB response locks
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b494-rank5-half-pot-lock.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  solve-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify original GTO and conditional EXP source boundaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/originals"
+          for id in 14628913050 14643721866; do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+            gh api "$api" > "$RUNNER_TEMP/originals/$id.json"
+            gh api "$api/zip" > "$RUNNER_TEMP/originals/$id.zip"
+          done
+          python3 tools/hu_b494_rank5_half_pot_lock.py --originals "$RUNNER_TEMP/originals" --solver pinned-solver
+      - name: Build the pinned Rust driver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd pinned-solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve the one supplemental lock and independently replay the emitted arrays
+        run: |
+          set -euo pipefail
+          args=(--solver pinned-solver --run "$GITHUB_RUN_ID" --originals "$RUNNER_TEMP/originals")
+          python3 tools/hu_b494_rank5_half_pot_lock.py "${args[@]}" --out "$RUNNER_TEMP/fresh" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          python3 tools/hu_b494_rank5_half_pot_lock.py "${args[@]}" --out "$RUNNER_TEMP/replay" \
+            --replay "$RUNNER_TEMP/fresh/data/solver_evidence/NL2_B494_R5_AS7H3D_STREET_LOCK.json.gz"
+          diff -r "$RUNNER_TEMP/fresh/data" "$RUNNER_TEMP/replay/data"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B494-rank5-native-turn
+          path: ${{ runner.temp }}/fresh/data
+          if-no-files-found: error
+          retention-days: 90
+  audit-and-publish:
+    needs: solve-and-verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/download-artifact@v4
+        with:
+          name: B494-rank5-native-turn
+          path: ${{ runner.temp }}/verified
+      - name: Audit the exact source on the current draft branch and publish
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch --no-tags origin "$branch"
+          git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+          git switch --detach FETCH_HEAD
+          cp -a "$RUNNER_TEMP/verified/." data/
+          python3 tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b494-status.json"
+          python3 tools/hu_b494_native_variant_check.py "$RUNNER_TEMP/b494-status.json"
+          node tools/hu_extension_runtime_test.cjs "$RUNNER_TEMP/b494-status.json"
+          bash tools/hu_exact_batch_audit.sh "$RUNNER_TEMP/b494-status.json"
+          git add data/nl2_hu_b494_rank5_attempt.json data/solver_evidence/NL2_B494_*.json.gz
+          if test -f data/solver_evidence/lock_variants/rank5_b494_As7h3d.json; then
+            git add data/solver_evidence/lock_variants/rank5_b494_As7h3d.json \
+              data/solver_evidence/NL2_MULTIBOARD_B494_*.json.gz data/nl2_hu_b494_locked_medium.json
+          fi
+          git commit -m 'B494: publish reverified native turn lock and two-seat medium evidence'
+          commit=$(git rev-parse HEAD)
+          for attempt in 1 2 3 4; do
+            git fetch --no-tags origin "$branch"
+            latest="$RUNNER_TEMP/b494-publish-$attempt"
+            git worktree add -q --detach "$latest" FETCH_HEAD
+            git -C "$latest" cherry-pick "$commit"
+            if git -C "$latest" push origin "HEAD:refs/heads/$branch"; then
+              bash tools/hu_publish_cert_extensions.sh
+              exit 0
+            fi
+          done
+          exit 1
