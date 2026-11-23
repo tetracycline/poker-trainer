@@ -14,16 +14,23 @@ async function run() {
   assert.equal(result.APPROX,registry.APPROX);
   const viewer=fs.readFileSync('nl2-multiboard.js','utf8');
   const proof=viewer.slice(viewer.indexOf('async function getProof(run){'),viewer.indexOf('function verifiedCase('));
-  for (const item of manifest.models) {
+  const cases=manifest.models.slice();
+  // Exercise both genuine historical sources even before a third rank146 board qualifies.
+  if (!cases.some(e=>e.rank===146)) {
+    cases.push(JSON.parse(fs.readFileSync('data/nl2_hu_b471_rank146_original_pairs.json','utf8')));
+  }
+  for (const item of cases) {
     const model=result.records[item.model_id];
-    for(const board of model.certified_3_to_5_exact_flop_boards) {
+    const viewStatus={...result,exact_source_extensions:{...result.exact_source_extensions,[item.model_id]:item.pins}};
+    for(const board of item.boards) {
       const pin=item.pins.find(p=>p.public_board===board.public_board);
-      const url='data/solver_evidence/NL2_MULTIBOARD_'+pin.viewer_archive_code+'.json.gz';
-      Object.assign(ctx,{chosenModel:model,chosenBoard:board,status:result,proofCache:{}, Response, DecompressionStream});
-      const bytes=fs.readFileSync(url);
-      ctx.fetch=async path=>{assert.equal(path,url);return new Response(bytes)};
+      Object.assign(ctx,{chosenModel:model,chosenBoard:board,status:viewStatus,proofCache:{}, Response, DecompressionStream, crypto:require("node:crypto").webcrypto});
       vm.runInContext(proof,ctx);
       for(const run of new Set([board.source_run_id, ...board.nl2_locked_variants.map(v=>v.run_id)])) {
+        const code=run===board.source_run_id ? pin.viewer_archive_code : pin.locked_viewer_archive_code;
+        const url='data/solver_evidence/NL2_MULTIBOARD_'+code+'.json.gz';
+        const bytes=fs.readFileSync(url);
+        ctx.fetch=async path=>{assert.equal(path,url);return new Response(bytes)};
         const raw=await ctx.getProof(run);
         assert.equal(raw.source_run_id,run);
         assert.equal(raw.source_run_id,JSON.parse(zlib.gunzipSync(bytes)).source_run_id);

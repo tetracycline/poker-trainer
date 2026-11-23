@@ -28,9 +28,12 @@ def dump(path, obj):
     path.write_text(json.dumps(obj, indent=2, ensure_ascii=False) + "\n")
 
 
-def verify_case(path, run, model, board, version, sha, count):
+def verify_case(code, archive_sha, run, model, board, version, sha, count):
     assert re.fullmatch(r"[0-9a-f]{64}", sha) and run > 0 and count > 0
-    proof = json.loads(gzip.decompress(path.read_bytes()))
+    assert re.fullmatch(r"[A-Za-z0-9_]+", code)
+    encoded = (SOURCE / f"NL2_MULTIBOARD_{code}.json.gz").read_bytes()
+    assert hashlib.sha256(encoded).hexdigest() == archive_sha
+    proof = json.loads(gzip.decompress(encoded))
     assert proof["schema"] == "NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1"
     assert proof["source_run_id"] == run and proof["no_generic_texture_certification"] and not proof["errors"]
     case, = (c for item in proof["artifacts"] for c in item["cases"]
@@ -62,17 +65,19 @@ def promote(registry, extension):
     for b in boards:
         p, = (p for p in pins if (p["flop"], p["turn"], p["public_board"]) == (b["flop"], b["turn"], b["public_board"]))
         code = p["viewer_archive_code"]
-        assert re.fullmatch(r"[A-Za-z0-9_]+", code)
-        path = SOURCE / f"NL2_MULTIBOARD_{code}.json.gz"
         assert b["source_sha256"] == p["original_GTO_SHA256"]
         assert b["strict_full_street_combo_reachable"] == p["GTO_strict_combos"] > 0
         assert b["model_assumed_spr"] == model["assumed_model_node_spr"]
         assert abs(b["actual_spr"]/b["model_assumed_spr"] - 1) <= .05
-        verify_case(path, b["source_run_id"], model, b, "gto", b["source_sha256"], p["GTO_strict_combos"])
+        verify_case(code, p["viewer_sha256"], b["source_run_id"], model, b, "gto", b["source_sha256"], p["GTO_strict_combos"])
         lock, = b["nl2_locked_variants"]
         assert lock["sha256"] == p["actual_NL2_SHA256"] and lock["version"] == ("exp_ip" if b["acting_seat"] else "exp_oop")
         assert lock["observed_marginal_source_nodes"] > 0
-        verify_case(path, lock["run_id"], model, b, lock["version"], lock["sha256"], p["NL2_strict_combos"])
+        if lock["run_id"] == b["source_run_id"]:
+            locked_code, locked_sha = code, p["viewer_sha256"]
+        else:
+            locked_code, locked_sha = p["locked_viewer_archive_code"], p["locked_viewer_sha256"]
+        verify_case(locked_code, locked_sha, lock["run_id"], model, b, lock["version"], lock["sha256"], p["NL2_strict_combos"])
     model.update(label="CERT-MULTIBOARD", proven_exact_board_count=len(boards),
                  certified_3_to_5_exact_flop_boards=boards, blocked_reason=None)
     return model
@@ -122,6 +127,7 @@ def main():
     registry["base_registry_sha256"] = hashlib.sha256(base.read_bytes()).hexdigest()
     summary = audit(registry)
     assert summary["cert_multiboard"] + summary["approx"] == registry["TOTAL"] == 392
+    registry["all_cert_lock_medium"] = summary["aggregate"]
     dump(x_path, xwalk)
     dump(r_path, refs)
     dump(DATA/"nl2_hu_verified_extensions.json", view)

@@ -23,6 +23,8 @@ assert labels["CERT-MULTIBOARD"] == len(locks["models"]) == registry["CERT_MULTI
 assert labels["APPROX"] == registry["APPROX"] and registry["EST"] == 0
 assert labels["APPROX"] + labels["CERT-MULTIBOARD"] == 392
 assert locks["not_generalized_handclass_GTO"] and locks["not_actual_NL2_earnings"]
+if "all_cert_lock_medium" in registry:
+    assert registry["all_cert_lock_medium"] == locks["aggregate"]
 counts = links["counts"]
 assert counts["continuing"] == counts["reachRiver"] == 2475 and counts["riverShare"] == 100
 print(f'{labels["CERT-MULTIBOARD"]} CERT / {labels["APPROX"]} APPROX, 2475/2475 HU routes')

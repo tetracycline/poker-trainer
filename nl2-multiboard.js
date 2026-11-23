@@ -68,8 +68,16 @@ function sourceCase(version){
 async function getProof(run){
  const pin=status.exact_source_extensions?.[chosenModel?.model_id]?.find(p=>
    p.flop===chosenBoard.flop && p.turn===chosenBoard.turn && p.public_board===chosenBoard.public_board);
- let batch=pin && (run===chosenBoard.source_run_id || chosenBoard.nl2_locked_variants.some(v=>v.run_id===run))
-   ? [pin.viewer_archive_code,{run_id:run,status:'VERIFIED'}] : null;
+ let batch, expectedDigest;
+ if(pin){
+   if(run===chosenBoard.source_run_id){
+     batch=[pin.viewer_archive_code,{run_id:run,status:'VERIFIED'}];
+     expectedDigest=pin.viewer_sha256;
+   }else if(chosenBoard.nl2_locked_variants.some(v=>v.run_id===run)){
+     batch=[pin.locked_viewer_archive_code,{run_id:run,status:'VERIFIED'}];
+     expectedDigest=pin.locked_viewer_sha256;
+   }
+ }
  if(!batch && chosenModel?.frequency_rank===218){
    const pin=status.B465_rank218_four_original_sources?.pins.find(p=>
      p.flop===chosenBoard.flop && p.public_board===chosenBoard.public_board &&
@@ -107,17 +115,26 @@ async function getProof(run){
  }
  if(!batch)return null;
  const code=batch[0];
- if(proofCache[code])return proofCache[code];
+ const cacheKey=expectedDigest || code;
+ if(proofCache[cacheKey])return proofCache[cacheKey];
  const path='data/solver_evidence/NL2_MULTIBOARD_'+code+'.json.gz';
  const resp=await fetch(path,{cache:'no-store'});
  if(!resp.ok)throw Error('來源 '+path+' HTTP '+resp.status);
  if(typeof DecompressionStream==='undefined')throw Error('瀏覽器缺少 gzip 檢視支援');
- const blob=new Response(resp.body.pipeThrough(new DecompressionStream('gzip')));
+ let body=resp.body;
+ if(expectedDigest){
+   const bytes=await resp.arrayBuffer();
+   const hash=await globalThis.crypto.subtle.digest('SHA-256',bytes);
+   const actual=Array.from(new Uint8Array(hash),byte=>byte.toString(16).padStart(2,'0')).join('');
+   if(actual!==expectedDigest)throw Error('逐牌來源檔 SHA-256 不符');
+   body=new Response(bytes).body;
+ }
+ const blob=new Response(body.pipeThrough(new DecompressionStream('gzip')));
  const raw=await blob.json();
  if(raw.schema!=='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1'||raw.errors?.length||
     raw.source_run_id!==run||raw.no_generic_texture_certification!==true)
     throw Error('原始 GitHub CFR 來源驗證不一致');
- proofCache[code]=raw;
+ proofCache[cacheKey]=raw;
  return raw;
 }
 function verifiedCase(source,proof){

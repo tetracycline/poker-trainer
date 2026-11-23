@@ -64,8 +64,10 @@ def audit_patterns(game, job, manifest, pool):
     return dict(marginal_targets=evidence, first_pattern_visible_nodes=matches, driver_tree_nodes={k:v["nodes"] for k,v in stats.items()})
 
 
-def original(directory, flop, turn, version):
-    base = directory / f"NL2-B470-{flop}-{version}"
+def original(directory, flop, turn, version, *, batch="B470", spot=SPOT, flop_line=FLOP_LINE,
+             flop_policy="checked-b33only", turn_policy="b100only", turn_extract="b100 c",
+             root_pot=550, root_stack=9750):
+    base = directory / f"NL2-{batch}-{flop}-{version}"
     evidence = base / "trainer/evidence"
     assert (evidence / "poker-solver-pin.txt").read_text().strip() == SOLVER
     assert (evidence / "rust-pin.txt").read_text().strip() == RUST
@@ -73,23 +75,23 @@ def original(directory, flop, turn, version):
     assert sha(pool_bytes) == "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a"
     pool = json.loads(pool_bytes)["NL2"]
     m = json.loads((evidence / f"{flop}-{version}.json").read_bytes())
-    assert (m["schema"], m["spot"], m["flop"], m["version"]) == ("NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1", SPOT, flop, version)
+    assert (m["schema"], m["spot"], m["flop"], m["version"]) == ("NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1", spot, flop, version)
     assert m["preflop_ranges"]["source"] == "PINNED_POKER_SOLVER_PREFLOP_CFR"
     assert m["flop_size_profile"] == "full" and not m["restricted_tree_assumption"]
-    assert m["flop_line_policy"] == "checked-b33only" and m["selected_lines"] == [FLOP_LINE]
-    assert m["turn_line_policy"] == "b100only" and m["selected_turn_lines"] == ["b100 c"]
+    assert m["flop_line_policy"] == flop_policy and m["selected_lines"] == [flop_line]
+    assert m["turn_line_policy"] == turn_policy and m["selected_turn_lines"] == [turn_extract]
     assert m["turn_sizing_mode"] == "default" and m["turns"] == [turn] and not m["failures"]
-    assert (m["root_pot_bb"], m["root_remaining_bb"]) == (5.5, 97.5)
+    assert (m["root_pot_bb"], m["root_remaining_bb"]) == (root_pot/100, root_stack/100)
     assert m["marginal_lock_matching"] == "RUST_FIRST_MATCH_POOLED_FALLBACK_EXACT_STREET"
     assert m["pool_source_sha256"] == sha(pool_bytes) and m["solver_ranges_sha256"]
     pf = base / "solver/postflop"
-    rootfile = pf / "out" / SPOT / version / f"{flop}_multiboard.json"
+    rootfile = pf / "out" / spot / version / f"{flop}_multiboard.json"
     assert m["file_flop"] == str(rootfile.relative_to(pf))
     root_raw = rootfile.read_bytes()
     assert sha(root_raw) == m["file_flop_sha256"]
     root = json.loads(root_raw)
     flop_job = json.loads(rootfile.with_suffix(".job.json").read_bytes())
-    assert (root["flop"], root["pot"], root["stack"]) == (flop, 550, 9750)
+    assert (root["flop"], root["pot"], root["stack"]) == (flop, root_pot, root_stack)
     assert flop_job["flop_oop"] == flop_job["flop_ip"] == "33%,50%,75%,100%"
     if version == "gto":
         assert flop_job.get("hero") is None and not flop_job.get("locks")
@@ -101,20 +103,20 @@ def original(directory, flop, turn, version):
         out["actual_flop_job_lock_coverage"] = audit_patterns(root, flop_job, m, pool)
     if not m["cases"]:
         skipped, = m["skipped"]
-        assert m["solved_cases"] == 0 and (skipped["line"], skipped["turn"]) == (FLOP_LINE, turn)
+        assert m["solved_cases"] == 0 and (skipped["line"], skipped["turn"]) == (flop_line, turn)
         assert skipped["reason"] in ("NO_BOTH_PLAYER_REACH", "ZERO_LEGAL_PLAYER_RANGE_AFTER_TURN_CARD_BLOCKERS",
                                      "RUST_ENGINE_EXCLUDED_EMPTY_REACH_RANGE")
         return out
     c, = m["cases"]
     assert m["solved_cases"] == 1 and not m["skipped"]
-    assert (c["line"], c["turn"]) == (FLOP_LINE, turn)
-    subfile = rootfile.parent / f"{flop}_xb33c_{turn}.json"
+    assert (c["line"], c["turn"]) == (flop_line, turn)
+    subfile = rootfile.parent / f"{flop}_{flop_line.replace(' ', '')}_{turn}.json"
     assert c["source_path"] == str(subfile.relative_to(pf))
     subraw = subfile.read_bytes()
     assert sha(subraw) == c["source_sha256"]
     sub = json.loads(subraw)
     job = json.loads(subfile.with_suffix(".job.json").read_bytes())
-    assert (sub["flop"], sub["turn"], sub["line0"]) == (flop, turn, FLOP_LINE)
+    assert (sub["flop"], sub["turn"], sub["line0"]) == (flop, turn, flop_line)
     assert sub["info"]["gto_expl_pct"] == c["gto_gap_pct"]
     assert job["turn_oop"] == job["turn_ip"] == "50%,100%"
     assert job["rake_rate"] == .05 and job["rake_cap"] == 1000

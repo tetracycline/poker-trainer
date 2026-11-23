@@ -114,7 +114,7 @@ def main():
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
     a.add_argument('--lock-marginals-by-street', action='store_true',
         help='Match the pooled bet-size and raise fallback to the actual flop, turn, or river before applying it')
-    a.add_argument('--turn-line-policy',choices=('default','b100only'),default='default',
+    a.add_argument('--turn-line-policy',choices=('default','b100only','checkcheck'),default='default',
         help='Extract only exact b100-call river continuations; never alter the full underlying solved tree')
     a.add_argument('--turn-size-menu',choices=('default','river-gaps','exact-b66-only','exact-b50-only'),default='default',
         help='river-gaps: predeclared 33/66/75pct turn size tree for x x / turn bet-call river MODEL proofs')
@@ -230,10 +230,10 @@ def main():
         # Keep the 50% action explicit; never relabel default 66% as b50.
         pipeline.SUB.update(turn_oop='50%',turn_ip='50%')
         pipeline.TURN_LINES=['b50 c']
-    if args.turn_line_policy=='b100only':
+    if args.turn_line_policy in ('b100only','checkcheck'):
         if args.turn_size_menu!='default':
-            a.error('b100only requires default turn size menu (50/100)')
-        pipeline.TURN_LINES=['b100 c']
+            a.error('targeted turn-line extraction requires default turn size menu (50/100)')
+        pipeline.TURN_LINES=['b100 c' if args.turn_line_policy=='b100only' else 'x x']
     turns=pipeline.turns_for(flop)[:args.turn_count]
     lines=(['b33 c','b50 c','b75 c','b100 c'] if args.flop_line_policy=='oop-betcall'
            else ['b50 c'] if args.flop_line_policy=='oop-b50only'

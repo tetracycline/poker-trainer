@@ -61,7 +61,9 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
       const pin = e.pins.find(p=>p.flop===b.flop && p.turn===b.turn && p.public_board===b.public_board);
       const lock = b.nl2_locked_variants?.[0];
       if (!pin || !lock || b.nl2_locked_variants.length !== 1 || ![0,1].includes(b.acting_seat) ||
-          !/^[A-Za-z0-9_]+$/.test(pin.viewer_archive_code || '') ||
+          !/^[A-Za-z0-9_]+$/.test(pin.viewer_archive_code || '') || !digest(pin.viewer_sha256) ||
+          (lock.run_id!==b.source_run_id && (!/^[A-Za-z0-9_]+$/.test(pin.locked_viewer_archive_code || '') ||
+            !digest(pin.locked_viewer_sha256))) ||
           !digest(b.source_sha256) || b.source_sha256!==pin.original_GTO_SHA256 ||
           !digest(lock.sha256) || lock.sha256!==pin.actual_NL2_SHA256 ||
           lock.version!==(b.acting_seat===0?'exp_oop':'exp_ip') ||
