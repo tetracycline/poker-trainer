@@ -30,7 +30,8 @@ def unpack(raw, digest):
     return json.loads(raw)
 
 
-def read_source(package, ref, version, flop, historical):
+def read_source(package, ref, version, flop, historical, *, flop_line='b50 c', batch='B496'):
+    assert flop_line in ('b50 c','x b50 c')
     artifact, run, zip_sha = ref['id'], ref['run'], ref['zip_sha256']
     meta = json.loads((package/f'{artifact}.json').read_bytes())
     assert (meta['id'],meta['digest'],meta['workflow_run']['id'],meta['workflow_run']['repository_id']) == (
@@ -45,7 +46,7 @@ def read_source(package, ref, version, flop, historical):
         assert (m['schema'],m['spot'],m['version'],m['flop'],m['pot_family']) == (
             'NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1',SPOT,version,flop,'LMP')
         assert (m['flop_size_profile'],m['restricted_tree_assumption'],m['flop_action_sizes'],m['selected_lines']) == (
-            'lmp-50-only',True,['50%'],['b50 c'])
+            'lmp-50-only',True,['50%'],[flop_line])
         assert m['turn_subgame_sizing']=={'ip':'50%,100%','oop':'50%,100%'} and not m['failures']
         assert m['pool_source_sha256']==POOL and m['preflop_ranges']['source']=='ASSUMED_EXPLICIT_169CLASS'
         def getgame(name,digest):
@@ -60,12 +61,18 @@ def read_source(package, ref, version, flop, historical):
         assert [r['pat'] for r in rjob.get('locks',[])]==[r['pat'] for r in m['locks']]
         check_limp_source(dict(manifest=m,root_job=rjob,subgame_job=None))
         root_decision,=(n for n in root['nodes'] if n['line']=='' and len(n['board'])==6 and n['player']==0)
-        root_response,=(n for n in root['nodes'] if n['line']=='b50' and len(n['board'])==6 and n['player']==1)
-        assert 'b50' in root_decision['acts'] and 'c' in root_response['acts'] and root_response['bets']==[125,0]
+        if flop_line=='b50 c':
+            root_response,=(n for n in root['nodes'] if n['line']=='b50' and len(n['board'])==6 and n['player']==1)
+            assert 'b50' in root_decision['acts'] and 'c' in root_response['acts'] and root_response['bets']==[125,0]
+        else:
+            stab,=(n for n in root['nodes'] if n['line']=='x' and len(n['board'])==6 and n['player']==1)
+            response,=(n for n in root['nodes'] if n['line']=='x b50' and len(n['board'])==6 and n['player']==0)
+            assert 'x' in root_decision['acts'] and 'b50' in stab['acts'] and 'c' in response['acts']
+            assert stab['bets']==[0,0] and response['bets']==[0,125] and m['allow_turn_lead']
         if historical:
             assert ref['root_sha256']==m['file_flop_sha256']
         else:
-            assert meta['name']==f'B496-original-{flop}-{version}'
+            assert meta['name']==f'{batch}-original-{flop}-{version}'
             assert m['marginal_lock_matching']=='RUST_FIRST_MATCH_POOLED_FALLBACK_EXACT_STREET'
             assert len(m['turns'])==len(set(m['turns']))==2
             assert set(m['turns'])=={c['turn'] for c in m['cases']+m['skipped']}
@@ -75,17 +82,18 @@ def read_source(package, ref, version, flop, historical):
             audit_patterns(root,rjob,m,pool,hero_seat=0)
         sources={}
         for c in m['cases']:
-            assert c['line']=='b50 c'
+            assert c['line']==flop_line
             if historical:
                 assert c['source_sha256']==ref['source_sha256']
             sub,sjob=getgame(c['source_path'],c['source_sha256'])
             turn=c['turn']
-            assert (sub['flop'],sub['line0'],sub['turn'],sub['pot'],sub['stack'])==(flop,'b50 c',turn,500,9775)
-            assert sjob['line0']==['b50','c','/'] and sjob['turn']==turn
+            assert (sub['flop'],sub['line0'],sub['turn'],sub['pot'],sub['stack'])==(flop,flop_line,turn,500,9775)
+            assert sjob['line0']==flop_line.split()+['/'] and sjob['turn']==turn
+            if flop_line=='x b50 c':assert sjob['root_no_bet'] is False
             assert (sjob['pot'],sjob['stack'],sjob['rake_rate'],sjob['rake_cap'])==(500,9775,.05,1000)
             assert sjob['turn_oop']==sjob['turn_ip']=='50%,100%' and not sjob.get('river_donk')
             assert [r['pat'] for r in sjob.get('locks',[])]==[r['pat'] for r in m['locks']]
-            parent,=(n for n in root['nodes'] if n['line']=='b50 c/' and n['board'].endswith(turn))
+            parent,=(n for n in root['nodes'] if n['line']==flop_line+'/' and n['board'].endswith(turn))
             for seat, name in enumerate(('oop_w','ip_w')):
                 assert sjob[name]==[[h,w] for h,w in zip(root['hands'][seat],parent['wr'][seat],strict=True) if w>1e-4]
             check_limp_source(dict(manifest=m,root_job=rjob,subgame_job=sjob))

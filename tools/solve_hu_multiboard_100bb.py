@@ -116,6 +116,8 @@ def main():
         help='Preserve a converged subgame that exported turn decisions but no requested river nodes')
     a.add_argument('--lock-marginals-by-street', action='store_true',
         help='Match the pooled bet-size and raise fallback to the actual flop, turn, or river before applying it')
+    a.add_argument('--allow-turn-lead', action='store_true',
+        help='Solve an alternative turn tree with OOP leads after an IP half-pot flop stab and call')
     a.add_argument('--turn-line-policy',choices=('default','b100only','checkcheck'),default='default',
         help='Extract only exact b100-call river continuations; never alter the full underlying solved tree')
     a.add_argument('--turn-size-menu',choices=('default','river-gaps','exact-b66-only','exact-b50-only','33-50-75-100'),default='default',
@@ -157,8 +159,10 @@ def main():
         if args.spot!='CO_BB' or args.flop_size_profile!='full' or args.turn_size_menu!='default':
             a.error('Dual checked-b50/b100 original solve only for full-size CO_BB SRP with default turn menu')
     if args.flop_size_profile=='lmp-50-only':
-        if args.spot!='LMP_CO_BB' or args.flop_line_policy!='oop-b50only':
-            a.error('Restricted flop 50pct policy requires LMP_CO_BB with exact b50 c line')
+        if args.spot!='LMP_CO_BB' or args.flop_line_policy not in ('oop-b50only','checked-b50only'):
+            a.error('Restricted half-pot flop tree requires a LMP half-pot bet-call line')
+    if args.allow_turn_lead and args.flop_line_policy!='checked-b50only':
+        a.error('The alternative turn lead requires the checked half-pot flop line')
     flop=args.flop;cards=[flop[i:i+2] for i in (0,2,4)]
     if len(flop)!=6 or len(set(cards))!=3 or not all(re.fullmatch('[23456789TJQKA][cdhs]',t) for t in cards):
         a.error('Invalid explicit flop')
@@ -218,6 +222,13 @@ def main():
         j['flop_raise']='3x,a'
         return j
     pipeline.make_job=sized_make
+    if args.allow_turn_lead:
+        native_run=pipeline.run
+        def run_turn_with_lead(turn_job, job_path):
+            assert turn_job['line0']==['x','b50','c','/'] and turn_job['root_no_bet']
+            turn_job['root_no_bet']=False
+            return native_run(turn_job,job_path)
+        pipeline.run=run_turn_with_lead
     if args.turn_size_menu=='river-gaps':
         pipeline.SUB.update(turn_oop='33%,66%,75%',turn_ip='33%,66%,75%')
         pipeline.TURN_LINES=['x b33 c','x b66 c','x b75 c','x x',
@@ -292,6 +303,8 @@ def main():
             if "street" in original:
                 record["street"] = original["street"]
     t0=time.monotonic()
+    if args.allow_turn_lead:
+        info['allow_turn_lead']=True
     try:
         if using_authenticated_parent:
             authm=json.loads(args.authenticated_original_gto_manifest.read_text())
