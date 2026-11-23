@@ -71,7 +71,7 @@ def turn_job(root, turn, pipeline):
     return job, rivers, public
 
 
-def process(args):
+def process(args, new_job=None, template_artifact=None):
     solver = args.solver.resolve()
     assert subprocess.check_output(["git","-C",solver,"rev-parse","HEAD"],text=True).strip()==SOLVER
     if args.driver:
@@ -83,14 +83,21 @@ def process(args):
     assert sha(pool_raw) == POOL
     pool = json.loads(pool_raw)["NL2"]
     route = json.loads(subprocess.check_output(["node","tools/hu_b613_rank55_routes.cjs"]))
-    old, job, turns = original(args.originals,args.flop)
+    if new_job is None:
+        old, job, turns = original(args.originals,args.flop)
+        template_artifact=CASES[args.flop][0]
+    else:
+        old=None
+        job,turns=new_job
     root_raw = native(args.output/"flop",job,args.driver)
     root = json.loads(root_raw)
-    assert (root["flop"],root["hands"],root["pot"],root["stack"]) == (args.flop,old["hands"],550,9750)
+    assert (root["flop"],root["pot"],root["stack"]) == (args.flop,550,9750)
     assert 0<=root["info"]["gto_expl_pct"]<=.5 and not root["info"].get("lock_stats")
     nodes = {(n["board"],n["line"],n["player"]):n for n in root["nodes"]}
     # Appended exports leave the original native strategy and all historical boundaries intact.
-    assert all(nodes[(n["board"],n["line"],n["player"])] == n for n in old["nodes"])
+    if old is not None:
+        assert root["hands"]==old["hands"]
+        assert all(nodes[(n["board"],n["line"],n["player"])] == n for n in old["nodes"])
     root_sha = sha(compact(root))
     results = []
     for turn in turns:
@@ -135,7 +142,7 @@ def process(args):
         results.append(dict(turn=turn,checks=checks))
         if checks:break
     return dict(rank=55,model_id=MODEL,flop=args.flop,run=args.run,root_sha256=sha(root_raw),
-                original_artifact=CASES[args.flop][0],original_nodes_reproduced=len(old["nodes"]),turns=results)
+                original_artifact=template_artifact,original_nodes_reproduced=len(old["nodes"]) if old is not None else 0,turns=results)
 
 
 if __name__=="__main__":

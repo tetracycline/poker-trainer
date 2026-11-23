@@ -1,0 +1,56 @@
+name: Reproduce named BTN and SB river witnesses from worker receipts
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-native-river-import.yml'
+      - 'tools/hu_native_river_witness_import.py'
+      - 'data/nl2_hu_native_river_worker_receipts.json'
+      - 'data/nl2_hu_b613_rank55_partial.json'
+      - 'data/nl2_hu_b617_rank58_partial.json'
+      - 'data/nl2_hu_b613_locked_medium.json'
+      - 'data/nl2_hu_b617_locked_medium.json'
+      - 'data/solver_evidence/NL2_B613_R55_*.zip'
+      - 'data/solver_evidence/NL2_B617_R58_*.zip'
+permissions: {contents: read, actions: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix: {batch: [613, 617]}
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Rebuild each published proof and compare the native strategy hashes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BATCH: ${{ matrix.batch }}
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          index=data/nl2_hu_native_river_worker_receipts.json
+          mkdir -p "$RUNNER_TEMP/worker" "$RUNNER_TEMP/original"
+          for kind in worker original; do
+            for id in $(jq -r --arg b "$BATCH" --arg k "$kind" '.[$b][$k][]' "$index"); do
+              base="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+              gh api "$base" > "$RUNNER_TEMP/$kind/$id.json"
+              gh api "$base/zip" > "$RUNNER_TEMP/$kind/$id.zip"
+            done
+          done
+          run=$(jq -r --arg b "$BATCH" '.[$b].run' "$index")
+          partial=$(jq -r --arg b "$BATCH" '.[$b].partial' "$index")
+          if test -e "$partial"; then mv "$partial" "$RUNNER_TEMP/baseline.json"; fi
+          python tools/hu_native_river_witness_import.py --batch "$BATCH" --run "$run" --solver ../solver --archives "$RUNNER_TEMP/worker" --originals "$RUNNER_TEMP/original"
+          if test -e "$RUNNER_TEMP/baseline.json" && test ! -e "$partial"; then mv "$RUNNER_TEMP/baseline.json" "$partial"; fi
+          git diff --exit-code -- data
