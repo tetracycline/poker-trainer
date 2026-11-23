@@ -30,6 +30,25 @@
           '% 假設。這條規則在轉河子樹共套用於 '+assumed.applied_subgame_nodes+' 個節點。'));
       }
       for(const r of lock.applied_street_rates){
+        if(r.token==='history'){
+          const labels={
+            'SRP_turn_stab_ip_after_pfr_checks':'翻牌跟注後，轉牌面對過牌時下注',
+            'delayed_cbet':'翻牌雙方過牌後，在轉牌延遲持續下注',
+            'vs_delayed_cbet':'面對轉牌延遲持續下注',
+            'vs_probe':'翻牌雙方過牌後，面對轉牌領打',
+            'vs_turn_barrel_by_size[34-55%]':'面對 34–55% 底池的轉牌連續下注',
+            'vs_turn_barrel_by_size[81-110%]':'面對 81–110% 底池的轉牌連續下注'
+          };
+          const history=labels[r.source.split('.').pop()];
+          if(!history)continue;
+          const counts=r.n.toLocaleString('zh-TW')+' 次池決策，Rust 套用 '+r.nodes+' 個節點。';
+          const result=r.opportunity==='BET'
+            ? '實測下注 '+r.target_bet_pct.toFixed(1)+'%，鎖後 '+r.bet_pct.toFixed(2)+
+              '%。尺寸分布借用 '+r.size_proxy+'。'
+            : '實測棄／加 '+r.target_fold_pct.toFixed(1)+'%／'+r.target_raise_pct.toFixed(1)+
+              '%，鎖後 '+r.fold_pct.toFixed(2)+'%／'+r.raise_pct.toFixed(2)+'%。';
+          details.appendChild(element('p',history+'，'+counts+result));continue;
+        }
         const rate=report.pool_by_action_and_street[r.token]?.[r.street-1];
         if(r.nodes>0 && Number.isSafeInteger(r.n) && r.n>=500 &&
            Number.isFinite(r.target_fold_pct) && Number.isFinite(r.target_raise_pct)){

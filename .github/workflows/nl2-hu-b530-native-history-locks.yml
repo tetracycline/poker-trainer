@@ -1,0 +1,77 @@
+name: B530 verify completed native turn action-history locks and audit every certified board
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b530-native-history-locks.yml', 'tools/hu_b530_native_history_locks.py', 'tools/hu_b530_history_rates_ui.cjs']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Replay every named original strategy through both players' previous actions and card blockers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/originals"
+          for aid in $(jq -r '[.[].artifact_id] | unique[]' data/nl2_hu_b521_originals.json); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$aid/zip" > "$RUNNER_TEMP/originals/$aid.zip"
+          done
+          python tools/hu_b530_native_history_locks.py --originals "$RUNNER_TEMP/originals" --solver pinned-solver --out "$RUNNER_TEMP/verified"
+          jq -e '[.records[] | select(.status == "REGISTERED")] | length == 49' "$RUNNER_TEMP/verified/data/nl2_hu_b530_native_street_locks.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B530-verified-certified-decisions
+          path: ${{ runner.temp }}/verified
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish verified native locks on the current PR branch and audit all routes
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          verified="$RUNNER_TEMP/verified"
+          mapfile -t files < <(cd "$verified" && find data -type f | sort)
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            for file in "${files[@]}"; do
+              if test -e "$live/$file"; then cmp "$verified/$file" "$live/$file"; fi
+            done
+            cp -a "$verified/data/." "$live/data/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b530_history_rates_ui.cjs
+              bash tools/hu_exact_batch_audit.sh "$status"
+              git add -f -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B530: register 49 source-replayed NL2 turn-history and river-size locks'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then
+              exit 0
+            fi
+            git worktree remove "$live"
+          done
+          exit 1
