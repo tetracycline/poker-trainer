@@ -26,7 +26,7 @@ CASES = {
 def reply_rules(pool, flop_line, pfr, family, actions):
     rows = []
     table = pool["postflop_HU"][family + "_PFR_" + pfr.upper()]
-    if family == "3BP":
+    if family == "3BP" and flop_line != "x x":
         assert pfr == "oop" and flop_line == "b75 c"
         assert actions in (["x","b50","a"], ["x","b50","b100","a"])
         for action, interval, count in (("b50","34-55%",3647), ("b100","81-110%",1175)):
@@ -38,7 +38,8 @@ def reply_rules(pool, flop_line, pfr, family, actions):
     if flop_line=="x x":
         metric = "vs_probe" if pfr == "ip" else "vs_delayed_cbet"
         rate = table[metric]
-        assert rate["n"] == (49952 if pfr == "ip" else 26780)
+        counts = {("SRP","ip"):49952, ("SRP","oop"):26780, ("3BP","oop"):6843, ("3BP","ip"):6093}
+        assert rate["n"] == counts[family,pfr]
         return [dict(pattern="^x x/b(50|100)$",table=metric,size="all",**rate)]
     assert pfr == "oop"
     for street, prefix in (("turn", "^"+flop_line+"/"), ("river", "^"+flop_line+"/b(50|100) c/")):
@@ -50,18 +51,21 @@ def reply_rules(pool, flop_line, pfr, family, actions):
     return rows
 
 
-def calculate(board, pin, originals, pool, archive, driver, verification_driver, pipeline, ranges, model, flop_line):
+def calculate(board, pin, originals, pool, archive, driver, verification_driver, pipeline, ranges, model, flop_line, repo_parent=None):
     public = board["public_board"]
     line = flop_line+"/"
-    aid=pin["archive_id"]
-    receipt=json.loads((originals/f"{aid}.json").read_bytes())
-    parent_pin=dict(name=receipt["name"],head=receipt["workflow_run"]["head_sha"],run=pin["run"],sha256=pin["archive_sha256"])
     spot = model["solver_profile"]
     profile = ranges.SPOTS[spot]
     assert profile["kind"] in ("SRP", "3BP") and profile["pfr"] in ("ip", "oop")
     pot, stack = round(100*profile["pot"]), round(100*profile["stack"])
-    parent=load_original(originals,aid,parent_pin,spot,board["flop"],board["turn"],"gto",pot=pot,stack=stack,
-                         pipeline=pipeline,ranges=ranges,flop_line=flop_line)
+    if repo_parent:
+        parent=repo_parent(board,pin,ranges)
+    else:
+        aid=pin["archive_id"]
+        receipt=json.loads((originals/f"{aid}.json").read_bytes())
+        parent_pin=dict(name=receipt["name"],head=receipt["workflow_run"]["head_sha"],run=pin["run"],sha256=pin["archive_sha256"])
+        parent=load_original(originals,aid,parent_pin,spot,board["flop"],board["turn"],"gto",pot=pot,stack=stack,
+                             pipeline=pipeline,ranges=ranges,flop_line=flop_line)
     assert parent["identity"]["source_sha256"]==pin["source_sha256"]
     root,original=parent["source"]["root"],parent["source"]["subgame"]
     parent_job,root_sha=parent["job"],parent["identity"]["root_sha256"]
@@ -126,7 +130,7 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
                 gto=before,locked=after,gto_gap_pct=locked["info"]["gto_expl_pct"],hero_gap_pct=locked["info"]["hero_gap_pct"],rules=rules)
 
 
-def main(*, model_id=MODEL, rank=3, flop_line="b75 c", cases=CASES, argv=None, schema="NL2_HU_B590_SB_BB_BARREL_REPLIES_V1"):
+def main(*, model_id=MODEL, rank=3, flop_line="b75 c", cases=CASES, argv=None, schema="NL2_HU_B590_SB_BB_BARREL_REPLIES_V1", repo_parent=None):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--solver",type=Path,required=True)
     p.add_argument("--originals",type=Path,required=True)
@@ -150,8 +154,9 @@ def main(*, model_id=MODEL, rank=3, flop_line="b75 c", cases=CASES, argv=None, s
     with ZipFile(a.archive,"w" if a.driver else "r",compression=ZIP_DEFLATED) as archive:
         for public,(aid,digest) in cases.items():
             b=boards[public]
-            pin=dict(archive_id=aid,archive_sha256=digest,version="gto",run=b["source_run_id"],source_sha256=b["source_sha256"])
-            records.append(calculate(b,pin,a.originals,json.loads(pool_raw)["NL2"],archive,a.driver,a.verification_driver,pipeline,ranges,model,flop_line))
+            pin=dict(archive_sha256=digest,version="gto",run=b["source_run_id"],source_sha256=b["source_sha256"])
+            pin["archive_code" if repo_parent else "archive_id"]=aid
+            records.append(calculate(b,pin,a.originals,json.loads(pool_raw)["NL2"],archive,a.driver,a.verification_driver,pipeline,ranges,model,flop_line,repo_parent))
     report=dict(schema=schema,solver=SOLVER,rust=RUST,pool_sha256=POOL,
                 archive_sha256=sha(a.archive.read_bytes()),records=records)
     a.out.write_text(json.dumps(report,sort_keys=True,indent=2)+"\n")

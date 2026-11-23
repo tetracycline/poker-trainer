@@ -1,0 +1,52 @@
+name: B632 reproduce ten three-bet-pot responses after a checked flop
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b632-three-bet-checked.yml'
+      - 'tools/hu_b632_*'
+      - 'tools/hu_b590_rank3_barrels.py'
+      - 'data/nl2_hu_b632_rank*_barrels.json'
+      - 'data/solver_evidence/NL2_B632_R*.zip'
+permissions: {contents: read, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the original native solver
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Authenticate all ten original boards and reproduce the native policies
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAYON_NUM_THREADS: 1
+        run: |
+          set -euo pipefail
+          for id in 14599605695 14593123141 14528582176 14593390837 14528551179 14530206356 14592263783; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$RUNNER_TEMP/$id.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/$id.zip"
+          done
+          for rank in 82 120 131; do
+            report="data/nl2_hu_b632_rank${rank}_barrels.json"
+            python tools/hu_b632_threebet_delayed.py --rank "$rank" --solver ../solver --verification-driver ../solver/postflop/pfdriver/target/release/pfdriver --originals "$RUNNER_TEMP" --archive "data/solver_evidence/NL2_B632_R${rank}.zip" --out "$RUNNER_TEMP/replay.json"
+            cmp "$RUNNER_TEMP/replay.json" "$report"
+            node tools/hu_b590_barrel_ui.cjs "$report"
+          done

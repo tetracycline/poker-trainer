@@ -33,8 +33,9 @@ async function main() {
       for(const [hand,freq] of hands)assert.ok(group.children[1].textContent.includes(hand+' '+(100*freq).toFixed(1)+'%'));
     }
     if(model.solver_profile==='BTN_BB')assert.ok(content.includes('探測下注') && content.includes('位置內'));
-    if(model.solver_profile==='BB3_BTN')assert.ok(content.includes('大盲三次加注') && content.includes('按鈕位') && content.includes('半池、滿池或全下'));
-    if(model.solver_profile==='SB3_BTN')assert.ok(content.includes('三次加注') && content.includes('按鈕位') && content.includes('半池或全下'));
+    if(model.solver_profile==='BB3_BTN' && row.line!=='x x/')assert.ok(content.includes('大盲三次加注') && content.includes('按鈕位') && content.includes('半池、滿池或全下'));
+    if(model.solver_profile==='SB3_BTN' && row.line!=='x x/')assert.ok(content.includes('三次加注') && content.includes('按鈕位') && content.includes('半池或全下'));
+    if(model.family==='3BP' && row.line==='x x/')assert.ok(content.includes('三次加注') && content.includes(model.solver_profile==='CO3_BTN'?'探測下注':'延遲持續下注') && content.includes('下半池或滿池'));
     if(model.solver_profile==='UTG_CO')assert.ok(content.includes('UTG'));
     if(row.line==='x x/')assert.ok(content.includes('同一組合併樣本頻率'));
     for (const r of row.rules) assert.ok(content.includes(r.n.toLocaleString('zh-TW')));

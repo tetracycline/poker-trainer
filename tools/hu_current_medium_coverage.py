@@ -194,7 +194,10 @@ def coverage(registry):
                 assert (barrel['pot_bb'],barrel['stack_bb'])==(pot,stack)
                 if row['line']=='x x/':
                     rule, = barrel['rules']
-                    field, n = ('vs_probe',49952) if model['solver_profile']=='BTN_BB' else ('vs_delayed_cbet',26780)
+                    if model['solver_profile'] in ('BTN_BB','CO3_BTN'):
+                        field, n = 'vs_probe', 6093 if model['family']=='3BP' else 49952
+                    else:
+                        field, n = 'vs_delayed_cbet', 6843 if model['family']=='3BP' else 26780
                     assert (rule['table'],rule['size'],rule['n'],rule['applied_nodes'])==(field,'all',n,2)
                 elif model['solver_profile'] in ('SB3_BTN','BB3_BTN'):
                     actions=baseline['actions']
