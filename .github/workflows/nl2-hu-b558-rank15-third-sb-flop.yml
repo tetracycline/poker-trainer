@@ -1,0 +1,130 @@
+name: B558 verify three SB double-barrel flops using the displayed hand actions
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b558-rank15-third-sb-flop.yml'
+      - 'tools/hu_b558_rank15_three_barrels.py'
+      - 'data/nl2_hu_b558_rank15_parents.json'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  solve-and-register:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile the native solver and retain the model inputs
+        run: |
+          set -euo pipefail
+          python -m pip install numpy matplotlib phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          mkdir -p trainer/evidence
+          cp solver/inputs/pool_stats.json trainer/evidence/
+          git -C solver rev-parse HEAD > trainer/evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > trainer/evidence/rust-pin.txt
+          (cd solver/postflop/pfdriver && RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve the third independent flop with the declared SB bet menu
+        working-directory: trainer
+        run: |
+          python tools/solve_hu_multiboard_100bb.py --solver-root ../solver --spot SB_BB --flop AdJd5c --version gto \
+            --flop-size-profile sb-75-only --flop-line-policy oop-b75only --turn-line-policy default --turn-count 3 \
+            --archive-empty-river-extraction --lock-marginals-by-street --manifest evidence/AdJd5c-gto.json
+      - id: gto
+        uses: actions/upload-artifact@v4
+        with:
+          name: B558-AdJd5c-gto
+          path: |
+            trainer/evidence
+            solver/postflop/out/SB_BB/gto
+          if-no-files-found: error
+          retention-days: 90
+      - name: Authenticate the two previous roots and the fresh solve artifact
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FRESH: ${{ steps.gto.outputs.artifact-id }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/parents"
+          mkdir -p "$dir"
+          for aid in "$FRESH" $(jq -r '.[] | .id' data/nl2_hu_b558_rank15_parents.json); do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$aid"
+            gh api "$api" > "$dir/$aid.json"
+            gh api "$api/zip" > "$dir/$aid.zip"
+          done
+          python tools/hu_b558_rank15_three_barrels.py --solver ../solver --originals "$dir" --results "$RUNNER_TEMP/native" \
+            --run "$GITHUB_RUN_ID" --head "$GITHUB_SHA" --driver ../solver/postflop/pfdriver/target/release/pfdriver
+      - name: Reuse the completed B552 first board and replay all private hands and NL2 frequencies
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/parents"
+          api="repos/$GITHUB_REPOSITORY/actions"
+          aid=14794349288
+          gh api "$api/artifacts/$aid" > "$dir/b552-meta.json"
+          gh api "$api/artifacts/$aid/zip" > "$dir/b552-results.zip"
+          python tools/hu_b558_rank15_three_barrels.py --solver ../solver --originals "$dir" --results "$RUNNER_TEMP/native" \
+            --run "$GITHUB_RUN_ID" --head "$GITHUB_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B558-ranked-river-replayed
+          path: |
+            trainer/data/solver_evidence/reverified/rank15.json
+            trainer/data/nl2_hu_b558_locked_medium.json
+            trainer/data/solver_evidence/NL2_B558_*.zip
+            trainer/data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R15_*.json.gz
+          if-no-files-found: error
+          retention-days: 90
+      - name: Audit and publish all three positively reachable boards on the current PR branch
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          registry=data/nl2_hu_multiboard_status_current.json
+          group=data/solver_evidence/reverified/rank15.json
+          files=("$group" data/nl2_hu_b558_locked_medium.json data/solver_evidence/NL2_B558_*.zip data/solver_evidence/NL2_B552_R15_*.zip)
+          while read -r code; do files+=("data/solver_evidence/NL2_MULTIBOARD_${code}.json.gz"); done < <(jq -r '.pins[]|.viewer_archive_code,(.locked_viewer_archive_code//empty)' "$group" | sort -u)
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            for f in "${files[@]}"; do if test -f "$live/$f"; then cmp "$f" "$live/$f"; fi; done
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$registry"
+              node tools/hu_extension_runtime_test.cjs "$registry"
+              node tools/hu_b558_river_policy_view.cjs
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              bash tools/hu_exact_batch_audit.sh "$registry"
+              python -c 'import json,sys; g=json.load(open(sys.argv[1])); r=json.load(open(sys.argv[2]))["records"][g["model_id"]]; assert r["label"]=="CERT-MULTIBOARD" and {b["source_sha256"] for b in g["boards"]} <= {b["source_sha256"] for b in r["certified_3_to_5_exact_flop_boards"]}' "$group" "$registry"
+              git add -- "${files[@]}" "$registry" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B558: publish three verified SB double-barrel flops and their measured opponents'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1

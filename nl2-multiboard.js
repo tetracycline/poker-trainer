@@ -485,6 +485,13 @@ function selectNode(){
  }
  for(const line of lines.filter(Boolean)){const p=document.createElement('p');p.textContent=line;details.appendChild(p);}
  details.appendChild(buildLinks(origin,caseData));
+ if (node.exact_node_line===chosenBoard.actual_exact_action_line && node.acting_seat===chosenBoard.acting_seat) {
+   const comparedPin=[pin,...(status.exact_source_extensions?.[chosenModel.model_id]||[])].find(p=>
+     p?.public_board===node.public_board && Array.isArray(p.rendered_decision_hands) &&
+     [p.original_GTO_SHA256,p.actual_NL2_SHA256].includes(caseData.source_sha256));
+   const rowPolicies=renderedPolicyComparison(comparedPin,node,caseData.source_sha256);
+   if(rowPolicies) details.appendChild(rowPolicies);
+ }
  if(chosenModel.model_id==='ln-iso-lmp_t_model-19hfq8v' && node.public_board==='2d4h4s8s' &&
     node.exact_node_line==='b50 c/' && node.acting_seat===0 && chosenBoard.source_run_id===44762388523){
    const link=document.createElement('a');
@@ -495,6 +502,32 @@ function selectNode(){
  }
 
  fillCombos();
+}
+function renderedPolicyComparison(record, node, sourceSha) {
+ if (!record || record.public_board !== node.public_board || ![record.original_GTO_SHA256,record.actual_NL2_SHA256].includes(sourceSha)) return null;
+ const details=document.createElement('details');
+ const summary=document.createElement('summary');
+ summary.textContent='共同可達手牌的練習動作與解算頻率';
+ details.appendChild(summary);
+ const table=document.createElement('table');
+ const caption=document.createElement('caption');
+ caption.textContent='✓ 表示該解算的嚴格可選動作。練習表動作仍為近似值。';
+ table.appendChild(caption);
+ const headings=document.createElement('tr');
+ for (const label of ['手牌','練習表','GTO','NL2 鎖頻']) {
+   const th=document.createElement('th');th.textContent=label;headings.appendChild(th);
+ }
+ table.appendChild(headings);
+ for (const row of record.rendered_decision_hands) {
+   const tr=document.createElement('tr');
+   const describe=policy=>policy.action_order.map((action,i)=>`${action} ${fmt(100*policy.strategy[action],2)}%${(policy.accepted_mask & (1<<i))?' ✓':''}`).join(' / ');
+   for (const value of [row.hand,row.displayed_suggestion,describe(row.gto),describe(row.nl2)]) {
+     const td=document.createElement('td');td.textContent=value;tr.appendChild(td);
+   }
+   table.appendChild(tr);
+ }
+ details.appendChild(table);
+ return details;
 }
 function fillCombos(){
  const box=el('combo-rows');box.replaceChildren();

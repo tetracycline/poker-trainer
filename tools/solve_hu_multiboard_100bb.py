@@ -121,8 +121,8 @@ def main():
     a.add_argument('--measured-bb-flop-lead',action='store_true',
         help='Use the measured SRP caller lead rate and size distribution for the BB flop opening action')
     a.add_argument('--turn-count',type=int,default=1)
-    a.add_argument('--flop-size-profile',choices=('full','lmp-50-only','utg-50-only','btn-50-only','sb-50-only'),default='full',
-        help='Predeclared 50% flop menu for the named spot; other streets retain their configured sizes')
+    a.add_argument('--flop-size-profile',choices=('full','lmp-50-only','utg-50-only','btn-50-only','sb-50-only','sb-75-only'),default='full',
+        help='Predeclared flop size menu for the named spot; other streets retain their configured sizes')
     a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','checkcheck-and-oop-b50','oop-b75only','oop-b100only','oop-b75raisecall','oop-b33only','checked-b33only','checked-b50only','checked-b75only','checked-b100only','checked-b50b100only','iso-checked-b33b50','checkcheck'),default='all',
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
     a.add_argument('--archive-empty-river-extraction', action='store_true',
@@ -179,6 +179,8 @@ def main():
     if args.flop_size_profile=='utg-50-only':
         if args.spot!='UTG_CO' or args.flop_line_policy not in ('oop-b50only','checked-b50only'):
             a.error('Restricted UTG half-pot flop tree requires a UTG_CO half-pot bet-call line')
+    if args.flop_size_profile=='sb-75-only' and (args.spot,args.flop_line_policy)!=('SB_BB','oop-b75only'):
+        a.error('Restricted SB three-quarter-pot flop tree requires the SB_BB 75% bet/call line')
     if args.flop_size_profile=='sb-50-only' and (args.spot,args.flop_line_policy)!=('SB_BB','oop-b50only'):
         a.error('Restricted SB flop tree requires the SB_BB half-pot bet/call line')
     if args.flop_size_profile=='lmp-50-only':
@@ -237,19 +239,14 @@ def main():
             rules[index], records[index] = measured_caller_flop_lead(pool)
         return rules, records
     pipeline.lock_list=lock_list
+    flop_menu={'full':SIZES,'sb-75-only':['75%']}.get(args.flop_size_profile,['50%'])
     orig_make=pipeline.make_job
     def sized_make(*pos,**kwargs):
         kwargs['target']=0.5
         kwargs['rank']=0.5 if args.version!='gto' else 1.5
         kwargs['iters']=1700
         j=orig_make(*pos,**kwargs)
-        if args.flop_size_profile!='full':
-            j['flop_oop']='50%'
-            j['flop_ip']='50%'
-        else:
-            j['flop_oop']=','.join(SIZES) # include donk or OOP-PFR cbet
-            j['flop_ip']=','.join(SIZES) # include IP stab / IP-PFR cbet
-        j['flop_raise']='3x,a'
+        j['flop_oop']=j['flop_ip']=','.join(flop_menu)
         return j
     pipeline.make_job=sized_make
     if args.allow_turn_lead:
@@ -319,7 +316,7 @@ def main():
       n_NL2_hands=pool['hands'],
       pool_source_sha256=sha(src/'inputs/pool_stats.json'),
       solver_pin=sha(pf/'py/pipeline.py'),solver_ranges_sha256=sha(pf/'py/ranges.py'),
-      flop_action_sizes=['50%'] if args.flop_size_profile!='full' else SIZES,
+      flop_action_sizes=flop_menu,
       flop_size_profile=args.flop_size_profile,
       restricted_tree_assumption=args.flop_size_profile!='full',
       allow_OOP_flop_leads=True,
