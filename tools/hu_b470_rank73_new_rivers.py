@@ -66,7 +66,10 @@ def audit_patterns(game, job, manifest, pool):
 
 def original(directory, flop, turn, version, *, batch="B470", spot=SPOT, flop_line=FLOP_LINE,
              flop_policy="checked-b33only", turn_policy="b100only", turn_extract="b100 c",
-             root_pot=550, root_stack=9750):
+             root_pot=550, root_stack=9750, flop_lines=None, turn_extracts=None,
+             turn_mode="default", turn_menu="50%,100%"):
+    expected_flop = [flop_line] if flop_lines is None else list(flop_lines)
+    expected_turn = [turn_extract] if turn_extracts is None else list(turn_extracts)
     base = directory / f"NL2-{batch}-{flop}-{version}"
     evidence = base / "trainer/evidence"
     assert (evidence / "poker-solver-pin.txt").read_text().strip() == SOLVER
@@ -78,9 +81,9 @@ def original(directory, flop, turn, version, *, batch="B470", spot=SPOT, flop_li
     assert (m["schema"], m["spot"], m["flop"], m["version"]) == ("NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1", spot, flop, version)
     assert m["preflop_ranges"]["source"] == "PINNED_POKER_SOLVER_PREFLOP_CFR"
     assert m["flop_size_profile"] == "full" and not m["restricted_tree_assumption"]
-    assert m["flop_line_policy"] == flop_policy and m["selected_lines"] == [flop_line]
-    assert m["turn_line_policy"] == turn_policy and m["selected_turn_lines"] == [turn_extract]
-    assert m["turn_sizing_mode"] == "default" and m["turns"] == [turn] and not m["failures"]
+    assert m["flop_line_policy"] == flop_policy and m["selected_lines"] == expected_flop
+    assert m["turn_line_policy"] == turn_policy and m["selected_turn_lines"] == expected_turn
+    assert m["turn_sizing_mode"] == turn_mode and m["turns"] == [turn] and not m["failures"]
     assert (m["root_pot_bb"], m["root_remaining_bb"]) == (root_pot/100, root_stack/100)
     assert m["marginal_lock_matching"] == "RUST_FIRST_MATCH_POOLED_FALLBACK_EXACT_STREET"
     assert m["pool_source_sha256"] == sha(pool_bytes) and m["solver_ranges_sha256"]
@@ -101,15 +104,17 @@ def original(directory, flop, turn, version, *, batch="B470", spot=SPOT, flop_li
                subgame=None, subgame_job=None, source_sha256=None)
     if version == "exp_oop":
         out["actual_flop_job_lock_coverage"] = audit_patterns(root, flop_job, m, pool)
-    if not m["cases"]:
-        skipped, = m["skipped"]
-        assert m["solved_cases"] == 0 and (skipped["line"], skipped["turn"]) == (flop_line, turn)
+    outcomes = m["cases"] + m["skipped"]
+    assert len(outcomes) == len(expected_flop)
+    assert {(c["line"], c["turn"]) for c in outcomes} == {(l, turn) for l in expected_flop}
+    assert m["solved_cases"] == len(m["cases"])
+    cases = [c for c in m["cases"] if c["line"] == flop_line]
+    if not cases:
+        skipped, = (s for s in m["skipped"] if s["line"] == flop_line)
         assert skipped["reason"] in ("NO_BOTH_PLAYER_REACH", "ZERO_LEGAL_PLAYER_RANGE_AFTER_TURN_CARD_BLOCKERS",
                                      "RUST_ENGINE_EXCLUDED_EMPTY_REACH_RANGE")
         return out
-    c, = m["cases"]
-    assert m["solved_cases"] == 1 and not m["skipped"]
-    assert (c["line"], c["turn"]) == (flop_line, turn)
+    c, = cases
     subfile = rootfile.parent / f"{flop}_{flop_line.replace(' ', '')}_{turn}.json"
     assert c["source_path"] == str(subfile.relative_to(pf))
     subraw = subfile.read_bytes()
@@ -118,7 +123,7 @@ def original(directory, flop, turn, version, *, batch="B470", spot=SPOT, flop_li
     job = json.loads(subfile.with_suffix(".job.json").read_bytes())
     assert (sub["flop"], sub["turn"], sub["line0"]) == (flop, turn, flop_line)
     assert sub["info"]["gto_expl_pct"] == c["gto_gap_pct"]
-    assert job["turn_oop"] == job["turn_ip"] == "50%,100%"
+    assert job["turn_oop"] == job["turn_ip"] == turn_menu
     assert job["rake_rate"] == .05 and job["rake_cap"] == 1000
     if version == "gto":
         assert job.get("hero") is None and not job.get("locks") and c["hero_gap_pct"] is None

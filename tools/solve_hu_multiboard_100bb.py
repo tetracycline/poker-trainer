@@ -110,13 +110,15 @@ def main():
     a.add_argument('--turn-count',type=int,default=1)
     a.add_argument('--flop-size-profile',choices=('full','lmp-50-only'),default='full',
         help='Only LMP: predeclared flop single 50pct menu; genuine restricted-game CFR, not unrestricted GTO')
-    a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','oop-b75only','oop-b100only','oop-b75raisecall','oop-b33only','checked-b33only','checked-b50only','checked-b100only','checked-b50b100only','checkcheck'),default='all',
+    a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','checkcheck-and-oop-b50','oop-b75only','oop-b100only','oop-b75raisecall','oop-b33only','checked-b33only','checked-b50only','checked-b100only','checked-b50b100only','checkcheck'),default='all',
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
+    a.add_argument('--archive-empty-river-extraction', action='store_true',
+        help='Preserve a converged subgame that exported turn decisions but no requested river nodes')
     a.add_argument('--lock-marginals-by-street', action='store_true',
         help='Match the pooled bet-size and raise fallback to the actual flop, turn, or river before applying it')
     a.add_argument('--turn-line-policy',choices=('default','b100only','checkcheck'),default='default',
         help='Extract only exact b100-call river continuations; never alter the full underlying solved tree')
-    a.add_argument('--turn-size-menu',choices=('default','river-gaps','exact-b66-only','exact-b50-only'),default='default',
+    a.add_argument('--turn-size-menu',choices=('default','river-gaps','exact-b66-only','exact-b50-only','33-50-75-100'),default='default',
         help='river-gaps: predeclared 33/66/75pct turn size tree for x x / turn bet-call river MODEL proofs')
     a.add_argument('--authenticated-original-gto-flop',type=pathlib.Path,
         help='Use a byte-verified authentic original GTO flop root; EXP is then ONLY a genuine partially locked turn/river solve, NOT full-tree NL2')
@@ -230,12 +232,16 @@ def main():
         # Keep the 50% action explicit; never relabel default 66% as b50.
         pipeline.SUB.update(turn_oop='50%',turn_ip='50%')
         pipeline.TURN_LINES=['b50 c']
+    if args.turn_size_menu=='33-50-75-100':
+        pipeline.SUB.update(turn_oop='33%,50%,75%,100%',turn_ip='33%,50%,75%,100%')
+        pipeline.TURN_LINES=['b33 c','b50 c','b75 c','b100 c']
     if args.turn_line_policy in ('b100only','checkcheck'):
         if args.turn_size_menu!='default':
             a.error('targeted turn-line extraction requires default turn size menu (50/100)')
         pipeline.TURN_LINES=['b100 c' if args.turn_line_policy=='b100only' else 'x x']
     turns=pipeline.turns_for(flop)[:args.turn_count]
     lines=(['b33 c','b50 c','b75 c','b100 c'] if args.flop_line_policy=='oop-betcall'
+           else ['x x','b50 c'] if args.flop_line_policy=='checkcheck-and-oop-b50'
            else ['b50 c'] if args.flop_line_policy=='oop-b50only'
            else ['b75 c'] if args.flop_line_policy=='oop-b75only'
            else ['b100 c'] if args.flop_line_policy=='oop-b100only'
@@ -403,7 +409,7 @@ def main():
                 if not sub.exists():raise FileNotFoundError('Missing true Rust subgame '+str(sub))
                 d=json.loads(sub.read_text())
                 source_nodes=[n for n in d['nodes'] if len(n['board'])>=8]
-                if not any(len(n['board'])==10 for n in source_nodes):
+                if not any(len(n['board'])==10 for n in source_nodes) and not args.archive_empty_river_extraction:
                     raise ValueError('No authentic river node '+str(sub))
                 info['cases'].append(dict(line=line,turn=turn,
                     source_path=str(sub.relative_to(pf)),source_sha256=sha(sub),
