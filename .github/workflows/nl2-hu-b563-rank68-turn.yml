@@ -1,0 +1,81 @@
+name: B563 replay three ranked UTG half-pot check-call flops
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b563-rank68-turn.yml'
+      - 'tools/hu_b563_rank68*'
+      - 'data/nl2_hu_b563_frozen_flop.json'
+      - 'data/nl2_hu_b563_local_preview.json'
+      - 'data/solver_evidence/NL2_B563_R68_AS9D4C_*.zip'
+permissions: {contents: write}
+jobs:
+  replay-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Verify both original seat policies and compare every shared hand
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          python tools/hu_b563_rank68_turn.py --solver pinned-solver --out "$RUNNER_TEMP/preview.json"
+          cmp "$RUNNER_TEMP/preview.json" data/nl2_hu_b563_local_preview.json
+          python tools/hu_b563_rank68_turn.py --solver pinned-solver --run "$GITHUB_RUN_ID" --out data/nl2_hu_b563_rank68_turn.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B563-authenticated-UTG-check-call-turns
+          path: |
+            data/nl2_hu_b563_rank68_turn.json
+            data/nl2_hu_b563_locked_medium.json
+            data/solver_evidence/reverified/rank68.json
+            data/solver_evidence/NL2_MULTIBOARD_B563_R68_*.json.gz
+            data/solver_evidence/NL2_B563_R68_AS9D4C_*.zip
+          if-no-files-found: error
+          retention-days: 90
+      - name: Register eligible named boards on the open audit branch
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          branch=fix/nl2-hu-lines-audit-20261118
+          files=(data/nl2_hu_b563_rank68_turn.json)
+          if test -f data/nl2_hu_b563_locked_medium.json; then
+            files+=(data/nl2_hu_b563_locked_medium.json data/solver_evidence/reverified/rank68.json data/solver_evidence/NL2_MULTIBOARD_B563_R68_*.json.gz)
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            for file in "${files[@]}"; do
+              if test -e "$live/$file"; then cmp "$file" "$live/$file"; fi
+            done
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              status=data/nl2_hu_multiboard_status_current.json
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              bash tools/hu_exact_batch_audit.sh "$status"
+              python -c 'import json; a=json.load(open("data/nl2_hu_b563_rank68_turn.json")); m=json.load(open("data/nl2_hu_multiboard_status_current.json"))["records"]["ln-opfr-t_model-19umlco"]; assert a["distinct_flops"]<3 or (m["label"]=="CERT-MULTIBOARD" and {b["flop"] for b in m["certified_3_to_5_exact_flop_boards"]}=={r["flop"] for r in a["attempts"] if r.get("selected")})'
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_source_references.json data/nl2_hu_model_history_crosswalk.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B563: publish independently replayed UTG half-pot turn decisions'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
