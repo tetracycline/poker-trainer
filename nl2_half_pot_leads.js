@@ -226,11 +226,16 @@
     }).catch(()=>{slot.textContent='目前無法核對河牌半池對照來源。';});
   }
   async function showMatchedBarrels(parent,model,board,source){
-    if(model.model_id!=='ln-opfr-t_model-1wej9w5' || (source && source!==board.source_sha256))return;
+    const name={
+      'ln-opfr-t_model-19esov6':'nl2_hu_b594_rank2_barrels.json',
+      'ln-opfr-t_model-1wej9w5':'nl2_hu_b590_rank3_barrels.json',
+      'ln-opfr-t_model-trdt3w':'nl2_hu_b594_rank4_barrels.json'
+    }[model.model_id];
+    if(!name || (source && source!==board.source_sha256))return;
     const slot=document.createElement('div');
     parent.appendChild(slot);
     try{
-      const response=await fetch('data/nl2_hu_b590_rank3_barrels.json',{cache:'no-store'});
+      const response=await fetch('data/'+name,{cache:'no-store'});
       if(!response.ok)throw Error('HTTP '+response.status);
       const report=await response.json();
       if(report.schema!=='NL2_HU_B590_SB_BB_BARREL_REPLIES_V1')throw Error('來源格式不符');
@@ -322,5 +327,5 @@
         return showFrozenRiver(parent,model,board,r);
     }).catch(()=>{line.textContent='半池領打對照來源暫時無法核對。';});
   }
-  globalThis.nl2HalfPotLeads={load,match,matchFrozenRiver,matchRestrictedTurn,showRestrictedTurn,matchingFrozenPolicies,showFrozenPolicies,reachReport,showBoard,showLock};
+  globalThis.nl2HalfPotLeads={load,match,matchFrozenRiver,matchRestrictedTurn,showRestrictedTurn,showMatchedBarrels,matchingFrozenPolicies,showFrozenPolicies,reachReport,showBoard,showLock};
 })();

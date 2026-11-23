@@ -88,9 +88,8 @@ def coverage(registry):
             assert p['prior_unresolved_output_sha256']==policies[i]['output_sha256'] and p['original_node_count']>0
             assert all(e['max_abs']==0 and e['relative_sum']==0 for e in p['range_errors'])
             policies[i]=p
-    barrel_file=Path('data/nl2_hu_b590_rank3_barrels.json')
     barrel_rows={}
-    if barrel_file.exists():
+    for barrel_file in sorted(Path('data').glob('nl2_hu_b*_rank*_barrels.json')):
         report=json.loads(barrel_file.read_bytes())
         assert report['schema']=='NL2_HU_B590_SB_BB_BARREL_REPLIES_V1'
         for barrel in report['records']:

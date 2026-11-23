@@ -2,13 +2,15 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 
-const report = JSON.parse(fs.readFileSync('data/nl2_hu_b590_rank3_barrels.json'));
+const sourceFile = process.argv[2] || 'data/nl2_hu_b590_rank3_barrels.json';
+const report = JSON.parse(fs.readFileSync(sourceFile));
 const models = JSON.parse(fs.readFileSync('data/nl2_hu_multiboard_status_current.json')).records;
 const element = () => ({children: [], appendChild(child) { this.children.push(child); }});
 const ctx = vm.createContext({
   document: {createElement: element},
   fetch: async path => {
-    assert.equal(path,'data/nl2_hu_b590_rank3_barrels.json');
+    if(path==='data/nl2_hu_b573_restricted_turn.json')return {ok:true,json:async()=>JSON.parse(fs.readFileSync(path))};
+    assert.equal(path,sourceFile);
     return {ok: true, json: async () => report};
   }
 });
@@ -18,8 +20,8 @@ async function main() {
     const model = models[row.model_id], board = model.certified_3_to_5_exact_flop_boards.find(b => b.public_board === row.public_board);
     const ok = element(), wrong = element(), other = element();
     ctx.nl2HalfPotLeads.showBoard(ok,model,board);
-    ctx.nl2HalfPotLeads.showRestrictedTurn(wrong,model,{...board,source_run_id: 0});
-    ctx.nl2HalfPotLeads.showRestrictedTurn(other,model,board,'wrong-source');
+    ctx.nl2HalfPotLeads.showMatchedBarrels(wrong,model,{...board,source_run_id: 0});
+    ctx.nl2HalfPotLeads.showMatchedBarrels(other,model,board,'wrong-source');
     await new Promise(resolve => setImmediate(resolve));
     const content = ok.children[0].children[0].children.map(child => child.textContent).join('\n');
     assert.ok(content.includes(row.locked.half_pot.eligible+' / '+row.locked.legal_combos));

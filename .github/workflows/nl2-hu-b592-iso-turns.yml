@@ -1,0 +1,85 @@
+name: B592 reproduce isolation-pot roots, locks and rank124 turn decisions
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b592-iso-turns.yml'
+      - 'tools/hu_b592_*'
+      - 'data/nl2_hu_b592_iso_*.json'
+      - 'data/solver_evidence/NL2_B592_R124_*.zip'
+permissions: {contents: read}
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: ['8s5h3d', '9c6h4s', '7h5h2h']
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the pinned native engine
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Re-solve the complete native flop and both turn policies
+        working-directory: trainer
+        run: python tools/hu_b592_iso_turns.py --solver ../solver --reproduce-flop ${{ matrix.flop }}
+  verify:
+    needs: reproduce
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Check shared private hands, branch prices and existing certifications
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          registry=data/nl2_hu_multiboard_status_current.json
+          cp "$registry" "$RUNNER_TEMP/before.json"
+          python tools/hu_b592_iso_turns.py --solver ../solver --run "$GITHUB_RUN_ID" --out "$RUNNER_TEMP/report.json"
+          cmp "$RUNNER_TEMP/report.json" data/nl2_hu_b592_iso_preview.json
+          python tools/hu_apply_cert_extensions.py --out "$registry"
+          python - "$RUNNER_TEMP/before.json" "$registry" <<'PY'
+          import json,sys
+          before,after=(json.load(open(p))['records'] for p in sys.argv[1:])
+          target='ln-iso-t_model-1gjwm8f'
+          assert before.keys()==after.keys() and all(after[k]==before[k] for k in before if k!=target)
+          assert after[target]['label']=='CERT-MULTIBOARD'
+          PY
+          node tools/hu_b558_river_policy_view.cjs data/solver_evidence/reverified/rank124.json
+          node tools/hu_extension_runtime_test.cjs "$registry"
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+          bash tools/hu_exact_batch_audit.sh "$registry"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B592-authenticated-rank124
+          if-no-files-found: error
+          path: |
+            trainer/data/nl2_hu_b592_locked_medium.json
+            trainer/data/solver_evidence/reverified/rank124.json
+            trainer/data/solver_evidence/NL2_MULTIBOARD_B592_R124_*.json.gz
