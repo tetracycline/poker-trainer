@@ -69,15 +69,22 @@ def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pi
     assert rj.get('locks',[])==j.get('locks',[]) and bool(j.get('locks'))==(hero is not None)
     if expected is not None:assert j.get('locks',[])==json.loads(compact(expected))
     parent,=[n for n in root['nodes'] if n['line']==flop_line+'/' and n['board'][-2:]==turn]
-    assert flop_line in ('x x', 'x b50 c')
-    investment = 0 if flop_line == 'x x' else pot // 2
+    bet_pct, raise_multiple = {"x x": (0, 1), "x b33 c": (33, 1), "x b50 c": (50, 1), "x b75 r c": (75, 3)}[flop_line]
+    bet = (pot * bet_pct + 50) // 100
+    investment = bet * raise_multiple
+    if bet:
+        facing, = (n for n in root["nodes"] if len(n["board"]) == 6 and n["line"] == f"x b{bet_pct}")
+        assert (facing["pot"], facing["bets"]) == (pot + bet, [0, bet])
+    if raise_multiple > 1:
+        raised, = (n for n in root["nodes"] if len(n["board"]) == 6 and n["line"] == f"x b{bet_pct} r")
+        assert (raised["pot"], raised["bets"]) == (pot + investment + bet, [investment, bet])
     assert parent['bets'] == [investment, investment] and len(parent['board']) == 8
     boundary = (pot + 2 * investment, stack - investment)
     assert (parent['pot'], stack - max(parent['bets'])) == boundary
     assert all((source['flop'], source['pot'], source['stack']) == (flop, *boundary) for source in (sub, j))
     for seat,name in enumerate(('oop_w','ip_w')):
         assert j[name]==[[h,w] for h,w in zip(root['hands'][seat],parent['wr'][seat],strict=True) if w>1e-4]
-    assert j['root_no_bet'] == (flop_line == 'x b50 c')
+    assert j['root_no_bet'] == (flop_line in ('x b33 c', 'x b50 c'))
     for game in (root,sub):
         assert 0<=game['info']['gto_expl_pct']<=.5
         if hero is not None:assert 0<=game['info']['hero_gap_pct']<=.5 and game['info']['lock_stats']
@@ -117,6 +124,7 @@ def replay_native(original,version,pool,pipeline,path,run,code):
     raw=base64.b64decode(locked['source_file_b64'],validate=True);assert sha(raw)==locked['source_sha256']
     sub=json.loads(raw);g=original['source'];parent=original['identity']
     old=g['subgame'];assert all(sub[k]==old[k] for k in ('flop','pot','stack','hands'))
+    assert job['line0'] == [*old['line0'].split(), '/']
     sub.update(line0=old['line0'],turn=old['turn'],rivers=old['rivers'])
     manifest=dict(g['manifest'],locks=meta,gto_parent_source_run_id=g['run'],gto_parent_source_sha256=parent['root_sha256'])
     assert parent['root_sha256']==sha(compact(g['root'])) and job['hero']==(version=='exp_ip')
