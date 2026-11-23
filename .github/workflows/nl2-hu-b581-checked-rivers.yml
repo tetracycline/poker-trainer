@@ -1,0 +1,78 @@
+name: B581 verify CO three-bet caller rivers and full HU audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b581-checked-rivers.yml'
+      - 'tools/hu_b581_checked_rivers.py'
+      - 'tools/hu_b581_threebet_routes.cjs'
+      - 'data/nl2_hu_b581_checked_river_inputs.json'
+      - 'data/solver_evidence/NL2_B581_R261_*.zip'
+permissions: {contents: write, actions: read}
+jobs:
+  verify-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Replay native source arrays and turn-specific measured locks
+        working-directory: trainer
+        run: python tools/hu_b581_checked_rivers.py --solver ../solver
+      - name: Register completed sources on the current draft branch after all audits
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            (
+              cd "$live"
+              python tools/hu_b581_checked_rivers.py --solver "$GITHUB_WORKSPACE/solver" --run "$GITHUB_RUN_ID"
+              evidence=data/solver_evidence
+              status=data/nl2_hu_multiboard_status_current.json
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              python - "$status" <<'PYGUARD'
+              import json, subprocess, sys
+              path = sys.argv[1]
+              before = json.loads(subprocess.check_output(['git', 'show', 'HEAD:' + path]))['records']
+              after = json.load(open(path))['records']
+              cert = lambda d: {k for k,v in d.items() if v['label'] == 'CERT-MULTIBOARD'}
+              assert cert(after) == cert(before) | {'ln-3bp-3c_r_model-7xkisp'}
+              PYGUARD
+              node tools/hu_b558_river_policy_view.cjs "$evidence/reverified/rank261.json"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              python tools/hu_b491_incremental_medium.py
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b483_lock_medium_ui.cjs
+              node tools/hu_b485_medium_viewers.cjs
+              node tools/hu_b584_optional_river_ui.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/replayed-registry.json"
+              cmp "$status" "$RUNNER_TEMP/replayed-registry.json"
+              shopt -s nullglob
+              files=(data/nl2_hu_b581_locked_medium.json "$evidence"/NL2_MULTIBOARD_B581_R261_*.json.gz "$evidence/reverified/rank261.json")
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_source_references.json data/nl2_hu_model_history_crosswalk.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B581: certify rank261 on three reachable checked CO three-bet rivers'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
