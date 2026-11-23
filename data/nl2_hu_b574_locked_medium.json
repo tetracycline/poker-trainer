@@ -1,0 +1,622 @@
+{
+  "schema": "NL2_HU_B574_ORIGINAL_LOCKED_MEDIUM_V1",
+  "references": {
+    "[\"ln-opfr-r_model-ka3vbv\",\"4hTdTs5d2c\",\"b50 c/b75 c/\",0,45128951555,\"32e6552618c2884b7c24b54f69f986c91ecb69152fcf03f35431b0612a4b2682\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "4hTdTs5d2c",
+      "line": "b50 c/b75 c/",
+      "acting_seat": 0,
+      "source_actions": [
+        "x",
+        "b50",
+        "b75",
+        "a"
+      ],
+      "source_hand_order_sha256": "1126a1d28d14ca94e190373a981ab0128a5442c8def61373926add55e1317d20",
+      "source_hand_count": 512,
+      "compatible_action_mask_b64": "AAAAAAAAAAAAAAEAAAAAAAAAAAAIAAAAAAAAAQAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAgIAAAAAAgAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAgICAAAABAAAAAAAAAICAAAAAAAAAAAAAwAAAAQAAAAAAAAAAAAAAAAAAAAAAgAAAAQAAAAAAAAAAAAAAgAAAAAAAAAAAgAABAAAAAAAAAAAAAAAAAAGAgIAAAAABAAAAAAAAAAAAAYGAAAAAAAAAAAAAAAAAAACAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAAAAAAAAAAAAAAAAAAAAAAEAAQEAAAAAAAAAAAAAAAAAAQEBAAAAAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAAAAAICAgICAgICAgICAgIAAAAAAgICAgICAgICAgICAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "strict_legal_combos": 71,
+      "compatible_opponent_combos": 2,
+      "compatible_hole_card_pairs": 133,
+      "b50": {
+        "eligible": 16,
+        "preferred": 11,
+        "best_ev_b50_fraction_pct": 68.75,
+        "low_count": 16,
+        "middle_count": 0,
+        "high_count": 0,
+        "mid_reach_mass_fraction_pct": 0.0,
+        "candidate": false,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "spot": "SB_BB",
+      "family": "SRP",
+      "flop": "TdTs4h",
+      "turn": "5d",
+      "version": "exp_oop",
+      "root_sha256": "fd0dd05662b79dcf65469bce7bdbc359ba04bee0e4e3fecbc3777489f2aa0717",
+      "source_run_id": 45128951555,
+      "source_sha256": "32e6552618c2884b7c24b54f69f986c91ecb69152fcf03f35431b0612a4b2682",
+      "archive_sha256": "b46753b38c693b952771f79db076130ec2c296100d69c4045b77af3d3776a099",
+      "root_gto_stage_gap_pct": 0.49924445152282715,
+      "root_locked_hero_gap_pct": null,
+      "gto_gap_pct": 0.40542998909950256,
+      "locked_hero_gap_pct": 0.0329030342400074,
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 434,
+      "lock_scope": {
+        "villain_decision_nodes": 47,
+        "pattern_matched_nodes": 47,
+        "observed_marginal_source_nodes": 35,
+        "imputed_assumption_nodes": 12,
+        "unmatched_nodes": 0,
+        "coverage_pct": 100.0,
+        "all_villain_nodes_locked": true,
+        "matching_examples": [
+          {
+            "line": "b50 c/x",
+            "board": "4hTdTs5d",
+            "first_pattern": "^b\\d+ c/x$",
+            "source": "SRP_turn_stab_ip_after_pfr_checks",
+            "source_observed_count": 38412,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75",
+            "board": "4hTdTs5d",
+            "first_pattern": "^b50 c/b75$",
+            "source": "SRP_PFR_OOP.vs_turn_barrel_by_size[56-80%]",
+            "source_observed_count": 10906,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/x",
+            "board": "4hTdTs5d2c",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "b50 c/b75 c/b50",
+            "board": "4hTdTs5d2c",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b50$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[34-55%]",
+            "source_observed_count": 2230,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/b75",
+            "board": "4hTdTs5d2c",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b75$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[56-80%]",
+            "source_observed_count": 2252,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/a",
+            "board": "4hTdTs5d2c",
+            "first_pattern": "^b\\d+ c/b\\d+ c/a$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[>110%]",
+            "source_observed_count": 1007,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/x",
+            "board": "4hTdTs5d3d",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "b50 c/b75 c/b50",
+            "board": "4hTdTs5d3d",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b50$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[34-55%]",
+            "source_observed_count": 2230,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/b75",
+            "board": "4hTdTs5d3d",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b75$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[56-80%]",
+            "source_observed_count": 2252,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/a",
+            "board": "4hTdTs5d3d",
+            "first_pattern": "^b\\d+ c/b\\d+ c/a$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[>110%]",
+            "source_observed_count": 1007,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/x",
+            "board": "4hTdTs5d5c",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "b50 c/b75 c/b50",
+            "board": "4hTdTs5d5c",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b50$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[34-55%]",
+            "source_observed_count": 2230,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          }
+        ],
+        "caveat": "Regex/source bucket matching does not prove the Rust driver locked every combo nor its conditional opponent behavior."
+      }
+    },
+    "[\"ln-opfr-r_model-ka3vbv\",\"3cJdJh5h2c\",\"b50 c/b75 c/\",0,45128951555,\"30dee72d747873978d5faf0b4b4cd37e751fcd53288dc1a7127e687c7acb597a\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "3cJdJh5h2c",
+      "line": "b50 c/b75 c/",
+      "acting_seat": 0,
+      "source_actions": [
+        "x",
+        "b50",
+        "b75",
+        "a"
+      ],
+      "source_hand_order_sha256": "261165c6ea0da0af72d5e622a6ac0d1fbfda2c91ed0b380d032b877efad7aea8",
+      "source_hand_count": 553,
+      "compatible_action_mask_b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAACAAAAAAAAAgIAAAAAAAAAAAAAAgAAAAAAAAAAQAAAAAACAAAAAAAAAAAAAAIAAAAAAIAAAAAAAAAAAAIAAAAAAAAAAAAAAgAAAAAAAAAAAAACAAAAAACAAAAAAAACAgAAAAAAAgAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAACAgIAAAAAAgAAAAAAAAICAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAgICAAAAAgAAAAAAAAAAAAICAAAAAAAAAAACAAAAAAAAAAAAAAACAAAAAAAAAAAAAgACAAAAAAACAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAICAgAAAAACAgAAAAAAAAAAAAAAAAICAAAAAAICAAAAAAAAAAAAAAAAAgAAAAACAgAAAAAAAAAAAAAAAAAAAAACAgAAAAAAAAAAAAAAAAICAgQCAAAAAAAAAAAAAAAAAgIEAgAAAAAAAAAAAAAAAAIEAgAAAAAAAAAAAAAAAAQCAAAAAAAAAAAAAAAACAQEBAQEBAAEBAQEDAQEBAQICAAICAgICAICAgAAAAAAAAAAAgIAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAACAAAAAAAAAAAAAAAAAA==",
+      "strict_legal_combos": 98,
+      "compatible_opponent_combos": 1,
+      "compatible_hole_card_pairs": 98,
+      "b50": {
+        "eligible": 55,
+        "preferred": 54,
+        "best_ev_b50_fraction_pct": 98.182,
+        "low_count": 32,
+        "middle_count": 23,
+        "high_count": 0,
+        "mid_reach_mass_fraction_pct": 46.234,
+        "candidate": true,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "spot": "SB_BB",
+      "family": "SRP",
+      "flop": "JdJh3c",
+      "turn": "5h",
+      "version": "exp_oop",
+      "root_sha256": "11d94774364d4aa046f8fbea8a202f84578d6514299f78439e58f22f4ff68ff4",
+      "source_run_id": 45128951555,
+      "source_sha256": "30dee72d747873978d5faf0b4b4cd37e751fcd53288dc1a7127e687c7acb597a",
+      "archive_sha256": "7a8d37dcb8c915eea9eb9d885c9e1c2243da30baa75e17872de269f7801cd67d",
+      "root_gto_stage_gap_pct": 0.4943346083164215,
+      "root_locked_hero_gap_pct": null,
+      "gto_gap_pct": 0.43912315368652344,
+      "locked_hero_gap_pct": 0.039340972900390625,
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 434,
+      "lock_scope": {
+        "villain_decision_nodes": 48,
+        "pattern_matched_nodes": 48,
+        "observed_marginal_source_nodes": 36,
+        "imputed_assumption_nodes": 12,
+        "unmatched_nodes": 0,
+        "coverage_pct": 100.0,
+        "all_villain_nodes_locked": true,
+        "matching_examples": [
+          {
+            "line": "b50 c/x",
+            "board": "3cJdJh5h",
+            "first_pattern": "^b\\d+ c/x$",
+            "source": "SRP_turn_stab_ip_after_pfr_checks",
+            "source_observed_count": 38412,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75",
+            "board": "3cJdJh5h",
+            "first_pattern": "^b50 c/b75$",
+            "source": "SRP_PFR_OOP.vs_turn_barrel_by_size[56-80%]",
+            "source_observed_count": 10906,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/x",
+            "board": "3cJdJh5h2c",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "b50 c/b75 c/b50",
+            "board": "3cJdJh5h2c",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b50$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[34-55%]",
+            "source_observed_count": 2230,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/b75",
+            "board": "3cJdJh5h2c",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b75$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[56-80%]",
+            "source_observed_count": 2252,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/a",
+            "board": "3cJdJh5h2c",
+            "first_pattern": "^b\\d+ c/b\\d+ c/a$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[>110%]",
+            "source_observed_count": 1007,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/x",
+            "board": "3cJdJh5h3d",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "b50 c/b75 c/b50",
+            "board": "3cJdJh5h3d",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b50$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[34-55%]",
+            "source_observed_count": 2230,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/b75",
+            "board": "3cJdJh5h3d",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b75$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[56-80%]",
+            "source_observed_count": 2252,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/a",
+            "board": "3cJdJh5h3d",
+            "first_pattern": "^b\\d+ c/b\\d+ c/a$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[>110%]",
+            "source_observed_count": 1007,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/x",
+            "board": "3cJdJh5h4h",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "b50 c/b75 c/b50",
+            "board": "3cJdJh5h4h",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b50$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[34-55%]",
+            "source_observed_count": 2230,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          }
+        ],
+        "caveat": "Regex/source bucket matching does not prove the Rust driver locked every combo nor its conditional opponent behavior."
+      }
+    },
+    "[\"ln-opfr-r_model-ka3vbv\",\"3sTcThJs2c\",\"b50 c/b75 c/\",0,45131280104,\"5988dc04b7905594b9ccffcb9aa32a94cde0cadc19aafeab315c8b3664ce8ee5\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "3sTcThJs2c",
+      "line": "b50 c/b75 c/",
+      "acting_seat": 0,
+      "source_actions": [
+        "x",
+        "b50",
+        "b75",
+        "a"
+      ],
+      "source_hand_order_sha256": "88b3f92551f07bdf2286666388a3ab21e2a26e83eda7313b619c9e2351669f67",
+      "source_hand_count": 505,
+      "compatible_action_mask_b64": "AAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAACAgAAAAAAAAAAAAAAAAACAgAAAAAAAAAAAAAAAAAAAAICAAAAAAAAAAAAAAACAgAAAAAAAAAAAAAAAAACAgICAgICAgICAgIAAAAAAgICAgICAgICAgIAAAAAAAAAQAAAAAAAAAAAQEBAAABAAAAAAAAAQEBAQAAAQAAAAAAAQEAAQAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+      "strict_legal_combos": 57,
+      "compatible_opponent_combos": 5,
+      "compatible_hole_card_pairs": 244,
+      "b50": {
+        "eligible": 1,
+        "preferred": 0,
+        "best_ev_b50_fraction_pct": 0.0,
+        "low_count": 1,
+        "middle_count": 0,
+        "high_count": 0,
+        "mid_reach_mass_fraction_pct": 0.0,
+        "candidate": false,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "spot": "SB_BB",
+      "family": "SRP",
+      "flop": "TcTh3s",
+      "turn": "Js",
+      "version": "exp_oop",
+      "root_sha256": "2407fafdf505258f0ec2d917d081a50e6bf82936768f80472658c5f595593490",
+      "source_run_id": 45131280104,
+      "source_sha256": "5988dc04b7905594b9ccffcb9aa32a94cde0cadc19aafeab315c8b3664ce8ee5",
+      "archive_sha256": "faf27c4bbb7813e23d8ad8a0a47e1d28a83e38793d22230c1e48d8ab1510999e",
+      "root_gto_stage_gap_pct": 0.4707159996032715,
+      "root_locked_hero_gap_pct": null,
+      "gto_gap_pct": 0.39677539467811584,
+      "locked_hero_gap_pct": 0.0408579520881176,
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 326,
+      "lock_scope": {
+        "villain_decision_nodes": 48,
+        "pattern_matched_nodes": 48,
+        "observed_marginal_source_nodes": 36,
+        "imputed_assumption_nodes": 12,
+        "unmatched_nodes": 0,
+        "coverage_pct": 100.0,
+        "all_villain_nodes_locked": true,
+        "matching_examples": [
+          {
+            "line": "b50 c/x",
+            "board": "3sTcThJs",
+            "first_pattern": "^b\\d+ c/x$",
+            "source": "SRP_turn_stab_ip_after_pfr_checks",
+            "source_observed_count": 38412,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75",
+            "board": "3sTcThJs",
+            "first_pattern": "^b50 c/b75$",
+            "source": "SRP_PFR_OOP.vs_turn_barrel_by_size[56-80%]",
+            "source_observed_count": 10906,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/x",
+            "board": "3sTcThJs2c",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "b50 c/b75 c/b50",
+            "board": "3sTcThJs2c",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b50$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[34-55%]",
+            "source_observed_count": 2230,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/b75",
+            "board": "3sTcThJs2c",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b75$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[56-80%]",
+            "source_observed_count": 2252,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/a",
+            "board": "3sTcThJs2c",
+            "first_pattern": "^b\\d+ c/b\\d+ c/a$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[>110%]",
+            "source_observed_count": 1007,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/x",
+            "board": "3sTcThJs3d",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "b50 c/b75 c/b50",
+            "board": "3sTcThJs3d",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b50$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[34-55%]",
+            "source_observed_count": 2230,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/b75",
+            "board": "3sTcThJs3d",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b75$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[56-80%]",
+            "source_observed_count": 2252,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/a",
+            "board": "3sTcThJs3d",
+            "first_pattern": "^b\\d+ c/b\\d+ c/a$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[>110%]",
+            "source_observed_count": 1007,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          },
+          {
+            "line": "b50 c/b75 c/x",
+            "board": "3sTcThJs4h",
+            "first_pattern": ".*/x$",
+            "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "b50 c/b75 c/b75",
+            "board": "3sTcThJs4h",
+            "first_pattern": "^b\\d+ c/b\\d+ c/b75$",
+            "source": "SRP_PFR_OOP.vs_river_barrel_by_size[56-80%]",
+            "source_observed_count": 2252,
+            "scope": "PINNED_MEASURED_NL2_SOURCE"
+          }
+        ],
+        "caveat": "Regex/source bucket matching does not prove the Rust driver locked every combo nor its conditional opponent behavior."
+      }
+    }
+  },
+  "gto_references": {
+    "[\"ln-opfr-r_model-ka3vbv\",\"4hTdTs5d2c\",\"b50 c/b75 c/\",0,45128951555,\"3ec8e0a063cf6cc426eefe565ec0058fa74ef948c5f8d6a7225b406f4f57d862\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "4hTdTs5d2c",
+      "line": "b50 c/b75 c/",
+      "acting_seat": 0,
+      "source_actions": [
+        "x",
+        "b50",
+        "b75",
+        "a"
+      ],
+      "source_hand_order_sha256": "1126a1d28d14ca94e190373a981ab0128a5442c8def61373926add55e1317d20",
+      "source_hand_count": 512,
+      "compatible_action_mask_b64": "AAAAAAAAAAAAAAAAAQEAAAAAAAEAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAAABAAAAAAEAAAAAAAAAAQABAAAAAQAAAAIAAAABAAAAAAAAAAABAAAAAQAAAAIBAQABAAAAAAAAAQAAAAABAAEBAQAAAgAAAAEAAAAAAAABAAACAgICAAAAAgAAAAAAAAAAAAICAAEAAAAAAAABAQAAAAACAAAAAAIAAAABAAAAAAAAAAAAAAAAAAEAAAAAAAACAgICAgAAAAAAAAAAAAAAAAAAAAACAAICAAEAAAEAAAAAAAAAAAICAgAAAAAAAAAAAAAAAAACAgAAAAAAAAIAAAAAAAACAwICAgIGAgICAwICAAAAAAMCAgIBBAEBAgECAAAAAAAAAgACAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "strict_legal_combos": 91,
+      "compatible_opponent_combos": 2,
+      "compatible_hole_card_pairs": 168,
+      "b50": {
+        "eligible": 51,
+        "preferred": 34,
+        "best_ev_b50_fraction_pct": 66.667,
+        "low_count": 7,
+        "middle_count": 14,
+        "high_count": 30,
+        "mid_reach_mass_fraction_pct": 28.483,
+        "candidate": true,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "spot": "SB_BB",
+      "family": "SRP",
+      "flop": "TdTs4h",
+      "turn": "5d",
+      "version": "gto",
+      "root_sha256": "fd0dd05662b79dcf65469bce7bdbc359ba04bee0e4e3fecbc3777489f2aa0717",
+      "source_run_id": 45128951555,
+      "source_sha256": "3ec8e0a063cf6cc426eefe565ec0058fa74ef948c5f8d6a7225b406f4f57d862",
+      "archive_sha256": "b46753b38c693b952771f79db076130ec2c296100d69c4045b77af3d3776a099",
+      "root_gto_stage_gap_pct": 0.49924445152282715,
+      "root_locked_hero_gap_pct": null,
+      "gto_gap_pct": 0.36202797293663025,
+      "locked_hero_gap_pct": null,
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 0,
+      "lock_scope": {
+        "villain_decision_nodes": 0,
+        "pattern_matched_nodes": 0,
+        "observed_marginal_source_nodes": 0,
+        "imputed_assumption_nodes": 0,
+        "unmatched_nodes": 0,
+        "coverage_pct": null,
+        "all_villain_nodes_locked": false
+      }
+    },
+    "[\"ln-opfr-r_model-ka3vbv\",\"3cJdJh5h2c\",\"b50 c/b75 c/\",0,45128951555,\"41b5acf821f1efea4cd6b0f3b47096c72347497f27337c6e4b62fa9d32f0ae44\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "3cJdJh5h2c",
+      "line": "b50 c/b75 c/",
+      "acting_seat": 0,
+      "source_actions": [
+        "x",
+        "b50",
+        "b75",
+        "a"
+      ],
+      "source_hand_order_sha256": "261165c6ea0da0af72d5e622a6ac0d1fbfda2c91ed0b380d032b877efad7aea8",
+      "source_hand_count": 553,
+      "compatible_action_mask_b64": "AAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAABAQAAAAAAAAEAAgAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAQAAAAAAAAAAAQABAgAAAAAAAAAAAAAAAQABAwAAAAAAAAAAAAABAAEBAQAAAAAAAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABAQABAQEBAAAAAQAAAAAAAAEBAAAAAAAAAAAAAQAAAQEAAQAAAQEBAAABAAAAAAAAAAAAAQEBAAAAAQAAAAAAAAAAAAEBAAAAAAAAAAABAAEAAAEAAAEBAAABAAAAAAAAAAAAAQABAQEBAQEBAAAAAAAAAAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEAAQAAAAAAAAAAAAEBAQABAQABAgAAAAAAAAAAAAAAAAEBAQABAAEDAAEAAAAAAAAAAAAAAQEBAQABAgAAAQAAAAAAAAAAAAEBAQEBAQAAAAAAAAAAAAAAAAEBAQECAAAAAAAAAAAAAAAAAQEBAgAAAAAAAAAAAAAAAAEBAgAAAQAAAAAAAAAAAAECAAAAAAAAAAAAAAAAAgEBAQEBAAAAAAAAAAIDAwMCAAACAAAAAAEBAAAAAAAAAAAAAQAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+      "strict_legal_combos": 123,
+      "compatible_opponent_combos": 1,
+      "compatible_hole_card_pairs": 123,
+      "b50": {
+        "eligible": 17,
+        "preferred": 15,
+        "best_ev_b50_fraction_pct": 88.235,
+        "low_count": 2,
+        "middle_count": 0,
+        "high_count": 15,
+        "mid_reach_mass_fraction_pct": 0.0,
+        "candidate": false,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "spot": "SB_BB",
+      "family": "SRP",
+      "flop": "JdJh3c",
+      "turn": "5h",
+      "version": "gto",
+      "root_sha256": "11d94774364d4aa046f8fbea8a202f84578d6514299f78439e58f22f4ff68ff4",
+      "source_run_id": 45128951555,
+      "source_sha256": "41b5acf821f1efea4cd6b0f3b47096c72347497f27337c6e4b62fa9d32f0ae44",
+      "archive_sha256": "7a8d37dcb8c915eea9eb9d885c9e1c2243da30baa75e17872de269f7801cd67d",
+      "root_gto_stage_gap_pct": 0.4943346083164215,
+      "root_locked_hero_gap_pct": null,
+      "gto_gap_pct": 0.3924039304256439,
+      "locked_hero_gap_pct": null,
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 0,
+      "lock_scope": {
+        "villain_decision_nodes": 0,
+        "pattern_matched_nodes": 0,
+        "observed_marginal_source_nodes": 0,
+        "imputed_assumption_nodes": 0,
+        "unmatched_nodes": 0,
+        "coverage_pct": null,
+        "all_villain_nodes_locked": false
+      }
+    },
+    "[\"ln-opfr-r_model-ka3vbv\",\"3sTcThJs2c\",\"b50 c/b75 c/\",0,45131280104,\"640588eca171619bec4f1408e20890fc1c516422fd690b8aedd06c35bbebcef6\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "3sTcThJs2c",
+      "line": "b50 c/b75 c/",
+      "acting_seat": 0,
+      "source_actions": [
+        "x",
+        "b50",
+        "b75",
+        "a"
+      ],
+      "source_hand_order_sha256": "88b3f92551f07bdf2286666388a3ab21e2a26e83eda7313b619c9e2351669f67",
+      "source_hand_count": 505,
+      "compatible_action_mask_b64": "AAAAAAAAAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAAAAQABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAIAAAAAAAAAAAAAAAAAAAAAAQECBgEAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAgAAAAAAAAAAAAAAAAAAAQEDBgEAAAAAAAAAAAAAAAAAAAABAAAAAAACAAAAAAABAAAAAAAAAAAAAAAAAAEAAAEAAAABAAAAAAAAAgAAAAABAAAAAAYAAAAAAAAAAAAAAAACAAAAAAEAAQAAAAEAAAAAAAEAAAAAAAAAAAEAAAAAAAAAAgABBAAAAAAAAAAAAAAAAAEAAAAAAAABAAAAAAAAAAEAAAEAAQAAAAAAAAAABgQAAAAGAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAAGBAAAAAAGAAAAAAAABgAAAAAAAAAAAAAAAAAAAgACAAYGBgYCAgIBAAAAAAADAAQABAAEAAQAAAAAAAAAAAAAAAAAAAAAAgIAAAAAAAAAAAAAAgICAgAAAAAAAAAAAgIAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+      "strict_legal_combos": 73,
+      "compatible_opponent_combos": 5,
+      "compatible_hole_card_pairs": 321,
+      "b50": {
+        "eligible": 38,
+        "preferred": 21,
+        "best_ev_b50_fraction_pct": 55.263,
+        "low_count": 8,
+        "middle_count": 9,
+        "high_count": 21,
+        "mid_reach_mass_fraction_pct": 28.772,
+        "candidate": false,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "spot": "SB_BB",
+      "family": "SRP",
+      "flop": "TcTh3s",
+      "turn": "Js",
+      "version": "gto",
+      "root_sha256": "2407fafdf505258f0ec2d917d081a50e6bf82936768f80472658c5f595593490",
+      "source_run_id": 45131280104,
+      "source_sha256": "640588eca171619bec4f1408e20890fc1c516422fd690b8aedd06c35bbebcef6",
+      "archive_sha256": "faf27c4bbb7813e23d8ad8a0a47e1d28a83e38793d22230c1e48d8ab1510999e",
+      "root_gto_stage_gap_pct": 0.4707159996032715,
+      "root_locked_hero_gap_pct": null,
+      "gto_gap_pct": 0.39677539467811584,
+      "locked_hero_gap_pct": null,
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 0,
+      "lock_scope": {
+        "villain_decision_nodes": 0,
+        "pattern_matched_nodes": 0,
+        "observed_marginal_source_nodes": 0,
+        "imputed_assumption_nodes": 0,
+        "unmatched_nodes": 0,
+        "coverage_pct": null,
+        "all_villain_nodes_locked": false
+      }
+    }
+  }
+}
