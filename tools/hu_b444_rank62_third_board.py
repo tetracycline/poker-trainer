@@ -7,6 +7,9 @@ RUST_PIN="9d1509fe5077d019825f833eed04b16d342dfda1"
 PIPE_SHA="f0a173b3d9331c4ff8697359a838094f76babb35f16133e37bbd0bfb203b5253"
 RANGES_SHA="f2a302b483c79995ed90031b62e65a202ae7a1fdc8695f8940fe3e8291fb2bba"
 PREFLOP_SHA="d4ca8e0c7d53deb6af337bfef8ff0c125205c1d3ef912267d8b40efc2fe7c100"
+CURRENT_PINNED_PREFLOP_SHA="58e91ec080c8adaef762b49590ebbf245873861b54e3618a1716316aadd35caf"
+# Original legacy manifests use d4ca..., current pinned checkout uses distinct 58e... tree.
+
 MODEL_SPR=6.791
 SPECS=[
  dict(flop="As9h2d",turn="Kd",run_id=44522421850,dir_gto="as9h2d_gto",
@@ -33,7 +36,7 @@ def check_pin(base,solver_root):
     assert p2.read_text().strip()==RUST_PIN
     assert sha(solver_root/"postflop/py/pipeline.py")==PIPE_SHA
     assert sha(solver_root/"postflop/py/ranges.py")==RANGES_SHA
-    assert sha(solver_root/"preflop/gto_norake.json")==PREFLOP_SHA
+    assert sha(solver_root/"preflop/gto_norake.json")==CURRENT_PINNED_PREFLOP_SHA
 def paths(base,version,flop,turn,legacy,manifest_name,solver_root):
     ev=evidence_dir(base); m=read(ev/manifest_name)
     rootdir=base/"solver/postflop/out/CO_BB"/version
@@ -86,7 +89,7 @@ def main():
     import locks as LK
     assert sha(solver_root/"postflop/py/pipeline.py")==PIPE_SHA
     assert sha(solver_root/"postflop/py/ranges.py")==RANGES_SHA
-    assert sha(solver_root/"preflop/gto_norake.json")==PREFLOP_SHA
+    assert sha(solver_root/"preflop/gto_norake.json")==CURRENT_PINNED_PREFLOP_SHA
     all_boards=[]; archive_by_run={}; archive_codes={}
     for spec in SPECS:
         run_id=spec["run_id"] if spec["legacy"] else a.run_id
