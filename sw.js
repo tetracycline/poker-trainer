@@ -8,6 +8,11 @@ self.addEventListener('fetch',e=>{
   if(nav){e.respondWith(fetch(q,{cache:'no-store'}).catch(()=>caches.open(C).then(c=>c.match(u.pathname.split('/').pop()||'./',{ignoreSearch:true}).then(h=>h||c.match('index.html')))));return;}// pages: always the real page from network; cache only when offline
   const key=q;
   e.respondWith(caches.open(C).then(c=>{
+    const latestRegistry = /\/data\/nl2_hu_(verified_extensions|multiboard_status_current|model_history_crosswalk|model_source_references)\.json$/.test(u.pathname);
+    if(latestRegistry) return fetch(q,{cache:'no-store'}).then(r=>{
+      if(r.ok)c.put(q,r.clone());
+      return r;
+    }).catch(()=>c.match(q).then(h=>h||Response.error()));
     if(/\/data\/|\/river\//.test(u.pathname))return c.match(q,{ignoreSearch:true}).then(h=>h||fetch(q).then(r=>{if(r&&r.ok)c.put(q,r.clone());return r;}));
     const net=fetch(q,{cache:'no-store'}).then(r=>{if(r&&r.ok){c.put(key,r.clone());}return r;});
     const cached=()=>c.match(key,{ignoreSearch:true}).then(h=>h||(nav?c.match('index.html'):undefined));

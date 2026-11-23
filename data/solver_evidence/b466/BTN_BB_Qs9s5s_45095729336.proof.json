@@ -1,0 +1,365 @@
+{
+  "flop": "Qs9s5s",
+  "turn": "Ts",
+  "run_id": 45095729336,
+  "spot": "BTN_BB",
+  "actor": 0,
+  "source_sha": {
+    "gto": "90d7162d47be701419f2adbcdc978a10b903b4d124fb0d6b34314b9fdc772c05",
+    "exp_oop": "75e6fd5080c7af8d996fe2e8e97bd08f15693826668882fb905d27fb847bd309"
+  },
+  "root_sha": {
+    "gto": "b7cba6a2d6e838c24d30e52e1142ec16a68d6e9819f337e4a7986172359d947e",
+    "exp_oop": "cfe01de6261b9a52ec81184af35b25a8487d71ef74e61943443fff4ddbd1a3c0"
+  },
+  "gto_gap": 0.47123250365257263,
+  "hero_gap": 0.31513839960098267,
+  "gain_bb": 1.26471,
+  "lock": {
+    "villain_decision_nodes": 27,
+    "pattern_matched_nodes": 23,
+    "observed_marginal_source_nodes": 13,
+    "imputed_assumption_nodes": 10,
+    "unmatched_nodes": 4,
+    "coverage_pct": 85.185,
+    "all_villain_nodes_locked": false,
+    "matching_examples": [
+      {
+        "line": "x x/x",
+        "board": "5s9sQsTs",
+        "first_pattern": "^x x/x$",
+        "source": "SRP_PFR_IP.delayed_cbet",
+        "source_observed_count": 83367,
+        "scope": "PINNED_MEASURED_NL2_SOURCE"
+      },
+      {
+        "line": "x x/b33",
+        "board": "5s9sQsTs",
+        "first_pattern": "^x x/b\\d+$",
+        "source": "SRP_PFR_IP.vs_probe",
+        "source_observed_count": 49952,
+        "scope": "PINNED_MEASURED_NL2_SOURCE"
+      },
+      {
+        "line": "x x/b75",
+        "board": "5s9sQsTs",
+        "first_pattern": "^x x/b\\d+$",
+        "source": "SRP_PFR_IP.vs_probe",
+        "source_observed_count": 49952,
+        "scope": "PINNED_MEASURED_NL2_SOURCE"
+      },
+      {
+        "line": "x x/x b33 c/x",
+        "board": "5s9sQsTs8d",
+        "first_pattern": ".*/x$",
+        "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+        "source_observed_count": 0,
+        "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+      },
+      {
+        "line": "x x/x b33 c/x",
+        "board": "5s9sQsTsTd",
+        "first_pattern": ".*/x$",
+        "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+        "source_observed_count": 0,
+        "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+      },
+      {
+        "line": "x x/x b75 c/x",
+        "board": "5s9sQsTs8d",
+        "first_pattern": ".*/x$",
+        "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+        "source_observed_count": 0,
+        "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+      },
+      {
+        "line": "x x/x b75 c/x",
+        "board": "5s9sQsTsTd",
+        "first_pattern": ".*/x$",
+        "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+        "source_observed_count": 0,
+        "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+      },
+      {
+        "line": "x x/x x/x",
+        "board": "5s9sQsTs8d",
+        "first_pattern": ".*/x$",
+        "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+        "source_observed_count": 0,
+        "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+      },
+      {
+        "line": "x x/x x/b50",
+        "board": "5s9sQsTs8d",
+        "first_pattern": "(?:^|[ /])b50$",
+        "source": "NL2.HU_facing_bet[1].by_size[34-55%]",
+        "source_observed_count": 275923,
+        "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+      },
+      {
+        "line": "x x/x x/b100",
+        "board": "5s9sQsTs8d",
+        "first_pattern": "(?:^|[ /])b100$",
+        "source": "NL2.HU_facing_bet[1].by_size[81-110%]",
+        "source_observed_count": 55927,
+        "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+      },
+      {
+        "line": "x x/x x/x",
+        "board": "5s9sQsTsTd",
+        "first_pattern": ".*/x$",
+        "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+        "source_observed_count": 0,
+        "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+      },
+      {
+        "line": "x x/x x/b50",
+        "board": "5s9sQsTsTd",
+        "first_pattern": "(?:^|[ /])b50$",
+        "source": "NL2.HU_facing_bet[1].by_size[34-55%]",
+        "source_observed_count": 275923,
+        "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+      }
+    ],
+    "caveat": "Regex/source bucket matching does not prove the Rust driver locked every combo nor its conditional opponent behavior."
+  },
+  "models": {
+    "48": {
+      "model_id": "ln-bb-r_model-16s8tm3",
+      "line": "x x/b75 c/",
+      "model_spr": 6.791,
+      "rivers": [
+        {
+          "board": "5s9sQsTs8d",
+          "gto": {
+            "strict": 53,
+            "actor_only": 53,
+            "opponent": 207,
+            "raw": 236,
+            "actions": [
+              "x",
+              "b50",
+              "b100",
+              "a"
+            ],
+            "pot_bb": 13.76,
+            "remaining_bb": 93.37,
+            "spr": 6.785610465116279,
+            "medium": {
+              "eligible": 0,
+              "preferred": 0,
+              "candidate": false,
+              "status": "B50_UNREACHABLE_AFTER_PREVIOUS_STREET"
+            }
+          },
+          "exp_oop": {
+            "strict": 63,
+            "actor_only": 63,
+            "opponent": 80,
+            "raw": 63,
+            "actions": [
+              "x",
+              "b50",
+              "b100",
+              "a"
+            ],
+            "pot_bb": 13.76,
+            "remaining_bb": 93.37,
+            "spr": 6.785610465116279,
+            "medium": {
+              "eligible": 9,
+              "preferred": 9,
+              "best_ev_b50_fraction_pct": 100.0,
+              "low_count": 6,
+              "middle_count": 3,
+              "high_count": 0,
+              "mid_reach_mass_fraction_pct": 32.304,
+              "candidate": false,
+              "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+            }
+          },
+          "common_strict_hands": 28
+        },
+        {
+          "board": "5s9sQsTsTd",
+          "gto": {
+            "strict": 56,
+            "actor_only": 56,
+            "opponent": 195,
+            "raw": 240,
+            "actions": [
+              "x",
+              "b50",
+              "b100",
+              "a"
+            ],
+            "pot_bb": 13.76,
+            "remaining_bb": 93.37,
+            "spr": 6.785610465116279,
+            "medium": {
+              "eligible": 29,
+              "preferred": 26,
+              "best_ev_b50_fraction_pct": 89.655,
+              "low_count": 0,
+              "middle_count": 9,
+              "high_count": 20,
+              "mid_reach_mass_fraction_pct": 34.672,
+              "candidate": false,
+              "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+            }
+          },
+          "exp_oop": {
+            "strict": 62,
+            "actor_only": 62,
+            "opponent": 74,
+            "raw": 62,
+            "actions": [
+              "x",
+              "b50",
+              "b100",
+              "a"
+            ],
+            "pot_bb": 13.76,
+            "remaining_bb": 93.37,
+            "spr": 6.785610465116279,
+            "medium": {
+              "eligible": 62,
+              "preferred": 62,
+              "best_ev_b50_fraction_pct": 100.0,
+              "low_count": 20,
+              "middle_count": 31,
+              "high_count": 11,
+              "mid_reach_mass_fraction_pct": 50.097,
+              "candidate": true,
+              "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+            }
+          },
+          "common_strict_hands": 29
+        }
+      ],
+      "paired": true
+    },
+    "52": {
+      "model_id": "ln-bb-r_model-rb27ni",
+      "line": "x x/b33 c/",
+      "model_spr": 10.436,
+      "rivers": [
+        {
+          "board": "5s9sQsTs8d",
+          "gto": {
+            "strict": 220,
+            "actor_only": 220,
+            "opponent": 263,
+            "raw": 421,
+            "actions": [
+              "x",
+              "b50",
+              "b100",
+              "a"
+            ],
+            "pot_bb": 9.14,
+            "remaining_bb": 95.68,
+            "spr": 10.468271334792123,
+            "medium": {
+              "eligible": 98,
+              "preferred": 83,
+              "best_ev_b50_fraction_pct": 84.694,
+              "low_count": 28,
+              "middle_count": 18,
+              "high_count": 52,
+              "mid_reach_mass_fraction_pct": 19.184,
+              "candidate": false,
+              "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+            }
+          },
+          "exp_oop": {
+            "strict": 158,
+            "actor_only": 158,
+            "opponent": 91,
+            "raw": 162,
+            "actions": [
+              "x",
+              "b50",
+              "b100",
+              "a"
+            ],
+            "pot_bb": 9.14,
+            "remaining_bb": 95.68,
+            "spr": 10.468271334792123,
+            "medium": {
+              "eligible": 31,
+              "preferred": 0,
+              "best_ev_b50_fraction_pct": 0.0,
+              "low_count": 0,
+              "middle_count": 31,
+              "high_count": 0,
+              "mid_reach_mass_fraction_pct": 100.0,
+              "candidate": false,
+              "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+            }
+          },
+          "common_strict_hands": 90
+        },
+        {
+          "board": "5s9sQsTsTd",
+          "gto": {
+            "strict": 221,
+            "actor_only": 221,
+            "opponent": 251,
+            "raw": 411,
+            "actions": [
+              "x",
+              "b50",
+              "b100",
+              "a"
+            ],
+            "pot_bb": 9.14,
+            "remaining_bb": 95.68,
+            "spr": 10.468271334792123,
+            "medium": {
+              "eligible": 50,
+              "preferred": 35,
+              "best_ev_b50_fraction_pct": 70.0,
+              "low_count": 9,
+              "middle_count": 0,
+              "high_count": 41,
+              "mid_reach_mass_fraction_pct": 0.0,
+              "candidate": false,
+              "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+            }
+          },
+          "exp_oop": {
+            "strict": 152,
+            "actor_only": 152,
+            "opponent": 86,
+            "raw": 157,
+            "actions": [
+              "x",
+              "b50",
+              "b100",
+              "a"
+            ],
+            "pot_bb": 9.14,
+            "remaining_bb": 95.68,
+            "spr": 10.468271334792123,
+            "medium": {
+              "eligible": 22,
+              "preferred": 12,
+              "best_ev_b50_fraction_pct": 54.545,
+              "low_count": 0,
+              "middle_count": 22,
+              "high_count": 0,
+              "mid_reach_mass_fraction_pct": 100.0,
+              "candidate": false,
+              "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+            }
+          },
+          "common_strict_hands": 91
+        }
+      ],
+      "paired": true
+    }
+  },
+  "archive": "BTN_BB_Qs9s5s_45095729336.json.gz",
+  "archive_sha256": "f419646137f010a0dc63eee01c151265c15d1f26b8a8e769b3e9050bb3edd065"
+}

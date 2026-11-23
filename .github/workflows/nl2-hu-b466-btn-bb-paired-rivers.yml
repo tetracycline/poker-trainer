@@ -1,9 +1,5 @@
 name: B466 BTN-BB ranks 48 and 52, named river histories and full audit
 on:
-  push:
-    branches: [fix/nl2-hu-lines-audit-20261118]
-    paths:
-      - '.github/workflows/nl2-hu-b466-btn-bb-paired-rivers.yml'
   workflow_dispatch:
 permissions:
   contents: write
@@ -88,11 +84,11 @@ jobs:
             gh run download "$GITHUB_RUN_ID" -n "B466-$FLOP-$version" -D "../original/$version"
           done
           python3 tools/hu_btn_bb_river_pairs.py --download-dir ../original --flop "$FLOP" \
-            --run-id "$GITHUB_RUN_ID" --out ../paired
+            --run-id "$GITHUB_RUN_ID" --out paired
       - uses: actions/upload-artifact@v4
         with:
           name: B466-paired-${{ matrix.flop }}
-          path: ../paired/
+          path: paired/
           if-no-files-found: error
   historical:
     runs-on: ubuntu-latest
@@ -110,15 +106,15 @@ jobs:
             gh run download 45092103725 -n "nl2-multiboard-B461-R52-BTNB-B33-$version" -D "../original/$version"
           done
           python3 tools/hu_btn_bb_river_pairs.py --download-dir ../original --flop Js9h4d \
-            --run-id 45092103725 --out ../paired
+            --run-id 45092103725 --out paired
           python3 tools/hu_btn_bb_river_pairs.py --flop 9s6h3d --run-id 45091990886 \
-            --b460-archive data/solver_evidence/NL2_B460_R48_BTN_BB_9S6H3D_B75.json.gz --out ../paired
+            --b460-archive data/solver_evidence/NL2_B460_R48_BTN_BB_9S6H3D_B75.json.gz --out paired
           python3 - <<'PYVERIFY'
           import json
           from pathlib import Path
           for pin in Path('data/solver_evidence/b466').glob('*.proof.json'):
               expected = json.loads(pin.read_bytes())
-              actual = json.loads((Path('../paired') / pin.name).read_bytes())
+              actual = json.loads((Path('paired') / pin.name).read_bytes())
               # Encoded gzip headers can differ between Python versions; both raw source SHAs are pinned.
               expected.pop('archive_sha256')
               actual.pop('archive_sha256')
@@ -128,7 +124,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: B466-paired-historical
-          path: ../paired/
+          path: paired/
           if-no-files-found: error
   preserve:
     needs: [archive-board, historical]

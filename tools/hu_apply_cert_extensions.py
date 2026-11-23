@@ -116,6 +116,8 @@ def main():
     registry.update(CERT_MULTIBOARD=labels["CERT-MULTIBOARD"], APPROX=labels["APPROX"])
     view = dict(schema="NL2_EXACT_VERIFIED_EXTENSIONS_V1", models=ordered)
     registry["exact_source_extensions"] = {e["model_id"]: e["pins"] for e in ordered}
+    registry["base_registry_schema"] = registry["schema"]
+    registry["schema"] = "NL2_HU_392_MULTIBOARD_CERT_STATUS_VERIFIED_EXTENSIONS_V1"
     registry["base_registry"] = base.name
     registry["base_registry_sha256"] = hashlib.sha256(base.read_bytes()).hexdigest()
     summary = audit(registry)

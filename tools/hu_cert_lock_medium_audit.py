@@ -7,7 +7,11 @@ remain explicitly unobserved, not empirical NL2 hole-card action data.
 import argparse,collections,hashlib,json,pathlib
 
 def audit(data):
-    assert data['schema'] in ('NL2_HU_392_MULTIBOARD_CERT_STATUS_V1',
+    source_schema = data['schema']
+    if source_schema == 'NL2_HU_392_MULTIBOARD_CERT_STATUS_VERIFIED_EXTENSIONS_V1':
+        assert data['exact_source_extensions'] and len(data['base_registry_sha256']) == 64
+        source_schema = data['base_registry_schema']
+    assert source_schema in ('NL2_HU_392_MULTIBOARD_CERT_STATUS_V1',
                               'NL2_HU_392_MULTIBOARD_CERT_STATUS_V2_EQUAL_SCORE_TIE',
                               'NL2_HU_392_MULTIBOARD_CERT_STATUS_V3_RANK28',
                               'NL2_HU_392_MULTIBOARD_CERT_STATUS_V4_BATCH50',
