@@ -1,0 +1,146 @@
+name: B550 three original third-pot calls and the rank69 checked river
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b550-rank69-thirds.yml'
+      - 'tools/hu_b550_rank69_originals.py'
+      - 'tools/hu_b550_rank69_routes.cjs'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [5h4h3s, 6s5h4d, 8c6d5s]
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile the pinned Rust solver and verify the named original GTO boundary
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          dir="$RUNNER_TEMP/originals"
+          mkdir -p "$dir"
+          aid=14792976867
+          if test "$FLOP" = 5h4h3s; then aid=14792264343; fi
+          api="repos/$GITHUB_REPOSITORY/actions/artifacts/$aid"
+          gh api "$api" > "$dir/$aid.json"
+          gh api "$api/zip" > "$dir/$aid.zip"
+          python tools/hu_b550_rank69_originals.py --solver pinned-solver --originals "$dir" \
+            --results "$RUNNER_TEMP/sources" --run "$GITHUB_RUN_ID" --flop "$FLOP" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B550-R69-${{ matrix.flop }}
+          path: ${{ runner.temp }}/sources/${{ matrix.flop }}
+          if-no-files-found: warn
+          retention-days: 90
+  verify:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions: {contents: write, actions: read}
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 'B550-R69-*'
+          path: ${{ runner.temp }}/sources
+      - name: Replay exact source hands, NL2 locks and old policy equality
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          python -m pip install numpy phevaluator==0.5.3.1
+          orig="$RUNNER_TEMP/originals"
+          mkdir -p "$orig"
+          for aid in 14792264343 14792976867; do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$aid"
+            gh api "$api" > "$orig/$aid.json"
+            gh api "$api/zip" > "$orig/$aid.zip"
+          done
+          for archive in "$RUNNER_TEMP"/sources/B550-R69-*; do
+            mv "$archive" "$RUNNER_TEMP/sources/${archive##*-}"
+          done
+          python tools/hu_b550_rank69_originals.py --solver pinned-solver --originals "$orig" \
+            --results "$RUNNER_TEMP/sources" --run "$GITHUB_RUN_ID"
+      - name: Audit all current routes and register only verified paired boards
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          files=(data/nl2_hu_b550_rank69_results.json)
+          group=data/solver_evidence/reverified/rank69.json
+          if test -f data/nl2_hu_b550_locked_medium.json; then
+            files+=(data/nl2_hu_b550_locked_medium.json "$group" data/solver_evidence/NL2_B550_*.json.gz data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R69_*.json.gz)
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            for file in "${files[@]}"; do
+              if test -e "$live/$file"; then cmp "$file" "$live/$file"; fi
+            done
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              bash tools/hu_exact_batch_audit.sh "$status"
+              python - "$status" <<'PYREG'
+          import json, sys
+          from pathlib import Path
+          reg = json.loads(Path(sys.argv[1]).read_bytes())["records"]
+          assert len(reg) == 392
+          for rank in (69,):
+              group = Path(f"data/solver_evidence/reverified/rank{rank}.json")
+              if group.exists():
+                  g = json.loads(group.read_bytes())
+                  r = reg[g["model_id"]]
+                  assert r["label"] == "CERT-MULTIBOARD"
+                  assert {b["flop"] for b in g["boards"]} <= {b["flop"] for b in r["certified_3_to_5_exact_flop_boards"]}
+          PYREG
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B550: publish exact rank69 checks with source-matched original third-pot flop boundaries'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
