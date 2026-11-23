@@ -1,0 +1,118 @@
+name: B565 reach rank18 on half-pot flops and measured 75% turn barrels
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b565-paired-barrels.yml'
+      - 'tools/hu_b565_paired_barrels.py'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [TdTs4h, JdJh3c, QcQd4s]
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the pinned native engine
+        run: |
+          set -euo pipefail
+          pip -q install numpy matplotlib phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve a fresh flop or read the completed B545 flop and solve the new continuation
+        working-directory: trainer
+        env:
+          RAYON_NUM_THREADS: 2
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          args=()
+          if test "$FLOP" != TdTs4h; then
+            manifest="$RUNNER_TEMP/$FLOP.json"
+            status=0
+            python tools/solve_hu_multiboard_100bb.py --solver-root ../solver --spot SB_BB --flop "$FLOP" \
+              --version gto --flop-size-profile sb-50-only --flop-line-policy oop-b50only --turn-size-menu 33-50-75-100 \
+              --turn-count 3 --lock-marginals-by-street --archive-empty-river-extraction --manifest "$manifest" || status=$?
+            python -c 'import sys,json; m=json.load(open(sys.argv[1])); assert not m["failures"] and len(m["cases"])+len(m["skipped"])==3 and int(sys.argv[2])==(0 if m["cases"] else 1)' "$manifest" "$status"
+            args+=(--manifest "$manifest")
+          fi
+          python tools/hu_b565_paired_barrels.py --solver ../solver --inputs "$RUNNER_TEMP/b565" --flop "$FLOP" "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B565-native-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b565
+          if-no-files-found: error
+  audit:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    permissions: {contents: write, actions: read}
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: B565-native-*
+          path: ${{ runner.temp }}/b565
+          merge-multiple: true
+      - name: Replay both policies, audit current routes and publish a checkpoint or the three-board certificate
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            (
+              cd "$live"
+              evidence=data/solver_evidence
+              cp "$RUNNER_TEMP"/b565/NL2_B565_R18_*.zip "$evidence/"
+              python tools/hu_b565_paired_barrels.py --inputs "$evidence" --solver "$GITHUB_WORKSPACE/solver" --run "$GITHUB_RUN_ID"
+              status=data/nl2_hu_multiboard_status_current.json
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              if test -f data/nl2_hu_b565_locked_medium.json; then node tools/hu_b558_river_policy_view.cjs "$evidence/reverified/rank18.json"; fi
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b492_medium_tree_ui.cjs
+              python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              shopt -s nullglob
+              files=(data/nl2_hu_b565_*.json "$evidence"/NL2_B565_R18_*.zip "$evidence"/NL2_MULTIBOARD_REVERIFIED_R18_"$GITHUB_RUN_ID"_*.json.gz)
+              if test -f data/nl2_hu_b565_locked_medium.json; then files+=("$evidence/reverified/rank18.json"); fi
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B565: record authenticated paired-flop river hands and measured turn and river BB responses'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1

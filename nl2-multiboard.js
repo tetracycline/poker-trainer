@@ -67,7 +67,11 @@ function selectLeadTree(){
 function fillVersions(){
  el('version').replaceChildren();
  const sizes=chosenBoard?.restricted_flop_bet_sizes_pct;
- const baseline=sizes?.length?'本公牌 GTO CERT（翻牌下注尺寸 '+sizes.join(' / ')+'%）':'本公牌 GTO CERT';
+ const turnSizes=chosenBoard?.conditional_turn_oop_bet_sizes_pct;
+ const streets=[];
+ if(sizes?.length)streets.push('翻牌下注尺寸 '+sizes.join(' / ')+'%');
+ if(turnSizes?.length)streets.push('轉牌先手下注尺寸 '+turnSizes.join(' / ')+'%');
+ const baseline=streets.length?'本公牌 GTO CERT（'+streets.join('，')+'）':'本公牌 GTO CERT';
  opt(el('version'),'gto',chosenBoard?.leadComparison?'開放領打的條件 GTO 對照':baseline);
  if(chosenBoard)chosenBoard.nl2_locked_variants.forEach((b,i)=>{
    opt(el('version'),b.version+'@'+i,(b.variant_label||b.version)+'｜Run '+b.run_id+
