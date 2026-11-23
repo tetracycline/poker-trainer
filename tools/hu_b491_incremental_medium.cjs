@@ -7,10 +7,10 @@ const [mid,board,line,seat]=JSON.parse(key), gto=row.gto;
 const gkey=JSON.stringify([mid,board,line,seat,gto.source_run_id,gto.source_sha256]);
 const earlier={...row};
 for(const f of ['root_applied_rust_lock_nodes','subgame_applied_rust_lock_nodes','gto'])delete earlier[f];
-async function load(extra,modify=()=>{},base={references:{[key]:earlier}}){
+async function load(extra,modify=()=>{},base={references:{[key]:earlier}},extraNumber=490){
   const contents=new Map(), reports=[];
-  for(const [number,data] of [[483,base],[490,extra]]){
-    const path='data/nl2_hu_b'+number+'_locked_medium.json', schema='NL2_HU_B'+number+'_ORIGINAL_LOCKED_MEDIUM_V1';
+  for(const [number,data] of [[483,base],[extraNumber,extra]]){
+    const path='data/nl2_hu_b'+number+'_locked_medium.json', schema=data.schema??('NL2_HU_B'+number+'_ORIGINAL_LOCKED_MEDIUM_V1');
     const bytes=JSON.stringify({schema,...data});
     reports.push({path,schema,sha256:createHash('sha256').update(bytes).digest('hex')});
     contents.set(path,bytes);
@@ -30,6 +30,11 @@ async function main(){
   const b={public_board:board,actual_exact_action_line:line,acting_seat:seat,flop:row.flop,turn:row.turn,
     source_run_id:gto.source_run_id,source_sha256:gto.source_sha256,nl2_locked_variants:[lock]};
   const refs={references:{[key]:row},gto_references:{[gkey]:gto}};
+  for(const [number,schema] of [[542,'NL2_B542_NATIVE_PAIRED_TURN_VERSION_V1'],[544,'NL2_HU_B544_CONDITIONAL_MEDIUM_V1']]){
+    const [,combined]=await load({...refs,schema},undefined,undefined,number);
+    assert.equal(Object.keys(combined.references).length,1);
+    await assert.rejects(load({...refs,schema},undefined,undefined,999),/路徑/);
+  }
   for(const r of [refs,{references:refs.references},{references:{[key]:earlier},gto_references:refs.gto_references}]){
     const [audit,combined]=await load(r);
     assert.equal(Object.keys(combined.references).length,1);

@@ -41,6 +41,14 @@ def main():
                 return
             raise AssertionError("Bad source evidence accepted")
 
+        for number, schema in ((542, "NL2_B542_NATIVE_PAIRED_TURN_VERSION_V1"), (544, "NL2_HU_B544_CONDITIONAL_MEDIUM_V1")):
+            path = directory/f"nl2_hu_b{number}_locked_medium.json"
+            path.write_text(json.dumps({"schema": schema, "references": {key: row}}))
+            assert read_replays(directory)[0][-1]["schema"] == schema
+            path.rename(directory/"nl2_hu_b999_locked_medium.json")
+            rejects()
+            (directory/"nl2_hu_b999_locked_medium.json").unlink()
+
         bad = deepcopy(row)
         bad["compatible_hole_card_pairs"] += 1
         write(489, {key: bad})

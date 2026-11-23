@@ -2,6 +2,10 @@
 (() => {
   const indexes=new WeakMap(), handDigests=new WeakMap();
   const unresolved='UNRESOLVED_JOINT_REACH';
+  const nativeReportSchemas = new Map([
+    ['542', 'NL2_B542_NATIVE_PAIRED_TURN_VERSION_V1'],
+    ['544', 'NL2_HU_B544_CONDITIONAL_MEDIUM_V1'],
+  ]);
   let loading;
   async function request(path){
     const response=await fetch(path,{cache:'no-store'});
@@ -16,7 +20,8 @@
        new Set(files.map(f=>f.path)).size!==files.length)throw Error('缺少原始雙方可達性來源目錄');
     const paths=files.map(({path,schema,sha256})=>{
       const match=/^data\/nl2_hu_b([1-9][0-9]*)_locked_medium\.json$/.exec(path);
-      if(!match||!/^[a-f0-9]{64}$/.test(sha256)||schema!=='NL2_HU_B'+match[1]+'_ORIGINAL_LOCKED_MEDIUM_V1')throw Error('原始來源路徑或版本不符');
+      if(!match||!/^[a-f0-9]{64}$/.test(sha256)||typeof schema!=='string'||
+         (schema!=='NL2_HU_B'+match[1]+'_ORIGINAL_LOCKED_MEDIUM_V1' && schema!==nativeReportSchemas.get(match[1])))throw Error('原始來源路徑或版本不符');
       return {path,schema,sha256};
     });
     const reports=await Promise.all(paths.map(async ({path,schema,sha256})=>{

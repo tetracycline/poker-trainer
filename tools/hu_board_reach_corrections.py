@@ -6,6 +6,9 @@ import re
 from pathlib import Path
 
 REPORT_NAME = re.compile(r"nl2_hu_b([1-9][0-9]*)_locked_medium\.json")
+# The immutable B542 and B544 workflows use these names for the same verified row format.
+NATIVE_REPORT_SCHEMAS = {542: "NL2_B542_NATIVE_PAIRED_TURN_VERSION_V1",
+                         544: "NL2_HU_B544_CONDITIONAL_MEDIUM_V1"}
 NODE = ("spot", "family", "flop", "turn", "public_board", "line", "acting_seat")
 RESULT = ("version", "source_run_id", "source_sha256", *NODE, "status", "source_hand_count",
           "source_hand_order_sha256", "source_actions", "compatible_action_mask_b64",
@@ -104,10 +107,11 @@ def read_replays(directory=Path("data")):
         return mid
 
     for number, path in paths:
-        schema = f"NL2_HU_B{number}_ORIGINAL_LOCKED_MEDIUM_V1"
         raw = path.read_bytes()
         report = json.loads(raw)
-        assert report["schema"] == schema, f"Wrong raw reach schema: {path}"
+        schema = report["schema"]
+        standard = f"NL2_HU_B{number}_ORIGINAL_LOCKED_MEDIUM_V1"
+        assert schema == standard or (number in NATIVE_REPORT_SCHEMAS and schema == NATIVE_REPORT_SCHEMAS[number]), f"Wrong raw reach schema: {path}"
         sources.append(dict(path="data/"+path.name, schema=schema, sha256=hashlib.sha256(raw).hexdigest()))
         assert isinstance(report["references"], dict) and isinstance(report.get("gto_references", {}), dict)
         for key, row in report["references"].items():
