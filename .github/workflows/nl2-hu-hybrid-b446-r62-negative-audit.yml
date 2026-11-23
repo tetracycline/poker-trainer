@@ -1,0 +1,84 @@
+name: B446 preserve rank62 strict-zero negative source, audit V50 and HU2475
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b446-r62-negative-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: trainer
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download the two prior exact board source pairs and this batch's GTO/EXP_IP artifacts
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p ../downloads/as9h2d_gto ../downloads/as9h2d_exp_ip ../downloads/8s8h3d_gto ../downloads/8s8h3d_exp_ip ../downloads/new_gto ../downloads/new_exp_ip
+          gh run download 44522421850 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-stage2-CO_BB-gto-0' --dir ../downloads/as9h2d_gto
+          gh run download 44522421850 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-stage2-CO_BB-exp_ip-0' --dir ../downloads/as9h2d_exp_ip
+          gh run download 44653774402 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-stage2-CO_BB-gto-8s8h3d' --dir ../downloads/8s8h3d_gto
+          gh run download 44653774402 --repo "$GITHUB_REPOSITORY" \
+            --name 'nl2-stage2-CO_BB-exp_ip-8s8h3d' --dir ../downloads/8s8h3d_exp_ip
+          gh run download 45085489935 --repo "$GITHUB_REPOSITORY" \
+            --name 'NL2-B444-R62-KsQh4d-GTO' --dir ../downloads/new_gto
+          gh run download 45085489935 --repo "$GITHUB_REPOSITORY" \
+            --name 'NL2-B444-R62-KsQh4d-EXP-IP' --dir ../downloads/new_exp_ip
+      - name: Verify existing original GTO and NL2-IP with strict multi-street reach, fail closed
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/verify_b446_rank62_negative.py
+          python3 tools/verify_b446_rank62_negative.py --downloads ../downloads --run-id "$GITHUB_RUN_ID"
+      - name: Full V50 GTO/locks/medium-size and HU2475 audit
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v50_b417_rank166.json --out /tmp/b446-source.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/b446-source.json'))
+          assert (d['cert_multiboard'],d['approx'],d['EST'],d['models_total'])==(163,229,0,392)
+          assert (d['aggregate']['named_board_proofs'],d['aggregate']['paired_hero_locked_source_variants'])==(618,710)
+          assert d['not_actual_NL2_earnings'] and d['not_generalized_handclass_GTO']
+          PY
+          node tools/hu_line_contract.js >/tmp/b446-contract.json
+          node tools/link_audit.js --md /tmp/b446-link.md --json /tmp/b446-link.json
+          node tools/reach_verify.js --log /tmp/b446-reach.md --json /tmp/b446-reach.json
+          node tools/hu_model_path_audit.js /tmp/b446-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b446-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B446 HU2475/2475")'
+          git diff --check
+      - name: Commit verified negative evidence to PR2 draft; do not merge
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b446_rank62_strict_zero_negative_proof.json docs/NL2_HU_B446_R62_GTO_STRICT_ZERO_NEGATIVE.md
+          git diff --cached --quiet && exit 1
+          git commit -m 'B446: preserve rank62 authentic zero GTO strict reach; no false CERT'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
