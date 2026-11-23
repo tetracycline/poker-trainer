@@ -1,0 +1,144 @@
+name: B538 UTG half-pot check-calls on five exact flops and checked rivers
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b538-utg-check-calls.yml'
+      - 'tools/hu_b538_utg_check_calls.py'
+      - 'tools/hu_b538_utg_routes.cjs'
+permissions:
+  contents: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [6c6d3h, 8h8d4c, Jh9s4c, Qh7s3d, Ac8d3h]
+        version: [gto, exp_oop]
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned Rust solver
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          mkdir -p trainer/evidence
+          cp solver/inputs/pool_stats.json trainer/evidence/pool_stats.json
+          git -C solver rev-parse HEAD > trainer/evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > trainer/evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve the half-pot flop and both priced turn leads on three runouts
+        working-directory: trainer
+        env:
+          FLOP: ${{ matrix.flop }}
+          VERSION: ${{ matrix.version }}
+        run: |
+          set -euo pipefail
+          status=0
+          python3 tools/solve_hu_multiboard_100bb.py --solver-root ../solver --spot UTG_CO \
+            --flop "$FLOP" --version "$VERSION" --flop-size-profile utg-50-only --flop-line-policy checked-b50only --allow-turn-lead \
+            --turn-size-menu default --turn-line-policy checkcheck --archive-empty-river-extraction --lock-marginals-by-street --turn-count 3 --manifest "evidence/$FLOP-$VERSION.json" || status=$?
+          python3 - "$status" "evidence/$FLOP-$VERSION.json" <<'PY'
+          import json,sys
+          m=json.load(open(sys.argv[2]))
+          assert not m["failures"] and len(m["cases"]) == m["solved_cases"] <= 3
+          assert int(sys.argv[1]) == (0 if m["cases"] else 1)
+          assert m["cases"] or len(m["skipped"]) == 3
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NL2-B538-${{ matrix.flop }}-${{ matrix.version }}
+          path: |
+            trainer/evidence
+            solver/postflop/out/UTG_CO/${{ matrix.version }}
+          if-no-files-found: error
+          retention-days: 90
+
+  verify:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 'NL2-B538-*'
+          path: downloads
+      - run: python -m pip install phevaluator==0.5.3.1
+      - name: Verify source hands and both rendered predecessor actions
+        run: python tools/hu_b538_utg_check_calls.py --downloads downloads --run "$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B538-verified-UTG-turn-and-river-decisions
+          path: |
+            data/nl2_hu_b538_*.json
+            data/solver_evidence/reverified/rank68.json
+            data/solver_evidence/reverified/rank205.json
+            data/solver_evidence/NL2_B538_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R68_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R205_*.json.gz
+          if-no-files-found: error
+          retention-days: 90
+      - name: Audit all current routes and register only verified paired boards
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          files=(data/nl2_hu_b538_utg_check_calls.json data/solver_evidence/NL2_B538_*.json.gz)
+          files+=(data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R{68,205}_*.json.gz)
+          if test -f data/nl2_hu_b538_locked_medium.json; then
+            files+=(data/nl2_hu_b538_locked_medium.json)
+            for rank in 68 205; do file="data/solver_evidence/reverified/rank$rank.json"; if test -f "$file"; then files+=("$file"); fi; done
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            for file in "${files[@]}"; do
+              if test -e "$live/$file"; then cmp "$file" "$live/$file"; fi
+            done
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              bash tools/hu_exact_batch_audit.sh "$status"
+              python -c 'import json; g=json.load(open("data/nl2_hu_b538_utg_check_calls.json"))["models"]; r=json.load(open("data/nl2_hu_multiboard_status_current.json"))["records"]; assert all(len(v["boards"])<3 or (r[v["model_id"]]["label"]=="CERT-MULTIBOARD" and {b["source_sha256"] for b in v["boards"]}<={b["source_sha256"] for b in r[v["model_id"]]["certified_3_to_5_exact_flop_boards"]}) for v in g.values())'
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B538: publish authenticated UTG check-call turns and checked rivers'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then
+              exit 0
+            fi
+            git worktree remove "$live"
+          done
+          exit 1

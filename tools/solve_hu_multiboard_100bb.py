@@ -171,8 +171,9 @@ def main():
     if args.flop_line_policy=='checked-b50b100only':
         if args.spot!='CO_BB' or args.flop_size_profile!='full' or args.turn_size_menu!='default':
             a.error('Dual checked-b50/b100 original solve only for full-size CO_BB SRP with default turn menu')
-    if args.flop_size_profile=='utg-50-only' and (args.spot,args.flop_line_policy)!=('UTG_CO','oop-b50only'):
-        a.error('Restricted UTG half-pot flop tree requires the UTG_CO OOP half-pot bet-call line')
+    if args.flop_size_profile=='utg-50-only':
+        if args.spot!='UTG_CO' or args.flop_line_policy not in ('oop-b50only','checked-b50only'):
+            a.error('Restricted UTG half-pot flop tree requires a UTG_CO half-pot bet-call line')
     if args.flop_size_profile=='lmp-50-only':
         if args.spot!='LMP_CO_BB' or args.flop_line_policy not in ('oop-b50only','checked-b50only'):
             a.error('Restricted half-pot flop tree requires a LMP half-pot bet-call line')
