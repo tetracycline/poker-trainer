@@ -14,6 +14,7 @@ section{padding:12px;margin:12px 0;border:1px solid #3d5a46;border-radius:10px;b
 .warn{padding:12px;background:#302717;border:1px solid #866b35;border-radius:9px;margin:13px 0}
 select{padding:8px;background:#21362a;color:#fff;border:1px solid #63826b;border-radius:7px;max-width:100%}
 .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px}
+[hidden]{display:none!important}
 label{display:block;font-size:14px;color:#d5e6da}
 h2{font-size:18px;margin:5px 0}
 b{color:#a4f0b2}
@@ -36,6 +37,7 @@ th{background:#254631;position:sticky;top:0}
 <section><div class="filters">
 <label>高頻訓練 MODEL <select id="model"></select></label>
 <label>認證的代表公牌 <select id="board"></select></label>
+<label id="lead-tree-label" hidden>下注選單 <select id="lead-tree"><option value="base">原始行動樹</option><option value="half-pot">開放半池領打的條件解</option></select></label>
 <label>GTO 或 NL2 英雄頻率鎖定 <select id="version"><option value="gto">精確公牌 GTO</option><option value="exp_ip">英雄 IP / 局部鎖頻</option><option value="exp_oop">英雄 OOP / 局部鎖頻</option></select></label>
 <label>實際 CFR 決策節點 <select id="node"></select></label>
 </div></section>
@@ -47,9 +49,10 @@ th{background:#254631;position:sticky;top:0}
 <label><input type="checkbox" id="all-combos"> 顯示全部可達 combos（預設前100）</label>
 <div class="table-wrap"><table><thead><tr><th>Hole cards</th><th>合法 CFR 行動</th><th>合法範圍內最高 EV 動作</th></tr></thead><tbody id="combo-rows"></tbody></table></div></section>
 </main>
-<script src="nl2_locked_medium.js?v=b485-1"></script>
+<script src="nl2_half_pot_leads.js?v=b492"></script>
+<script src="nl2_locked_medium.js?v=b485-1-b491"></script>
 <script src="nl2_pool_rate_scope.js?v=b475-1"></script>
-<script src="nl2_cert_registry.js?v=task-hybrid-b463-b484"></script>
-<script src="nl2-multiboard.js?v=task-hybrid-b463-v52-b485"></script>
+<script src="nl2_cert_registry.js?v=task-hybrid-b463-b484-b491"></script>
+<script src="nl2-multiboard.js?v=task-hybrid-b463-v52-b492"></script>
 </body>
 </html>

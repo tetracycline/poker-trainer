@@ -1,0 +1,26 @@
+name: Check original and conditional half-pot hand views
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b492-conditional-lead-view.yml'
+      - 'nl2_half_pot_leads.js'
+      - 'nl2-multiboard.js'
+      - 'nl2_hu_multiboard_ui.js'
+      - 'nl2-multiboard.html'
+      - 'nl2.html'
+      - 'data/nl2_hu_b49[23]_half_pot_leads.json'
+      - 'tools/hu_b492_medium_tree_ui.cjs'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate conditional views, original board sources, and every training route
+        run: |
+          set -euo pipefail
+          node tools/hu_b492_medium_tree_ui.cjs
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json

@@ -32,17 +32,48 @@ function selectedModel(){
  }
  selectBoard();
 }
+let originalBoard=null, leadResult=null, boardRequest=0;
 function selectBoard(){
- chosenBoard=chosenModel?.certified_3_to_5_exact_flop_boards[Number(el('board').value)]||null;
+ const request=++boardRequest;
+ originalBoard=chosenModel?.certified_3_to_5_exact_flop_boards[Number(el('board').value)]||null;
+ chosenBoard=originalBoard;leadResult=null;
+ const tree=el('lead-tree'),box=el('lead-tree-label'),source=globalThis.nl2HalfPotLeads;
+ if(box)box.hidden=true;
+ if(tree){tree.value='base';if(tree.lastElementChild)tree.lastElementChild.disabled=false;}
+ const requested=q.get('tree')==='half-pot' && q.get('model')===chosenModel?.model_id && q.get('board')===originalBoard?.public_board;
+ if(requested){++versionRequest;caseData=null;el('version').replaceChildren();el('node').replaceChildren();el('locked-medium')?.replaceChildren();el('lock-pool-source')?.replaceChildren();}
+ if(!tree || !box || !originalBoard || !source || originalBoard.exact_node_actions.includes('b50') || originalBoard.actual_spr<.5){
+   if(requested){setMessage('所選公牌缺少指定的半池領打對照。');return;}
+   fillVersions();return;
+ }
+ if(requested)setMessage('正在核對半池領打的原始行動線與兩組解算。');
+ else fillVersions();
+ source.load().then(rows=>{
+   if(request!==boardRequest)return;
+   leadResult=source.match(rows,chosenModel,originalBoard);
+   if(leadResult?.status!=='BOTH_POSITIVE'){
+     if(requested){box.hidden=false;tree.value='half-pot';tree.lastElementChild.disabled=true;setMessage('此具名公牌尚無通過雙方可達性重驗的領打對照。');}
+     return;
+   }
+   tree.lastElementChild.disabled=false;box.hidden=false;
+   if(requested){tree.value='half-pot';selectLeadTree();}
+ }).catch(error=>{if(request===boardRequest && requested)setMessage('領打對照來源無法驗證，'+error.message);});
+}
+function selectLeadTree(){
+ chosenBoard=el('lead-tree').value==='half-pot' && leadResult?.status==='BOTH_POSITIVE'
+   ? {...leadResult.board,leadComparison:leadResult} : originalBoard;
+ fillVersions();
+}
+function fillVersions(){
  el('version').replaceChildren();
- opt(el('version'),'gto','本公牌 GTO CERT');
+ opt(el('version'),'gto',chosenBoard?.leadComparison?'開放領打的條件 GTO 對照':'本公牌 GTO CERT');
  if(chosenBoard)chosenBoard.nl2_locked_variants.forEach((b,i)=>{
    opt(el('version'),b.version+'@'+i,(b.variant_label||b.version)+'｜Run '+b.run_id+
      '｜觀測聚合節點 '+nodeCount(b,'observed_marginal_source_nodes')+
      '／假設 '+nodeCount(b,'assumed_default_source_nodes')+
      '（局部 NL2 lock，非 GTO）');
  });
- if(q.has('version')){
+ if(q.has('version') && (q.get('tree')==='half-pot')===Boolean(chosenBoard?.leadComparison)){
    const requested=q.get('version');
    const versions=[...el('version').options];
    const pinned=q.get('sha');
@@ -75,7 +106,7 @@ async function getProof(run){
  return getProofForSource(run,null);
 }
 async function getProofForSource(run,source){
- const pin=status.exact_source_extensions?.[chosenModel?.model_id]?.find(p=>
+ const pin=chosenBoard?.leadComparison?.pin||status.exact_source_extensions?.[chosenModel?.model_id]?.find(p=>
    p.flop===chosenBoard.flop && p.turn===chosenBoard.turn && p.public_board===chosenBoard.public_board);
  let batch, expectedDigest;
  const extra=source && chosenBoard.nl2_locked_variants.find(v=>
@@ -179,7 +210,8 @@ async function selectVersion(){
    medium.textContent='';
    setMessage('正在核對來源與雙方可達性……');
    try{
-     const audit=globalThis.nl2LockedMedium, report=await audit.load();
+     const audit=globalThis.nl2LockedMedium, report=chosenBoard?.leadComparison
+       ?globalThis.nl2HalfPotLeads.reachReport(chosenModel,chosenBoard.leadComparison):await audit.load();
      if(request!==versionRequest)return;
      jointReport=report;
      const row=audit.lookup(report,chosenModel,chosenBoard,source);
@@ -198,7 +230,8 @@ async function selectVersion(){
  if(lockScope){
    lockScope.replaceChildren();
    const locks=version==='gto'?chosenBoard.nl2_locked_variants:[source];
-   globalThis.nl2PoolRateScope?.show(lockScope,chosenModel,chosenBoard,locks);
+   if(chosenBoard.leadComparison)globalThis.nl2HalfPotLeads.showLock(lockScope,chosenBoard.leadComparison);
+   else globalThis.nl2PoolRateScope?.show(lockScope,chosenModel,chosenBoard,locks);
  }
  if(jointReach?.row.status==='ZERO_JOINT_REACH'){
    setMessage('此公牌與行動線沒有相容的雙方私牌。');return;
@@ -393,7 +426,8 @@ function selectNode(){
  const lock=caseData.villain_lock_scope||{};
  const origin=sourceCase(version);
  const details=el('details');details.replaceChildren();
- const currentSourceType=chosenBoard.assumed_preflop_ranges?
+ const currentSourceType=chosenBoard.leadComparison?
+     '保留原解到轉牌的雙方範圍，另行求解開放半池領打的轉河牌子局。翻牌策略固定。'+(originalBoard?.assumed_preflop_ranges?'此 LMP／ISO 分支使用假設翻前範圍。':''):chosenBoard.assumed_preflop_ranges?
      'LMP／ISO 假設 169 起手牌類型；如為 50% 單尺寸限制樹，僅是該樹的條件均衡，非完整 NL2 GTO':
      '釘定翻前範圍 CFR；僅此具名公牌及決策歷史通過來源認證';
  const selectedLock=version==='gto'?'本頁為 GTO 基線，沒有套用 NL2 對手鎖頻':
@@ -426,7 +460,7 @@ function selectNode(){
  if(chosenModel.frequency_rank===218&&status.B465_rank218_four_original_sources){
    lines.push('四組彩虹翻牌驗證此下注線。練習表僅啟用單色面／強聽牌，該格仍為 APPROX。');
  }
- const pin=origin?.reach_comparison || status.exact_source_extensions?.[chosenModel.model_id]?.find(v=>
+ const pin=chosenBoard.leadComparison?.pin || origin?.reach_comparison || status.exact_source_extensions?.[chosenModel.model_id]?.find(v=>
    v.public_board===node.public_board && v.flop===chosenBoard.flop && v.turn===chosenBoard.turn &&
    node.exact_node_line===chosenBoard.actual_exact_action_line && node.acting_seat===chosenBoard.acting_seat);
  if(pin && Number.isSafeInteger(pin.GTO_strict_combos) && Number.isSafeInteger(pin.NL2_strict_combos)){
@@ -500,6 +534,7 @@ function fillCombos(){
 }
 el('model').addEventListener('change',selectedModel);
 el('board').addEventListener('change',selectBoard);
+el('lead-tree')?.addEventListener('change',selectLeadTree);
 el('version').addEventListener('change',selectVersion);
 el('node').addEventListener('change',selectNode);
 el('all-combos').addEventListener('change',fillCombos);
@@ -1534,6 +1569,12 @@ fetchCertifiedRegistry()
      '；50% 非極化精確牌面研究候選 '+fmt(medium,0)+'。');
    const id=q.get('model');
    const i=id?models.findIndex(x=>x.model_id===id):-1;
+   if(q.get('tree')==='half-pot' &&
+      (i<0 || !models[i].certified_3_to_5_exact_flop_boards.some(b=>b.public_board===q.get('board')))){
+     el('model').value='';
+     el('version').replaceChildren();el('board').replaceChildren();el('node').replaceChildren();
+     setMessage('指定的模型與公牌沒有可查閱的半池領打對照。');return;
+   }
    if(i>=0)el('model').value=String(i);
    selectedModel();
  }).catch(e=>{text('summary','來源無法驗證：'+e.message);setMessage('沒有可安全展示的真實多牌面 CERT。')});

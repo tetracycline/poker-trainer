@@ -1,0 +1,69 @@
+name: B492 replay verified comparison and publish after combined UI audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b492-publish-verified-comparison.yml']
+permissions:
+  actions: read
+  contents: write
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Recheck frozen originals and compare every original output and viewer with the official completed gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          originals="$RUNNER_TEMP/b492-originals"
+          mkdir -p "$originals"
+          base="repos/$GITHUB_REPOSITORY/actions/artifacts"
+          gh api "$base/14786256954" > "$RUNNER_TEMP/b492-gate-info.json"
+          gh api "$base/14786256954/zip" > "$RUNNER_TEMP/b492-gate.zip"
+          for id in $(python3 tools/hu_b492_half_pot_leads.py --list-artifacts); do
+            gh api "$base/$id" > "$originals/$id.json"
+            gh api "$base/$id/zip" > "$originals/$id.zip"
+          done
+          python3 tools/hu_b492_replay_completed_gate.py --metadata "$RUNNER_TEMP/b492-gate-info.json" \
+            --archive "$RUNNER_TEMP/b492-gate.zip" --solver pinned-solver --originals "$originals" --work "$RUNNER_TEMP/b492-replay"
+      - name: Audit the published B493 and recovered B492 sources together and fast-forward the draft branch
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          shopt -s nullglob
+          files=(data/nl2_hu_b492_half_pot_leads.json data/solver_evidence/NL2_B492_*.zip data/solver_evidence/NL2_MULTIBOARD_B492_*.json.gz)
+          test "${#files[@]}" = 40
+          for attempt in 1 2 3 4 5 6; do
+            git fetch --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add --quiet --detach "$live" FETCH_HEAD
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python3 tools/hu_b492_half_pot_leads.py --verify-published
+              python3 tools/hu_b492_half_pot_leads.py --batch B493 --verify-published
+              node tools/hu_b492_medium_tree_ui.cjs
+              node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+              bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+              git add -f -- "${files[@]}"
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B492: publish the verified conditional half-pot comparison after B493 integration'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1

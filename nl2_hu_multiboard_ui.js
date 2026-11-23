@@ -102,6 +102,7 @@ function render(){
          });
          globalThis.nl2PoolRateScope?.show(li,item,b,b.nl2_locked_variants);
          globalThis.nl2LockedMedium?.showBoard(li,item,b);
+         globalThis.nl2HalfPotLeads?.showBoard(li,item,b);
          ul.appendChild(li);
        }
        note.append(ul);
