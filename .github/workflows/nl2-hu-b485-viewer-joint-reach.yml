@@ -20,6 +20,7 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python3 tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/registry.json"
           node tools/hu_b483_lock_medium_ui.cjs
           node tools/hu_b485_medium_viewers.cjs
-          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh "$RUNNER_TEMP/registry.json"

@@ -184,6 +184,7 @@ async function selectVersion(){
      jointReport=report;
      const row=audit.lookup(report,chosenModel,chosenBoard,source);
      if(row){
+       if(row.status==='UNRESOLVED_JOINT_REACH'){medium.textContent=audit.describe(row);setMessage(medium.textContent);return;}
        jointReach={row,mask:null};
        medium.textContent=(version==='gto'?'GTO':'NL2 鎖 '+sourceRun(source))+'｜'+audit.describe(row);
      }else if(version!=='gto')medium.textContent=audit.describe(null);
@@ -386,6 +387,7 @@ function selectNode(){
    else if(!anchor)medium.textContent='此節點尚無雙方可達性稽核。';
    else medium.textContent=version==='gto'?'':globalThis.nl2LockedMedium.describe(null);
  }
+ if(joint?.row.status==='UNRESOLVED_JOINT_REACH'){setMessage(globalThis.nl2LockedMedium.describe(joint.row));return;}
  if(joint?.row.status==='ZERO_JOINT_REACH'){setMessage('此公牌與行動線沒有相容的雙方私牌。');return;}
  const cands=(joint?joint.row.b50:node.medium_50pct_strict_evidence)||{};
  const lock=caseData.villain_lock_scope||{};

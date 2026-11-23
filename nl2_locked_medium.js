@@ -1,50 +1,129 @@
 // Source identities include the model, decision, acting seat, original run and original subgame digest.
 (() => {
-  const sources=[
-    ['data/nl2_hu_b483_locked_medium.json','NL2_HU_B483_ORIGINAL_LOCKED_MEDIUM_V1'],
-    ['data/nl2_hu_b485_locked_medium.json','NL2_HU_B485_ORIGINAL_LOCKED_MEDIUM_V1']
-  ];
   const indexes=new WeakMap(), handDigests=new WeakMap();
+  const unresolved='UNRESOLVED_JOINT_REACH';
   let loading;
-  function load(){
-    loading ??= Promise.all(sources.map(async ([path,schema])=>{
-      const response=await fetch(path,{cache:'no-store'});
-      if(!response.ok)throw Error('HTTP '+response.status);
-      const report=await response.json();
-      if(report.schema!==schema||!report.references)throw Error('雙方可達性來源格式不符');
+  async function request(path){
+    const response=await fetch(path,{cache:'no-store'});
+    if(!response.ok)throw Error('HTTP '+response.status);
+    return response;
+  }
+  async function readReports(){
+    const manifest=await (await request('data/nl2_hu_verified_extensions.json')).json();
+    const files=manifest.locked_medium_reports;
+    if(manifest.schema!=='NL2_EXACT_VERIFIED_EXTENSIONS_V1' || !Array.isArray(files) ||
+       !files.some(f=>f.path==='data/nl2_hu_b483_locked_medium.json') ||
+       new Set(files.map(f=>f.path)).size!==files.length)throw Error('缺少原始雙方可達性來源目錄');
+    const paths=files.map(({path,schema,sha256})=>{
+      const match=/^data\/nl2_hu_b([1-9][0-9]*)_locked_medium\.json$/.exec(path);
+      if(!match||!/^[a-f0-9]{64}$/.test(sha256)||schema!=='NL2_HU_B'+match[1]+'_ORIGINAL_LOCKED_MEDIUM_V1')throw Error('原始來源路徑或版本不符');
+      return {path,schema,sha256};
+    });
+    const reports=await Promise.all(paths.map(async ({path,schema,sha256})=>{
+      const bytes=await (await request(path)).arrayBuffer();
+      const hash=await crypto.subtle.digest('SHA-256',bytes);
+      const actual=Array.from(new Uint8Array(hash),c=>c.toString(16).padStart(2,'0')).join('');
+      if(actual!==sha256)throw Error('原始雙方可達性報告 SHA 不符');
+      const report=JSON.parse(new TextDecoder().decode(bytes));
+      if(report.schema!==schema)throw Error('雙方可達性來源格式不符');
       return report;
-    })).then(reports=>{
-      const result={references:{},gto_references:{}};
-      for(const report of reports){
-        Object.assign(result.references,report.references);
-        Object.assign(result.gto_references,report.gto_references);
-      }
-      return result;
-    }).catch(error=>{loading=undefined;throw error;});
+    }));
+    return combine(reports);
+  }
+  function load(){
+    loading ??= readReports().catch(error=>{loading=undefined;throw error;});
     return loading;
   }
-  function sourceKey(run,sha,version,spot){
-    return JSON.stringify([run,sha,version,spot]);
-  }
+  const sourceKey=(run,sha,version,spot)=>JSON.stringify([run,sha,version,spot]);
   const nodeKey=(board,line,seat)=>JSON.stringify([board,line,seat]);
-  function sourceIndex(report){
-    if(indexes.has(report))return indexes.get(report);
-    const result=new Map();
-    function add(row){
-      if(!row)return;
+  const scopeFields=['root_applied_rust_lock_nodes','subgame_applied_rust_lock_nodes'];
+  function same(a,b){
+    if(a===b)return true;
+    if(!a||!b||typeof a!=='object'||typeof b!=='object'||Array.isArray(a)!==Array.isArray(b))return false;
+    return Object.keys(a).length===Object.keys(b).length&&Object.keys(a).every(k=>Object.hasOwn(b,k)&&same(a[k],b[k]));
+  }
+  // Different model keys can point to exactly the same original node and private-hand order.
+  function combine(reports){
+    const index=new Map(), result={references:Object.create(null),gto_references:Object.create(null)};
+    const links=new Map(), pending=new Map();
+    function register(key,row,gto){
+      const [model]=JSON.parse(key), seat=row.acting_seat;
+      const canonical=JSON.stringify([model,row.public_board,row.line,seat,row.source_run_id,row.source_sha256]);
+      if(typeof model!=='string'||!model||canonical!==key||![0,1].includes(seat)||
+         !Number.isSafeInteger(row.source_run_id)||row.source_run_id<=0||!/^[a-f0-9]{64}$/.test(row.source_sha256)||
+         row.version!==(gto?'gto':(seat?'exp_ip':'exp_oop'))||
+         !Number.isSafeInteger(row.strict_legal_combos)||row.strict_legal_combos<0||
+         !Number.isSafeInteger(row.compatible_hole_card_pairs)||row.compatible_hole_card_pairs<row.strict_legal_combos||
+         Boolean(row.strict_legal_combos)!==Boolean(row.compatible_hole_card_pairs)||
+         row.status!==(row.strict_legal_combos?'POSITIVE_JOINT_REACH':'ZERO_JOINT_REACH'))
+        throw Error('原始來源與模型、行動或座位不符');
+      if(scopeFields.some(f=>f in row) &&
+         (!scopeFields.every(f=>Number.isSafeInteger(row[f])&&row[f]>=0) ||
+          (row.root_applied_rust_lock_nodes+row.subgame_applied_rust_lock_nodes>0)===gto))
+        throw Error('原始套鎖節點數不符');
       const source=sourceKey(row.source_run_id,row.source_sha256,row.version,row.spot);
-      if(!result.has(source))result.set(source,new Map());
-      const index=result.get(source), key=nodeKey(row.public_board,row.line,row.acting_seat);
-      const before=index.get(key);
-      if(before&&(before.source_hand_order_sha256!==row.source_hand_order_sha256||
-         before.compatible_action_mask_b64!==row.compatible_action_mask_b64||
-         before.compatible_hole_card_pairs!==row.compatible_hole_card_pairs||
-         JSON.stringify(before.b50)!==JSON.stringify(row.b50)))throw Error('同一來源有相衝的手牌證據');
-      index.set(key,row);
+      if(!index.has(source))index.set(source,new Map());
+      const nodes=index.get(source), node=nodeKey(row.public_board,row.line,seat);
+      let verified=nodes.get(node);
+      if(!verified){
+        verified={...row};delete verified.gto;nodes.set(node,verified);
+      }else{
+        for(const f of ['family','flop','turn','status','source_hand_order_sha256','source_actions','source_hand_count',
+          'compatible_action_mask_b64','strict_legal_combos','compatible_hole_card_pairs','compatible_opponent_combos',
+          'b50','gto_gap_pct','locked_hero_gap_pct',...scopeFields,'root_sha256','root_gto_stage_gap_pct','root_locked_hero_gap_pct']){
+          if(f in row && f in verified && !same(row[f],verified[f]))throw Error('同一來源有相衝的手牌證據');
+          if(f in row)verified[f]=row[f];
+        }
+      }
+      const target=gto?result.gto_references:result.references;
+      if(target[key] && target[key]!==verified)throw Error('同一模型來源的解算範圍不符');
+      target[key]=verified;
+      return model;
     }
-    for(const row of Object.values(report.references)){add(row);add(row.gto);}
-    for(const row of Object.values(report.gto_references||{}))add(row);
-    indexes.set(report,result);return result;
+    for(const report of reports){
+      if(!report.references||Array.isArray(report.references)||typeof report.references!=='object'||
+         ('unresolved' in report && (!report.unresolved||Array.isArray(report.unresolved)||typeof report.unresolved!=='object'))||
+         ('gto_references' in report && (!report.gto_references||Array.isArray(report.gto_references)||typeof report.gto_references!=='object')))
+        throw Error('雙方可達性來源清單格式不符');
+      for(const [key,row] of Object.entries(report.references)){
+        const model=register(key,row,false);
+        if(row.gto!=null){
+          if(!['spot','family','flop','turn','public_board','line','acting_seat'].every(f=>row[f]===row.gto[f]))
+            throw Error('相對應的 GTO 節點不符');
+          const g=row.gto, gkey=JSON.stringify([model,g.public_board,g.line,g.acting_seat,g.source_run_id,g.source_sha256]);
+          if(links.has(key)&&links.get(key)!==gkey)throw Error('鎖頻與原始 GTO 配對不符');
+          links.set(key,gkey);register(gkey,g,true);
+        }
+      }
+      for(const [key,row] of Object.entries(report.gto_references||{}))register(key,row,true);
+      for(const [key,item] of Object.entries(report.unresolved||{})){
+        const [mid,public_board,line,acting_seat,source_run_id,source_sha256]=JSON.parse(key);
+        const exact={public_board,line,acting_seat,source_run_id,source_sha256};
+        if(typeof mid!=='string'||!mid||typeof public_board!=='string'||typeof line!=='string'||
+           key!==JSON.stringify([mid,public_board,line,acting_seat,source_run_id,source_sha256])||
+           ![0,1].includes(acting_seat)||!Number.isSafeInteger(source_run_id)||source_run_id<=0||!/^[a-f0-9]{64}$/.test(source_sha256)||
+           !['gto',acting_seat?'exp_ip':'exp_oop'].includes(item.version)||typeof item.reason!=='string'||!item.reason.trim()||
+           Object.keys(exact).some(k=>k in item&&item[k]!==exact[k])||
+           ['strict_legal_combos','compatible_action_mask_b64','b50'].some(f=>f in item)||
+           (pending.has(key)&&pending.get(key).version!==item.version))throw Error('待核對原始來源格式不符');
+        pending.set(key,{...item,...exact,status:unresolved});
+      }
+    }
+    for(const [key,row] of pending){
+      const target=row.version==='gto'?result.gto_references:result.references;
+      if(target[key])continue;
+      const source=sourceKey(row.source_run_id,row.source_sha256,row.version,row.spot??null);
+      if(!index.has(source))index.set(source,new Map());
+      const nodes=index.get(source), node=nodeKey(row.public_board,row.line,row.acting_seat);
+      if(!nodes.has(node))nodes.set(node,row);
+      target[key]=nodes.get(node);
+    }
+    indexes.set(result,index);
+    return result;
+  }
+  function sourceIndex(report){
+    if(!indexes.has(report))indexes.set(report,indexes.get(combine([report])));
+    return indexes.get(report);
   }
   function lookup(report,model,board,source){
     if(!source)return null;
@@ -63,6 +142,13 @@
       row=report.references[key(run,sha)];
     }
     if(!row)return null;
+    if(row.status===unresolved){
+      if(row.version!==source.version || row.source_run_id!==run || row.source_sha256!==sha ||
+         (row.spot!=null&&row.spot!==model.solver_profile)||(row.family!=null&&row.family!==model.family)||
+         (row.flop!=null&&row.flop!==board.flop)||(row.turn!=null&&row.turn!==board.turn))
+        throw Error('待核對來源與模型不符');
+      return row;
+    }
     if(row.spot!==model.solver_profile||row.family!==model.family||row.flop!==board.flop||row.turn!==board.turn||
        row.public_board!==board.public_board||row.line!==board.actual_exact_action_line||row.acting_seat!==board.acting_seat||
        row.version!==source.version||row.source_run_id!==run||row.source_sha256!==sha||
@@ -70,14 +156,15 @@
     return row;
   }
   async function bindCase(report,actual,run=actual.source_run_id){
-    const index=sourceIndex(report).get(sourceKey(run,actual.source_sha256,actual.version,actual.spot));
+    const sources=sourceIndex(report), index=sources.get(sourceKey(run,actual.source_sha256,actual.version,actual.spot));
+    const unknown=sources.get(sourceKey(run,actual.source_sha256,actual.version,null));
     const verified=new Map();
-    if(!index)return verified;
+    if(!index&&!unknown)return verified;
     await Promise.all(actual.nodes.map(async node=>{
       const key=nodeKey(node.public_board??node.board,node.exact_node_line??node.line,node.acting_seat);
-      const row=index.get(key);
+      const row=index?.get(key)??unknown?.get(key);
       if(row){
-        const mask=await bindMask(row,actual,node);
+        const mask=row.status===unresolved?null:await bindMask(row,actual,node);
         verified.set(node,{row,mask});
       }
     }));
@@ -85,8 +172,11 @@
   }
   function describe(row){
     if(!row) return '50% pot 的雙方可達組合尚未核對。';
-    if(row.status==='ZERO_JOINT_REACH')return '雙方可達配牌為 0；這條行動線沒有可評估的 50% 下注。';
-    const b=row.b50, counts='雙方可達 '+row.strict_legal_combos+' 組英雄手牌、'+row.compatible_hole_card_pairs+' 組雙方配牌。';
+    if(row.status===unresolved)return '尚缺可重算的原始子局。雙方可達手牌與 50% 下注證據仍待核對。';
+    const scope=row.version!=='gto'&&scopeFields.every(f=>Number.isSafeInteger(row[f]))?
+      '實際套鎖節點為翻牌父樹 '+row.root_applied_rust_lock_nodes+' 個、轉河子樹 '+row.subgame_applied_rust_lock_nodes+' 個。':'';
+    if(row.status==='ZERO_JOINT_REACH')return scope+'雙方可達配牌為 0；這條行動線沒有可評估的 50% 下注。';
+    const b=row.b50, counts=scope+'雙方可達 '+row.strict_legal_combos+' 組英雄手牌、'+row.compatible_hole_card_pairs+' 組雙方配牌。';
     if(!b)return counts+'50% pot 尚無可核對的行動證據。';
     if(b.status==='NO_50PCT_ACTION')return counts+'此節點的解算選單沒有 50% 下注。';
     if(!b.eligible)return counts+'有 50% 下注選項，可走此行動的手牌為 0 組。';

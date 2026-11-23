@@ -9,7 +9,7 @@ from pathlib import Path
 import re
 
 from hu_cert_lock_medium_audit import audit
-from hu_board_reach_corrections import apply_updates, replay_updates
+from hu_board_reach_corrections import apply_updates, read_replays, replay_updates
 from copy import deepcopy
 
 DATA = Path("data")
@@ -149,14 +149,21 @@ def main():
     variants = [read(p) for p in sorted((SOURCE/"lock_variants").glob("*.json"))]
     for item in variants:
         append_lock(registry,item)
-    changes = replay_updates(registry)
-    apply_updates(registry, changes)
-    for mid in changes:
-        m = registry["records"][mid]
-        update_references(m, xwalk, refs)
-        if m["label"] == "APPROX":
-            xwalk["records"][mid]["board_specific_certification_status"] = "APPROX"
-            refs["items"][mid]["note"] = "Fewer than three named flops survive the original two-seat action-path replay."
+    sources, locked, originals, links = read_replays()
+    seen, seen_gto = set(), set()
+
+    def apply_replays(model_ids=None):
+        changes = replay_updates(registry, locked, originals, links, seen, seen_gto, model_ids)
+        apply_updates(registry, changes)
+        for mid in changes:
+            m = registry["records"][mid]
+            update_references(m, xwalk, refs)
+            if m["label"] == "APPROX":
+                xwalk["records"][mid]["board_specific_certification_status"] = "APPROX"
+                refs["items"][mid]["note"] = "Fewer than three named flops survive the original two-seat action-path replay."
+        return changes
+
+    changes = apply_replays()
     repairs = sorted((read(p) for p in (SOURCE/"reverified").glob("rank*.json")), key=lambda e:e["rank"])
     for repair in repairs:
         for pin in repair["pins"]:
@@ -165,9 +172,12 @@ def main():
         restored = promote(registry, deepcopy(repair))
         restored.pop("remaining_exact_board_evidence", None)
         update_references(restored, xwalk, refs)
+    repair_changes = apply_replays({r["model_id"] for r in repairs})
+    assert seen == set(locked) and seen_gto == set(originals), "Raw source missing from the named registry boards"
     labels = collections.Counter(r["label"] for r in registry["records"].values())
     registry.update(CERT_MULTIBOARD=labels["CERT-MULTIBOARD"], APPROX=labels["APPROX"])
-    view = dict(schema="NL2_EXACT_VERIFIED_EXTENSIONS_V1", models=ordered, lock_variants=variants, board_reach_updates=changes, reverified_models=repairs)
+    view = dict(schema="NL2_EXACT_VERIFIED_EXTENSIONS_V1", models=ordered, lock_variants=variants, board_reach_updates=changes,
+                reverified_models=repairs, reverified_board_reach_updates=repair_changes, locked_medium_reports=sources)
     registry["exact_source_extensions"] = {e["model_id"]: e["pins"] for e in ordered + repairs}
     registry["base_registry_schema"] = registry["schema"]
     registry["schema"] = "NL2_HU_392_MULTIBOARD_CERT_STATUS_VERIFIED_EXTENSIONS_V1"

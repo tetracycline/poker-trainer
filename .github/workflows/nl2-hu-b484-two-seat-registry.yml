@@ -5,7 +5,11 @@ on:
     paths:
       - '.github/workflows/nl2-hu-b484-two-seat-registry.yml'
       - 'tools/hu_board_reach_corrections.py'
-      - 'data/nl2_hu_b485_locked_medium.json'
+      - 'tools/hu_apply_cert_extensions.py'
+      - 'tools/hu_b491_incremental_medium.cjs'
+      - 'tools/hu_b491_incremental_medium.py'
+      - 'nl2_locked_medium.js'
+      - 'data/nl2_hu_b*_locked_medium.json'
 permissions:
   contents: write
 jobs:
@@ -20,6 +24,10 @@ jobs:
       - name: Regenerate both training views from exact original board and lock masks
         run: |
           python3 tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/reconciled.json"
+          python3 tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
           node tools/hu_extension_runtime_test.cjs "$RUNNER_TEMP/reconciled.json"
           bash tools/hu_exact_batch_audit.sh "$RUNNER_TEMP/reconciled.json"
       - name: Publish verified counts, remaining named boards and source references

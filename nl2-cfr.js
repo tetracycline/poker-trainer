@@ -34,6 +34,7 @@ function selectNode(){
  current=game?.nodes[Number(selN.value)]||null;
  if(!current){by('details').textContent='目前沒有符合的真實 CFR 節點。';by('combos').innerHTML='';return;}
  const n=current,joint=jointNodes.get(n),eligible=n.medium_50pct_eligible_combos||0;
+ if(joint?.row.status==='UNRESOLVED_JOINT_REACH'){by('details').textContent=globalThis.nl2LockedMedium.describe(joint.row);by('combos').replaceChildren();return;}
  const strict=sequential(game,n);
  const run=String(game.source_run_id),source=/^[0-9]+$/.test(run)
   ? '原始 GitHub Actions：<a href="https://github.com/tetracycline/poker-trainer/actions/runs/'+run+'" target="_blank" rel="noopener">Run '+run+'</a>'
@@ -57,6 +58,7 @@ function selectNode(){
 }
 function renderCombos(){
  if(!current||!game)return;
+ if(jointNodes.get(current)?.row.status==='UNRESOLVED_JOINT_REACH'){by('combos').replaceChildren();return;}
  const n=current,strict=sequential(game,n),hand=game.hands_by_seat[n.acting_seat],joint=jointNodes.get(n),raw=joint?.mask??atob(strict?.mask??n.eligible_action_masks_b64),best=typeof n.best_ev_action_indices_b64==='string'?atob(n.best_ev_action_indices_b64):null,allrows=[];
  if(raw.length!==hand.length||(best!==null&&best.length!==hand.length)){by('combos').textContent='來源頻率或 EV 資料維度不一致；禁止顯示。';return;}
  for(let i=0;i<raw.length;i++)if(raw.charCodeAt(i)!==0){

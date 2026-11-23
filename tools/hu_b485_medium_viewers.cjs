@@ -8,7 +8,7 @@ const unzip=p=>JSON.parse(zlib.gunzipSync(fs.readFileSync(p)));
 const helper=fs.readFileSync('nl2_locked_medium.js','utf8');
 const viewer=fs.readFileSync('nl2-cfr.js','utf8');
 const report=read('data/nl2_hu_b485_locked_medium.json');
-const old=read('data/nl2_hu_b483_locked_medium.json');
+const mediumManifest=read('data/nl2_hu_verified_extensions.json');
 const registry=JSON.parse(require('node:child_process').execFileSync('git',['show','d0fe026b3cd59b50450f99471bd27c55e7d4b522:data/nl2_hu_multiboard_status_current.json'],{maxBuffer:16*1024*1024}));
 const sealed=new Map();
 function store(run,item,official){
@@ -22,11 +22,11 @@ for(const [run,code] of [[44732810327,'B4_MICRO'],[44736420272,'B5_SBGAPS']]){
   for(const artifact of data.artifacts)for(const c of artifact.cases)store(run,c,false);
 }
 function reportFor(path){
-  if(path==='data/nl2_hu_b483_locked_medium.json')return old;
-  if(path==='data/nl2_hu_b485_locked_medium.json')return report;
+  if(path==='data/nl2_hu_verified_extensions.json')return Response.json(mediumManifest);
+  if(mediumManifest.locked_medium_reports.some(f=>f.path===path))return new Response(fs.readFileSync(path));
   return null;
 }
-const globals={URL,URLSearchParams,crypto:webcrypto,atob,TextEncoder,Response,DecompressionStream,console};
+const globals={URL,URLSearchParams,crypto:webcrypto,atob,TextEncoder,TextDecoder,Response,DecompressionStream,console};
 function element(){
   let text='',html='',value='';
   return {children:[],checked:true,addEventListener(){},get options(){return this.children;},
@@ -55,7 +55,7 @@ async function officialView(sample,expectZero=false){
   const overlay={schema:'HU_NL2_SEQUENTIAL_REACH_OVERLAY_V1',subgames_by_source_sha256:{
     [game.source_sha256]:{nodes:{[pathKey]:{mask:maskOld,count:countOld}}}}};
   async function fetch(path){
-    const medium=reportFor(path);if(medium)return Response.json(medium);
+    const medium=reportFor(path);if(medium)return medium;
     if(path.includes('offline_manifest'))return Response.json({schema:'HU_NL2_OFFLINE_SHARDS_V1',exact:[],sequential:[]});
     if(path.includes('sequential_reach'))return new Response(zlib.gzipSync(JSON.stringify(overlay)));
     if(path.endsWith('nl2_hu_exact_boards.json.gz'))return new Response(zlib.gzipSync(JSON.stringify(index)));
@@ -82,7 +82,7 @@ async function multiboardView(sample){
   const {row,model,b,game,node}=sample;
   const {ctx,by}=htmlPage('nl2-multiboard.html',async path=>{
     const medium=reportFor(path);
-    return medium?Response.json(medium):new Response(fs.readFileSync(path));
+    return medium||new Response(fs.readFileSync(path));
   });
   const page=fs.readFileSync('nl2-multiboard.js','utf8');
   vm.runInContext(page.slice(page.indexOf('const el='),page.indexOf("el('model').addEventListener")),ctx);
@@ -104,7 +104,7 @@ async function multiboardView(sample){
   assert.ok(node.strict_legal_best_ev_action_indices_b64);
 }
 async function main(){
-  const ctx=vm.createContext({...globals,fetch:async path=>Response.json(reportFor(path))});
+  const ctx=vm.createContext({...globals,fetch:async path=>reportFor(path)});
   vm.runInContext(helper,ctx);
   const audit=ctx.nl2LockedMedium,combined=await audit.load(),bound=new Map(),samples=[];
   for(const [key,row] of [...Object.entries(report.references),...Object.entries(report.gto_references)]){

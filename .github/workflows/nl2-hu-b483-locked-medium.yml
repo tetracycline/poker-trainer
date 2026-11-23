@@ -52,5 +52,6 @@ jobs:
           set -euo pipefail
           python3 tools/hu_b483_locked_medium.py --assemble "$RUNNER_TEMP"/b483/source-*.json --out "$RUNNER_TEMP/complete.json"
           cmp "$RUNNER_TEMP/complete.json" data/nl2_hu_b483_locked_medium.json
+          python3 tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/registry.json"
           node tools/hu_b483_lock_medium_ui.cjs
-          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh "$RUNNER_TEMP/registry.json"

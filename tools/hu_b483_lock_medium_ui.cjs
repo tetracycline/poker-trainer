@@ -12,9 +12,9 @@ function element(){
 const dom=new Map(), get=id=>{if(!dom.has(id))dom.set(id,element());return dom.get(id);};
 const document={getElementById:get,createElement:element,createDocumentFragment:element,
   createTextNode:s=>({textContent:s})};
-const ctx=vm.createContext({document,console,location:{search:''},URLSearchParams,atob,TextEncoder,DecompressionStream,Response,
+const ctx=vm.createContext({document,console,location:{search:''},URLSearchParams,atob,TextEncoder,TextDecoder,DecompressionStream,Response,
   crypto:require('node:crypto').webcrypto,fetch:async path=>{
-    if(path==='data/nl2_hu_b483_locked_medium.json')return {ok:true,json:async()=>report};
+    if(path==='data/nl2_hu_b483_locked_medium.json'&&process.argv[2])return new Response(fs.readFileSync(process.argv[2]));
     return new Response(fs.readFileSync(path));
   }});
 vm.runInContext(helper,ctx);
