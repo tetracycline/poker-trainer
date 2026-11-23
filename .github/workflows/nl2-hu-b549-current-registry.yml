@@ -1,0 +1,27 @@
+name: B549 publish the current trainer-gated exact-board registry
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b549-current-registry.yml'
+      - 'tools/hu_b549_publish_trainer_registry.sh'
+      - 'tools/hu_b549_rank8_current_rows.cjs'
+      - 'tools/hu_b549_rank8_sources.py'
+permissions: {contents: write}
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install phevaluator==0.5.3.1
+      - name: Publish the audited registry and trainer as one fast-forward commit
+        run: bash tools/hu_b549_publish_trainer_registry.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B549-current-medium-coverage
+          path: ${{ runner.temp }}/current-medium-coverage.json
+          if-no-files-found: error
