@@ -340,7 +340,39 @@
       slot.appendChild(details);
     }catch{slot.textContent='目前無法核對連續下注的鎖頻資料。';}
   }
+  async function showRiverReply(parent,model,board,source){
+    const rank=({'ln-opfr-r_model-1e6gydx':43,'ln-ipc-r_model-1at1re2':102})[model.model_id];
+    if(!rank || (source && source!==board.source_sha256))return;
+    try{
+      const response=await fetch('data/nl2_hu_b663_rank'+rank+'_river.json',{cache:'no-store'});
+      if(!response.ok)return;
+      const report=await response.json();
+      if(report.schema!=='NL2_HU_B663_RIVER_HALF_POT_REPLY_V1' || !sha(report.archive_sha256) ||
+         report.measure!=='NL2.HU_facing_bet[3].by_size[34-55%]' || report.observations.n!==64272)return;
+      const row=report.records.find(r=>r.model_id===model.model_id && r.public_board===board.public_board &&
+        r.line===board.actual_exact_action_line && r.seat===board.acting_seat &&
+        r.original.run===board.source_run_id && r.original.source_sha256===board.source_sha256);
+      if(!row || !sha(row.output_sha256) || !sha(row.job_sha256) || row.applied_nodes<=0)return;
+      const policy=row.locked;
+      const frequencies=Object.entries(policy.eligible_hand_frequencies);
+      if(!policy.half_pot || frequencies.length===0 || frequencies.length!==policy.half_pot.eligible ||
+         policy.compatible_pairs<policy.legal_combos || row.response_pairs<=0 ||
+         frequencies.some(([hand,f])=>!/^([2-9TJQKA][cdhs]){2}$/.test(hand) || !Number.isFinite(f) || f<=0 || f>1))return;
+      const detail=document.createElement('details'),title=document.createElement('summary');
+      title.textContent=(row.seat?'大盲':'小盲')+' 河牌半池下注與'+(row.seat?'小盲':'大盲')+'回應鎖';
+      detail.appendChild(title);
+      const add=text=>{const p=document.createElement('p');p.textContent=text;detail.appendChild(p);};
+      add('翻牌小盲下半池、大盲跟注。保留原下注尺寸，從原翻牌範圍重算轉牌及河牌。'+
+        (row.seat?'轉牌雙方過牌、河牌小盲過牌後，由大盲行動。':'轉牌雙方過牌後，由小盲先行動。'));
+      add('單挑河牌面對 34% 至 55% 底池下注的樣本共 64,272 次，涵蓋各位置及底池類型。對手在這條線面對半池時鎖定棄牌 53.1%、跟注 37.6%、加注 9.3%。');
+      add(policy.legal_combos+' 組可達手牌中，'+frequencies.length+' 組可下半池。'+
+        (policy.half_pot.candidate?'符合非極化研究門檻。':'未達非極化研究門檻。'));
+      add('逐手半池頻率　'+frequencies.map(([hand,f])=>hand+' '+(f*100).toFixed(1)+'%').join('、'));
+      parent.appendChild(detail);
+    }catch{return;}
+  }
   function showRestrictedTurn(parent,model,board,source){
+    showRiverReply(parent,model,board,source);
     showMatchedBarrels(parent,model,board,source);
     showFrozenPolicies(parent,model,board,source);
     const sb=model.model_id==='ln-opfr-t_model-19esov6' && board.public_board==='2d9hAsKd';
@@ -401,5 +433,5 @@
         return showFrozenRiver(parent,model,board,r);
     }).catch(()=>{line.textContent='半池領打對照來源暫時無法核對。';});
   }
-  globalThis.nl2HalfPotLeads={load,match,matchFrozenRiver,matchRestrictedTurn,showRestrictedTurn,showMatchedBarrels,matchingFrozenPolicies,showFrozenPolicies,reachReport,showBoard,showLock};
+  globalThis.nl2HalfPotLeads={load,match,matchFrozenRiver,matchRestrictedTurn,showRestrictedTurn,showMatchedBarrels,showRiverReply,matchingFrozenPolicies,showFrozenPolicies,reachReport,showBoard,showLock};
 })();

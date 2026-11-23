@@ -6,11 +6,11 @@ const report = read('data/nl2_hu_b578_conditional_turns.json');
 const registry = read('data/nl2_hu_multiboard_status_current.json');
 const element = () => ({children: [], textContent: '', appendChild(child) { this.children.push(child); }});
 const context = vm.createContext({document: {createElement: element}, fetch: async path => {
-  assert.equal(path, 'data/nl2_hu_b578_conditional_turns.json');
-  return {ok: true, json: async () => report};
+  return {ok: true, json: async () => read(path)};
 }});
 vm.runInContext(fs.readFileSync('nl2_half_pot_leads.js','utf8'), context);
 const {matchRestrictedTurn, showBoard, showRestrictedTurn} = context.nl2HalfPotLeads;
+const text = node => node.textContent + node.children.map(text).join('');
 
 for (const r of report.records) {
   const model = registry.records[r.model_id];
@@ -23,11 +23,11 @@ for (const r of report.records) {
   showRestrictedTurn(viewer,model,board,r.original_locked_sha256);
   setImmediate(() => {
     for (const container of [summary,viewer]) {
-      const text=container.children[0].children[0].children.map(el=>el.textContent).join('');
+      const content=text(container);
       const phrases=r.rank===46?['1 / 1','Tc4c 100.0%','144,567','單挑玩家池']:['0 / 1','11,019'];
-      for (const phrase of phrases) assert.ok(text.includes(phrase),phrase);
-      assert.ok(text.includes('未達非極化研究門檻'));
-      assert.ok(!text.includes('undefined'));
+      for (const phrase of phrases) assert.ok(content.includes(phrase),phrase);
+      assert.ok(content.includes('未達非極化研究門檻'));
+      assert.ok(!content.includes('undefined'));
     }
   });
 }

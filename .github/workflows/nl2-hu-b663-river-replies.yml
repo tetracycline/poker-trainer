@@ -1,0 +1,48 @@
+name: B663 reproduce measured replies to checked-turn river half-pot bets
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b663-river-replies.yml'
+      - 'tools/hu_b663_*'
+      - 'tools/hu_b649_srp_turn_stabs.py'
+      - 'data/solver_evidence/NL2_B486_*_gto.json.gz'
+      - 'data/nl2_hu_b663_rank*_river.json'
+      - 'data/solver_evidence/NL2_B663_R*.zip'
+permissions: {contents: read, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the original native solver
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Authenticate the original turn tree and reproduce its river half-pot replies
+        working-directory: trainer
+        env:
+          RAYON_NUM_THREADS: 1
+        run: |
+          set -euo pipefail
+          for rank in 43 102; do
+            report="data/nl2_hu_b663_rank${rank}_river.json"
+            python tools/hu_b663_river_replies.py --rank "$rank" --solver ../solver --verify ../solver/postflop/pfdriver/target/release/pfdriver --archive "data/solver_evidence/NL2_B663_R${rank}.zip" --out "$RUNNER_TEMP/replay.json"
+            cmp "$RUNNER_TEMP/replay.json" "$report"
+          done
+          node tools/hu_b663_river_ui.cjs

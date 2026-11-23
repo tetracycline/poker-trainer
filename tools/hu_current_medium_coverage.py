@@ -88,6 +88,15 @@ def coverage(registry):
             assert p['prior_unresolved_output_sha256']==policies[i]['output_sha256'] and p['original_node_count']>0
             assert all(e['max_abs']==0 and e['relative_sum']==0 for e in p['range_errors'])
             policies[i]=p
+    river_replies={}
+    for path in sorted(Path('data').glob('nl2_hu_b663_rank*_river.json')):
+        report=json.loads(path.read_bytes())
+        assert report['schema']=='NL2_HU_B663_RIVER_HALF_POT_REPLY_V1'
+        assert report['observations']=={'n':64272,'fold':53.1,'call':37.6,'raise':9.3}
+        for r in report['records']:
+            k=(r['model_id'],r['public_board'],r['line'],r['seat'],r['original']['run'],r['original']['source_sha256'])
+            assert k not in river_replies
+            river_replies[k]=r
     barrel_rows={}
     for barrel_file in sorted(Path('data').glob('nl2_hu_b*_rank*_barrels.json')):
         report=json.loads(barrel_file.read_bytes())
@@ -253,10 +262,24 @@ def coverage(registry):
                     eligible_combos=conditional['half_pot']['eligible'] if conditional['legal_combos'] else 0,
                     nonpolarized_candidate=conditional['half_pot']['candidate'] if conditional['legal_combos'] else None,
                     legal_combos=conditional['legal_combos'],compatible_pairs=conditional['compatible_pairs'])
+            key=(mid,row['public_board'],row['line'],row['seat'],original['run'],original['sha256'])
+            if key in river_replies:
+                reply=river_replies.pop(key)
+                baseline,conditional=reply['gto'],reply['locked']
+                assert baseline['compatible_pairs']==original['compatible_pairs'] and baseline['legal_combos']==original['legal_combos']
+                assert baseline['half_pot']['eligible']==original['half_pot_eligible_combos']
+                assert reply['pattern']=='^'+row['line']+(' ' if row['seat'] else '')+'b50$'
+                assert abs(reply['applied_fold']-.531)<.001 and abs(reply['applied_raise']-.093)<.001
+                assert reply['applied_nodes']>0 and 0<=reply['hero_gap_pct']<=.35 and 0<=reply['gto_gap_pct']<=.35
+                eligible=len(conditional['eligible_hand_frequencies'])
+                assert not eligible or (conditional['half_pot']['eligible']==eligible and reply['response_pairs']>0)
+                row['measured_river_half_pot_reply']=dict(source_sha256=reply['output_sha256'],legal_combos=conditional['legal_combos'],
+                    eligible_combos=eligible,response_pairs=reply['response_pairs'],nonpolarized_candidate=bool(eligible and conditional['half_pot']['candidate']))
             row['medium_policy_usage']=medium_usage(row, alt, frozen)
             boards.append(row)
     totals=dict(Counter(r['half_pot_status'] for r in boards))
     assert len(boards)==registry['all_cert_lock_medium']['named_board_proofs']
+    assert not river_replies
     return dict(certified_models=registry['CERT_MULTIBOARD'],named_boards=len(boards),half_pot_status=totals,
                 medium_action_eligible=comparison_counts(boards,'eligible_policy_comparison'),
                 nonpolarized_candidate=comparison_counts(boards,'nonpolarized_policy_comparison'),boards=boards)

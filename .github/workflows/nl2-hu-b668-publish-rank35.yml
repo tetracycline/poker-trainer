@@ -1,0 +1,56 @@
+name: B668 publish four authenticated rank35 boards and audit the resulting commit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b668-publish-rank35.yml'
+      - 'tools/hu_b668_publish_rank35.*'
+      - 'data/nl2_hu_b668_rank35_workers.json'
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: trainer
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Download the four pinned successful source workers
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/b668-workers"
+          mkdir "$folder"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45270338275" > "$folder/run.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45270338275/jobs?per_page=100" > "$folder/jobs.json"
+          for id in $(jq -r '.workers[].id' data/nl2_hu_b668_rank35_workers.json); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$folder/$id.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$folder/$id.zip"
+          done
+      - name: Independently replay, preserve the latest head, publish and run the full audit
+        working-directory: trainer
+        run: bash tools/hu_b668_publish_rank35.sh "$RUNNER_TEMP/b668-workers" "$GITHUB_WORKSPACE/solver"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B668-published-commit-and-full-audit
+          path: |
+            ${{ runner.temp }}/b668-published-sha.txt
+            ${{ runner.temp }}/b668-coverage.json
+          if-no-files-found: ignore
+          retention-days: 90
