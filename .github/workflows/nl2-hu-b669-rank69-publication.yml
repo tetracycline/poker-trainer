@@ -1,0 +1,63 @@
+name: B669 authenticate five rendered rank69 boards and measured half-pot policies
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b669-rank69-publication.yml'
+      - 'tools/hu_b669_publish_rank69.py'
+      - 'data/nl2_hu_b669_*'
+      - 'data/solver_evidence/reverified/rank69.json'
+      - 'data/solver_evidence/NL2_B669_R69_*.zip'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Authenticate the original native workers and replay both seats
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/b669-workers"
+          mkdir "$folder"
+          for id in $(jq -r '.[].id' data/nl2_hu_b669_rank69_workers.json); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$folder/$id.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$folder/$id.zip"
+          done
+          python - "$folder" <<'PY'
+          import hashlib,json,sys
+          from pathlib import Path
+          folder=Path(sys.argv[1])
+          for pin in json.load(open('data/nl2_hu_b669_rank69_workers.json')):
+              receipt=json.loads((folder/f'{pin["id"]}.json').read_bytes())
+              assert receipt['name']==pin['name']
+              assert receipt['digest']=='sha256:'+pin['sha256']
+              assert hashlib.sha256((folder/f'{pin["id"]}.zip').read_bytes()).hexdigest()==pin['sha256']
+              assert (receipt['workflow_run']['id'],receipt['workflow_run']['head_sha'])==(pin['run'],pin['head'])
+          PY
+          python tools/hu_b669_publish_rank69.py --solver ../solver --receipts "$folder" \
+            --run 45273486787 --head 707f6a800eba9b8cabb0d9ee052019d02eb7fa05
+          git diff --exit-code -- data/nl2_hu_b669_locked_medium.json data/nl2_hu_b669_rank69_results.json \
+            data/solver_evidence/reverified/rank69.json data/solver_evidence/NL2_MULTIBOARD_B669_R69_*.json.gz \
+            data/solver_evidence/NL2_MULTIBOARD_B655_R69_TH7H5C.json.gz \
+            data/solver_evidence/NL2_B669_R69_*.zip data/solver_evidence/NL2_B655_R69_TH7H5C.zip
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/replayed-registry.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/replayed-registry.json"
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs

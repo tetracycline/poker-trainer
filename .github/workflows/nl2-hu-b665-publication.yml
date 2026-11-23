@@ -1,0 +1,43 @@
+name: Authenticate four rank126 native river pairs and the published registry
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b665-publication.yml'
+      - 'tools/hu_b665_publish_rank126.py'
+      - 'data/nl2_hu_b665_rank126_workers.json'
+      - 'data/nl2_hu_b665_locked_medium.json'
+      - 'data/solver_evidence/reverified/rank126.json'
+permissions: {contents: read, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Rebuild all four pairs from their authenticated original worker bytes
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          originals="$RUNNER_TEMP/originals"
+          mkdir -p "$originals"
+          jq -r '.[].artifact_id' data/nl2_hu_b665_rank126_workers.json |
+          while read -r artifact; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact" > "$originals/$artifact.json"
+          done
+          python tools/hu_b665_publish_rank126.py --solver ../solver --originals "$originals"
+          git diff --exit-code -- data/nl2_hu_b665_locked_medium.json data/solver_evidence/reverified/rank126.json data/solver_evidence/NL2_MULTIBOARD_B665_*.json.gz
+          node tools/hu_b558_river_policy_view.cjs data/solver_evidence/reverified/rank126.json
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
