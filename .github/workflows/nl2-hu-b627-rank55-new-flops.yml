@@ -1,0 +1,59 @@
+name: B627 solve five new two-tone flops for the rank55 river check
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b627-rank55-new-flops.yml'
+      - 'tools/hu_b627_rank55_flops.py'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [7d6c5c, 7d5c3c, 8d6c4c, 7d4c3c, 8d7c5c]
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile the pinned solver and solve each new flop from the verified preflop template
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLOP: ${{ matrix.flop }}
+          RAYON_NUM_THREADS: 2
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          dir="$RUNNER_TEMP/originals"
+          mkdir -p "$dir"
+          aid=14792312789
+          api="repos/$GITHUB_REPOSITORY/actions/artifacts/$aid"
+          gh api "$api" > "$dir/$aid.json"
+          gh api "$api/zip" > "$dir/$aid.zip"
+          python tools/hu_b627_rank55_flops.py --solver pinned-solver --originals "$dir" \
+            --output "$RUNNER_TEMP/sources/$FLOP" --run "$GITHUB_RUN_ID" --flop "$FLOP" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          output="$RUNNER_TEMP/sources/$FLOP"
+          cp "$output/proof.json" "$RUNNER_TEMP/native-proof.json"
+          python tools/hu_b627_rank55_flops.py --solver pinned-solver --originals "$dir" \
+            --output "$output" --run "$GITHUB_RUN_ID" --flop "$FLOP"
+          cmp "$RUNNER_TEMP/native-proof.json" "$output/proof.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B627-R55-${{ matrix.flop }}
+          path: ${{ runner.temp }}/sources/${{ matrix.flop }}
+          if-no-files-found: error
+          retention-days: 90

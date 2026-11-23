@@ -8,6 +8,8 @@ on:
       - 'data/nl2_hu_native_river_worker_receipts.json'
       - 'data/nl2_hu_b613_rank55_partial.json'
       - 'data/nl2_hu_b617_rank58_partial.json'
+      - 'data/nl2_hu_b624_rank55_partial.json'
+      - 'data/solver_evidence/NL2_B624_R55_*.zip'
       - 'data/nl2_hu_b613_locked_medium.json'
       - 'data/nl2_hu_b617_locked_medium.json'
       - 'data/solver_evidence/NL2_B613_R55_*.zip'
@@ -19,7 +21,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       fail-fast: false
-      matrix: {batch: [613, 617]}
+      matrix: {batch: [613, 617, 624]}
     steps:
       - uses: actions/checkout@v4
         with: {path: trainer, persist-credentials: false}

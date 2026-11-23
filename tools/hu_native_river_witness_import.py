@@ -1,4 +1,4 @@
-"""Publish sparse native river witnesses from B613 or B617 GitHub Actions artifacts."""
+"""Publish sparse native river witnesses from original and newly solved flop GitHub Actions artifacts."""
 import argparse
 import io
 import json
@@ -21,6 +21,7 @@ from hu_sequential_cfr_reach import game_reach
 from verify_hu_multiboard_100bb import lock_scope
 import hu_b613_rank55_barrels as btn
 import hu_b617_rank58 as sb
+import hu_b624_rank55_flops as new_btn
 
 DATA=Path("data")
 
@@ -32,7 +33,13 @@ def zip_entry(z,name,body):
 
 
 def authoritative_root(args,flop,z,report):
-    if args.rank==55:
+    if args.batch==624:
+        assert (report["batch"],report["original_artifact"],report["preflop_template"]) == (624,new_btn.ARTIFACT,new_btn.TEMPLATE)
+        assert report["original_nodes_reproduced"] == 0
+        job, _ = new_btn.source_job(args.originals,flop)
+        old=None
+        added=True
+    elif args.rank==55:
         old, job, _ = btn.original(args.originals,flop)
         added=True
     else:
@@ -44,8 +51,12 @@ def authoritative_root(args,flop,z,report):
     else:
         root=old;raw=compact(root)
     digest = sha(raw if args.rank==55 else compact(root))
-    assert digest==report["root_sha256"] and root["hands"]==old["hands"]
+    assert digest==report["root_sha256"]
+    assert (root["flop"],root["pot"],root["stack"])==(flop,job["pot"],job["stack"])
     assert not root["info"].get("lock_stats") and 0<=root["info"]["gto_expl_pct"]<=.5
+    if old is None:
+        return root,raw,job
+    assert root["hands"]==old["hands"]
     nd={(n["board"],n["line"],n["player"]):n for n in root["nodes"]}
     assert all(nd[n["board"],n["line"],n["player"]]==n for n in old["nodes"])
     return root,raw,job
@@ -127,12 +138,13 @@ def create_pair(args,flop,reg,receipt,route,solver,pool):
 def main():
     cli=argparse.ArgumentParser(description=__doc__)
     for name in ["originals","archives","solver"]:cli.add_argument("--"+name,type=Path,required=True)
-    cli.add_argument("--batch",type=int,choices=(613,617),required=True)
+    cli.add_argument("--batch",type=int,choices=(613,617,624),required=True)
     cli.add_argument("--run",type=int,required=True)
     args=cli.parse_args()
-    if args.batch==613:
+    if args.batch in (613,624):
         args.rank,args.model,args.version,args.seat,args.line=55,btn.MODEL,"exp_ip",1,btn.LINE
-        cases=btn.CASES;route_js="tools/hu_b613_rank55_routes.cjs"
+        cases=btn.CASES if args.batch==613 else new_btn.FLOPS
+        route_js="tools/hu_b613_rank55_routes.cjs"
     else:
         args.rank,args.model,args.version,args.seat,args.line=58,sb.MODEL,"exp_oop",0,sb.LINE
         cases=sb.CASES;route_js="tools/hu_b617_sb_routes.cjs"
