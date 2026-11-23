@@ -1,0 +1,33 @@
+name: B554 replay archived UTG half-pot flops and CO checked rivers
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b554-rank213-rivers.yml'
+      - 'tools/hu_b554_rank213*'
+      - 'data/nl2_hu_b554_locked_medium.json'
+      - 'data/solver_evidence/NL2_B554_R213_KSQH4D_GTO.zip'
+      - 'data/solver_evidence/reverified/rank213.json'
+permissions: {contents: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Rebuild three named river nodes from the pinned original policies
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          python tools/hu_b554_rank213_rivers.py --solver pinned-solver
+          git diff --exit-code -- data
+          test -z "$(git ls-files --others --exclude-standard -- data)"
