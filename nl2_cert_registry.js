@@ -83,3 +83,46 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
   if (cert+approx!==392 || base.EST!==0) throw Error('模型分類總數不符');
   return {...base, records, CERT_MULTIBOARD:cert, APPROX:approx, exact_source_extensions:extensions};
 };
+
+globalThis.nl2ValidateRank218 = function validateRank218(registry) {
+  const record = registry.records?.['ln-ipfr-r_model-h0c7q7'];
+  const evidence = registry.B465_rank218_four_original_sources;
+  const withRank45 = !!registry.B463_rank45_three_true_original_GTO_NL2_OOP_flops;
+  const count = withRank45 ? 166 : 165;
+  const records = Object.values(registry.records || {});
+  const boards = record?.certified_3_to_5_exact_flop_boards || [];
+  if (registry.schema !== 'NL2_HU_392_MULTIBOARD_CERT_STATUS_V53_B465_R218' ||
+      registry.TOTAL !== 392 || registry.EST !== 0 || records.length !== 392 ||
+      registry.CERT_MULTIBOARD !== count || registry.APPROX !== 392-count ||
+      records.filter(r => r.label === 'CERT-MULTIBOARD').length !== count ||
+      records.filter(r => r.label === 'APPROX').length !== 392-count ||
+      registry.records['ln-iso-iso_t_model-1x553s3']?.label !== (withRank45 ? 'CERT-MULTIBOARD' : 'APPROX') ||
+      registry.records['ln-ipfr-r_model-7kv23r']?.label !== 'APPROX' ||
+      registry.records['ln-opfr-t_model-qx9t0u']?.label !== 'CERT-MULTIBOARD' ||
+      record?.label !== 'CERT-MULTIBOARD' || record.frequency_rank !== 218 || record.solver_profile !== 'CO_BB' ||
+      record.proven_exact_board_count !== 4 || boards.length !== 4 ||
+      boards.map(b=>b.flop).sort().join(',') !== '7c6h5d,Js9h4d,Js9h5d,Td8h3c' ||
+      evidence?.rank !== 218 || evidence.actor !== 'CO_IP' || evidence.line !== 'x b50 c/x b50 c/x' ||
+      evidence.model_flop_bet_fraction !== 0.5 || evidence.model_turn_bet_fraction !== 0.5 ||
+      evidence.pins?.length !== 4 || evidence.excluded_model?.rank !== 216) {
+    throw Error('rank218 model size, source coverage or registry mismatch');
+  }
+  const sha = x => typeof x === 'string' && /^[0-9a-f]{64}$/.test(x);
+  for (const board of boards) {
+    const pin = evidence.pins.find(p => p.flop === board.flop && p.turn === board.turn && p.public_board === board.public_board);
+    const lock = board.nl2_locked_variants?.find(v => v.version === 'exp_ip');
+    if (!pin || !lock || board.acting_seat !== 1 || board.actual_exact_action_line !== evidence.line ||
+        !Number.isSafeInteger(pin.original_GTO_run) || pin.original_GTO_run <= 0 || pin.original_GTO_run !== board.source_run_id ||
+        !Number.isSafeInteger(pin.actual_NL2_IP_run) || pin.actual_NL2_IP_run <= 0 || pin.actual_NL2_IP_run !== lock.run_id ||
+        !sha(pin.original_GTO_SHA256) || pin.original_GTO_SHA256 !== board.source_sha256 ||
+        !sha(pin.actual_NL2_SHA256) || pin.actual_NL2_SHA256 !== lock.sha256 ||
+        !Number.isInteger(pin.GTO_strict_combos) || pin.GTO_strict_combos <= 0 ||
+        board.strict_full_street_combo_reachable !== pin.GTO_strict_combos ||
+        !Number.isInteger(pin.NL2_strict_combos) || pin.NL2_strict_combos <= 0 ||
+        !(board.actual_spr > 0) || !(board.relative_spr_error_pct >= 0 && board.relative_spr_error_pct <= 5) ||
+        !(board.genuine_gto_exploitability_pct >= 0 && board.genuine_gto_exploitability_pct <= 0.5)) {
+      throw Error('rank218 board GTO or actor-matched NL2 source mismatch');
+    }
+  }
+  return registry;
+};

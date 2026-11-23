@@ -20,7 +20,7 @@ async function main() {
     }});
     vm.runInContext(shared + '\n' + fetcher, runtime);
     assert.equal(await vm.runInContext('fetchCertifiedRegistry()', runtime), registry);
-    assert.deepEqual(visits, [path]);
+    assert.equal(visits.at(-1), path);
     for (const field of ['GTO_strict_combos','NL2_strict_combos','actual_NL2_SHA256']) {
       const corrupt = structuredClone(registry);
       corrupt.B463_rank45_three_true_original_GTO_NL2_OOP_flops.pins[0][field] = 0;

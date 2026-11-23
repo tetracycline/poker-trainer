@@ -1,0 +1,89 @@
+name: B465 rank218 exact half-pot source replay and complete HU audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b465-rank218.yml'
+      - 'tools/hu_b465_*'
+      - 'data/nl2_hu_b465_rank218_four_board_gate.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: b465-rank218-registry
+  cancel-in-progress: false
+jobs:
+  replay-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Download and verify eight original GTO and NL2 partial-lock archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/b465-sources"
+          cd "$RUNNER_TEMP/b465-sources"
+          while read -r label id digest; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$label.zip"
+            echo "$digest  $label.zip" | sha256sum -c -
+            unzip -q "$label.zip" -d "$label"
+          done <<'ARCHIVES'
+          historical-exp 14598807546 70edcf8cf6b0b1e7a5a2eb30a1fed6959bcd0462bf4199ac880f54b1e4b7a31a
+          historical-gto 14597934573 247c05663e8edd668a317d3104c33b0ab780ce26722923bc76dc3cff4fea04ec
+          td-gto 14757075648 fe7f4d1f630e2203099e5dee6bd89b58483d6a1a200d9db410fa5546ca793258
+          td-exp 14756859154 f991d07c83bed33055c4bc2194f4e713876950c684807aecd405ae11e50803c1
+          js-gto 14755847893 ec86b2e5cb5e9f131925a43b7ae249d1b20b56382013dc0d771814ba7188eab9
+          js-exp 14766239558 f0c2daf04a8acdebf2f20cc347a3aec2e5302a80c60f808e928f695912cc39e0
+          low-gto 14767287775 d1aa62cea6cb8830a020c8ffad4fc232ea6186b175a17162171500cf6e6959c8
+          low-exp 14767878687 72ae70a2e9882c861e31399f17630885f3bbfc7e299fe961a3d02cff665493c3
+          ARCHIVES
+      - name: Replay original boards, audit the cumulative registry and publish verified sources
+        env:
+          BRANCH: fix/nl2-hu-lines-audit-20261118
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch origin "$BRANCH"
+            candidate="$RUNNER_TEMP/b465-candidate-$attempt"
+            git worktree add --detach "$candidate" FETCH_HEAD
+            if (
+              cd "$candidate"
+              set -euo pipefail
+              python3 tools/hu_b465_rank218.py --downloads "$RUNNER_TEMP/b465-sources" --publish || exit 2
+              python3 tools/hu_b465_combo_sources.py --downloads "$RUNNER_TEMP/b465-sources" || exit 2
+              node tools/hu_b465_loader_runtime_test.cjs || exit 2
+              registry=data/nl2_hu_multiboard_status_v53_b465_rank218.json
+              if compgen -G 'data/solver_evidence/extensions/rank*.json' >/dev/null; then
+                registry=data/nl2_hu_multiboard_status_current.json
+                python3 tools/hu_apply_cert_extensions.py --out "$registry" || exit 2
+                node tools/hu_extension_runtime_test.cjs "$registry" || exit 2
+                git add "$registry" data/nl2_hu_verified_extensions.json || exit 2
+              fi
+              bash tools/hu_exact_batch_audit.sh "$registry" || exit 2
+              git add data/nl2_hu_multiboard_status_v53_b465_rank218.json data/nl2_hu_cert_lock_medium_matrix_v53_b465.json \
+                data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json \
+                data/solver_evidence/NL2_MULTIBOARD_R218_*.json.gz || exit 2
+              if git diff --cached --quiet; then exit 0; fi
+              git commit -m 'B465: certify rank218 at four exact half-pot GTO and NL2 IP boards' || exit 2
+              git push origin "HEAD:refs/heads/$BRANCH" || exit 3
+            ); then exit 0; else result=$?; fi
+            if [ "$result" -ne 3 ]; then exit "$result"; fi
+          done
+          exit 1
+      - name: Verify the current registry after publishing V53
+        env:
+          BRANCH: fix/nl2-hu-lines-audit-20261118
+        run: |
+          set -euo pipefail
+          git fetch origin "$BRANCH"
+          if git ls-tree -r --name-only FETCH_HEAD -- data/solver_evidence/extensions | grep -q 'rank.*\.json$'; then
+            bash tools/hu_publish_cert_extensions.sh
+          fi

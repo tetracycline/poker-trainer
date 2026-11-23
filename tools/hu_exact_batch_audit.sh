@@ -12,6 +12,7 @@ node tools/hu_model_path_audit.js "$tmpdir/path.json"
 node --check nl2_hu_multiboard_ui.js
 node --check nl2-multiboard.js
 node tools/hu_b378_v47_loader_runtime_test.cjs
+node tools/hu_b390_loader_runtime_test.cjs
 python3 - "$registry" "$tmpdir/locks.json" "$tmpdir/link.json" <<'PY'
 import collections, json, sys
 from pathlib import Path
