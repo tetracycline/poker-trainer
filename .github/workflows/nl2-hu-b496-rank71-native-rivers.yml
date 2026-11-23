@@ -1,0 +1,146 @@
+name: B496 rank71 original LMP50 river with two verified flops and three fresh flop pairs
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b496-rank71-native-rivers.yml'
+permissions:
+  contents: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [3c3d4h, 5c5d2h, 2c2d4h]
+        version: [gto, exp_oop]
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned Rust solver
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          mkdir -p trainer/evidence
+          cp solver/inputs/pool_stats.json trainer/evidence/pool_stats.json
+          git -C solver rev-parse HEAD > trainer/evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > trainer/evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve the original restricted half-pot flop and two independent reached turns
+        working-directory: trainer
+        env:
+          FLOP: ${{ matrix.flop }}
+          VERSION: ${{ matrix.version }}
+        run: |
+          set -euo pipefail
+          status=0
+          python3 tools/solve_hu_multiboard_100bb.py --solver-root ../solver --spot LMP_CO_BB \
+            --flop "$FLOP" --version "$VERSION" --flop-size-profile lmp-50-only --flop-line-policy oop-b50only \
+            --turn-size-menu default --archive-empty-river-extraction --lock-marginals-by-street --turn-count 2 --manifest "evidence/$FLOP-$VERSION.json" || status=$?
+          python3 - "$status" "evidence/$FLOP-$VERSION.json" <<'PY'
+          import json,sys
+          m=json.load(open(sys.argv[2]))
+          assert not m["failures"] and len(m["cases"]) == m["solved_cases"] <= 2
+          assert int(sys.argv[1]) == (0 if m["cases"] else 1)
+          assert len(m["cases"]) + len(m["skipped"]) == 2
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B496-original-${{ matrix.flop }}-${{ matrix.version }}
+          path: |
+            trainer/evidence
+            solver/postflop/out/LMP_CO_BB/${{ matrix.version }}
+          if-no-files-found: error
+          retention-days: 90
+
+  gate:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate prior original ZIPs and each completed fresh source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/b496"
+          mkdir "$dir"
+          api="repos/$GITHUB_REPOSITORY/actions"
+          gh api "$api/runs/$GITHUB_RUN_ID/artifacts?per_page=100" > "$dir/run.json"
+          ids=$(python3 tools/hu_b496_rank71_baseline.py --list-originals)
+          newids=$(jq -r '.artifacts[] | select(.name | startswith("B496-original-")) | .id' "$dir/run.json")
+          for id in $ids $newids; do
+            gh api "$api/artifacts/$id" > "$dir/$id.json"
+            gh api "$api/artifacts/$id/zip" > "$dir/$id.zip"
+          done
+          python3 tools/hu_b496_rank71_baseline.py --downloads "$dir" --run "$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B496-rank71-baseline-audit
+          path: |
+            data/nl2_hu_b496_rank71_baseline_attempts.json
+            data/nl2_hu_b496_locked_medium.json
+            data/solver_evidence/reverified/rank71.json
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R71_*.json.gz
+            data/solver_evidence/B496_*.zip
+          if-no-files-found: error
+          retention-days: 90
+      - name: Audit and publish only reverified original river evidence
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          shopt -s nullglob
+          files=(data/nl2_hu_b496_rank71_baseline_attempts.json)
+          if test -f data/solver_evidence/reverified/rank71.json; then
+            files+=(data/solver_evidence/reverified/rank71.json data/nl2_hu_b496_locked_medium.json
+              data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R71_*.json.gz data/solver_evidence/B496_*.zip)
+          fi
+          git fetch --no-tags origin "$branch"
+          git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+          live="$RUNNER_TEMP/b496-check"
+          git worktree add -q --detach "$live" FETCH_HEAD
+          cp --parents "${files[@]}" "$live/"
+          (
+            cd "$live"
+            status="$RUNNER_TEMP/current.json"
+            python3 tools/hu_apply_cert_extensions.py --out "$status"
+            node tools/hu_extension_runtime_test.cjs "$status"
+            bash tools/hu_exact_batch_audit.sh "$status"
+            git add "${files[@]}"
+            git commit -m 'B496: audit the independent native rank71 LMP50 originals and preserve verified pairs'
+          )
+          commit=$(git -C "$live" rev-parse HEAD)
+          for n in 1 2 3 4; do
+            git fetch --no-tags origin "$branch"
+            check="$RUNNER_TEMP/b496-push-$n"
+            git worktree add -q --detach "$check" FETCH_HEAD
+            git -C "$check" cherry-pick "$commit"
+            if git -C "$check" push origin "HEAD:refs/heads/$branch"; then
+              bash tools/hu_publish_cert_extensions.sh
+              exit 0
+            fi
+          done
+          exit 1
