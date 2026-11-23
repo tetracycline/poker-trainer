@@ -1,0 +1,152 @@
+name: B493 rank14 conditional half-pot leads on four verified CO versus BB boards
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b493-rank14-half-pot-leads.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [CO_BB_Js9h4d_Ts, CO_BB_Js9h3d_4s, CO_BB_Js9s4s_8c, CO_BB_Td8h3c_2h]
+    env:
+      GROUP: ${{ matrix.group }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Download this group's two pinned original artifacts
+        id: originals
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/originals"
+          for id in $(python3 tools/hu_b492_half_pot_leads.py --batch B493 --group "$GROUP" --list-artifacts); do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+            gh api "$api" > "$RUNNER_TEMP/originals/$id.json"
+            gh api "$api/zip" > "$RUNNER_TEMP/originals/$id.zip"
+          done
+      - name: Compile pinned Rust solver
+        id: compile
+        run: |
+          set -euo pipefail
+          git clone https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd pinned-solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve conditional GTO from the pinned GTO turn boundary
+        run: |
+          python3 tools/hu_b492_half_pot_leads.py --batch B493 --group "$GROUP" --version gto --solver pinned-solver \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver --originals "$RUNNER_TEMP/originals" \
+            --work "$RUNNER_TEMP/B493-source-$GROUP-gto" --run-id "$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B493-source-${{ matrix.group }}-gto
+          path: |
+            ${{ runner.temp }}/B493-source-${{ matrix.group }}-gto/outcome.json
+            ${{ runner.temp }}/B493-source-${{ matrix.group }}-gto/NL2_B493_*.zip
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Solve conditional EXP against the measured street-specific pool
+        if: ${{ !cancelled() && steps.originals.outcome == 'success' && steps.compile.outcome == 'success' }}
+        run: |
+          python3 tools/hu_b492_half_pot_leads.py --batch B493 --group "$GROUP" --version exp_oop --solver pinned-solver \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver --originals "$RUNNER_TEMP/originals" \
+            --work "$RUNNER_TEMP/B493-source-$GROUP-exp_oop" --run-id "$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B493-source-${{ matrix.group }}-exp_oop
+          path: |
+            ${{ runner.temp }}/B493-source-${{ matrix.group }}-exp_oop/outcome.json
+            ${{ runner.temp }}/B493-source-${{ matrix.group }}-exp_oop/NL2_B493_*.zip
+          if-no-files-found: warn
+          retention-days: 90
+  gate:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: B493-source-*
+          path: ${{ runner.temp }}/b493-gate
+      - name: Authenticate original ranges and jobs, conditional output, legal pairs and exact half-pot edge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/originals"
+          for id in $(python3 tools/hu_b492_half_pot_leads.py --batch B493 --list-artifacts); do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+            gh api "$api" > "$RUNNER_TEMP/originals/$id.json"
+            gh api "$api/zip" > "$RUNNER_TEMP/originals/$id.zip"
+          done
+          python3 tools/hu_b492_half_pot_leads.py --batch B493 --assemble --solver pinned-solver --originals "$RUNNER_TEMP/originals" \
+            --work "$RUNNER_TEMP/b493-gate" --run-id "$GITHUB_RUN_ID"
+          python3 tools/hu_b492_half_pot_leads.py --batch B493 --verify-published
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B493-conditional-source-comparison
+          path: |
+            data/nl2_hu_b493_half_pot_leads.json
+            data/solver_evidence/NL2_B493_*.zip
+            data/solver_evidence/NL2_MULTIBOARD_B493_*.json.gz
+          if-no-files-found: error
+          retention-days: 90
+      - name: Full exact audit and publish paired comparison to the live draft branch
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          shopt -s nullglob
+          files=(data/nl2_hu_b493_half_pot_leads.json data/solver_evidence/NL2_B493_*.zip data/solver_evidence/NL2_MULTIBOARD_B493_*.json.gz)
+          for attempt in 1 2 3; do
+            git fetch --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add --detach "$live" FETCH_HEAD
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python3 tools/hu_b492_half_pot_leads.py --batch B493 --verify-published
+              node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+              bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+              git add -f -- "${files[@]}"
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B493: publish conditional half-pot leads with exact original reach and paired source evidence'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1

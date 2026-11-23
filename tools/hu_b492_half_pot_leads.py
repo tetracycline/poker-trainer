@@ -20,8 +20,7 @@ from solve_hu_multiboard_100bb import make_fallbacks
 from verify_hu_multiboard_100bb import lock_scope
 
 
-INPUTS=Path("data/nl2_hu_b492_lead_inputs.json")
-OUT=Path("data/nl2_hu_b492_half_pot_leads.json")
+EXPECTED_SIZES={"B492":(17,7),"B493":(4,0)}
 VERSIONS=("gto","exp_oop")
 SCOPE="CONDITIONAL_TURN_SUBGAME_WITH_ORIGINAL_VERSION_FLOP_REACH_AND_HALF_POT_LEAD"
 
@@ -50,9 +49,13 @@ def originals(directory,group,version):
             ref["id"],"sha256:"+ref["zip_sha256"],ref["run"],1438346845)
     flop,turn=group["flop"],group["turn"]
     with zipfile.ZipFile(path) as archive:
-        pins={archive.read(n).decode().strip() for n in archive.namelist() if n.startswith("evidence/") and n.endswith(".txt")}
+        evidence=("evidence/","trainer/evidence/")
+        names=[n for n in archive.namelist() if n.startswith(evidence)]
+        pins={archive.read(n).decode().strip() for n in names if n.endswith(".txt")}
         assert {SOLVER,RUST} <= pins
-        mf,=[n for n in archive.namelist() if n.startswith("evidence/") and n.endswith(".json")]
+        mf,=[n for n in names if n.endswith(".json") and not n.endswith("/pool_stats.json")]
+        if "trainer/evidence/pool_stats.json" in names:
+            assert sha(archive.read("trainer/evidence/pool_stats.json"))==POOL
         manifest_raw=archive.read(mf)
         m=json.loads(manifest_raw)
         assert (m["spot"],m["version"])==(group["spot"],version) and not m["failures"]
@@ -109,8 +112,8 @@ def preparation(group,version,job,pipeline,pool):
     return changed,metadata
 
 
-def code_for(key,version):
-    return f"B492_{key.upper()}_{version.upper()}"
+def code_for(key,version,batch="B492"):
+    return f"{batch}_{key.upper()}_{version.upper()}"
 
 
 def zip_payload(path,entries):
@@ -147,12 +150,12 @@ def solve(args,key,group,version,pipeline,pool):
     envelope=dict(result,solver_output_sha256=sha(raw),conditional_job_sha256=sha(jobraw))
     files.update({"conditional.job.json":jobraw,"conditional.json":raw,"provenance.json":compact(envelope),
                   "street-lock-metadata.json":compact(meta)})
-    pack=directory/f"NL2_{code_for(key,version)}.zip"
+    pack=directory/f"NL2_{code_for(key,version,args.batch)}.zip"
     zip_payload(pack,files)
     write(directory/"outcome.json",dict(envelope,status="SOLVED",archive=pack.name,archive_sha256=sha(pack.read_bytes())))
 
 
-def unpack(directory,key,group,version,original_dir,pipeline,pool,run):
+def unpack(directory,key,group,version,original_dir,pipeline,pool,run,batch="B492"):
     result_path=directory/"outcome.json"
     if not result_path.exists():
         return None,"NO_COMPLETED_ORIGINAL_SOLVER_OUTPUT"
@@ -165,7 +168,7 @@ def unpack(directory,key,group,version,original_dir,pipeline,pool,run):
     root,old,oldjob,files=originals(original_dir,group,version)
     job,metadata=preparation(group,version,oldjob,pipeline,pool)
     pack=directory/result["archive"]
-    code=code_for(key,version)
+    code=code_for(key,version,batch)
     assert pack.name==f"NL2_{code}.zip" and sha(pack.read_bytes())==result["archive_sha256"]
     with zipfile.ZipFile(pack) as z:
         assert all(z.read(f)==data for f,data in files.items())
@@ -230,7 +233,7 @@ def attach_view(row,code):
     row.update(viewer_path=path.as_posix(),viewer_sha256=sha(path.read_bytes()))
 
 
-def record(group,target,sources,missing,model,run):
+def record(group,target,sources,missing,model,run,batch="B492"):
     public,line,seat=target["public"],target["line"],target["seat"]
     orig,other=group["gto"],group["exp_oop"]
     old,=[b for b in model["certified_3_to_5_exact_flop_boards"] if b["public_board"]==public and b["actual_exact_action_line"]==line and b["acting_seat"]==seat]
@@ -252,7 +255,7 @@ def record(group,target,sources,missing,model,run):
             row["unavailable_versions"][ver]=f"TARGET_SOURCE_VERIFICATION_FAILED: {type(error).__name__} {error}"
             row[ver]=None
     outcomes=[row[v]["status"] if row[v] else "UNAVAILABLE" for v in VERSIONS]
-    code=f'B492_R{target["rank"]}_{group["flop"].upper()}_{public[6:].upper()}_{run}'
+    code=f'{batch}_R{target["rank"]}_{group["flop"].upper()}_{public[6:].upper()}_{run}'
     if all(v=="POSITIVE_JOINT_REACH" for v in outcomes):
         try:
             b,p=emit_board(model,sources["gto"],sources["exp_oop"],public,line,old["flop_texture"],viewer_code=code)
@@ -295,30 +298,31 @@ def materialize(args,inputs,pipeline,pool):
     for key,g in inputs["groups"].items():
         sources,missing={},{}
         for ver in VERSIONS:
-            folder=args.work/f"B492-source-{key}-{ver}"
+            folder=args.work/f"{args.batch}-source-{key}-{ver}"
             try:
-                source,reason=unpack(folder,key,g,ver,args.originals,pipeline,pool,args.run_id)
+                source,reason=unpack(folder,key,g,ver,args.originals,pipeline,pool,args.run_id,args.batch)
             except (AssertionError,KeyError,ValueError,FileNotFoundError,zipfile.BadZipFile) as err:
                 source=None
                 reason=f"SOURCE_VERIFICATION_FAILED: {type(err).__name__} {err}"
             if source is None:missing[ver]=reason
             else:sources[ver]=source
         for t in g["targets"]:
-            results.append(record(g,t,sources,missing,historical["records"][t["model"]],args.run_id))
+            results.append(record(g,t,sources,missing,historical["records"][t["model"]],args.run_id,args.batch))
     short=inputs["under_half_pot_stack"]
     for s in short:
         m=historical["records"][s["model"]]
         b,=[b for b in m["certified_3_to_5_exact_flop_boards"] if (b["public_board"],b["actual_exact_action_line"])==(s["board"],s["line"])]
         assert b["actual_spr"]==s["spr"]<.5 and 2*b["actual_effective_stack_bb"]<b["actual_pot_bb"]
-    assert len(results)==17 and len(short)==7
-    write(OUT,dict(schema="NL2_HU_B492_CONDITIONAL_HALF_POT_LEADS_V1",source_run_id=args.run_id,freeze=freeze,
-                   poker_solver_pin=SOLVER,rust_pin=RUST,pool_sha256=POOL,inputs_sha256=sha(INPUTS.read_bytes()),
+    assert (len(results),len(short))==EXPECTED_SIZES[args.batch]
+    write(args.report_path,dict(schema="NL2_HU_B492_CONDITIONAL_HALF_POT_LEADS_V1",source_run_id=args.run_id,freeze=freeze,
+                   poker_solver_pin=SOLVER,rust_pin=RUST,pool_sha256=POOL,inputs_sha256=sha(args.input_path.read_bytes()),
                    records=results,under_half_pot_stack=short))
     print({s:sum(r["status"]==s for r in results) for s in ("BOTH_POSITIVE","ZERO_JOINT_REACH","UNAVAILABLE")})
 
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--batch",choices=EXPECTED_SIZES,default="B492")
     p.add_argument("--group")
     p.add_argument("--version",choices=VERSIONS)
     p.add_argument("--solver",type=Path)
@@ -331,15 +335,22 @@ def main():
     p.add_argument("--preflight",action="store_true")
     p.add_argument("--verify-published",action="store_true")
     args=p.parse_args()
-    inputs=read(INPUTS)
+    args.input_path=Path(f"data/nl2_hu_{args.batch.lower()}_lead_inputs.json")
+    args.report_path=Path(f"data/nl2_hu_{args.batch.lower()}_half_pot_leads.json")
+    inputs=read(args.input_path)
     groups=inputs["groups"]
     if args.list_artifacts:
         chosen=[groups[args.group]] if args.group else groups.values()
         print(" ".join(str(i) for i in sorted({g[v]["id"] for g in chosen for v in VERSIONS})))
         return
     if args.verify_published:
-        d=read(OUT)
-        assert d["inputs_sha256"]==sha(INPUTS.read_bytes()) and len(d["records"])==17
+        d=read(args.report_path)
+        assert d["inputs_sha256"]==sha(args.input_path.read_bytes()) and d["freeze"]==inputs["freeze"]
+        assert (len(d["records"]),len(d["under_half_pot_stack"]))==EXPECTED_SIZES[args.batch]
+        expected={(t["model"],t["public"],t["line"],t["seat"],g["gto"]["source_sha256"],g["exp_oop"]["source_sha256"])
+                  for g in groups.values() for t in g["targets"]}
+        actual={(r["model_id"],r["public_board"],r["line"],r["seat"],r["original_gto_sha256"],r["original_lock_sha256"]) for r in d["records"]}
+        assert actual==expected and len(actual)==len(d["records"])
         for r in d["records"]:
             for ver in VERSIONS:
                 s=r[ver]
