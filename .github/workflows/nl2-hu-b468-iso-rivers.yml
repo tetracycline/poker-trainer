@@ -1,0 +1,34 @@
+name: B468 ISO river source replay and complete HU audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b468-iso-rivers.yml'
+      - 'tools/hu_b468_*'
+      - 'data/nl2_hu_b468_iso_river_gate.json'
+      - 'data/solver_evidence/extensions/rank140.json'
+      - 'data/solver_evidence/extensions/rank160.json'
+      - 'data/solver_evidence/extensions/rank161.json'
+      - 'data/solver_evidence/NL2_MULTIBOARD_R140_*.json.gz'
+      - 'data/solver_evidence/NL2_MULTIBOARD_R160_*.json.gz'
+      - 'data/solver_evidence/NL2_MULTIBOARD_R161_*.json.gz'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Rebuild each exact river, check both seats and all visible model origins
+        run: |
+          python3 tools/hu_b467_river_source_gate.py --verify
+          python3 tools/hu_b468_iso_river_gate.py --verify
+      - name: Verify the cumulative registry and every HU route
+        run: |
+          set -euo pipefail
+          python3 tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/registry.json"
+          bash tools/hu_exact_batch_audit.sh "$RUNNER_TEMP/registry.json"
+          node tools/hu_extension_runtime_test.cjs "$RUNNER_TEMP/registry.json"
+          bash tools/hu_publish_cert_extensions.sh

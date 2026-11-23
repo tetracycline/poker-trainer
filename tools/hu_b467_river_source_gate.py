@@ -71,18 +71,27 @@ def originals(pin):
     return (gto, exp)
 
 
-def extract(source, line, model_spr, pin):
+class NoLegalRiver(ValueError):
+    """A valid source has no legal deal for the frozen river and action line."""
+
+
+def extract(source, line, model_spr, pin, public_board=None):
     root, sub = source["root"], source["subgame"]
     version = source["version"]
     # Pick a public river deterministically, before applying private-hand reach.
     matches = sorted((n for n in sub["nodes"] if len(n["board"]) == 10 and n["line"] == line and n["player"] == 0),
                      key=lambda n: n["board"])
-    assert len({n["board"] for n in matches}) == len(matches) and matches
+    if public_board is not None:
+        matches = [n for n in matches if n["board"] == public_board]
+    if not matches:
+        raise NoLegalRiver("No original river node for " + line)
+    assert len({n["board"] for n in matches}) == len(matches)
     node = matches[0]
     mask, _ = game_reach(root, sub)
     key = "|".join((node["board"], line, "0"))
     actual = compatible_node_reach(root, sub, node, mask[key])
-    assert actual["count"] > 0 and actual["compatible_hole_card_pairs"] > 0
+    if not actual["count"] or not actual["compatible_hole_card_pairs"]:
+        raise NoLegalRiver(f"No compatible {version} deal at {node['board']} {line}")
     result, = source_nodes(dict(sub, nodes=[node]), {"nodes": {key: actual}})
     assert abs(result["node_spr"] - model_spr) / model_spr <= .01
     assert result["strictly_reachable_combos"] == actual["count"]
@@ -90,25 +99,28 @@ def extract(source, line, model_spr, pin):
     scope = lock_scope(sub, source["manifest"]["locks"], version)
     if version == "exp_oop":
         assert scope["observed_marginal_source_nodes"] > 0 and sub["info"]["hero_gap_pct"] <= .5
-    case = dict(spot="UTG_CO", pot_family="SRP", version=version, source_sha256=source["source_sha256"],
-                flop=pin["flop"], turn=pin["turn"], flop_line="b100 c", hands_by_seat=sub["hands"],
+    case = dict(spot=source["manifest"]["spot"], pot_family=source["manifest"]["pot_family"], version=version, source_sha256=source["source_sha256"],
+                flop=pin["flop"], turn=pin["turn"], flop_line=sub["line0"], hands_by_seat=sub["hands"],
                 nodes=[result], gto_exploitability_pct=sub["info"]["gto_expl_pct"],
                 locked_hero_gap_pct=sub["info"].get("hero_gap_pct"), villain_lock_scope=scope)
     cards = {cardkey(h) for h, bits in zip(sub["hands"][0], base64.b64decode(actual["mask"])) if bits}
     return case, actual["compatible_hole_card_pairs"], cards
 
 
-def export_board(parent_pin, parent_board, sources, rank, line, model_spr, verify):
+def export_board(parent_pin, parent_board, sources, rank, line, model_spr, verify, archive_digest=None, viewer_code=None, public_board=None):
     gto, exp = sources
-    g, gpairs, ghands = extract(gto, line, model_spr, parent_pin)
-    e, epairs, ehands = extract(exp, line, model_spr, parent_pin)
+    g, gpairs, ghands = extract(gto, line, model_spr, parent_pin, public_board)
+    e, epairs, ehands = extract(exp, line, model_spr, parent_pin, public_board)
     node, e_node = g["nodes"][0], e["nodes"][0]
     assert node["public_board"] == e_node["public_board"] and node["node_spr"] == e_node["node_spr"]
     assert node["public_board"].startswith(parent_board["public_board"])
     run, archive = parent_pin["source_run_id"], parent_pin["archive_code"]
-    code = f"R{rank}_{run}"
+    archive_digest = archive_digest or PINS[archive]
+    code = viewer_code or f"R{rank}_{run}"
+    if not code.replace("_", "").isalnum():
+        raise ValueError(f"Invalid viewer archive code: {code}")
     output = dict(schema="NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1", source_run_id=run,
-                  original_archive_sha256=PINS[archive], errors=[], no_generic_texture_certification=True,
+                  original_archive_sha256=archive_digest, errors=[], no_generic_texture_certification=True,
                   artifacts=[dict(cases=[g, e])])
     path = EVIDENCE / f"NL2_MULTIBOARD_{code}.json.gz"
     if verify:
@@ -125,17 +137,17 @@ def export_board(parent_pin, parent_board, sources, rank, line, model_spr, verif
                 assumed_default_source_nodes=scope["imputed_assumption_nodes"], unlocked_source_nodes=scope["unmatched_nodes"],
                 hero_model_gain_bb=locked_model_gain(exp["subgame"], "exp_oop"), true_hero_gap_pct=e["locked_hero_gap_pct"])
     b = dict(flop=parent_pin["flop"], turn=parent_pin["turn"], river=node["public_board"][-2:],
-             public_board=node["public_board"], actual_exact_action_line=line, acting_seat=0, exact_flop_action="b100 c",
+             public_board=node["public_board"], actual_exact_action_line=line, acting_seat=0, exact_flop_action=g["flop_line"],
              actual_pot_bb=node["pot_bb"], actual_effective_stack_bb=node["remaining_bb"], actual_spr=node["node_spr"],
              model_assumed_spr=model_spr, relative_spr_error_pct=round(100*abs(node["node_spr"]-model_spr)/model_spr, 6),
              genuine_gto_exploitability_pct=g["gto_exploitability_pct"], source_run_id=run, source_sha256=gto["source_sha256"],
-             source_kind="PINNED_PREFLOP_CFR", assumed_preflop_ranges=False, exact_combo_reachable=node["source_reachable_combos"],
+             source_kind=parent_board["source_kind"], assumed_preflop_ranges=parent_board["assumed_preflop_ranges"], exact_combo_reachable=node["source_reachable_combos"],
              strict_full_street_combo_reachable=node["strictly_reachable_combos"], exact_node_actions=node["source_actions"],
              medium_50pct_eligible_combos=node["medium_50pct_eligible_combos"],
              b50_nonpolarized_relative_equity_research_candidate=node["b50_nonpolarized_relative_equity_research_candidate"],
              nl2_locked_variants=[lock], flop_texture=parent_board["flop_texture"])
     p = dict(flop=b["flop"], turn=b["turn"], river=b["river"], public_board=b["public_board"], source_run_id=run,
-             archive_code=archive, archive_sha256=PINS[archive], viewer_archive_code=code, viewer_sha256=sha(encoded),
+             archive_code=archive, archive_sha256=archive_digest, viewer_archive_code=code, viewer_sha256=sha(encoded),
              original_GTO_SHA256=gto["source_sha256"], actual_NL2_SHA256=exp["source_sha256"], actual_spr=b["actual_spr"],
              GTO_strict_combos=node["strictly_reachable_combos"], NL2_strict_combos=e_node["strictly_reachable_combos"],
              GTO_compatible_hole_card_pairs=gpairs, NL2_compatible_hole_card_pairs=epairs, common_legal_hero_combos=len(ghands & ehands),
