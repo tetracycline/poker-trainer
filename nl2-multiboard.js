@@ -69,6 +69,8 @@ function fillVersions(){
  const sizes=chosenBoard?.restricted_flop_bet_sizes_pct;
  const turnSizes=chosenBoard?.conditional_turn_oop_bet_sizes_pct;
  const streets=[];
+ const seatSizes=chosenBoard?.restricted_flop_bet_sizes_by_seat;
+ if(seatSizes)streets.push('翻牌先手下注 '+seatSizes.oop.join(' / ')+'%，後手下注 '+seatSizes.ip.join(' / ')+'%');
  if(sizes?.length)streets.push('翻牌下注尺寸 '+sizes.join(' / ')+'%');
  if(turnSizes?.length)streets.push('轉牌先手下注尺寸 '+turnSizes.join(' / ')+'%');
  const baseline=streets.length?'本公牌 GTO CERT（'+streets.join('，')+'）':'本公牌 GTO CERT';

@@ -62,6 +62,7 @@ function render(){
            b.public_board+'（'+flavor+'）｜歷史 '+b.actual_exact_action_line
            +'｜SPR '+b.actual_spr
            +(b.restricted_flop_bet_sizes_pct?.length?'｜翻牌下注尺寸 '+b.restricted_flop_bet_sizes_pct.join(' / ')+'%':'')
+           +(b.restricted_flop_bet_sizes_by_seat?'｜翻牌先手下注 '+b.restricted_flop_bet_sizes_by_seat.oop.join(' / ')+'%，後手下注 '+b.restricted_flop_bet_sizes_by_seat.ip.join(' / ')+'%':'')
            +(b.conditional_turn_oop_bet_sizes_pct?.length?'｜轉牌先手下注尺寸 '+b.conditional_turn_oop_bet_sizes_pct.join(' / ')+'%':'')
            +'｜GTO exploitability '+b.genuine_gto_exploitability_pct.toFixed(3)+'%｜'));
          const link=make('a','', '真實 CFR Run '+b.source_run_id);

@@ -1,0 +1,67 @@
+name: B571 verify native CO 75% flop bets and half-pot turn responses
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b571-co-checked-turn.yml'
+      - 'tools/hu_b571_rank62*'
+      - 'data/nl2_hu_b571_rank62_sources.json'
+      - 'data/solver_evidence/NL2_B571_R62_*.zip'
+permissions: {contents: write}
+jobs:
+  verify-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Reconstruct every input and compare underlying native bets, checks and measured responses
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python tools/hu_b571_rank62_turn.py --solver ../solver --out "$RUNNER_TEMP/preview.json"
+          cmp "$RUNNER_TEMP/preview.json" data/nl2_hu_b571_rank62_preview.json
+      - name: Register completed sources on the current draft branch after all audits
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            (
+              cd "$live"
+              python tools/hu_b571_rank62_turn.py --solver "$GITHUB_WORKSPACE/solver" --run "$GITHUB_RUN_ID"
+              evidence=data/solver_evidence
+              status=data/nl2_hu_multiboard_status_current.json
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              if test -f data/nl2_hu_b571_locked_medium.json; then node tools/hu_b558_river_policy_view.cjs "$evidence/reverified/rank62.json"; fi
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              shopt -s nullglob
+              files=(data/nl2_hu_b571_rank62_checkpoints.json "$evidence"/NL2_MULTIBOARD_REVERIFIED_R62_"$GITHUB_RUN_ID"_*.json.gz)
+              if test -f data/nl2_hu_b571_locked_medium.json; then files+=(data/nl2_hu_b571_locked_medium.json "$evidence/reverified/rank62.json"); fi
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_source_references.json data/nl2_hu_model_history_crosswalk.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B571: publish CO checked-turn decisions from verified native ranges and measured BB responses'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
