@@ -123,7 +123,7 @@ def main():
     a.add_argument('--turn-count',type=int,default=1)
     a.add_argument('--flop-size-profile',choices=('full','lmp-50-only','utg-50-only'),default='full',
         help='Predeclared 50% flop menu for the named spot; other streets retain their configured sizes')
-    a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','checkcheck-and-oop-b50','oop-b75only','oop-b100only','oop-b75raisecall','oop-b33only','checked-b33only','checked-b50only','checked-b75only','checked-b100only','checked-b50b100only','checkcheck'),default='all',
+    a.add_argument('--flop-line-policy',choices=('all','oop-betcall','oop-b50only','checkcheck-and-oop-b50','oop-b75only','oop-b100only','oop-b75raisecall','oop-b33only','checked-b33only','checked-b50only','checked-b75only','checked-b100only','checked-b50b100only','iso-checked-b33b50','checkcheck'),default='all',
         help='Predeclared targeted exact action lines; no result-adaptive node selection')
     a.add_argument('--archive-empty-river-extraction', action='store_true',
         help='Preserve a converged subgame that exported turn decisions but no requested river nodes')
@@ -168,6 +168,8 @@ def main():
     if args.turn_size_menu=='exact-b50-only':
         if args.spot!='LMP_CO_BB' or args.flop_line_policy!='oop-b33only' or args.flop_size_profile!='full':
             a.error('Exact b50 turn solve requires LMP_CO_BB b33-call with full flop menu')
+    if args.flop_line_policy=='iso-checked-b33b50' and (args.spot,args.flop_size_profile)!=('ISO_BTN_CO','full'):
+        a.error('Dual checked third-pot and half-pot extraction requires the full ISO_BTN_CO flop tree')
     if args.flop_line_policy=='checked-b50b100only':
         if args.spot!='CO_BB' or args.flop_size_profile!='full' or args.turn_size_menu!='default':
             a.error('Dual checked-b50/b100 original solve only for full-size CO_BB SRP with default turn menu')
@@ -285,6 +287,7 @@ def main():
            else ['b100 c'] if args.flop_line_policy=='oop-b100only'
            else ['b75 r c'] if args.flop_line_policy=='oop-b75raisecall'
            else ['b33 c'] if args.flop_line_policy=='oop-b33only'
+           else ['x b33 c','x b50 c'] if args.flop_line_policy=='iso-checked-b33b50'
            else ['x b50 c','x b100 c'] if args.flop_line_policy=='checked-b50b100only'
            else ['x b33 c'] if args.flop_line_policy=='checked-b33only'
            else ['x b50 c'] if args.flop_line_policy=='checked-b50only'

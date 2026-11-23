@@ -1,0 +1,153 @@
+name: B539 ISO checked third-pot and half-pot GTO boundaries with conditional IP locks
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b539-iso-boundaries.yml'
+      - 'tools/hu_b539_iso_boundaries.py'
+      - 'tools/hu_b539_iso_routes.cjs'
+      - 'data/nl2_hu_b539_flops.json'
+permissions:
+  contents: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [8c6h3d, 9s7d4h, Kh8c5d, Qh7c4s, 8s5s3s]
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned Rust solver
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib phevaluator==0.5.3.1
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          mkdir -p trainer/evidence
+          cp solver/inputs/pool_stats.json trainer/evidence/pool_stats.json
+          git -C solver rev-parse HEAD > trainer/evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > trainer/evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve both original GTO branches and the reachable conditional NL2 turns
+        working-directory: trainer
+        env:
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          status=0
+          python3 tools/solve_hu_multiboard_100bb.py --solver-root ../solver --spot ISO_BTN_CO \
+            --flop "$FLOP" --version gto --flop-size-profile full --flop-line-policy iso-checked-b33b50 \
+            --turn-line-policy checkcheck --turn-size-menu default --archive-empty-river-extraction --lock-marginals-by-street --turn-count 2 --manifest "evidence/$FLOP-gto.json" || status=$?
+          python3 - "$status" "evidence/$FLOP-gto.json" <<'PY'
+          import json,sys
+          m=json.load(open(sys.argv[2]))
+          assert not m["failures"] and len(m["cases"]) == m["solved_cases"] <= 4
+          assert int(sys.argv[1]) == (0 if m["cases"] else 1)
+          assert len(m["cases"]) + len(m["skipped"]) == 4
+          PY
+          originals="$RUNNER_TEMP/b539-original"
+          mkdir -p "$originals"
+          ln -s "$GITHUB_WORKSPACE" "$originals/NL2-B539-$FLOP-gto"
+          python tools/hu_b539_iso_boundaries.py --solver ../solver --downloads "$originals" \
+            --flop "$FLOP" --run "$GITHUB_RUN_ID" --out native --driver ../solver/postflop/pfdriver/target/release/pfdriver
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NL2-B539-${{ matrix.flop }}-gto
+          path: |
+            trainer/evidence
+            trainer/native/NL2_B539_*.json.gz
+            solver/postflop/out/ISO_BTN_CO/gto
+          if-no-files-found: error
+          retention-days: 90
+
+  verify:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 'NL2-B539-*'
+          path: downloads
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Replay the native locks, exact flop price and rendered compatible combos
+        run: python tools/hu_b539_iso_boundaries.py --solver pinned-solver --downloads downloads --run "$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B539-iso-verified-decisions
+          path: |
+            data/nl2_hu_b539_*.json
+            data/solver_evidence/reverified/rank124.json
+            data/solver_evidence/reverified/rank125.json
+            data/solver_evidence/NL2_B539_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R124_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R125_*.json.gz
+          if-no-files-found: error
+          retention-days: 90
+      - name: Audit all current routes and register only verified paired boards
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          files=(data/nl2_hu_b539_iso_results.json data/nl2_hu_b539_locked_medium.json data/solver_evidence/NL2_B539_*.json.gz)
+          for rank in 124 125; do
+            files+=(data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R"${rank}"_"${GITHUB_RUN_ID}"_*.json.gz)
+            if [[ -f data/solver_evidence/reverified/rank"${rank}".json ]]; then files+=(data/solver_evidence/reverified/rank"${rank}".json); fi
+          done
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            for file in "${files[@]}"; do
+              if test -e "$live/$file"; then cmp "$file" "$live/$file"; fi
+            done
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              bash tools/hu_exact_batch_audit.sh "$status"
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B539: publish verified ISO turn decisions from exact third-pot and half-pot calls'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then
+              exit 0
+            fi
+            git worktree remove "$live"
+          done
+          exit 1
