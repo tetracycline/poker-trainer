@@ -325,7 +325,7 @@ function selectNode(){
  '具體公牌：'+node.public_board+'；完整動作線 '+node.exact_node_line,
  '認證範圍：'+currentSourceType,
  selectedLock,
- '嚴格可達 combo '+chosenBoard.strict_full_street_combo_reachable+
+ 'GTO 基線可達 combo '+chosenBoard.strict_full_street_combo_reachable+
    '；GTO／鎖頻來源各自 SHA 為 '+chosenBoard.source_sha256+'／'+sourceSha(origin),
  '座位 '+(node.acting_seat?'IP':'OOP')+'；底池 '+fmt(node.pot_bb)+' bb；剩餘有效籌碼 '+fmt(node.remaining_bb)+' bb；SPR '+fmt(node.node_spr),
  'GTO 基線 exploitability：'+fmt(caseData.gto_exploitability_pct)+'%；NL2 模型 hero gap：'+fmt(caseData.locked_hero_gap_pct)+'%',
@@ -344,8 +344,28 @@ function selectNode(){
  if(chosenModel.frequency_rank===218&&status.B465_rank218_four_original_sources){
    lines.push('四組彩虹翻牌驗證此下注線。練習表僅啟用單色面／強聽牌，該格仍為 APPROX。');
  }
+ const pin=status.exact_source_extensions?.[chosenModel.model_id]?.find(v=>
+   v.public_board===node.public_board && v.flop===chosenBoard.flop && v.turn===chosenBoard.turn &&
+   node.exact_node_line===chosenBoard.actual_exact_action_line && node.acting_seat===chosenBoard.acting_seat);
+ if(pin && Number.isSafeInteger(pin.GTO_strict_combos) && Number.isSafeInteger(pin.NL2_strict_combos)){
+   let comparison='英雄可達手牌：GTO '+pin.GTO_strict_combos+' 組，NL2 局部鎖 '+pin.NL2_strict_combos+' 組';
+   const common=pin.common_legal_hero_combos;
+   if(Number.isSafeInteger(common) && common>=0 && common<=Math.min(pin.GTO_strict_combos,pin.NL2_strict_combos)){
+     comparison+='，兩解共同 '+common+' 組'+(common===0?'，此牌面沒有可逐手比較的組合':'');
+   }
+   lines.push(comparison+'。');
+ }
  for(const line of lines){const p=document.createElement('p');p.textContent=line;details.appendChild(p);}
  details.appendChild(buildLinks(origin,caseData));
+ if(chosenModel.model_id==='ln-iso-lmp_t_model-19hfq8v' && node.public_board==='2d4h4s8s' &&
+    node.exact_node_line==='b50 c/' && node.acting_seat===0 && chosenBoard.source_run_id===44762388523){
+   const link=document.createElement('a');
+   link.href='https://github.com/tetracycline/poker-trainer/blob/fix/nl2-hu-lines-audit-20261118/docs/NL2_HU_B472_RANK1_STREET_POOL_RATES.md';
+   link.target='_blank';link.rel='noopener';
+   link.textContent='查看 B19 實際鎖頻與 NL2 各街樣本數、棄／跟／加率';
+   details.appendChild(link);
+ }
+
  fillCombos();
 }
 function fillCombos(){

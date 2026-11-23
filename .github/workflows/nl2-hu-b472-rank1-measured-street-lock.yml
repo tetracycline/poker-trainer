@@ -1,0 +1,79 @@
+name: B472 verified street-specific NL2 marginal lock for rank1
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b472-rank1-measured-street-lock.yml'
+      - 'tools/hu_b472_street_lock.py'
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+concurrency:
+  group: b472-rank1-measured-street-lock
+  cancel-in-progress: false
+jobs:
+  solve-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: trainer
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build original Rust driver and verify original B19 archive bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+          cd "$RUNNER_TEMP"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14643500832/zip" > b19-r1.zip
+          echo 'ba0d60853510ba4735dbdac1e2d9d99734523c6304e3820e9879427749cfe276  b19-r1.zip' | sha256sum -c -
+          unzip -q b19-r1.zip -d b19-r1
+      - name: Resolve identical 100bb BB turn subgame with the measured street buckets
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b472_street_lock.py --original "$RUNNER_TEMP/b19-r1" \
+            --pool ../solver/inputs/pool_stats.json --driver ../solver/postflop/pfdriver/target/release/pfdriver \
+            --work "$RUNNER_TEMP/b472-solve" --run "$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B472-original-Rust-and-jobs
+          path: |
+            trainer/data/solver_evidence/NL2_B472_R1_STREET_LOCK.json.gz
+            trainer/data/nl2_hu_b472_rank1_new_pool_lock.json
+            trainer/docs/NL2_HU_B472_RANK1_STREET_POOL_RATES.md
+      - name: Check complete current registry, HU navigation and source views
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Publish independently solved comparison to the draft branch
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/NL2_HU_B472_RANK1_STREET_POOL_RATES.md data/nl2_hu_b472_rank1_new_pool_lock.json data/solver_evidence/NL2_B472_R1_STREET_LOCK.json.gz
+          git commit -m 'B472: record exact rank1 measured street-specific Rust lock and source sample rates'
+          branch=fix/nl2-hu-lines-audit-20261118
+          for try in 1 2 3; do
+            git fetch origin "$branch"
+            git rebase FETCH_HEAD
+            if git push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+          done
+          exit 1

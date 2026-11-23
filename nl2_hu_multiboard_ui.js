@@ -87,6 +87,12 @@ function render(){
           '｜50% pot '+(b.b50_nonpolarized_relative_equity_research_candidate
              ? '具名牌面非極化研究候選':'缺乏足夠非極化證據，不可推薦')+
           '。聚合頻率非逐牌面／逐私牌實測。'));
+         if(item.model_id==='ln-iso-lmp_t_model-19hfq8v' && b.public_board==='2d4h4s8s' &&
+            b.actual_exact_action_line==='b50 c/' && b.source_run_id===44762388523){
+           const rates=make('a','','｜B19 實際鎖頻與 NL2 逐街玩家池樣本比較');
+           rates.href='https://github.com/tetracycline/poker-trainer/blob/fix/nl2-hu-lines-audit-20261118/docs/NL2_HU_B472_RANK1_STREET_POOL_RATES.md';
+           rates.target='_blank';rates.rel='noopener';li.appendChild(rates);
+         }
          ul.appendChild(li);
        }
        note.append(ul);
