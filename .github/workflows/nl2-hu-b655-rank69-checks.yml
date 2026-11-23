@@ -1,0 +1,51 @@
+name: B655 solve BTN river checks on five new BB third-pot leads
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b655-rank69-checks.yml'
+      - 'tools/hu_b655_rank69_checks.py'
+      - 'tools/hu_b550_rank69_routes.cjs'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [Ts9h6c, Jh8c7d, Th7h5c, JdTc8s, 8d7c4h]
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile the pinned Rust solver and verify the named original GTO boundary
+        env:
+          FLOP: ${{ matrix.flop }}
+          RAYON_NUM_THREADS: 2
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          output="$RUNNER_TEMP/sources/$FLOP"
+          python tools/hu_b655_rank69_checks.py --solver pinned-solver --flop "$FLOP" --output "$output" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$output/proof.json" "$RUNNER_TEMP/solver-proof.json"
+          python tools/hu_b655_rank69_checks.py --solver pinned-solver --flop "$FLOP" --output "$output"
+          cmp "$RUNNER_TEMP/solver-proof.json" "$output/proof.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B655-R69-${{ matrix.flop }}
+          path: ${{ runner.temp }}/sources/${{ matrix.flop }}
+          if-no-files-found: error
+          retention-days: 90

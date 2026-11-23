@@ -240,6 +240,10 @@
       'ln-ipc-t_model-btptzw':'nl2_hu_b649_rank12_barrels.json',
       'ln-ipfr-t_model-xbvh6':'nl2_hu_b643_rank20_barrels.json',
       'ln-ipfr-t_model-sxr0qa':'nl2_hu_b643_rank41_barrels.json',
+      'ln-iso-lmp_t_model-17z0wyl':'nl2_hu_b660_rank46_barrels.json',
+      'ln-iso-lmp_t_model-1oaypnl':'nl2_hu_b660_rank47_barrels.json',
+      'ln-iso-lmp_t_model-1nf06ka':'nl2_hu_b656_rank10_barrels.json',
+      'ln-iso-lmp_t_model-10v4wiz':'nl2_hu_b656_rank13_barrels.json',
       'ln-iso-lmp_t_model-19hfq8v':'nl2_hu_b638_rank1_barrels.json',
       'ln-iso-lmp_t_model-1e9jvm0':'nl2_hu_b638_rank7_barrels.json',
       'ln-opfr-t_model-19esov6':'nl2_hu_b594_rank2_barrels.json',
@@ -272,7 +276,7 @@
       const afterLead=board.acting_seat===1 && board.actual_exact_action_line==='b50 c/x';
       const ipBarrel=board.acting_seat===1 && !delayedIP && !afterLead;
       const limped=model.solver_profile==='LMP_CO_BB';
-      if(report.schema!==(afterLead?'NL2_HU_B649_IP_BET_AFTER_FLOP_LEAD_V1':checkedThreeBet?'NL2_HU_B646_IP_CHECKED_THREEBET_V1':delayedIP?'NL2_HU_B643_IP_DELAYED_TURN_RESPONSES_V1':ipBarrel?'NL2_HU_B640_IP_TURN_BARRELS_V1':limped?'NL2_HU_B638_LIMPED_TURN_RESPONSES_V1':threeBet?'NL2_HU_B628_3BP_TURN_BARREL_RESPONSES_V1':probe?'NL2_HU_B609_BB_PROBE_RESPONSES_V1':'NL2_HU_B590_SB_BB_BARREL_REPLIES_V1'))throw Error('來源格式不符');
+      if(report.schema!==(limped?'NL2_HU_B638_LIMPED_TURN_RESPONSES_V1':afterLead?'NL2_HU_B649_IP_BET_AFTER_FLOP_LEAD_V1':checkedThreeBet?'NL2_HU_B646_IP_CHECKED_THREEBET_V1':delayedIP?'NL2_HU_B643_IP_DELAYED_TURN_RESPONSES_V1':ipBarrel?'NL2_HU_B640_IP_TURN_BARRELS_V1':threeBet?'NL2_HU_B628_3BP_TURN_BARREL_RESPONSES_V1':probe?'NL2_HU_B609_BB_PROBE_RESPONSES_V1':'NL2_HU_B590_SB_BB_BARREL_REPLIES_V1'))throw Error('來源格式不符');
       const row=report.records.find(r=>r.model_id===model.model_id && r.public_board===board.public_board &&
         r.line===board.actual_exact_action_line && r.seat===board.acting_seat && r.original.version==='gto' &&
         r.original.run===board.source_run_id && r.original.source_sha256===board.source_sha256 &&
@@ -280,8 +284,8 @@
       if(!row)return;
       const checked=row.line==='x x/';
       const fullPot=board.exact_node_actions.includes('b100');
-      const ruleCount=delayedIP||afterLead?1:ipBarrel?2:checked||limped?1:threeBet?(fullPot?2:1):4;
-      const rateTable=afterLead?'HU_facing_bet[2].by_pot[SRP]':callerStab?'HU_facing_bet[2].by_pot[3BP]':delayedIP?'vs_delayed_cbet':limped?'HU_facing_bet[2].by_pot[limped]':probe?'vs_probe':'vs_delayed_cbet';
+      const ruleCount=limped||delayedIP||afterLead?1:ipBarrel?2:checked?1:threeBet?(fullPot?2:1):4;
+      const rateTable=limped?'HU_facing_bet[2].by_pot[limped]':afterLead?'HU_facing_bet[2].by_pot[SRP]':callerStab?'HU_facing_bet[2].by_pot[3BP]':delayedIP?'vs_delayed_cbet':probe?'vs_probe':'vs_delayed_cbet';
       const zeroReach=afterLead && row.locked.legal_combos===0 && row.locked.compatible_pairs===0 && row.locked.half_pot===null &&
         Object.keys(row.locked.eligible_hand_frequencies).length===0;
       if(!sha(row.output_sha256) || !sha(row.job_sha256) || !sha(report.archive_sha256) ||
@@ -293,7 +297,8 @@
       const blindOrCO={BB3_BTN:'大盲',SB3_BTN:'小盲',CO3_BTN:'CO'};
       const actors=threeBet?[blindOrCO[model.solver_profile],'按鈕位']:probe?['大盲','按鈕位']:model.solver_profile==='UTG_CO'?['UTG','CO']:['小盲','大盲'];
       const ipName=model.solver_profile==='CO_BB'?'CO':'按鈕位';
-      summary.textContent=afterLead?(model.solver_profile==='SB_BB'?'大盲轉牌下注的小盲回應鎖':'按鈕位轉牌下注的大盲回應鎖'):checkedThreeBet?(callerStab?'按鈕位轉牌下注的小盲回應鎖':'按鈕位延遲持續下注的 CO 回應鎖'):delayedIP?ipName+' 延遲持續下注的大盲回應鎖':ipBarrel?ipName+' 轉牌再次下注的大盲尺寸回應鎖':limped?'單挑未加注底池的大盲轉牌下注與 CO 回應鎖':threeBet?actors[0]+'三次加注底池的轉牌'+(probe?'探測下注':checked?'延遲持續下注':'下注')+'與按鈕位回應鎖':probe?'大盲轉牌探測下注的按鈕位回應鎖':checked?actors[0]+' 延遲持續下注的 '+actors[1]+' 回應鎖':actors[0]+' 連續下注的轉牌及河牌尺寸鎖';
+      const limpedSummary=board.acting_seat===1?'單挑未加注底池的 CO 轉牌下注與大盲回應鎖':'單挑未加注底池的大盲轉牌下注與 CO 回應鎖';
+      summary.textContent=limped?limpedSummary:afterLead?(model.solver_profile==='SB_BB'?'大盲轉牌下注的小盲回應鎖':'按鈕位轉牌下注的大盲回應鎖'):checkedThreeBet?(callerStab?'按鈕位轉牌下注的小盲回應鎖':'按鈕位延遲持續下注的 CO 回應鎖'):delayedIP?ipName+' 延遲持續下注的大盲回應鎖':ipBarrel?ipName+' 轉牌再次下注的大盲尺寸回應鎖':threeBet?actors[0]+'三次加注底池的轉牌'+(probe?'探測下注':checked?'延遲持續下注':'下注')+'與按鈕位回應鎖':probe?'大盲轉牌探測下注的按鈕位回應鎖':checked?actors[0]+' 延遲持續下注的 '+actors[1]+' 回應鎖':actors[0]+' 連續下注的轉牌及河牌尺寸鎖';
       details.appendChild(summary);
       const add=text=>{const p=document.createElement('p');p.textContent=text;details.appendChild(p);};
       const turnChoices=fullPot?'半池、滿池或全下':'半池或全下';
@@ -320,16 +325,17 @@
       }
       for(const r of row.rules){
         const street=r.table==='vs_turn_barrel_by_size'?'轉牌':'河牌';
-        const scope=afterLead?'單挑單次加注底池面對轉牌下注，各位置與下注尺寸合計':checkedThreeBet?(callerStab?'單挑三次加注底池面對轉牌下注，各位置與尺寸合計':'三次加注底池面對位置內翻前加注者的延遲持續下注，各尺寸合計'):delayedIP?'大盲面對轉牌延遲持續下注，各下注尺寸合計':limped?'單挑未加注底池面對轉牌下注，各位置和尺寸合計':checked?actors[1]+' 面對'+(probe?'探測下注':'延遲持續下注')+'，各下注尺寸合計':street+'面對 '+r.size+' 底池的下注';
+        const scope=limped?'單挑未加注底池面對轉牌下注，各位置和尺寸合計':afterLead?'單挑單次加注底池面對轉牌下注，各位置與下注尺寸合計':checkedThreeBet?(callerStab?'單挑三次加注底池面對轉牌下注，各位置與尺寸合計':'三次加注底池面對位置內翻前加注者的延遲持續下注，各尺寸合計'):delayedIP?'大盲面對轉牌延遲持續下注，各下注尺寸合計':checked?actors[1]+' 面對'+(probe?'探測下注':'延遲持續下注')+'，各下注尺寸合計':street+'面對 '+r.size+' 底池的下注';
         add(scope+'，共 '+r.n.toLocaleString('zh-TW')+' 次。棄牌 '+r.fold+
           '%、跟注 '+r.call+'%、加注 '+r.raise+'%。');
       }
+      if(limped)add('此模型沿用 CO 跛入、大盲過牌的假設翻前範圍。實測回應的樣本涵蓋所有單挑未加注底池。');
       if(afterLead)add('翻牌位置外玩家下半池獲跟注，轉牌可以繼續下注。兩種策略各自計算位置外玩家過牌後可達的手牌。');
       else if(checkedThreeBet)add('位置外玩家可以轉牌領打。兩種策略各自計算過牌後可達的手牌。將合併樣本頻率套用到上列每種下注尺寸。河牌自由求解。');
       else if(delayedIP)add('翻牌雙方過牌。大盲在轉牌可以領打，兩種策略各自計算大盲過牌後可達的手牌。實測樣本涵蓋單挑、單次加注底池中，面對位置內翻前加注者延遲持續下注的回應。');
+      else if(limped && ipBarrel)add('翻牌由大盲過牌，CO 下注後大盲跟注。此解算樹的轉牌由大盲只可過牌，再由 CO 選擇過牌、半池或滿池。');
       else if(ipBarrel)add('翻牌持續下注獲跟注，轉牌由大盲過牌。實測樣本涵蓋單挑、單次加注底池中，面對位置內翻前加注者轉牌再次下注的回應。鎖定轉牌半池與滿池的回應，河牌自由求解。');
-      else if(limped)add('此模型沿用 CO 跛入、大盲過牌的假設翻前範圍。實測回應的樣本涵蓋所有單挑未加注底池。');
-      else add('實測樣本合併單挑、'+(threeBet?'三次加注':'單次加注')+'底池中翻前加注者在位置'+(probe?'內':'外')+'的對局。');
+      else if(!limped)add('實測樣本合併單挑、'+(threeBet?'三次加注':'單次加注')+'底池中翻前加注者在位置'+(probe?'內':'外')+'的對局。');
       if(checked||limped||afterLead||(delayedIP&&!threeBet))add('此子局將同一組合併樣本頻率分別套用到半池與滿池回應。河牌保留自由求解。');
       slot.appendChild(details);
     }catch{slot.textContent='目前無法核對連續下注的鎖頻資料。';}

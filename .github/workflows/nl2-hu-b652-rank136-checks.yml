@@ -1,0 +1,49 @@
+name: B652 solve BTN river checks after a three-quarter flop bet
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b652-rank136-checks.yml'
+      - 'tools/hu_b652_rank136.py'
+      - 'tools/hu_b652_rank136_routes.cjs'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [Ah7d4c, Ac8h5d, Ad9c6h, As6c3h, Ah8d4s, Ac7h3d]
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile the pinned Rust solver and verify the named original GTO boundary
+        env:
+          FLOP: ${{ matrix.flop }}
+          RAYON_NUM_THREADS: 2
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          output="$RUNNER_TEMP/sources/$FLOP"
+          python tools/hu_b652_rank136.py --solver pinned-solver --flop "$FLOP" --run "$GITHUB_RUN_ID" --output "$output"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B652-R136-${{ matrix.flop }}
+          path: |
+            ${{ runner.temp }}/sources/${{ matrix.flop }}/source.zip
+            ${{ runner.temp }}/sources/${{ matrix.flop }}/proof.json
+          if-no-files-found: error
+          retention-days: 90

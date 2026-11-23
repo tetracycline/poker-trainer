@@ -198,7 +198,15 @@ def coverage(registry):
                     assert row['line']=='b50 c/x' and conditional['compatible_pairs']==0
                     assert conditional['half_pot'] is None and conditional['eligible_hand_frequencies']=={}
                 assert (barrel['pot_bb'],barrel['stack_bb'])==(pot,stack)
-                if row['line']=='b50 c/x':
+                if model['solver_profile']=='LMP_CO_BB':
+                    allowed={('b50 c/',0),('x x/',0),('b50 c/x',1),('x b50 c/',0),('x b50 c/x',1),('x b33 c/x',1)}
+                    assert (row['line'],row['seat']) in allowed
+                    rule, = barrel['rules']
+                    assert baseline['actions']==conditional['actions']==['x','b50','b100']
+                    assert (rule['table'],rule['size'],rule['n'],rule['applied_nodes'])==('HU_facing_bet[2].by_pot[limped]','all',63420,2)
+                    separator=' ' if row['seat']==1 else ''
+                    assert rule['pattern']=='^'+row['line']+separator+'b(50|100)$'
+                elif row['line']=='b50 c/x':
                     assert row['seat']==1 and model['solver_profile'] in ('BTN_BB','SB_BB')
                     assert baseline['actions']==conditional['actions']==['x','b50','b100']
                     rule, = barrel['rules']
@@ -223,12 +231,6 @@ def coverage(registry):
                     assert [(r['size'],r['n'],r['applied_nodes']) for r in rules]==[('34-55%',15700,1),('81-110%',4480,1)]
                     for rule, action in zip(rules, ('b50','b100'), strict=True):
                         assert (rule['table'],rule['pattern'])==('vs_turn_barrel_by_size','^'+row['line']+' '+action+'$')
-                elif model['solver_profile']=='LMP_CO_BB':
-                    rule, = barrel['rules']
-                    assert row['line'] in ('b50 c/', 'x x/') and row['seat']==0
-                    assert baseline['actions']==conditional['actions']==['x','b50','b100']
-                    assert (rule['table'],rule['size'],rule['n'],rule['applied_nodes'])==('HU_facing_bet[2].by_pot[limped]','all',63420,2)
-                    assert rule['pattern']=='^'+row['line']+'b(50|100)$'
                 elif row['line']=='x x/':
                     rule, = barrel['rules']
                     if model['solver_profile'] in ('BTN_BB','CO3_BTN'):

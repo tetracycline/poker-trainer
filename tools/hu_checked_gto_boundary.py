@@ -23,7 +23,7 @@ def lock_metadata(rows):
                  **({'street':r['street']} if 'street' in r else {})) for r in rows]
 
 
-def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pipeline, ranges, flop_line="x x"):
+def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pipeline, ranges, flop_line="x x", allow_turn_lead=False):
     info=json.loads((folder/f'{aid}.json').read_bytes())
     assert (info['id'],info['name'],info['digest'],info['workflow_run']['id'],info['workflow_run']['head_sha'],info['workflow_run']['repository_id'])==(
         aid,pin['name'],'sha256:'+pin['sha256'],pin['run'],pin['head'],1438346845)
@@ -94,7 +94,9 @@ def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pi
     assert all((source['flop'], source['pot'], source['stack']) == (flop, *boundary) for source in (sub, j))
     for seat,name in enumerate(('oop_w','ip_w')):
         assert j[name]==[[h,w] for h,w in zip(root['hands'][seat],parent['wr'][seat],strict=True) if w>1e-4]
-    assert j['root_no_bet'] == (flop_line in ('x b33 c', 'x b50 c', 'x b75 c', 'x b100 c'))
+    if allow_turn_lead:
+        assert m.get('allow_turn_lead') is True and spot == 'LMP_CO_BB' and flop_line == 'x b50 c' and m['flop_size_profile'] == 'lmp-50-only'
+    assert j['root_no_bet'] == (not allow_turn_lead and flop_line in ('x b33 c', 'x b50 c', 'x b75 c', 'x b100 c'))
     for game in (root,sub):
         assert 0<=game['info']['gto_expl_pct']<=.5
         if hero is not None:assert 0<=game['info']['hero_gap_pct']<=.5 and game['info']['lock_stats']

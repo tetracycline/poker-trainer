@@ -27,10 +27,11 @@ CASES = {
 def reply_rules(pool, flop_line, pfr, family, actions, seat):
     rows = []
     if family == "LMP":
-        assert flop_line in ("b50 c", "x x") and actions == ["x", "b50", "b100"]
+        assert (flop_line, seat) in (("b50 c", 0), ("x x", 0), ("b50 c", 1), ("x b50 c", 0), ("x b50 c", 1), ("x b33 c", 1)) and actions == ["x", "b50", "b100"]
         rate = pool["HU_facing_bet"]["2"]["by_pot"]["limped"]
         assert rate["n"] == 63420
-        return [dict(pattern="^"+flop_line+"/b(50|100)$", table="HU_facing_bet[2].by_pot[limped]",
+        decision = flop_line + ("/x " if seat else "/")
+        return [dict(pattern="^"+decision+"b(50|100)$", table="HU_facing_bet[2].by_pot[limped]",
                      size="all", **rate)]
     table = pool["postflop_HU"][family + "_PFR_" + pfr.upper()]
     if seat and family=="SRP" and flop_line=="b50 c":
@@ -102,14 +103,15 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
         receipt=json.loads((originals/f"{aid}.json").read_bytes())
         parent_pin=dict(name=receipt["name"],head=receipt["workflow_run"]["head_sha"],run=pin["run"],sha256=pin["archive_sha256"])
         parent=load_original(originals,aid,parent_pin,spot,board["flop"],board["turn"],"gto",pot=pot,stack=stack,
-                             pipeline=pipeline,ranges=ranges,flop_line=flop_line)
+                             pipeline=pipeline,ranges=ranges,flop_line=flop_line,
+                             allow_turn_lead=(spot == "LMP_CO_BB" and bool(board.get("turn_root_allows_lead")) and flop_line == "x b50 c"))
     assert parent["identity"]["source_sha256"]==pin["source_sha256"]
     root,original=parent["source"]["root"],parent["source"]["subgame"]
     parent_job,root_sha=parent["job"],parent["identity"]["root_sha256"]
     assert (original["line0"], original["turn"], board["actual_exact_action_line"], board["acting_seat"]) == (flop_line, public[-2:], line, seat)
     bet_pct = 0 if flop_line=="x x" else int(next(token[1:] for token in flop_line.split() if token.startswith("b")))
     if seat and flop_line.startswith("x b"):
-        assert parent_job["root_no_bet"] and model["solver_profile"] in ("BTN_BB","CO_BB")
+        assert parent_job["root_no_bet"] and model["solver_profile"] in ("BTN_BB","CO_BB","LMP_CO_BB")
         forced, = (n for n in original["nodes"] if (n["board"],n["line"],n["player"])==(public,turn_root,0))
         assert forced["acts"]==["x"]
     investment = (pot * bet_pct + 50) // 100

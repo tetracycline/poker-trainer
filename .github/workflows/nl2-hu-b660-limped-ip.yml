@@ -1,0 +1,53 @@
+name: B660 reproduce measured BB replies to CO turn bets in limped pots
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b660-limped-ip.yml'
+      - 'tools/hu_b660_*'
+      - 'tools/hu_b590_rank3_barrels.py'
+      - 'tools/hu_checked_gto_boundary.py'
+      - 'data/nl2_hu_b660_rank*_barrels.json'
+      - 'data/solver_evidence/NL2_B660_R*.zip'
+permissions: {contents: read, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the original native solver
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Authenticate the pinned flop sources and reproduce every native turn policy
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAYON_NUM_THREADS: 1
+        run: |
+          set -euo pipefail
+          for id in 14601426559 14600026283 14599037935 14721557248; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$RUNNER_TEMP/$id.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/$id.zip"
+          done
+          for rank in 46 47; do
+            report="data/nl2_hu_b660_rank${rank}_barrels.json"
+            python tools/hu_b660_limped_ip.py --rank "$rank" --solver ../solver --verification-driver ../solver/postflop/pfdriver/target/release/pfdriver --originals "$RUNNER_TEMP" --archive "data/solver_evidence/NL2_B660_R${rank}.zip" --out "$RUNNER_TEMP/replay.json"
+            cmp "$RUNNER_TEMP/replay.json" "$report"
+            node tools/hu_b590_barrel_ui.cjs "$report"
+          done
