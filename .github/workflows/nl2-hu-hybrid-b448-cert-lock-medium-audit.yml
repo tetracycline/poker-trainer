@@ -1,0 +1,63 @@
+name: B448 audit all 163 CERT 618 real boards 710 NL2 locks 135 medium candidates and HU2475
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b448-cert-lock-medium-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  audit-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Independently match every CERT GTO source, NL2 lock and medium candidate to pinned board ledger
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b448_cert_lock_medium_reconciliation.py
+          python3 tools/hu_b448_cert_lock_medium_reconciliation.py
+          python3 tools/hu_cert_lock_medium_audit.py --source data/nl2_hu_multiboard_status_v50_b417_rank166.json --out /tmp/b448-source.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/b448-source.json'))
+          assert (a['cert_multiboard'],a['approx'],a['EST'])==(163,229,0)
+          assert (a['aggregate']['named_board_proofs'],a['aggregate']['paired_hero_locked_source_variants'])==(618,710)
+          assert a['aggregate']['board_examples_with_b50_candidate']==135
+          assert a['not_generalized_handclass_GTO'] and a['not_actual_NL2_earnings']
+          PY
+      - name: Full HU2475 link/reach/front-end/contract regression audit
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js >/tmp/b448-contract.json
+          node tools/link_audit.js --md /tmp/b448-link.md --json /tmp/b448-link.json
+          node tools/reach_verify.js --log /tmp/b448-reach.md --json /tmp/b448-reach.json
+          node tools/hu_model_path_audit.js /tmp/b448-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b448-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B448 HU2475/2475")'
+          git diff --check
+      - name: Commit exact-board evidence audit on draft PR2, no merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b448_all163_cert_lock_medium_reconciliation.json \
+            docs/NL2_HU_B448_ALL_CERT_LOCK_MEDIUM_RECONCILIATION.md
+          git diff --cached --quiet && exit 1
+          git commit -m 'B448: reconcile all 618 exact CERT boards, 710 locks and 135 medium candidates'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
