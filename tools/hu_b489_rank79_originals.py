@@ -3,8 +3,10 @@ import argparse
 import gzip
 import json
 from pathlib import Path
+import struct
 import subprocess
 import sys
+import zipfile
 
 from hu_b467_river_source_gate import EVIDENCE, compact, sha
 from hu_b470_rank73_new_rivers import audit_patterns
@@ -61,6 +63,13 @@ def pack(source, flop, turn):
     source.update(archive_code=code,archive_sha256=sha(raw))
 
 
+def native_size_weights(rules):
+    # Rust deserializes sizing shares into f32. Python's sum changed in 3.12,
+    # producing a binary64 ULP difference in a normalized share on some runners.
+    return [dict(rule, sizes=[[size,struct.pack("!f",weight)] for size,weight in rule["sizes"]])
+            if rule.get("sizes") is not None else rule for rule in rules]
+
+
 def parse(base,evidence,manifest,run,flop,version,solver,pipeline,ranges,fresh):
     m=read(manifest)
     assert (m["spot"],m["pot_family"],m["flop"],m["version"]) == ("UTG_CO","SRP",flop,version)
@@ -84,7 +93,7 @@ def parse(base,evidence,manifest,run,flop,version,solver,pipeline,ranges,fresh):
         assert m["turns"]==CANDIDATES[flop] and m["turn_sizing_mode"]=="default"
         pool=read(solver/"inputs/pool_stats.json")["NL2"]
         rules,_=make_fallbacks("UTG_CO",version,pool,pipeline.lock_list,flop,by_street=True)
-        assert root_job.get("locks",[])==json.loads(encode(rules))
+        assert native_size_weights(root_job.get("locks",[]))==native_size_weights(json.loads(encode(rules)))
         if version!="gto":lock_coverage["root"]=audit_patterns(root,root_job,m,pool,hero_seat=1)
     assert 0<=root["info"]["gto_expl_pct"]<=.5
     if version=="exp_ip":assert root_job["hero"]==1 and 0<=root["info"]["hero_gap_pct"]<=.5
@@ -116,6 +125,20 @@ def parse(base,evidence,manifest,run,flop,version,solver,pipeline,ranges,fresh):
     return out
 
 
+def archived_fresh(directory, run):
+    pins=read(Path("data/nl2_hu_b489_replay_sources.json"))
+    assert len(pins)==4 and {pin["run"] for pin in pins.values()}=={run}
+    for id,pin in pins.items():
+        info=read(directory/f"{id}.json")
+        assert (info["id"],info["name"],info["digest"],info["workflow_run"]["id"],info["workflow_run"]["head_sha"],
+                info["workflow_run"]["repository_id"])==(int(id),pin["name"],"sha256:"+pin["sha256"],run,pin["commit"],1438346845)
+        path=directory/f"{id}.zip"
+        assert sha(path.read_bytes())==pin["sha256"]
+        with zipfile.ZipFile(path) as raw:
+            raw.extractall(directory/pin["name"])
+    return pins
+
+
 def other_archived_turns():
     results={}
     recorded=sorted(p for name in ("NL2_B473_R146_*","NL2_B476_UTG_*","NL2_B479_R146_*")
@@ -145,6 +168,7 @@ def main():
     p.add_argument("--solver",type=Path)
     p.add_argument("--list-artifacts",action="store_true")
     p.add_argument("--write-prior",action="store_true")
+    p.add_argument("--archived-fresh",action="store_true",help="Recheck the four completed B489 artifacts by ID, digest and run")
     args=p.parse_args()
     if args.list_artifacts:
         print(" ".join(PINS));return
@@ -195,6 +219,7 @@ def main():
     else:assert OLD.read_bytes()==encode(baseline)+b"\n"
     if args.fresh is None:return
     assert args.run_id
+    used_pins=archived_fresh(args.fresh,args.run_id) if args.archived_fresh else None
     fresh_rows,missing,boards,pins={},{},[],[]
     for flop,turns in CANDIDATES.items():
         for ver in (("gto","exp_ip") if flop=="KsQh3d" else ("exp_ip",)):
@@ -205,6 +230,9 @@ def main():
             sources=parse(folder/"solver/postflop",evidence,manifest,args.run_id,flop,ver,solver,pipeline,ranges,True)
             if not sources:missing[flop+" "+ver]=read(manifest)["skipped"]
             for turn,source in sources.items():
+                if used_pins:
+                    artifact,=([int(id),pin] for id,pin in used_pins.items() if pin["name"]==folder.name)
+                    source.update(artifact_id=artifact[0],github_artifact_sha256=artifact[1]["sha256"])
                 pack(source,flop,turn)
                 fresh_rows[flop+" "+turn+" "+ver]=audit_node(source)
                 paired_sources[flop,turn,ver]=source
@@ -222,7 +250,7 @@ def main():
     if len(boards)>=3:
         d=EVIDENCE/"reverified";d.mkdir(exist_ok=True)
         save(d/"rank79.json",group)
-    save(REPORT,dict(other_archived_turns=other_archived_turns(),originals=original_rows,fresh=fresh_rows,unavailable=missing,model=group))
+    save(REPORT,dict(fresh_original_artifacts=used_pins,other_archived_turns=other_archived_turns(),originals=original_rows,fresh=fresh_rows,unavailable=missing,model=group))
     print("Rank 79 original paired named flops:",len(boards))
 
 

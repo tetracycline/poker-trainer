@@ -1,0 +1,57 @@
+name: B489 independently replay completed rank79 sources and full audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b489-audit-completed-sources.yml']
+permissions:
+  actions: read
+  contents: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Replay the SHA-pinned old and new sources without invoking a solver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          old="$RUNNER_TEMP/old"; fresh="$RUNNER_TEMP/fresh"
+          mkdir -p "$old" "$fresh"
+          for id in $(python3 tools/hu_b489_rank79_originals.py --list-artifacts); do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+            gh api "$api" > "$old/$id.json"
+            gh api "$api/zip" > "$old/$id.zip"
+            unzip -q "$old/$id.zip" -d "$old/$id"
+          done
+          for id in $(python3 -c 'import json;print(*json.load(open("data/nl2_hu_b489_replay_sources.json")))'); do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+            gh api "$api" > "$fresh/$id.json"
+            gh api "$api/zip" > "$fresh/$id.zip"
+          done
+          python3 tools/hu_b489_rank79_originals.py --originals "$old" --fresh "$fresh" --archived-fresh --solver pinned-solver --run-id 45101958259
+          python3 tools/hu_b489_verify_replay.py
+          node tools/hu_b489_model_route.cjs
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B489-independent-replay-verified-results
+          retention-days: 90
+          if-no-files-found: error
+          path: |
+            data/nl2_hu_b489_rank79_attempts.json
+            data/nl2_hu_b489_locked_medium.json
+            data/nl2_hu_b489_replay_sources.json
+            data/solver_evidence/NL2_B489_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R79_*.json.gz
