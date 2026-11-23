@@ -1,0 +1,80 @@
+name: B474 publish audited rank218 sources and current board registry
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b474-publish-verified-rank218.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: b474-publish-verified-rank218
+  cancel-in-progress: false
+jobs:
+  publish-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Rebuild V53 from the accepted V52 and original audited rank218 proof
+        run: |
+          set -euo pipefail
+          PYTHONPATH=tools python - <<'PY'
+          from hu_b465_rank218 import DATA, PROOF, promote, read
+          promote(DATA/"nl2_hu_multiboard_status_v52_b463_rank45.json",read(PROOF))
+          PY
+          sha256sum -c data/nl2_hu_b474_rank218_immutable_sha256.txt
+          node tools/hu_b465_loader_runtime_test.cjs
+          # These references will be regenerated from the latest parent after the immutable commit.
+          git restore -- data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+      - name: Push immutable registry and matrix without rebuilding them on unrelated branch changes
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_multiboard_status_v53_b465_rank218.json data/nl2_hu_cert_lock_medium_matrix_v53_b465.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'B474: publish immutable B465 rank218 registry and lock matrix'
+          fi
+          branch=fix/nl2-hu-lines-audit-20261118
+          for attempt in {1..10}; do
+            git fetch --no-tags origin "$branch"
+            git rebase FETCH_HEAD
+            sha256sum --quiet -c data/nl2_hu_b474_rank218_immutable_sha256.txt
+            if git push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+          done
+          exit 1
+      - name: Compose source references on the newest parent and audit the published commit
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          for attempt in {1..10}; do
+            git fetch --no-tags origin "$branch"
+            candidate="$RUNNER_TEMP/rank218-current-$attempt"
+            git worktree add --quiet --detach "$candidate" FETCH_HEAD
+            (
+              cd "$candidate"
+              set -euo pipefail
+              sha256sum --quiet -c data/nl2_hu_b474_rank218_immutable_sha256.txt || exit 2
+              PYTHONPATH=tools python -c 'from hu_b465_rank218 import PROOF,read,update_source_references; update_source_references(read(PROOF)["boards"])' || exit 2
+              registry=data/nl2_hu_multiboard_status_current.json
+              python tools/hu_apply_cert_extensions.py --out "$registry" || exit 2
+              node tools/hu_extension_runtime_test.cjs "$registry" || exit 2
+              node tools/hu_b465_loader_runtime_test.cjs || exit 2
+              git add "$registry" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json || exit 2
+              if ! git diff --cached --quiet; then
+                git commit -m 'B474: publish cumulative rank218 source references on the latest base' || exit 2
+              fi
+              git push origin "HEAD:refs/heads/$branch" || exit 3
+            ) && result=0 || result=$?
+            if [ "$result" -eq 0 ]; then
+              cd "$candidate"
+              bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+              exit 0
+            fi
+            git worktree remove --force "$candidate"
+            if [ "$result" -ne 3 ]; then exit "$result"; fi
+          done
+          exit 1
