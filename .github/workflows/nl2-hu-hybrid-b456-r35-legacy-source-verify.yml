@@ -58,7 +58,7 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/nl2_hu_b454_rank35_authentic_strict_zero_negative.json              docs/NL2_HU_B456_R35_B33XX_STRICT_ZERO_NEGATIVE.md
+          git add data/nl2_hu_b454_rank35_authentic_strict_zero_negative.json              docs/NL2_HU_B454_R35_B33XX_STRICT_ZERO_NEGATIVE.md
           git diff --cached --quiet && exit 1
           git commit -m 'B456: authentic legacy B3 root menu verified; preserve rank35 zero-reach GTO evidence'
           for n in 1 2 3; do
