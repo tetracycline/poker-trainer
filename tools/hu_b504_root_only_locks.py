@@ -97,13 +97,14 @@ def targets(old, ranks, models, locked, gtos):
     return result
 
 
-def solve_or_replay(args, old, pipeline, pool, out):
+def solve_or_replay(args, old, pipeline, pool, out, *, archive_code=None):
     rules, raw_meta = make_fallbacks(old['spot'], old['version'], pool, pipeline.lock_list, old['flop'], by_street=True)
     meta = lock_metadata(raw_meta)
     job = dict(old['job'], locks=json.loads(compact(rules)), rank_pct=.45, target_pct=.45,
                iters=max(2000, old['job']['iters']), out='continuation.json')
     origin = {k:old[k] for k in ('run','id','archive_sha256','source_sha256','root_sha256')}
-    path = out/f"NL2_B504_{old['id']}.json.gz"
+    code = archive_code or f"B504_{old['id']}"
+    path = out/f"NL2_{code}.json.gz"
     if args.replay:
         data = json.loads(gzip.decompress((args.replay/'data/solver_evidence'/path.name).read_bytes()))
         raw = base64.b64decode(data['source_file_b64'], validate=True)
@@ -139,7 +140,7 @@ def solve_or_replay(args, old, pipeline, pool, out):
     return source, path, rates
 
 
-def register(out, model, board, old, source, raw_path, rates, observations, masks, *, batch="B504", river_only=None):
+def register(out, model, board, old, source, raw_path, rates, observations, masks, *, batch="B504", river_only=None, source_suffix=""):
     rank = model['frequency_rank']
     sub = source['subgame']
     target = (board['public_board'], board['actual_exact_action_line'], board['acting_seat'])
@@ -163,7 +164,7 @@ def register(out, model, board, old, source, raw_path, rates, observations, mask
     case, _, pairs = source_case(model, source, identity['public_board'], identity['line'], identity['acting_seat'])
     node, = case['nodes']
     assert pairs == reach['compatible_hole_card_pairs'] and node['strictly_reachable_masks_b64'] == reach['compatible_action_mask_b64']
-    name = f'{batch}_R{rank}_NATIVE_STREET_LOCK'
+    name = f'{batch}_R{rank}_NATIVE_STREET_LOCK{source_suffix}'
     viewer_sha = packed(out/f'NL2_MULTIBOARD_{name}.json.gz',dict(schema='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1',
                         source_run_id=source['run'], errors=[], no_generic_texture_certification=True, artifacts=[dict(cases=[case])]))
     lock = dict(version=source['version'], run_id=source['run'], sha256=source['source_sha256'], viewer_archive_code=name,
@@ -182,7 +183,7 @@ def register(out, model, board, old, source, raw_path, rates, observations, mask
     overlay = dict(model_id=model['model_id'], flop=old['flop'], turn=old['turn'], **identity, gto_run=board['source_run_id'],
                    gto_sha256=board['source_sha256'], parent_lock_run=old['run'], parent_lock_sha256=old['source_sha256'],
                    original_package=raw_path.name, original_package_sha256=source['archive_sha256'], lock=lock)
-    write(out/f'lock_variants/rank{rank}_{batch.lower()}.json', overlay)
+    write(out/f'lock_variants/rank{rank}_{batch.lower()}{source_suffix}.json', overlay)
     obs = dict(reach, spot=old['spot'], family=model['family'], flop=old['flop'], turn=old['turn'], version=source['version'],
                source_run_id=source['run'], source_sha256=source['source_sha256'], archive_sha256=source['archive_sha256'],
                root_sha256=old['root_sha256'], gto_gap_pct=stats['gto_expl_pct'], locked_hero_gap_pct=stats['hero_gap_pct'], lock_scope=scope,
