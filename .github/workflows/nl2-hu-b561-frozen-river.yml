@@ -1,0 +1,85 @@
+name: B561 frozen B496 river half-pot decisions and measured NL2 response
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b561-frozen-river.yml'
+      - 'tools/hu_b561_river_boundary.py'
+      - 'tools/hu_b561_river_root.patch'
+permissions: {contents: write, actions: read}
+jobs:
+  solve-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build native river driver against the unchanged pinned CFR engine
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          test "$(git -C solver rev-parse HEAD)" = abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          echo '2f9e8c029fd54db499cf4bb8824c95fc118fcf12d9eb8f4b666a6a8ebef1c533  solver/postflop/pfdriver/src/main.rs' | sha256sum -c
+          git -C solver apply ../trainer/tools/hu_b561_river_root.patch
+          echo '9ace0029a5c52086fed5defca403d6945c4cda3c3f27f562e1c5290bce777605  solver/postflop/pfdriver/src/main.rs' | sha256sum -c
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Read the two authenticated completed B496 originals and solve only the new river
+        working-directory: trainer
+        env: {GH_TOKEN: "${{ github.token }}", RAYON_NUM_THREADS: 1}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/originals" "$RUNNER_TEMP/b561"
+          for id in 14787866823 14788570107; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$RUNNER_TEMP/originals/$id.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/originals/$id.zip"
+          done
+          python tools/hu_b561_river_boundary.py --run "$GITHUB_RUN_ID" --originals "$RUNNER_TEMP/originals" --work "$RUNNER_TEMP/b561" --driver ../solver/postflop/pfdriver/target/release/pfdriver
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B561-river-native-originals
+          path: ${{ runner.temp }}/b561
+          if-no-files-found: error
+      - name: Revalidate river outputs and publish against current draft head after all route audits
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            (
+              cd "$live"
+              python tools/hu_b561_river_boundary.py --run "$GITHUB_RUN_ID" --originals "$RUNNER_TEMP/originals" --work "$RUNNER_TEMP/b561"
+              cp "$RUNNER_TEMP/b561/report.json" data/nl2_hu_b561_frozen_river.json
+              status=data/nl2_hu_multiboard_status_current.json
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_b561_river_ui.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_extension_runtime_test.cjs "$status"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              git add -- data/nl2_hu_b561_frozen_river.json "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B561: publish fixed-river half-pot hand frequencies and NL2 responses on the B496 ranges'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1

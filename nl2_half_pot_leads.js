@@ -77,6 +77,64 @@
     }
     parent.appendChild(details);
   }
+  function matchFrozenRiver(report,model,board,prior){
+    if(report.model_id!==model.model_id || report.public_board!==board.public_board ||
+       report.line!==board.actual_exact_action_line || report.seat!==board.acting_seat ||
+       report.original_run!==board.source_run_id || report.policies?.gto?.original.original_source_sha256!==board.source_sha256 ||
+       !board.nl2_locked_variants.some(v=>v.run_id===report.original_run && v.version==='exp_oop' &&
+         v.sha256===report.policies?.exp_oop?.original.original_source_sha256))return null;
+    const {gto,exp_oop:locked}=report.policies;
+    if(report.schema!=='NL2_HU_B561_FROZEN_RIVER_V1' || report.scope!=='CONDITIONAL_RIVER_WITH_ROUNDED_ORIGINAL_TURN_POLICIES' ||
+       !prior || prior.status!==report.full_turn_status || prior.status!=='ZERO_JOINT_REACH' ||
+       prior.source_run_id!==report.full_turn_alternative_run || prior.exp_oop.compatible_hole_card_pairs!==0 ||
+       report.pot_bb!==board.actual_pot_bb || report.stack_bb!==board.actual_effective_stack_bb ||
+       !Number.isSafeInteger(report.run) || report.run<=0 || !sha(report.driver_patch_sha256) ||
+       report.pool?.source!=='NL2.HU_facing_bet[3].by_size[34-55%]' || !sha(report.pool.sha256) ||
+       report.pool.n!==64272 || locked.river_reply?.nodes!==1 ||
+       !Number.isFinite(locked.river_reply.fold) || !Number.isFinite(locked.river_reply.agg) ||
+       !(locked.hero_gap_pct>=0 && locked.hero_gap_pct<=.1) ||
+       Math.abs(locked.river_reply.fold-report.pool.fold/100)>0.00001 ||
+       Math.abs(locked.river_reply.agg-report.pool.raise/100)>0.00001)
+      throw Error('河牌子局來源或對手回應不符');
+    for(const v of [gto,locked]){
+      if(!sha(v.output_sha256) || !sha(v.input_sha256) || v.actions.join()!=='x,b50' ||
+         !(v.compatible_pairs>=v.half_pot_pairs && v.half_pot_pairs>0 && v.gto_gap_pct>=0 && v.gto_gap_pct<=.1) ||
+         v.hands.length!==v.strict_legal_combos || v.hands.reduce((n,h)=>n+h.compatible_pairs,0)!==v.compatible_pairs ||
+         v.hands.reduce((n,h)=>n+((h.accepted_mask&2)?h.compatible_pairs:0),0)!==v.half_pot_pairs ||
+         v.hands.filter(h=>h.accepted_mask&2).length!==v.b50.eligible || v.b50.candidate ||
+         v.hands.some(h=>!Number.isFinite(h.frequencies.b50) || h.frequencies.b50<0 || h.frequencies.b50>1))
+        throw Error('河牌半池逐手策略與配牌不符');
+    }
+    return report;
+  }
+  async function showFrozenRiver(parent,model,board,prior){
+    const response=await fetch('data/nl2_hu_b561_frozen_river.json',{cache:'no-store'});
+    if(response.status===404)return;
+    if(!response.ok)throw Error('HTTP '+response.status);
+    const row=matchFrozenRiver(await response.json(),model,board,prior);
+    if(!row)return;
+    const details=document.createElement('details'),title=document.createElement('summary');
+    title.textContent='固定原轉牌策略後的河牌半池領打';
+    details.appendChild(title);
+    const text=s=>{const p=document.createElement('p');p.textContent=s;details.appendChild(p);};
+    text('此子局沿用原翻牌範圍，以及原始檔保留至小數四位的逐手轉牌行動頻率。河牌先手可過牌或下注 50% 底池。');
+    for(const [label,v] of [['GTO',row.policies.gto],['NL2',row.policies.exp_oop]]){
+      text(label+' 在 '+v.strict_legal_combos+' 個合格手牌組合中，有 '+v.b50.eligible+' 個接受半池，涵蓋 '+v.half_pot_pairs+' 組雙方配牌。'+
+        '符合半池的手牌數低於非極化研究門檻。');
+      text(label+' 逐手半池頻率　'+v.hands.map(h=>h.hand+' '+(100*h.frequencies.b50).toFixed(1)+'%').join('、'));
+    }
+    const l=row.policies.exp_oop.river_reply;
+    text('對手面對河牌 34–55% 底池下注的 NL2 樣本共 '+row.pool.n.toLocaleString('zh-TW')+
+      ' 次。此子局鎖定的棄牌率為 '+(100*l.fold).toFixed(1)+'%，加注率為 '+(100*l.agg).toFixed(1)+'%。可用加注尺寸為全下。');
+    const reply=row.policies.exp_oop.strict_reply_frequencies;
+    text('按可達手牌與半池領打頻率加權後，對手棄牌 '+(100*reply.f).toFixed(1)+'%、跟注 '+
+      (100*reply.c).toFixed(1)+'%、全下 '+(100*reply.a).toFixed(1)+'%。');
+    const link=document.createElement('a');
+    link.href='https://github.com/tetracycline/poker-trainer/actions/runs/'+row.run;
+    link.textContent='河牌子局的原始解、輸入與稽核';
+    details.appendChild(link);
+    parent.appendChild(details);
+  }
   function showBoard(parent,model,board){
     if(board.exact_node_actions.includes('b50'))return;
     const line=document.createElement('div');parent.appendChild(line);
@@ -91,8 +149,10 @@
         link.href='nl2-multiboard.html?'+new URLSearchParams({model:model.model_id,board:board.public_board,tree:'half-pot',version:'gto',sha:r.gto.source_sha256});
         link.textContent='比較開放半池領打後的 GTO 與 NL2 鎖頻逐手解';
         line.appendChild(link);
-      }else line.textContent=r.status==='ZERO_JOINT_REACH'?'半池領打重算在這條線沒有合格的雙方配牌。':'本牌面尚缺完整的半池領打對照解。';
+      }else line.textContent=r.status==='ZERO_JOINT_REACH'?'從轉牌重新求解時，這條線沒有合格的雙方配牌。':'本牌面尚缺完整的半池領打對照解。';
+      if(r.status==='ZERO_JOINT_REACH' && r.rank===71)
+        return showFrozenRiver(parent,model,board,r);
     }).catch(()=>{line.textContent='半池領打對照來源暫時無法核對。';});
   }
-  globalThis.nl2HalfPotLeads={load,match,reachReport,showBoard,showLock};
+  globalThis.nl2HalfPotLeads={load,match,matchFrozenRiver,reachReport,showBoard,showLock};
 })();

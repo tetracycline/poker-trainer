@@ -1,0 +1,25 @@
+--- a/postflop/pfdriver/src/main.rs
++++ b/postflop/pfdriver/src/main.rs
+@@ -16,6 +16,7 @@
+     #[serde(default)] oop: String, #[serde(default)] ip: String,
+     #[serde(default)] oop_w: Vec<(String, f32)>, #[serde(default)] ip_w: Vec<(String, f32)>,
+     #[serde(default)] turn: Option<String>,
++    #[serde(default)] river: Option<String>,
+     #[serde(default)] line0: Vec<String>,
+     flop_oop: String, flop_ip: String, flop_raise: String,
+     turn_oop: String, turn_ip: String, turn_raise: String,
+@@ -238,10 +239,12 @@
+         Range::from_hands_weights(&hands, &ws).unwrap()
+     };
+     let turn_card = job.turn.as_ref().map(|t| card_from_str(t).unwrap()).unwrap_or(NOT_DEALT);
+-    let card_config = CardConfig { range: [mkr(&job.oop, &job.oop_w), mkr(&job.ip, &job.ip_w)], flop: flop_from_str(&job.flop).unwrap(), turn: turn_card, river: NOT_DEALT };
++    let river_card = job.river.as_ref().map(|r| card_from_str(r).unwrap()).unwrap_or(NOT_DEALT);
++    assert!(river_card == NOT_DEALT || turn_card != NOT_DEALT);
++    let card_config = CardConfig { range: [mkr(&job.oop, &job.oop_w), mkr(&job.ip, &job.ip_w)], flop: flop_from_str(&job.flop).unwrap(), turn: turn_card, river: river_card };
+     let bs = |a: &str, r: &str| BetSizeOptions::try_from((a, r)).unwrap();
+     let tree_config = TreeConfig {
+-        initial_state: if turn_card == NOT_DEALT { BoardState::Flop } else { BoardState::Turn }, starting_pot: job.pot, effective_stack: job.stack, rake_rate: job.rake_rate, rake_cap: job.rake_cap,
++        initial_state: if river_card != NOT_DEALT { BoardState::River } else if turn_card != NOT_DEALT { BoardState::Turn } else { BoardState::Flop }, starting_pot: job.pot, effective_stack: job.stack, rake_rate: job.rake_rate, rake_cap: job.rake_cap,
+         flop_bet_sizes: [bs(&job.flop_oop, &job.flop_raise), bs(&job.flop_ip, &job.flop_raise)],
+         turn_bet_sizes: [bs(&job.turn_oop, &job.turn_raise), bs(&job.turn_ip, &job.turn_raise)],
+         river_bet_sizes: [bs(&job.river_oop, &job.river_raise), bs(&job.river_ip, &job.river_raise)],

@@ -59,6 +59,8 @@ def coverage(registry):
             key=(row['model_id'],row['public_board'],row['line'],row['seat'],row['original_gto_run'],row['original_gto_sha256'])
             assert key not in alternatives
             alternatives[key]=row
+    frozen_path=Path('data/nl2_hu_b561_frozen_river.json')
+    frozen=json.loads(frozen_path.read_bytes()) if frozen_path.exists() else None
     boards=[]
     for model in sorted(registry['records'].values(),key=lambda m:m['frequency_rank']):
         if model['label']!='CERT-MULTIBOARD':
@@ -83,6 +85,20 @@ def coverage(registry):
                 if alt and (alt['original_lock_run'],alt['original_lock_sha256']) in {(p['run'],p['sha256']) for p in policies}:
                     row['half_pot_status']='CONDITIONAL_'+alt['status']
                     row['conditional_run']=alt['source_run_id']
+                    if frozen and (frozen['model_id'],frozen['public_board'],frozen['line'],frozen['seat'])==(mid,row['public_board'],row['line'],row['seat']):
+                        assert frozen['schema']=='NL2_HU_B561_FROZEN_RIVER_V1'
+                        assert frozen['full_turn_alternative_run']==alt['source_run_id'] and frozen['full_turn_status']==alt['status']=='ZERO_JOINT_REACH'
+                        assert (frozen['original_run'],frozen['pot_bb'],frozen['stack_bb'])==(original['run'],pot,stack)
+                        refs=frozen['policies']
+                        assert refs['gto']['original']['original_source_sha256']==original['sha256']
+                        lock,=(p for p in policies if p['sha256']==refs['exp_oop']['original']['original_source_sha256'] and p['run']==frozen['original_run'])
+                        for policy,baseline in [(refs['gto'],original),(refs['exp_oop'],lock)]:
+                            assert (policy['strict_legal_combos'],policy['compatible_pairs'])==(baseline['legal_combos'],baseline['compatible_pairs'])
+                            assert policy['actions']==['x','b50'] and 0<policy['half_pot_pairs']<=policy['compatible_pairs']
+                            assert 0<policy['b50']['eligible']<=policy['strict_legal_combos'] and not policy['b50']['candidate']
+                        row['full_turn_half_pot_status']=row['half_pot_status']
+                        row['half_pot_status']='CONDITIONAL_FROZEN_RIVER_BOTH_POSITIVE'
+                        row['frozen_river_run']=frozen['run']
                     if alt['status']=='BOTH_POSITIVE':
                         assert all(alt[v]['compatible_hole_card_pairs']>=alt[v]['strict_legal_combos']>0 and
                                    'b50' in alt[v]['source_actions'] for v in ('gto','exp_oop'))
