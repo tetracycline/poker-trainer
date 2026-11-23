@@ -1,0 +1,73 @@
+name: Publish and audit completed B504 native street lock evidence
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b504-publish-recorded-locks.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Authenticate the combined B504 artifact and restore its exact files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api="repos/$GITHUB_REPOSITORY/actions/artifacts/14789087617"
+          gh api "$api" > "$RUNNER_TEMP/meta.json"
+          gh api "$api/zip" > "$RUNNER_TEMP/recorded.zip"
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import hashlib, json, os, re
+          tmp=Path(os.environ['RUNNER_TEMP'])
+          meta=json.loads((tmp/'meta.json').read_bytes())
+          digest='e1c5f037457ae4dfaecbbb36b10853cc6af173a5079444ba027dd2a7ee2a65e7'
+          assert (meta['id'],meta['name'],meta['workflow_run']['id'],meta['workflow_run']['repository_id'],meta['digest'])==(14789087617,'B504-native-street-locks',45109975829,1438346845,'sha256:'+digest)
+          assert hashlib.sha256((tmp/'recorded.zip').read_bytes()).hexdigest()==digest
+          with ZipFile(tmp/'recorded.zip') as z:
+              assert len(z.namelist())==len(set(z.namelist()))
+              for name in z.namelist():
+                  assert name in ('nl2_hu_b504_locked_medium.json','nl2_hu_b504_native_street_locks.json') or re.fullmatch(r'solver_evidence/(?:NL2_(?:MULTIBOARD_)?B504_[A-Za-z0-9_]+\.json\.gz|lock_variants/rank[0-9]+_b504\.json)',name)
+              report=json.loads(z.read('nl2_hu_b504_native_street_locks.json'))
+              assert report['run']==45109975829
+              assert {r['rank'] for r in report['records'] if r['status']=='REGISTERED'}=={190,349,351}
+              z.extractall(tmp/'verified'/'data')
+          PY
+      - name: Verify paired source and publish on the current draft head
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          registry=data/nl2_hu_multiboard_status_current.json
+          verified="$RUNNER_TEMP/verified"
+          mapfile -t files < <(cd "$verified" && find data -type f)
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            cp -a "$verified/data/." "$live/data/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$registry"
+              node tools/hu_extension_runtime_test.cjs "$registry"
+              git add -f -- "${files[@]}" "$registry" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B504: publish measured native locks on ranks190,349,351 and preserve the three unmatched outcomes'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then
+              cd "$live"
+              node tools/hu_extension_runtime_test.cjs "$registry"
+              bash tools/hu_exact_batch_audit.sh "$registry"
+              exit 0
+            fi
+            git worktree remove "$live"
+          done
+          exit 1
