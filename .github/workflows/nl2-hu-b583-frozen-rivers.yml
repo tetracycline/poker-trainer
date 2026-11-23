@@ -1,0 +1,41 @@
+name: B583 replay 11 frozen river policies and measured half-pot responses
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b583-frozen-rivers.yml'
+      - 'tools/hu_b561_river_root.patch'
+      - 'tools/hu_b583_frozen_rivers.py'
+      - 'data/nl2_hu_b583_frozen_rivers.json'
+      - 'data/nl2_hu_b583_frozen_river_inputs.json'
+      - 'tools/hu_b583_medium_ui.cjs'
+      - 'data/solver_evidence/NL2_B583_FROZEN_RIVERS.zip'
+permissions: {actions: read, contents: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Rebuild frozen river ranges and verify every compatible pair against the native policies
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for aid in 14628913050 14676001488 14643500832 14643520614 14593975807 14593123141 14528551516 14528675947 14630030655 14696600313; do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$aid"
+            gh api "$api" > "$RUNNER_TEMP/$aid.json"
+            gh api "$api/zip" > "$RUNNER_TEMP/$aid.zip"
+          done
+          python tools/hu_b583_frozen_rivers.py --originals "$RUNNER_TEMP" --solver pinned-solver --out "$RUNNER_TEMP/replay.json"
+          cmp "$RUNNER_TEMP/replay.json" data/nl2_hu_b583_frozen_rivers.json
+          node tools/hu_b583_medium_ui.cjs

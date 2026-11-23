@@ -70,6 +70,10 @@ def coverage(registry):
             restricted_rows.extend(json.loads(path.read_bytes())['records'])
     restricted_by_key={(r['model_id'],r['public_board'],r['line'],r['seat']):r for r in restricted_rows}
     assert len(restricted_rows)==len(restricted_by_key)
+    path=Path('data/nl2_hu_b583_frozen_rivers.json')
+    river_rows=json.loads(path.read_bytes())['records'] if path.exists() else []
+    rivers={(r['model_id'],r['public_board'],r['line'],r['seat']):r for r in river_rows}
+    assert len(rivers)==len(river_rows)
     boards=[]
     for model in sorted(registry['records'].values(),key=lambda m:m['frequency_rank']):
         if model['label']!='CERT-MULTIBOARD':
@@ -135,6 +139,28 @@ def coverage(registry):
                             compatible_pairs=policy['compatible_pairs'], half_pot_reply_pairs=pairs,
                             nonpolarized_candidate=policy['half_pot']['candidate'])
                     row['restricted_turn_half_pot']=conditional
+            river=rivers.get((mid,row['public_board'],row['line'],row['seat']))
+            if river:
+                assert (river['pot_bb'],river['stack_bb'])==(pot,stack)
+                ids={(p['version'],p['run'],p['sha256']) for p in [original,*policies]}
+                snapshots=[]
+                for p in river['policies']:
+                    src=p['original']
+                    if (src['version'],src['run'],src['source_sha256']) not in ids:
+                        continue
+                    summary=dict(version=src['version'],run=src['run'],parent_sha256=src['source_sha256'],
+                                 source_sha256=p['output_sha256'],status=p['status'])
+                    if p['status']=='VERIFIED':
+                        assert sum(h['compatible_pairs'] for h in p['hands'])==p['compatible_pairs']
+                        assert sum(h['compatible_pairs'] for h in p['hands'] if h['accepted_mask']&2)==p['half_pot_pairs']
+                        assert p['b50']['eligible']==sum(bool(h['accepted_mask']&2) for h in p['hands'])
+                        summary.update(eligible_combos=p['b50']['eligible'],half_pot_pairs=p['half_pot_pairs'],
+                                       nonpolarized_candidate=p['b50']['candidate'])
+                    else:
+                        assert p['status']=='UNRESOLVED_ROUNDED_BOUNDARY' and 'hands' not in p
+                    snapshots.append(summary)
+                if snapshots:
+                    row['frozen_river_policies']=snapshots
             row['medium_policy_usage']=medium_usage(row, alt, frozen)
             boards.append(row)
     totals=dict(Counter(r['half_pot_status'] for r in boards))

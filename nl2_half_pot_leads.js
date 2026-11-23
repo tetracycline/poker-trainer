@@ -152,7 +152,63 @@
       p.half_pot_reply_pairs<=p.compatible_pairs && (p.half_pot_reply_pairs>0)===(p.half_pot.eligible>0) &&
       p.original_half_pot_eligible===0 && p.actions.join(' ')==='x b50' && p.half_pot.eligible<=p.legal_combos);
   }
+  const frozenRiverBoards=new Map([
+    ['ln-opfr-r_model-1e6gydx','3d7hAsKd3s'],['ln-iso-lmp_r_model-vlgh2t','2d4h4s8s5c'],
+    ['ln-3bp-3b_r_model-1bgfa05','2d7hKs9d5s'],['ln-ipfr-r_model-1cbkgix','8dQhAsKh9s'],
+    ['ln-ipc-r_model-vvxn9n','4dQhKsTc4c']
+  ]);
+  function matchingFrozenPolicies(report,model,board,source){
+    const row=report.records.find(r=>r.model_id===model.model_id && r.public_board===board.public_board &&
+      r.line===board.actual_exact_action_line && r.seat===board.acting_seat &&
+      r.pot_bb===board.actual_pot_bb && r.stack_bb===board.actual_effective_stack_bb);
+    if(!row || report.schema!=='NL2_HU_B583_ORIGINAL_POLICY_FROZEN_RIVERS_V1')return [];
+    const originals=[{version:'gto',run_id:board.source_run_id,sha256:board.source_sha256},...board.nl2_locked_variants];
+    return row.policies.filter(p=>(!source || p.original.source_sha256===source) &&
+      originals.some(o=>o.version===p.original.version && o.run_id===p.original.run && o.sha256===p.original.source_sha256));
+  }
+  function showFrozenPolicies(parent,model,board,source){
+    if(frozenRiverBoards.get(model.model_id)!==board.public_board)return;
+    const slot=document.createElement('div');
+    parent.appendChild(slot);
+    fetch('data/nl2_hu_b583_frozen_rivers.json',{cache:'no-store'}).then(r=>{
+      if(!r.ok)throw Error('HTTP '+r.status);
+      return r.json();
+    }).then(report=>{
+      const policies=matchingFrozenPolicies(report,model,board,source);
+      if(!policies.length)return;
+      const details=document.createElement('details'),summary=document.createElement('summary');
+      summary.textContent='沿用原策略抵達河牌後的半池對照';
+      details.appendChild(summary);
+      const add=text=>{const p=document.createElement('p');p.textContent=text;details.appendChild(p);};
+      add(board.acting_seat?'沿用原翻牌、轉牌與河牌先手過牌頻率，重算後手決策。':'沿用原翻牌與轉牌頻率，重算河牌先手決策。');
+      for(const p of policies){
+        const label=p.original.version==='gto'?'GTO':'NL2 鎖 '+p.original.run;
+        if(p.status==='UNRESOLVED_ROUNDED_BOUNDARY'){
+          add(label+' 的原始頻率取位誤差超出範圍核對門檻。');continue;
+        }
+        if(p.status!=='VERIFIED' || !sha(p.output_sha256) || p.hands.length!==p.legal_combos ||
+           p.hands.filter(h=>h.accepted_mask&2).length!==p.b50.eligible ||
+           p.hands.reduce((n,h)=>n+h.compatible_pairs,0)!==p.compatible_pairs ||
+           p.hands.reduce((n,h)=>n+((h.accepted_mask&2)?h.compatible_pairs:0),0)!==p.half_pot_pairs)
+          throw Error('河牌逐手結果與配牌數不符');
+        const menu=p.actions.includes('a')?'過牌、半池或全下':'過牌或半池';
+        add(label+' 可選'+menu+'。'+p.b50.eligible+' / '+p.legal_combos+' 組手牌可以下半池，涵蓋 '+
+          p.half_pot_pairs.toLocaleString('zh-TW')+' 組雙方配牌。'+(p.b50.candidate?'符合非極化研究門檻。':'未達非極化研究門檻。'));
+        if(p.b50.eligible){
+          const hands=p.hands.filter(h=>h.accepted_mask&2).map(h=>h.hand+' '+(100*h.b50).toFixed(1)+'%');
+          add(label+' 逐手半池頻率　'+hands.join('、'));
+        }
+        if(p.applied_reply){
+          add('單挑河牌面對 34% 至 55% 底池下注的樣本共 '+report.response.n.toLocaleString('zh-TW')+
+            ' 次。本子局對手面對半池時，實際鎖定棄牌 '+(100*p.applied_reply.fold).toFixed(1)+'%、加注 '+
+            (100*p.applied_reply.agg).toFixed(1)+'%。');
+        }
+      }
+      slot.appendChild(details);
+    }).catch(()=>{slot.textContent='目前無法核對河牌半池對照來源。';});
+  }
   function showRestrictedTurn(parent,model,board,source){
+    showFrozenPolicies(parent,model,board,source);
     const sb=model.model_id==='ln-opfr-t_model-19esov6' && board.public_board==='2d9hAsKd';
     const utg=model.model_id==='ln-opfr-t_model-1ocorr7' && ['3d6h9sTs','3dKhAsQh'].includes(board.public_board);
     const barrel=model.model_id==='ln-opfr-t_model-1hmsxaw' && board.public_board==='4dQhKsTc';
@@ -193,6 +249,7 @@
   }
   function showBoard(parent,model,board){
     if(board.exact_node_actions.includes('b50'))return showRestrictedTurn(parent,model,board);
+    showFrozenPolicies(parent,model,board);
     const line=document.createElement('div');parent.appendChild(line);
     if(board.actual_spr<.5){
       line.textContent='剩餘有效籌碼不足半個底池。';return;
@@ -210,5 +267,5 @@
         return showFrozenRiver(parent,model,board,r);
     }).catch(()=>{line.textContent='半池領打對照來源暫時無法核對。';});
   }
-  globalThis.nl2HalfPotLeads={load,match,matchFrozenRiver,matchRestrictedTurn,showRestrictedTurn,reachReport,showBoard,showLock};
+  globalThis.nl2HalfPotLeads={load,match,matchFrozenRiver,matchRestrictedTurn,showRestrictedTurn,matchingFrozenPolicies,showFrozenPolicies,reachReport,showBoard,showLock};
 })();
