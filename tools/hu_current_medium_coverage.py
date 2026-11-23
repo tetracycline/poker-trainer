@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from hu_apply_cert_extensions import verify_case
+from hu_medium_policy_usage import medium_usage, comparison_counts
 from hu_board_reach_corrections import read_replays, source_key, summarize
 
 
@@ -75,6 +76,7 @@ def coverage(registry):
             row=dict(rank=model['frequency_rank'],model_id=mid,public_board=board['public_board'],
                      line=board['actual_exact_action_line'],seat=board['acting_seat'],pot_bb=pot,stack_bb=stack,
                      gto=original,opponent_locks=policies)
+            alt=None
             if 'b50' in original['actions']:
                 row['half_pot_status']='NATIVE_ACTION'
             elif stack<pot/2:
@@ -104,10 +106,13 @@ def coverage(registry):
                                    'b50' in alt[v]['source_actions'] for v in ('gto','exp_oop'))
                 else:
                     row['half_pot_status']='NO_MATCHING_CONDITIONAL_SOURCE'
+            row['medium_policy_usage']=medium_usage(row, alt, frozen)
             boards.append(row)
     totals=dict(Counter(r['half_pot_status'] for r in boards))
     assert len(boards)==registry['all_cert_lock_medium']['named_board_proofs']
-    return dict(certified_models=registry['CERT_MULTIBOARD'],named_boards=len(boards),half_pot_status=totals,boards=boards)
+    return dict(certified_models=registry['CERT_MULTIBOARD'],named_boards=len(boards),half_pot_status=totals,
+                medium_action_eligible=comparison_counts(boards,'eligible_policy_comparison'),
+                nonpolarized_candidate=comparison_counts(boards,'nonpolarized_policy_comparison'),boards=boards)
 
 
 if __name__=='__main__':
