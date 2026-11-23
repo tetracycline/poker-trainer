@@ -1,0 +1,3 @@
+# B453 rank32: three authentic exact GTO / partially NL2 OOP locked boards
+
+Three preregistered UTG_CO (OOP) boards were independently verified: AsKh3d/8s, Ks7h2d/9d, KsQh4d/Tc. Every real pinned Rust GTO source has strict max/near-action full-street legal combos and a separately computed real Rust partially locked EXP_OOP on the same exact board, actor, b100-call betting history, and SPR ~4.667. No gross FME, texture, or private-card conditional NL2 claim is inferred. The 50% nonpolarized flag is retained only on boards passing true relative-equity gates. Counts are **164 CERT / 228 APPROX / 0 EST**; PR #2 remains Draft.
