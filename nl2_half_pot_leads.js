@@ -138,30 +138,36 @@
   function matchRestrictedTurn(report,model,board,source){
     if(report.model_id!==model.model_id || report.public_board!==board.public_board ||
        report.line!==board.actual_exact_action_line || report.seat!==board.acting_seat)return false;
-    const g=report.policies.gto,e=report.policies.exp_oop;
+    const version=report.seat?'exp_ip':'exp_oop';
+    const g=report.policies.gto,e=report.policies[version];
     const originalLock=report.original_locked_sha256||e.parent.source_sha256;
+    const lockRun=report.original_locked_run??report.source_run;
     const frozen=e.parent_version==='gto';
     if(g.parent.source_sha256!==board.source_sha256 || report.source_run!==board.source_run_id ||
        e.parent.source_sha256!==(frozen?g.parent.source_sha256:originalLock) ||
-       !board.nl2_locked_variants.some(l=>l.run_id===report.source_run && l.sha256===originalLock))return false;
+       !board.nl2_locked_variants.some(l=>l.run_id===lockRun && l.sha256===originalLock && l.version===version))return false;
     if(source && source!==g.parent.source_sha256 && source!==originalLock)return false;
-    return [g,e].every(p=>sha(p.source_sha256) && p.half_pot.eligible>0 && p.half_pot_reply_pairs>0 &&
+    return [g,e].every(p=>sha(p.source_sha256) && Number.isSafeInteger(p.half_pot.eligible) && p.half_pot.eligible>=0 &&
+      Number.isSafeInteger(p.half_pot_reply_pairs) && p.half_pot_reply_pairs>=0 && p.legal_combos>0 &&
+      p.half_pot_reply_pairs<=p.compatible_pairs && (p.half_pot_reply_pairs>0)===(p.half_pot.eligible>0) &&
       p.original_half_pot_eligible===0 && p.actions.join(' ')==='x b50' && p.half_pot.eligible<=p.legal_combos);
   }
   function showRestrictedTurn(parent,model,board,source){
     const sb=model.model_id==='ln-opfr-t_model-19esov6' && board.public_board==='2d9hAsKd';
     const utg=model.model_id==='ln-opfr-t_model-1ocorr7' && ['3d6h9sTs','3dKhAsQh'].includes(board.public_board);
-    if(!sb && !utg)return;
+    const barrel=model.model_id==='ln-opfr-t_model-1hmsxaw' && board.public_board==='4dQhKsTc';
+    const limp=model.model_id==='ln-iso-lmp_t_model-17z0wyl' && board.public_board==='3d6h9sTs';
+    if(!sb && !utg && !barrel && !limp)return;
     const slot=document.createElement('div');
     parent.appendChild(slot);
-    const file=sb?'nl2_hu_b573_restricted_turn.json':'nl2_hu_b575_delayed_cbet.json';
+    const file=sb?'nl2_hu_b573_restricted_turn.json':utg?'nl2_hu_b575_delayed_cbet.json':'nl2_hu_b578_conditional_turns.json';
     fetch('data/'+file,{cache:'no-store'}).then(response=>{
       if(!response.ok)throw Error('HTTP '+response.status);
       return response.json();
     }).then(data=>{
       const report=sb?data:data.records.find(r=>r.public_board===board.public_board);
       if(!report || !matchRestrictedTurn(report,model,board,source))return;
-      const g=report.policies.gto,e=report.policies.exp_oop;
+      const g=report.policies.gto,e=report.policies[report.seat?'exp_ip':'exp_oop'];
       const details=document.createElement('details'),title=document.createElement('summary');
       title.textContent='比較轉牌只開放過牌或半池下注的解';details.appendChild(title);
       if(e.parent_version==='gto'){
@@ -172,11 +178,14 @@
       for(const [name,p] of [['GTO',g],['NL2',e]]){
         const para=document.createElement('p');
         para.textContent=name+' 原樹半池合格手牌 '+p.original_half_pot_eligible+' 組。限尺寸子局有 '+p.half_pot.eligible+' / '+p.legal_combos+
-          ' 組可下半池，其中 '+p.half_pot.middle_count+' 組屬中段勝率。'+(p.half_pot.candidate?'符合非極化研究門檻。':'未達非極化研究門檻。');
+          ' 組可下半池，其中 '+(p.half_pot.middle_count??0)+' 組屬中段勝率。'+(p.half_pot.candidate?'符合非極化研究門檻。':'未達非極化研究門檻。');
+        const hands=Object.entries(p.eligible_hand_frequencies??{});
+        if(hands.length)para.textContent+=' 合格手牌及下注頻率為 '+hands.map(([h,f])=>h+' '+(f*100).toFixed(1)+'%').join('、')+'。';
         details.appendChild(para);
       }
       const para=document.createElement('p'),rate=e.response;
-      const scope=sb?'大盲面對 34% 至 55% 底池的轉牌再下注':'CO 面對延遲持續下注（樣本涵蓋各尺寸）';
+      const scope=utg?'CO 面對延遲持續下注（樣本涵蓋各尺寸）':limp?'單挑玩家池面對 34% 至 55% 底池的轉牌下注':
+        (sb?'大盲':'CO')+' 面對 34% 至 55% 底池的轉牌再下注';
       para.textContent=scope+'共 '+rate.n.toLocaleString('zh-TW')+' 次。半池回應鎖定棄牌 '+rate.fold_pct+
         '%、跟注 '+rate.call_pct+'%、加注 '+rate.raise_pct+'%。';
       details.appendChild(para);slot.appendChild(details);

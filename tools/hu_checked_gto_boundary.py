@@ -54,7 +54,8 @@ def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pi
         else:
             assert (m['schema'],m['pool_source_sha256'],m['solver_pin'],m['solver_ranges_sha256'],m['flop'])==(
                 'NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1',POOL,PIPELINE,RANGES,flop)
-            assert m['preflop_ranges']['source']=='PINNED_POKER_SOLVER_PREFLOP_CFR'
+            expected_source = 'ASSUMED_EXPLICIT_169CLASS' if spot == 'LMP_CO_BB' else 'PINNED_POKER_SOLVER_PREFLOP_CFR'
+            assert m['preflop_ranges']['source'] == expected_source
             rp,rs,sp,ss=m['file_flop'],m['file_flop_sha256'],c['source_path'],c['source_sha256']
             patterns=m['locks'];expected=None
         def extract(path,digest):
@@ -64,7 +65,11 @@ def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pi
         root,rj,rjs=extract(rp,rs);sub,j,js=extract(sp,ss)
     assert all((source['flop'],source['pot'],source['stack'])==(flop,pot,stack) for source in (root,rj))
     assert sub['turn']==j['turn']==turn and sub['line0']==flop_line and j['line0']==flop_line.split()+['/']
-    assert (rj['oop'],rj['ip'])==tuple(ranges.to_str(weights) for weights in ranges.ranges(spot,version))
+    if spot == 'LMP_CO_BB':
+        from hu_b481_rank27_limp_rivers import check_limp_source
+        check_limp_source(dict(manifest=m, root_job=rj, subgame_job=j))
+    else:
+        assert (rj['oop'],rj['ip'])==tuple(ranges.to_str(weights) for weights in ranges.ranges(spot,version))
     hero={'gto':None,'exp_oop':0,'exp_ip':1}[version]
     for job in (rj,j):
         assert job.get('hero')==hero and (job['rake_rate'],job['rake_cap'])==(.05,1000)
@@ -94,7 +99,7 @@ def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pi
         assert 0<=game['info']['gto_expl_pct']<=.5
         if hero is not None:assert 0<=game['info']['hero_gap_pct']<=.5 and game['info']['lock_stats']
     src=dict(run=pin['run'],version=version,root=root,subgame=sub,source_sha256=ss,archive_code=f'GHA_{aid}',archive_sha256=pin['sha256'],
-             manifest=dict(spot=spot,pot_family=ranges.SPOTS[spot]['kind'],locks=patterns))
+             manifest=dict(spot=spot,pot_family=('LMP' if spot == 'LMP_CO_BB' else ranges.SPOTS[spot]['kind']),locks=patterns))
     identity=dict(artifact_id=aid,artifact_run=pin['run'],artifact_sha256=pin['sha256'],head=pin['head'],root_sha256=rs,
                   source_sha256=ss,root_job_sha256=rjs,turn_job_sha256=js,flop_oop_menu=rj['flop_oop'],flop_ip_menu=rj['flop_ip'])
     return dict(source=src,job=j,identity=identity,public=parent['board'])

@@ -64,9 +64,10 @@ def coverage(registry):
     frozen=json.loads(frozen_path.read_bytes()) if frozen_path.exists() else None
     restricted_path=Path('data/nl2_hu_b573_restricted_turn.json')
     restricted_rows=[json.loads(restricted_path.read_bytes())] if restricted_path.exists() else []
-    delayed_path=Path('data/nl2_hu_b575_delayed_cbet.json')
-    if delayed_path.exists():
-        restricted_rows.extend(json.loads(delayed_path.read_bytes())['records'])
+    for filename in ('nl2_hu_b575_delayed_cbet.json', 'nl2_hu_b578_conditional_turns.json'):
+        path=Path('data') / filename
+        if path.exists():
+            restricted_rows.extend(json.loads(path.read_bytes())['records'])
     restricted_by_key={(r['model_id'],r['public_board'],r['line'],r['seat']):r for r in restricted_rows}
     assert len(restricted_rows)==len(restricted_by_key)
     boards=[]
@@ -116,15 +117,24 @@ def coverage(registry):
             restricted=restricted_by_key.get((mid,row['public_board'],row['line'],row['seat']))
             if restricted:
                 parent_ids={(p['version'],p['run'],p['sha256']) for p in [original,*policies]}
-                lock_id=restricted.get('original_locked_sha256',restricted['policies']['exp_oop']['parent']['source_sha256'])
-                if ('exp_oop',restricted['source_run'],lock_id) in parent_ids and all(
-                        (p.get('parent_version',v),restricted['source_run'],p['parent']['source_sha256']) in parent_ids
+                locked_version='exp_ip' if row['seat'] else 'exp_oop'
+                lock_id=restricted.get('original_locked_sha256') or restricted['policies'][locked_version]['parent']['source_sha256']
+                lock_run=restricted.get('original_locked_run', restricted['source_run'])
+                if (locked_version,lock_run,lock_id) in parent_ids and all(
+                        (p.get('parent_version',v),p['parent']['artifact_run'],p['parent']['source_sha256']) in parent_ids
                         for v,p in restricted['policies'].items()):
-                    assert all(p['original_half_pot_eligible']==0 and p['half_pot_reply_pairs']>0
-                               for p in restricted['policies'].values())
-                    row['restricted_turn_half_pot']={v:dict(source_sha256=p['source_sha256'],
-                        archive_sha256=restricted['archive_sha256'], eligible_combos=p['half_pot']['eligible'],
-                        nonpolarized_candidate=p['half_pot']['candidate']) for v,p in restricted['policies'].items()}
+                    conditional={}
+                    for version,policy in restricted['policies'].items():
+                        eligible=policy['half_pot']['eligible']
+                        pairs=policy['half_pot_reply_pairs']
+                        assert policy['original_half_pot_eligible']==0 and policy['legal_combos']>0
+                        assert 0<=eligible<=policy['legal_combos']<=policy['compatible_pairs']
+                        assert 0<=pairs<=policy['compatible_pairs'] and bool(pairs)==bool(eligible)
+                        conditional[version]=dict(source_sha256=policy['source_sha256'],
+                            archive_sha256=restricted['archive_sha256'], eligible_combos=eligible,
+                            compatible_pairs=policy['compatible_pairs'], half_pot_reply_pairs=pairs,
+                            nonpolarized_candidate=policy['half_pot']['candidate'])
+                    row['restricted_turn_half_pot']=conditional
             row['medium_policy_usage']=medium_usage(row, alt, frozen)
             boards.append(row)
     totals=dict(Counter(r['half_pot_status'] for r in boards))
