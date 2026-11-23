@@ -25,7 +25,12 @@ from run10_common import classes, hcls
 DATA = Path('data')
 SPOT = 'BTN_BB'
 FLOP_LINE = 'x b50 c'
-BET = {72: 50, 74: 33}
+BET = {72: 50, 74: 33, 185: 33}
+
+
+def line_for(rank):
+    bet = f'b{BET[rank]}'
+    return f'{FLOP_LINE}/x {bet} c/x' if rank == 185 else f'{FLOP_LINE}/{bet} c/'
 
 
 def source_pair(spec, rank, pipeline, pool, run, batch=588):
@@ -37,7 +42,10 @@ def source_pair(spec, rank, pipeline, pool, run, batch=588):
         raw = {n: z.read(n) for n in z.namelist()}
     assert set(raw) == {'root.json', 'root.job.json', 'gto.json', 'gto.job.json', 'native.json', 'native.job.json', 'locks.json'}
     root = json.loads(raw['root.json'])
-    extracts = [dict(prefix=[], street=True)] + [dict(prefix=['x', 'b50', 'c', t], street=False, raw=True) for t in spec['root_turns']]
+    root_lines = spec.get('root_flop_lines', [FLOP_LINE])
+    assert root_lines == [FLOP_LINE] or (rank == 185 and root_lines == [FLOP_LINE, 'b50 c'])
+    extracts = [dict(prefix=[], street=True)] + [dict(prefix=line.split()+[t], street=False, raw=True)
+               for line in root_lines for t in spec['root_turns']]
     root_job = pipeline.make_job(SPOT, 'gto', flop, 'root.json', iters=1700, target=.5, compress=True, extract=extracts)
     root_job.update(flop_oop='50%', flop_ip='50%')
     assert root_job == json.loads(raw['root.job.json'])
@@ -49,11 +57,13 @@ def source_pair(spec, rank, pipeline, pool, run, batch=588):
     parent, = [n for n in root['nodes'] if n['line'] == FLOP_LINE + '/' and n['board'].endswith(turn)]
     assert (parent['pot'], parent['bets']) == (1100, [275, 275])
     bet = f'b{BET[rank]}'
-    targets = [dict(prefix=[], street=True)] + [dict(prefix=[bet, 'c', r], street=False) for r in spec['river_extracts']]
+    ip = rank == 185
+    child_prefix = ['x', bet, 'c'] if ip else [bet, 'c']
+    targets = [dict(prefix=[], street=True)] + [dict(prefix=child_prefix+[r], street=ip) for r in spec['river_extracts']]
     job = pipeline.make_job(SPOT, 'gto', flop, 'gto.json', compress=False, target=.45, iters=2200, extract=targets)
     job.update(pipeline.SUB)
     job.update(oop='', ip='', turn=turn, pot=1100, stack=9475, line0=['x','b50','c','/'], root_no_bet=False,
-               turn_oop=f'{BET[rank]}%', river_oop='50%,75%,100%,a', river_ip='50%,75%,100%,a')
+               turn_oop='50%,100%' if ip else f'{BET[rank]}%', turn_ip=f'{BET[rank]}%' if ip else '50%,100%', river_oop='50%,75%,100%,a', river_ip='50%,75%,100%,a')
     for seat, key in enumerate(('oop_w', 'ip_w')):
         job[key] = [[h, w] for h, w in zip(root['hands'][seat], parent['wr'][seat], strict=True) if w > 1e-4]
     assert job == json.loads(raw['gto.job.json'])
@@ -61,9 +71,10 @@ def source_pair(spec, rank, pipeline, pool, run, batch=588):
     manifest = dict(spot=SPOT, pot_family='SRP', locks=[])
     g = dict(version='gto', root=root, run=run, manifest=manifest, root_sha256=root_sha,
              archive_code=code, archive_sha256=spec['archive_sha256'])
-    locked, metadata = prepare_job(dict(source=g, job=job), 'exp_oop', pool, pipeline)
+    version = 'exp_ip' if ip else 'exp_oop'
+    locked, metadata = prepare_job(dict(source=g, job=job), version, pool, pipeline)
     assert locked == json.loads(raw['native.job.json']) and metadata == json.loads(raw['locks.json'])
-    e = dict(g, version='exp_oop', manifest=dict(manifest, locks=metadata, gto_parent_source_run_id=run,
+    e = dict(g, version=version, manifest=dict(manifest, locks=metadata, gto_parent_source_run_id=run,
                                                  gto_parent_source_sha256=root_sha), verified_gto_parent=dict(run=run, sha256=root_sha))
     for source, name in [(g, 'gto'), (e, 'native')]:
         result = raw[name + '.json']
@@ -75,18 +86,29 @@ def source_pair(spec, rank, pipeline, pool, run, batch=588):
     assert not g['subgame']['info'].get('lock_stats') and g['subgame']['hands'] == e['subgame']['hands']
     assert 0 <= e['subgame']['info']['hero_gap_pct'] <= .5
     e.update(applied_rust_rates=e['subgame']['info']['lock_stats'],
-             measured_lock_application=audit_patterns(e['subgame'], locked, e['manifest'], pool, hero_seat=0))
+             measured_lock_application=audit_patterns(e['subgame'], locked, e['manifest'], pool, hero_seat=int(ip)))
     return g, e, parent['board'] + spec['river']
 
 
 def decision(source, public, route, rank):
     root, sub = source['root'], source['subgame']
     bet = f'b{BET[rank]}'
-    paid = {72: 550, 74: 363}[rank]
-    line = FLOP_LINE + '/' + bet + ' c/'
-    for b, path, seat, price, bets, action in [(public[:8], FLOP_LINE+'/', 0, 1100, [0,0], bet),
-            (public[:8], FLOP_LINE+'/'+bet, 1, 1100+paid, [paid,0], 'c'),
-            (public, line, 0, 1100+2*paid, [paid,paid], 'b50')]:
+    paid = round(1100 * BET[rank] / 100)
+    ip = rank == 185
+    line = line_for(rank)
+    prefix = 'x ' if ip else ''
+    placed = [0, paid] if ip else [paid, 0]
+    turn_root = FLOP_LINE+'/'
+    river_root = turn_root+prefix+bet+' c/'
+    steps = []
+    if ip:
+        steps.append((public[:8], turn_root, 0, 1100, [0,0], 'x'))
+    steps.extend([(public[:8], turn_root+prefix.strip(), int(ip), 1100, [0,0], bet),
+                  (public[:8], turn_root+prefix+bet, int(not ip), 1100+paid, placed, 'c')])
+    if ip:
+        steps.append((public, river_root, 0, 1100+2*paid, [paid,paid], 'x'))
+    steps.append((public, line, int(ip), 1100+2*paid, [paid,paid], 'b50'))
+    for b, path, seat, price, bets, action in steps:
         node, = [n for n in sub['nodes'] if (n['board'], n['line'], n['player']) == (b, path, seat)]
         assert (node['pot'], node['bets']) == (price, bets) and action in node['acts']
     row = proof(root, sub, node, game_reach(root, sub)[0])
@@ -98,7 +120,7 @@ def decision(source, public, route, rank):
                subgame_applied_rust_lock_nodes=sum(p['nodes'] for p in info.get('lock_stats', {}).values()))
     mask = base64.b64decode(row['compatible_action_mask_b64'], validate=True)
     names = node['acts']
-    hands = sub['hands'][0]
+    hands = sub['hands'][int(ip)]
     policies = {}
     for index, (hand, bits) in enumerate(zip(hands, mask, strict=True)):
         if not bits:
@@ -125,7 +147,7 @@ def main():
     ap.add_argument('--solver', type=Path, required=True)
     ap.add_argument('--out', type=Path, required=True)
     ap.add_argument('--run', type=int)
-    ap.add_argument('--batch', type=int, choices=(588, 597), default=588)
+    ap.add_argument('--batch', type=int, choices=(588, 597, 601), default=588)
     args = ap.parse_args()
     assert args.run is None or args.run > 0
     solver = args.solver.resolve()
@@ -137,7 +159,8 @@ def main():
     sys.path.insert(0, str(py))
     import pipeline
     pool = json.loads(poolraw)['NL2']
-    routes = json.loads(subprocess.check_output(['node', 'tools/hu_b588_bb_river_routes.cjs']))
+    route_test = 'tools/hu_b601_btn_river_routes.cjs' if args.batch == 601 else 'tools/hu_b588_bb_river_routes.cjs'
+    routes = json.loads(subprocess.check_output(['node', route_test]))
     records = json.loads((DATA/'nl2_hu_multiboard_status_current.json').read_bytes())['records']
     specs = json.loads((DATA/f'nl2_hu_b{args.batch}_bb_river_inputs.json').read_bytes())
     attempts = []
@@ -171,14 +194,17 @@ def main():
             board, pin = emit_board(model, g, e, public, gr['line'], texture(spec['flop']), viewer_code=g['archive_code'])
             bet = BET[rank]
             provenance = dict(source_run_role='VERIFICATION_OF_LOCAL_NATIVE_RESULTS', origin_solve_run_id=None)
-            board.update(**provenance, restricted_flop_bet_sizes_pct=[50], flop_bet_size_menu='50%', conditional_turn_oop_bet_sizes_pct=[bet])
-            board['nl2_locked_variants'][0].update(**provenance, variant_label=f'BB 翻牌限半池；轉牌領打限 {bet}% 底池，轉河牌分街 NL2 回應鎖頻',
+            turn_menu = {'conditional_turn_ip_bet_sizes_pct' if rank == 185 else 'conditional_turn_oop_bet_sizes_pct': [bet]}
+            board.update(**provenance, restricted_flop_bet_sizes_pct=[50], flop_bet_size_menu='50%', **turn_menu)
+            variant = (f'BTN 翻牌限半池；轉牌續打限 {bet}% 底池，轉河牌分街 NL2 回應鎖頻' if rank == 185 else
+                       f'BB 翻牌限半池；轉牌領打限 {bet}% 底池，轉河牌分街 NL2 回應鎖頻')
+            board['nl2_locked_variants'][0].update(**provenance, variant_label=variant,
                 pool_sha256=POOL, measurement_policy='STREET_SPECIFIC_POOL_MARGINALS', applied_street_rates=rates(e),
                 gto_parent_source_run_id=args.run, gto_parent_source_sha256=g['root_sha256'], viewer_archive_code=pin['viewer_archive_code'],
                 viewer_sha256=pin['viewer_sha256'])
             pin.update(rendered_decision_hands=named, authenticated_flop_boundary=dict(**provenance, verification_run_id=args.run,
                        root_canonical_sha256=g['root_sha256'], root_preflop_ranges='PINNED_POKER_SOLVER_PREFLOP_CFR', solver=SOLVER, rust=RUST,
-                       restricted_flop_bet_sizes_pct=[50], conditional_turn_oop_bet_sizes_pct=[bet]))
+                       restricted_flop_bet_sizes_pct=[50], **turn_menu))
             group['boards'].append(board)
             group['pins'].append(pin)
             medium['references'][source_key(mid, er)] = er

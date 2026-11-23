@@ -230,7 +230,8 @@
       'ln-opfr-t_model-19esov6':'nl2_hu_b594_rank2_barrels.json',
       'ln-opfr-t_model-1wej9w5':'nl2_hu_b590_rank3_barrels.json',
       'ln-opfr-t_model-trdt3w':'nl2_hu_b594_rank4_barrels.json',
-      'ln-opfr-t_model-id38uf':'nl2_hu_b596_rank5_barrels.json'
+      'ln-opfr-t_model-id38uf':'nl2_hu_b596_rank5_barrels.json',
+      'ln-opfr-t_model-1hmsxaw':'nl2_hu_b603_rank30_barrels.json'
     }[model.model_id];
     if(!name || (source && source!==board.source_sha256))return;
     const slot=document.createElement('div');
@@ -252,7 +253,9 @@
          row.rules.length!==(delayed?1:4) || (delayed && row.rules[0].table!=='vs_delayed_cbet') || !row.rules.every(r=>r.n>0 && r.applied_nodes>0))throw Error('來源核對失敗');
       const details=document.createElement('details');
       const summary=document.createElement('summary');
-      summary.textContent=delayed?'小盲延遲持續下注的大盲回應鎖':'小盲連續下注的轉牌及河牌尺寸鎖';details.appendChild(summary);
+      const actors=model.solver_profile==='UTG_CO'?['UTG','CO']:['小盲','大盲'];
+      summary.textContent=delayed?actors[0]+' 延遲持續下注的 '+actors[1]+' 回應鎖':actors[0]+' 連續下注的轉牌及河牌尺寸鎖';
+      details.appendChild(summary);
       const add=text=>{const p=document.createElement('p');p.textContent=text;details.appendChild(p);};
       add('沿用原 GTO 翻牌範圍。轉牌可過牌、下半池或滿池。');
       for(const [name,p] of [['原 GTO',row.gto],['實測回應鎖',row.locked]]){
@@ -271,10 +274,11 @@
       }
       for(const r of row.rules){
         const street=r.table==='vs_turn_barrel_by_size'?'轉牌':'河牌';
-        const scope=delayed?'大盲面對延遲持續下注，各下注尺寸合計':street+'面對 '+r.size+' 底池的下注';
+        const scope=delayed?actors[1]+' 面對延遲持續下注，各下注尺寸合計':street+'面對 '+r.size+' 底池的下注';
         add(scope+'，共 '+r.n.toLocaleString('zh-TW')+' 次。棄牌 '+r.fold+
           '%、跟注 '+r.call+'%、加注 '+r.raise+'%。');
       }
+      add('實測樣本合併單挑、單次加注底池中翻前加注者在位置外的對局。');
       if(delayed)add('此子局將同一組合併樣本頻率分別套用到半池與滿池回應。河牌保留自由求解。');
       slot.appendChild(details);
     }catch{slot.textContent='目前無法核對連續下注的鎖頻資料。';}

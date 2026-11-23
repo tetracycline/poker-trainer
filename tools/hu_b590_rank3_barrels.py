@@ -13,6 +13,7 @@ from hu_b467_river_source_gate import compact, sha
 from hu_b483_locked_medium import POOL, proof
 from hu_checked_gto_boundary import load_original
 from hu_sequential_cfr_reach import game_reach
+from solve_hu_missing_branches import EXTRA_SPOTS
 
 MODEL = "ln-opfr-t_model-1wej9w5"
 CASES = {
@@ -44,14 +45,19 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
     aid=pin["archive_id"]
     receipt=json.loads((originals/f"{aid}.json").read_bytes())
     parent_pin=dict(name=receipt["name"],head=receipt["workflow_run"]["head_sha"],run=pin["run"],sha256=pin["archive_sha256"])
-    parent=load_original(originals,aid,parent_pin,"SB_BB",board["flop"],board["turn"],"gto",pot=600,stack=9700,
+    spot = model["solver_profile"]
+    profile = ranges.SPOTS[spot]
+    assert (profile["kind"],profile["pfr"]) == ("SRP","oop")
+    pot, stack = round(100*profile["pot"]), round(100*profile["stack"])
+    parent=load_original(originals,aid,parent_pin,spot,board["flop"],board["turn"],"gto",pot=pot,stack=stack,
                          pipeline=pipeline,ranges=ranges,flop_line=flop_line)
     assert parent["identity"]["source_sha256"]==pin["source_sha256"]
     root,original=parent["source"]["root"],parent["source"]["subgame"]
     parent_job,root_sha=parent["job"],parent["identity"]["root_sha256"]
     assert (original["line0"], original["turn"], board["actual_exact_action_line"], board["acting_seat"]) == (flop_line, public[-2:], line, 0)
-    investment={"x x":0, "b100 c":600, "b75 c":450, "b50 c":300}[flop_line]
-    assert (root["pot"], root["stack"], parent_job["pot"], parent_job["stack"]) == (600, 9700, 600+2*investment, 9700-investment)
+    bet_pct = {"x x":0, "b100 c":100, "b75 c":75, "b50 c":50}[flop_line]
+    investment = (pot * bet_pct + 50) // 100
+    assert (root["pot"], root["stack"], parent_job["pot"], parent_job["stack"]) == (pot, stack, pot+2*investment, stack-investment)
     assert (parent_job["rake_rate"], parent_job["rake_cap"], parent_job["line0"]) == (.05, 1000, [*flop_line.split(), "/"])
     assert not parent_job.get("locks") and parent_job.get("hero") is None and not original["info"].get("lock_stats")
     assert (original["pot"]/100, original["stack"]/100) == (board["actual_pot_bb"], board["actual_effective_stack_bb"])
@@ -120,6 +126,7 @@ def main(*, model_id=MODEL, rank=3, flop_line="b75 c", cases=CASES):
     sys.path.insert(0,str((a.solver/"postflop/py").resolve()))
     import pipeline
     import ranges
+    ranges.SPOTS.update(EXTRA_SPOTS)
     pool_raw=(a.solver/"inputs/pool_stats.json").read_bytes()
     assert sha(pool_raw)==POOL
     model=json.loads(Path("data/nl2_hu_multiboard_status_current.json").read_bytes())["records"][model_id]

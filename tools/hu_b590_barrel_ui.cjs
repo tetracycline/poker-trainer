@@ -9,7 +9,7 @@ const element = () => ({children: [], appendChild(child) { this.children.push(ch
 const ctx = vm.createContext({
   document: {createElement: element},
   fetch: async path => {
-    if(path==='data/nl2_hu_b573_restricted_turn.json')return {ok:true,json:async()=>JSON.parse(fs.readFileSync(path))};
+    if(['data/nl2_hu_b573_restricted_turn.json','data/nl2_hu_b578_conditional_turns.json','data/nl2_hu_b575_delayed_cbet.json'].includes(path))return {ok:true,json:async()=>JSON.parse(fs.readFileSync(path))};
     assert.equal(path,sourceFile);
     return {ok: true, json: async () => report};
   }
@@ -32,6 +32,7 @@ async function main() {
       assert.equal(Boolean(group),hands.length>0);
       for(const [hand,freq] of hands)assert.ok(group.children[1].textContent.includes(hand+' '+(100*freq).toFixed(1)+'%'));
     }
+    if(model.solver_profile==='UTG_CO')assert.ok(content.includes('UTG'));
     if(row.line==='x x/')assert.ok(content.includes('同一組合併樣本頻率'));
     for (const r of row.rules) assert.ok(content.includes(r.n.toLocaleString('zh-TW')));
     assert.equal(wrong.children[0].children.length,0);
