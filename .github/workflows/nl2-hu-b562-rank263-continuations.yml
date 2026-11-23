@@ -1,0 +1,37 @@
+name: B562 check the native 3-bet river continuations
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b562-rank263-continuations.yml'
+      - 'tools/hu_b562_rank263_continuations.py'
+      - 'data/nl2_hu_b562_rank263_reach.json'
+      - 'data/solver_evidence/NL2_B562_R263_NATIVE_CONTINUATIONS.zip'
+permissions: {actions: read, contents: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Recompute reach using the original GitHub flop archives and the native policy outputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for aid in 14528716811 14593390837; do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$aid"
+            gh api "$api" > "$RUNNER_TEMP/$aid.json"
+            gh api "$api/zip" > "$RUNNER_TEMP/$aid.zip"
+          done
+          python tools/hu_b562_rank263_continuations.py --originals "$RUNNER_TEMP" --solver pinned-solver --out "$RUNNER_TEMP/replay.json"
+          cmp "$RUNNER_TEMP/replay.json" data/nl2_hu_b562_rank263_reach.json
