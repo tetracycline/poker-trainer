@@ -1,0 +1,129 @@
+name: B453 strict 3-flop rank32 CERT GTO+NL2 OOP source gate and full HU2475 audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b453-r32-three-source-cert.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: b453-r32-3source-cert
+  cancel-in-progress: false
+jobs:
+  verify-cert-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Strict original source archival SHA and independent GTO/NL2 OOP sequential action reach
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/hu_b453_rank32_three_original_source_gate.py tools/verify_hu_multiboard_100bb.py
+          python3 tools/hu_b453_rank32_three_original_source_gate.py
+          python3 - <<'PY'
+          import json,pathlib
+          p=pathlib.Path('data/nl2_hu_b453_rank32_three_board_gate.json')
+          a=json.loads(p.read_text())
+          assert a['model_id']=='ln-opfr-t_model-qx9t0u' and a['rank']==32
+          assert a['three_flops_original_source_complete'] and a['no_generic_texture_CERT']
+          assert a['CERT_MULTIBOARD']+a['APPROX']==392
+          if a['classification']=='CERT_MULTIBOARD_EXACT_NAMED_ONLY':
+              assert a['CERT_MULTIBOARD']==164 and a['APPROX']==228
+              assert len(a['positive_exact_boards'])==3 and not a['negative_exact_boards']
+              assert all(x['strict_full_street_combo_reachable']>0
+                         and x['nl2_locked_variants'][0]['version']=='exp_oop'
+                         for x in a['positive_exact_boards'])
+              print('B453 positive 3/3 original GTO and EXP_OOP matched, 164/228')
+          else:
+              assert a['classification']=='APPROX_FAIL_CLOSED_INSUFFICIENT_STRICT_REACH'
+              assert a['CERT_MULTIBOARD']==163 and a['APPROX']==229
+              print('B453 strict negative, 163/229 preserved')
+          PY
+      - name: Full exact source / actor / SPR / all 163 or 164 CERT node-lock and medium-size audit
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          a=json.loads(pathlib.Path('data/nl2_hu_b453_rank32_three_board_gate.json').read_text())
+          if a['classification']=='CERT_MULTIBOARD_EXACT_NAMED_ONLY':
+              assert pathlib.Path('data/nl2_hu_multiboard_status_v51_b453_rank32.json').is_file()
+              print('data/nl2_hu_multiboard_status_v51_b453_rank32.json')
+          else:
+              print('data/nl2_hu_multiboard_status_v50_b417_rank166.json')
+          PY
+          target="$(python3 - <<'PY'
+          import json
+          a=json.load(open('data/nl2_hu_b453_rank32_three_board_gate.json'))
+          print('data/nl2_hu_multiboard_status_v51_b453_rank32.json'
+                if a['classification']=='CERT_MULTIBOARD_EXACT_NAMED_ONLY'
+                else 'data/nl2_hu_multiboard_status_v50_b417_rank166.json')
+          PY
+          )"
+          python3 tools/hu_cert_lock_medium_audit.py --source "$target" --out /tmp/b453-source.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('data/nl2_hu_b453_rank32_three_board_gate.json'))
+          r=json.load(open('/tmp/b453-source.json'))
+          positive=a['classification']=='CERT_MULTIBOARD_EXACT_NAMED_ONLY'
+          expected=(164,228,621,713) if positive else (163,229,618,710)
+          got=(r['cert_multiboard'],r['approx'],r['aggregate']['named_board_proofs'],
+               r['aggregate']['paired_hero_locked_source_variants'])
+          assert got==expected,(got,expected)
+          assert r['not_generalized_handclass_GTO'] and r['not_actual_NL2_earnings']
+          n=sum(bool(b['b50_nonpolarized_relative_equity_research_candidate']) for b in a['positive_exact_boards'])
+          assert r['aggregate']['board_examples_with_b50_candidate']==135+n
+          PY
+      - name: Full HU 2475/2475 navigation, allowed-line reach, model-path and actual loader regression
+        run: |
+          set -euo pipefail
+          node tools/hu_line_contract.js > /tmp/b453-contract.json
+          node tools/link_audit.js --md /tmp/b453-link.md --json /tmp/b453-link.json
+          node tools/reach_verify.js --log /tmp/b453-reach.md --json /tmp/b453-reach.json
+          node tools/hu_model_path_audit.js /tmp/b453-path.json
+          node --check nl2_hu_multiboard_ui.js
+          node --check nl2-multiboard.js
+          node tools/hu_b378_v47_loader_runtime_test.cjs
+          node -e 'const c=require("/tmp/b453-link.json").counts;if(c.continuing!==2475||c.reachRiver!==2475||c.riverShare!==100)process.exit(1);console.log("PASS B453 HU2475/2475")'
+          node - <<'JS'
+          const fs=require('fs');const gate=JSON.parse(fs.readFileSync('data/nl2_hu_b453_rank32_three_board_gate.json'));
+          for(const file of ['nl2_hu_multiboard_ui.js','nl2-multiboard.js']){
+           const s=fs.readFileSync(file,'utf8'),start=s.indexOf('const v51b453=d=>{'),end=s.indexOf('const v51b444=d=>{',start);
+           if(start<0||end<=start)throw Error('B453 validator not installed '+file);
+           const fn=new Function(s.slice(start,end)+';return v51b453;')();
+           if(gate.classification==='CERT_MULTIBOARD_EXACT_NAMED_ONLY'){
+             const d=JSON.parse(fs.readFileSync('data/nl2_hu_multiboard_status_v51_b453_rank32.json','utf8'));
+             if(fn(d)!==d)throw Error('B453 authentic source validator failed');
+             const fake=JSON.parse(JSON.stringify(d));fake.records['ln-opfr-t_model-qx9t0u'].certified_3_to_5_exact_flop_boards[0].strict_full_street_combo_reachable=0;
+             try{fn(fake);throw Error('B453 falsified strict0 CERT incorrectly accepted')}catch(e){if(e.message.includes('incorrectly accepted'))throw e}
+           }else{
+             const old=JSON.parse(fs.readFileSync('data/nl2_hu_multiboard_status_v50_b417_rank166.json','utf8'));
+             try{fn(old);throw Error('B453 incorrectly accepted old schema')}catch(e){if(e.message.includes('incorrectly accepted'))throw e}
+           }
+          }
+          console.log('PASS B453 strict browser certification fail-closed');
+          JS
+          git diff --check
+      - name: Commit verified B453 rank32 three-source result to PR2 draft; no merge
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/nl2_hu_b453_rank32_three_board_gate.json docs/NL2_HU_B453_R32_THREE_BOARD_GATE.md
+          if test -f data/nl2_hu_multiboard_status_v51_b453_rank32.json; then
+            git add data/nl2_hu_multiboard_status_v51_b453_rank32.json               data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+          fi
+          git diff --cached --quiet && exit 1
+          git commit -m 'B453: strict 3-board original GTO and real NL2 OOP exact source gate for rank32'
+          for n in 1 2 3; do
+            git fetch origin fix/nl2-hu-lines-audit-20261118
+            git rebase origin/fix/nl2-hu-lines-audit-20261118
+            if git push origin HEAD:fix/nl2-hu-lines-audit-20261118; then exit 0; fi
+          done
+          exit 1
