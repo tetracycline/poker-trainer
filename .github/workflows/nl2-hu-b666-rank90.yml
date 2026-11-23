@@ -1,0 +1,54 @@
+name: B666 solve priced SB check-call checked-turn rivers
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b666-rank90.yml'
+      - 'tools/hu_b666_*'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        flop: [Ac8h3d, Ah7d4c]
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the pinned native solver
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve native 33-percent flop ancestry and both actor strategies
+        working-directory: trainer
+        env:
+          RAYON_NUM_THREADS: 1
+        run: |
+          set -euo pipefail
+          python tools/hu_b666_solve.py --solver ../solver --flop '${{ matrix.flop }}' --output "$RUNNER_TEMP/result"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B666-rank90-${{ matrix.flop }}
+          path: |
+            ${{ runner.temp }}/result/NL2_B666_*.zip
+            ${{ runner.temp }}/result/selected.json
+            ${{ runner.temp }}/result/attempts.json
+          if-no-files-found: error
+          retention-days: 90

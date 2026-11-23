@@ -1,0 +1,50 @@
+name: Authenticate completed rank29 and rank57 native river results
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b659-b664-completed.yml'
+      - 'tools/hu_completed_river_workers.py'
+      - 'data/nl2_hu_b659_rank29_completed.json'
+      - 'data/nl2_hu_b664_rank57_completed.json'
+permissions: {contents: read, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {batch: 659, rank: 29}
+          - {batch: 664, rank: 57}
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Authenticate all original worker bytes and recheck actual legal flop actions
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BATCH: ${{ matrix.batch }}
+          RANK: ${{ matrix.rank }}
+        run: |
+          set -euo pipefail
+          report="data/nl2_hu_b${BATCH}_rank${RANK}_completed.json"
+          originals="$RUNNER_TEMP/originals"
+          mkdir -p "$originals"
+          jq -r '.records[] | [.flop,.artifact_id] | @tsv' "$report" |
+          while read -r flop artifact; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact" > "$originals/$flop.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact/zip" > "$originals/$flop.zip"
+          done
+          python tools/hu_completed_river_workers.py --batch "$BATCH" --solver ../solver --originals "$originals" --out "$RUNNER_TEMP/completed.json"
+          cmp "$RUNNER_TEMP/completed.json" "$report"
