@@ -1,0 +1,33 @@
+name: B559 independently check the reached rank27 third-pot river
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b559-rank27-reach.yml'
+      - 'tools/hu_b559_rank27_native_replay.py'
+      - 'data/nl2_hu_b559_rank27_reach.json'
+      - 'data/solver_evidence/NL2_B559_R27_7H6D4S_8C_EXP_OOP.json.gz'
+permissions: {actions: read, contents: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Verify the archived native input, measured lock, and common legal hands
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14793354999/zip" > "$RUNNER_TEMP/14793354999.zip"
+          python tools/hu_b559_rank27_native_replay.py --original "$RUNNER_TEMP" --solver pinned-solver --out "$RUNNER_TEMP/replay.json"
+          cmp "$RUNNER_TEMP/replay.json" data/nl2_hu_b559_rank27_reach.json
