@@ -1,0 +1,73 @@
+name: B574 replay two completed B565 river boards and one fresh paired flop
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b574-rank18-third-flop.yml'
+      - 'tools/hu_b574_rank18_third_flop.py'
+      - 'data/nl2_hu_b574_fresh_source.json'
+      - 'data/solver_evidence/NL2_B574_R18_*.zip'
+permissions: {contents: write, actions: read}
+jobs:
+  verify-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Authenticate both B565 artifacts and replay all three pairs of native policies
+        working-directory: trainer
+        env: {GH_TOKEN: "${{ github.token }}"}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/receipts"
+          for id in 14796508645 14796882649; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$RUNNER_TEMP/receipts/$id.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/receipts/$id.zip"
+          done
+          python tools/hu_b574_rank18_third_flop.py --solver ../solver --receipts "$RUNNER_TEMP/receipts" --out "$RUNNER_TEMP/preview.json"
+          cmp "$RUNNER_TEMP/preview.json" data/nl2_hu_b574_rank18_preview.json
+      - name: Register completed sources on the current draft branch after all audits
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            (
+              cd "$live"
+              python tools/hu_b574_rank18_third_flop.py --solver "$GITHUB_WORKSPACE/solver" --receipts "$RUNNER_TEMP/receipts" --run "$GITHUB_RUN_ID"
+              evidence=data/solver_evidence
+              status=data/nl2_hu_multiboard_status_current.json
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              if test -f data/nl2_hu_b574_locked_medium.json; then node tools/hu_b558_river_policy_view.cjs "$evidence/reverified/rank18.json"; fi
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              shopt -s nullglob
+              files=(data/nl2_hu_b574_rank18_checkpoint.json "$evidence"/NL2_MULTIBOARD_REVERIFIED_R18_"$GITHUB_RUN_ID"_*.json.gz)
+              if test -f data/nl2_hu_b574_locked_medium.json; then files+=(data/nl2_hu_b574_locked_medium.json "$evidence/reverified/rank18.json"); fi
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_source_references.json data/nl2_hu_model_history_crosswalk.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B574: publish paired SB river actions using the two original B565 source identities and one new flop'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
