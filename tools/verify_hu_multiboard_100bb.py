@@ -1359,7 +1359,7 @@ def verify(root,source_pin,run_id):
                 raise ValueError('Unregistered turn subgame size menu')
             permitted_flop_lines={'oop-b33only':'b33 c','oop-b50only':'b50 c',
                 'checked-b33only':'x b33 c',
-                'oop-b75only':'b75 c','oop-b75raisecall':'b75 r c','checked-b50only':'x b50 c',
+                'oop-b75only':'b75 c','oop-b100only':'b100 c','oop-b75raisecall':'b75 r c','checked-b50only':'x b50 c',
                 'checked-b75only':'x b75 c',
                 'checked-b100only':'x b100 c','checkcheck':'x x'}
             policy=m.get('flop_line_policy','all')
