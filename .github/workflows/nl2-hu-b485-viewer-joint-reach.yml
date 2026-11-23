@@ -1,0 +1,25 @@
+name: B485 exact masks and EV in both named-board viewers
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b485-viewer-joint-reach.yml'
+      - 'tools/hu_b485_medium_viewers.cjs'
+      - 'nl2_locked_medium.js'
+      - 'nl2-cfr.js'
+      - 'nl2-multiboard.js'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check current and historical viewers against the exact hand rosters and action masks
+        run: |
+          set -euo pipefail
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json

@@ -5,7 +5,8 @@ const setText=(el,s)=>{el.textContent=s;return el;};
 const option=(list,k,label)=>{const op=document.createElement('option');op.value=k;op.textContent=label;list.appendChild(op);};
 let all=[],subset=[],game=null,current=null,pathReach=Object.create(null);
 const selS=by('spot'),selV=by('ver'),selG=by('game'),selN=by('node'),selFocus=by('focus');
-const mediumCandidate=n=>!!n.b50_relative_equity_mix?.nonpolarized_medium_bet_candidate;
+const jointNodes=new WeakMap();
+const mediumCandidate=n=>jointNodes.has(n)?!!jointNodes.get(n).row.b50?.candidate:!!n.b50_relative_equity_mix?.nonpolarized_medium_bet_candidate;
 const setHtml=(id,h)=>{by(id).innerHTML=h;};
 const copyOpts=(el,items)=>{el.innerHTML='';for(const [k,l] of items)option(el,k,l);};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -32,7 +33,7 @@ const sequential=(g,n)=>pathReach[g.source_sha256]?.nodes?.[[n.board,n.line,n.ac
 function selectNode(){
  current=game?.nodes[Number(selN.value)]||null;
  if(!current){by('details').textContent='目前沒有符合的真實 CFR 節點。';by('combos').innerHTML='';return;}
- const n=current,eligible=n.medium_50pct_eligible_combos||0;
+ const n=current,joint=jointNodes.get(n),eligible=n.medium_50pct_eligible_combos||0;
  const strict=sequential(game,n);
  const run=String(game.source_run_id),source=/^[0-9]+$/.test(run)
   ? '原始 GitHub Actions：<a href="https://github.com/tetracycline/poker-trainer/actions/runs/'+run+'" target="_blank" rel="noopener">Run '+run+'</a>'
@@ -42,10 +43,10 @@ function selectNode(){
  (game.solve_menu_scope?'<p><b>解算下注選單：</b>翻牌 OOP '+esc(game.solve_menu_scope.flop_oop)+'／IP '+esc(game.solve_menu_scope.flop_ip)+'；轉牌下注 '+esc(game.solve_menu_scope.turn_bets)+'，加注 '+esc(game.solve_menu_scope.turn_raise)+'。'+esc(game.solve_menu_scope.restriction_note)+'</p>':''),
  '<p>精確公牌 <strong>'+esc(n.board)+'</strong>；完整動作線 <strong>'+esc(n.line)+'</strong>；動作玩家 '+(n.acting_seat===0?'OOP':'IP')+'；此節點剩餘 SPR <strong>'+fmt(n.node_spr)+'</strong></p>',
  '<p>可選動作：'+n.actions.map(esc).join('、')+'；CFR 權重加總頻率：'+Object.entries(n.reach_weighted_action_pct).map(([k,v])=>esc(k)+':'+v+'%').join('、')+'</p>',
- (strict?'<p><b>跨街可達手牌 '+fmt(strict.count)+'／'+fmt(n.reachable_combos)+'</b>。已按前街最高頻／近混頻及卡牌衝突篩選；原始 EV 未重解。</p>':
+ (joint?'<p><b>'+esc(globalThis.nl2LockedMedium.describe(joint.row))+'</b></p>':strict?'<p><b>跨街可達手牌 '+fmt(strict.count)+'／'+fmt(n.reachable_combos)+'</b>。已按前街最高頻／近混頻及卡牌衝突篩選；原始 EV 未重解。</p>':
  '<p>此來源只驗證當前節點，未驗證跨街最高頻路徑。</p>'),
- '<p>可達 combos × node：'+fmt(n.reachable_combos)+'；接近混合策略：'+fmt(n.near_mixed_combos)+'；50% pot 中等尺寸符合雙門檻的 combos：<strong>'+fmt(eligible)+'</strong>（只適用本公牌／線／角色）</p>',
- n.b50_relative_equity_mix?'<p>50% pot（中等尺寸）合格組合的相對 equity 構成：低／中／高 = '+n.b50_relative_equity_mix.low_count+'／'+n.b50_relative_equity_mix.middle_count+'／'+n.b50_relative_equity_mix.high_count+'；中段權重 '+fmt(n.b50_relative_equity_mix.middle_eligible_weight_share_pct)+'%。'+(n.b50_relative_equity_mix.nonpolarized_medium_bet_candidate?'<strong>存在去極化／合併下注候選</strong>（精確公牌研究用，未跨牌面證實）。':'無足夠去極化下注證據。')+'</p>':'',
+ joint?'':'<p>可達 combos × node：'+fmt(n.reachable_combos)+'；接近混合策略：'+fmt(n.near_mixed_combos)+'；50% pot 中等尺寸符合雙門檻的 combos：<strong>'+fmt(eligible)+'</strong>（只適用本公牌／線／角色）</p>',
+ !joint&&n.b50_relative_equity_mix?'<p>50% pot（中等尺寸）合格組合的相對 equity 構成：低／中／高 = '+n.b50_relative_equity_mix.low_count+'／'+n.b50_relative_equity_mix.middle_count+'／'+n.b50_relative_equity_mix.high_count+'；中段權重 '+fmt(n.b50_relative_equity_mix.middle_eligible_weight_share_pct)+'%。'+(n.b50_relative_equity_mix.nonpolarized_medium_bet_candidate?'<strong>存在去極化／合併下注候選</strong>（精確公牌研究用，未跨牌面證實）。':'無足夠去極化下注證據。')+'</p>':'',
  game.version==='gto'?'':('<p>NL2 實際頻率可匹配對手節點：'+fmt(game.nl2_pool_lock_coverage?.matched_nodes)+'／'+fmt(game.nl2_pool_lock_coverage?.villain_nodes)+'（'+fmt(game.nl2_pool_lock_coverage?.coverage_pct)+'%）。未匹配節點未鎖定；本子局模型化鎖頻的英雄 EV 差值 '+fmt(game.hero_gain_vs_locked_pool_bb)+' bb，<b>不能稱為完整 NL2 池最優策略。</b></p>'),
  game.version==='gto'?'<p>GTO exploitability：'+fmt(game.gto_gap_pct)+'%</p>':
  '<p>對手頻率鎖定試驗：hero gap '+fmt(game.hero_gap_pct)+'%，初始平衡 gap '+fmt(game.gto_gap_pct)+'%；不代表未匹配節點也被鎖定。</p>',
@@ -56,7 +57,7 @@ function selectNode(){
 }
 function renderCombos(){
  if(!current||!game)return;
- const n=current,strict=sequential(game,n),hand=game.hands_by_seat[n.acting_seat],raw=atob(strict?.mask??n.eligible_action_masks_b64),best=typeof n.best_ev_action_indices_b64==='string'?atob(n.best_ev_action_indices_b64):null,allrows=[];
+ const n=current,strict=sequential(game,n),hand=game.hands_by_seat[n.acting_seat],joint=jointNodes.get(n),raw=joint?.mask??atob(strict?.mask??n.eligible_action_masks_b64),best=typeof n.best_ev_action_indices_b64==='string'?atob(n.best_ev_action_indices_b64):null,allrows=[];
  if(raw.length!==hand.length||(best!==null&&best.length!==hand.length)){by('combos').textContent='來源頻率或 EV 資料維度不一致；禁止顯示。';return;}
  for(let i=0;i<raw.length;i++)if(raw.charCodeAt(i)!==0){
    const mask=raw.charCodeAt(i),acts=[];
@@ -64,8 +65,8 @@ function renderCombos(){
    if(acts.length<1||acts.length>2){by('combos').textContent='不符合雙動作可達性規則；禁止顯示。';return;}
    const evIndex=best?.charCodeAt(i);if(best!==null&&(evIndex===255||evIndex>=n.actions.length)){by('combos').textContent='EV 行動證據不完整，禁止顯示。';return;}allrows.push([hand[i],acts.join(' / '),best===null?'未收錄':n.actions[evIndex]]);
  }
- if(strict&&allrows.length!==strict.count){by('combos').textContent='跨街可達性證據不一致，禁止顯示。';return;}
- if(strict&&!allrows.length){by('combos').textContent='依指定可達性規則，這條行動線沒有可達手牌。';return;}
+ if((joint||strict)&&allrows.length!==(joint?.row.strict_legal_combos??strict.count)){by('combos').textContent='跨街可達性證據不一致，禁止顯示。';return;}
+ if((joint||strict)&&!allrows.length){by('combos').textContent=joint?'此公牌與行動線沒有相容的雙方私牌。':'依指定可達性規則，這條行動線沒有可達手牌。';return;}
  const displayed=by('showall').checked?allrows:allrows.slice(0,100);
  const fragment=document.createDocumentFragment();
  for(const cells of displayed){const tr=document.createElement('tr');for(const value of cells){const td=document.createElement('td');setText(td,value);tr.appendChild(td);}fragment.appendChild(tr);}
@@ -131,15 +132,20 @@ async function loadOfficialSequential(){
  return {missingPath:results.some(x=>x.status==='rejected'),
          completed:results.filter(x=>x.status==='fulfilled').length};
 }
-Promise.allSettled([loadOffline(),loadOfficialSequential(),loadBase(),...independentSources.map(f=>loadIndex(f,true))]).then(([offline,official,...sourceResults])=>{
+Promise.allSettled([loadOffline(),loadOfficialSequential(),loadBase(),...independentSources.map(f=>loadIndex(f,true))]).then(async ([offline,official,...sourceResults])=>{
  const results=[...sourceResults,...(offline.status==='fulfilled'?offline.value.exact:[offline])];
  if(results.every(x=>x.status==='rejected'))throw results[0].reason;
  const loaded=results.flatMap(x=>x.status==='fulfilled'?x.value:[]);
  const seen=new Set();
  all=loaded.filter(c=>{
-  const key=[c.spot,c.version,c.source_sha256].join(':');
+  const key=[c.source_run_id,c.spot,c.version,c.source_sha256].join(':');
   if(seen.has(key))return false;seen.add(key);return true;
  });
+ const report=await globalThis.nl2LockedMedium.load();
+ for(const game of all){
+   const verified=await globalThis.nl2LockedMedium.bindCase(report,game);
+   for(const [node,bound] of verified)jointNodes.set(node,bound);
+ }
  const counts={};for(const c of all)counts[c.status]=(counts[c.status]||0)+1;
  const candidateNodes=all.reduce((k,c)=>k+c.nodes.filter(mediumCandidate).length,0);
  const msg='已載入 '+all.length+' 個實際公牌多街子局'+(results.some(x=>x.status==='rejected')||offline.value?.missingPath||official.value?.missingPath?'（有一批未能載入）':'')+'；50% pot 去極化研究候選節點 '+candidateNodes+'；GTO 精確公牌 CERT：'+(counts['CERT_EXACT_BOARD_GTO']||0)
@@ -158,16 +164,18 @@ Promise.allSettled([loadOffline(),loadOfficialSequential(),loadBase(),...indepen
  }
  const sha=url.searchParams.get('sha');
  if(sha){
-   const target=subset.findIndex(c=>c.source_sha256===sha);
+   const run=url.searchParams.get('run');
+   const target=subset.findIndex(c=>c.source_sha256===sha&&(!run||String(c.source_run_id)===run));
    if(target>=0){
     selG.value=String(target);selectGame();
     const board=url.searchParams.get('board'),line=url.searchParams.get('line');
     if(board!==null||line!==null){
-     const ix=game.nodes.findIndex(n=>n.board===board&&n.line===line);
+     const seat=url.searchParams.get('seat');
+     const ix=game.nodes.findIndex(n=>n.board===board&&n.line===line&&(seat===null||String(n.acting_seat)===seat));
      if(ix>=0){selN.value=String(ix);selectNode();}
      else{current=null;by('combos').innerHTML='';setText(by('details'),'指定的公牌與行動線不在這份精確來源內。');}
     }
-   }
+   }else{current=null;by('combos').innerHTML='';setText(by('details'),'指定的 run 與 SHA 沒有對應的原始來源。');}
  }
 }).catch(e=>setText(by('status'),'真實 CFR 索引不可用：'+e.message));
 })();

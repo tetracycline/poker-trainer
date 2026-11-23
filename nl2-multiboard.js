@@ -167,10 +167,10 @@ function verifiedCase(source,proof){
  return item;
 }
 let versionRequest=0;
-let jointReach=null;
+let jointReach=null, jointReport=null, jointNodes=new Map();
 async function selectVersion(){
  const request=++versionRequest;
- caseData=null;jointReach=null;el('node').replaceChildren();
+ caseData=null;jointReach=null;jointReport=null;jointNodes=new Map();el('node').replaceChildren();
  el('lock-pool-source')?.replaceChildren();el('locked-medium')?.replaceChildren();
  const version=el('version').value;const source=sourceCase(version);
  if(!source){setMessage('尚無符合的 source');return;}
@@ -181,6 +181,7 @@ async function selectVersion(){
    try{
      const audit=globalThis.nl2LockedMedium, report=await audit.load();
      if(request!==versionRequest)return;
+     jointReport=report;
      const row=audit.lookup(report,chosenModel,chosenBoard,source);
      if(row){
        jointReach={row,mask:null};
@@ -336,7 +337,7 @@ async function selectVersion(){
    const link=document.createElement('a');
    link.href='nl2-cfr.html?spot='+encodeURIComponent(chosenModel.solver_profile)
       +'&version='+encodeURIComponent(source.version||version)+'&sha='+encodeURIComponent(digest)
-      +'&board='+encodeURIComponent(chosenBoard.public_board)
+      +'&run='+encodeURIComponent(run)+'&seat='+chosenBoard.acting_seat+'&board='+encodeURIComponent(chosenBoard.public_board)
       +'&line='+encodeURIComponent(chosenBoard.actual_exact_action_line);
    link.textContent='開啟已驗證的原始 644 子局逐 combo GTO/EXP 查閱頁（Run '+run+'）';
    el('details').replaceChildren(link);
@@ -350,12 +351,10 @@ async function selectVersion(){
    if(request!==versionRequest)return;
    if(!proof){setMessage('來源未由獨立 GitHub Actions 驗證；不可將本頁標示為 CERT。'+url);return;}
    const actual=verifiedCase(source,proof);
-   if(jointReach){
-     const checked=jointReach, row=checked.row;
-     const anchor=actual.nodes.find(n=>n.public_board===chosenBoard.public_board&&n.exact_node_line===chosenBoard.actual_exact_action_line&&n.acting_seat===chosenBoard.acting_seat);
-     try{checked.mask=await globalThis.nl2LockedMedium.bindMask(row,actual,anchor);}
-     catch(e){checked.reason=e.message;}
+   if(jointReport){
+     const bound=await globalThis.nl2LockedMedium.bindCase(jointReport,actual,run);
      if(request!==versionRequest)return;
+     jointNodes=bound;
    }
    caseData=actual;
    const options=actual.nodes.map((n,i)=>({n,i}))
@@ -372,8 +371,7 @@ async function selectVersion(){
  }catch(e){if(request===versionRequest){caseData=null;el('node').replaceChildren();setMessage('來源稽核錯誤：'+e.message);}}
 }
 function jointFor(node){
- const row=jointReach?.row;
- return row && row.public_board===node.public_board && row.line===node.exact_node_line && row.acting_seat===node.acting_seat ? jointReach : null;
+ return jointNodes.get(node)||null;
 }
 function selectNode(){
  if(!caseData)return;
@@ -384,10 +382,11 @@ function selectNode(){
  const medium=el('locked-medium');
  if(medium){
    const anchor=node.public_board===chosenBoard.public_board&&node.exact_node_line===chosenBoard.actual_exact_action_line&&node.acting_seat===chosenBoard.acting_seat;
-   if(!anchor)medium.textContent='此索引只核對所選具名公牌的認證行動線。';
-   else if(joint)medium.textContent=(version==='gto'?'GTO':'NL2 鎖 '+joint.row.source_run_id)+'｜'+globalThis.nl2LockedMedium.describe(joint.row);
+   if(joint)medium.textContent=(version==='gto'?'GTO':'NL2 鎖 '+joint.row.source_run_id)+'｜'+globalThis.nl2LockedMedium.describe(joint.row);
+   else if(!anchor)medium.textContent='此節點尚無雙方可達性稽核。';
    else medium.textContent=version==='gto'?'':globalThis.nl2LockedMedium.describe(null);
  }
+ if(joint?.row.status==='ZERO_JOINT_REACH'){setMessage('此公牌與行動線沒有相容的雙方私牌。');return;}
  const cands=(joint?joint.row.b50:node.medium_50pct_strict_evidence)||{};
  const lock=caseData.villain_lock_scope||{};
  const origin=sourceCase(version);

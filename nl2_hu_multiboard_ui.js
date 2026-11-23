@@ -60,12 +60,12 @@ function render(){
          const flavor=b.flop_texture;
          li.append(document.createTextNode(
            b.public_board+'（'+flavor+'）｜歷史 '+b.actual_exact_action_line
-           +'｜SPR '+b.actual_spr+'｜原始 GTO 可達 combo '+b.strict_full_street_combo_reachable
+           +'｜SPR '+b.actual_spr
            +'｜GTO exploitability '+b.genuine_gto_exploitability_pct.toFixed(3)+'%｜'));
          const link=make('a','', '真實 CFR Run '+b.source_run_id);
          if(b.source_kind.includes('OFFICIAL')){
            link.href='nl2-cfr.html?spot='+encodeURIComponent(item.solver_profile)
-              +'&version=gto&sha='+encodeURIComponent(b.source_sha256)
+              +'&version=gto&run='+encodeURIComponent(b.source_run_id)+'&seat='+b.acting_seat+'&sha='+encodeURIComponent(b.source_sha256)
               +'&board='+encodeURIComponent(b.public_board)
               +'&line='+encodeURIComponent(b.actual_exact_action_line);
          }else{
