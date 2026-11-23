@@ -1,0 +1,105 @@
+name: B553 replay original ISO decisions against actual turn rows and displayed actions
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b553-iso-current-street.yml'
+      - 'tools/hu_b553_iso_rendered.cjs'
+      - 'tools/hu_b553_iso_current_street.py'
+      - 'data/nl2_hu_b553_iso_archives.json'
+permissions: {contents: write, actions: read}
+jobs:
+  verify-and-register:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download the five completed source archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          dir="$RUNNER_TEMP/originals"
+          mkdir -p "$dir"
+          for aid in $(jq -r '.[]|.id' data/nl2_hu_b553_iso_archives.json); do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$aid"
+            gh api "$api" > "$dir/$aid.json"
+            gh api "$api/zip" > "$dir/$aid.zip"
+          done
+      - name: Register the corrected training rows and retained single-board sources atomically
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          registry=data/nl2_hu_multiboard_status_current.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch -q --no-tags origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          for generation in 1 2 3 4 5; do
+            git fetch -q --no-tags origin "$branch"
+            base=$(git rev-parse FETCH_HEAD)
+            git merge-base --is-ancestor "$GITHUB_SHA" "$base"
+            live=$(mktemp -d "$RUNNER_TEMP/b553.XXXXXX")
+            git worktree add --quiet --detach "$live" "$base"
+            (
+              cd "$live"
+              python tools/hu_b553_iso_current_street.py --solver "$GITHUB_WORKSPACE/pinned-solver" \
+                --archives "$RUNNER_TEMP/originals" --downloads "$RUNNER_TEMP/b553-verified"
+              python tools/hu_apply_cert_extensions.py --out "$registry"
+              python - <<'PY'
+          import json
+          from pathlib import Path
+          mid='ln-iso-t_model-szsdgn'
+          reg=json.loads(Path('data/nl2_hu_multiboard_status_current.json').read_bytes())['records'][mid]
+          report=json.loads(Path('data/nl2_hu_b553_iso_results.json').read_bytes())
+          boards=report['groups']['125']['boards']
+          cross=json.loads(Path('data/nl2_hu_model_history_crosswalk.json').read_bytes())['records'][mid]
+          refs=json.loads(Path('data/nl2_hu_model_source_references.json').read_bytes())['items'][mid]
+          assert len(boards)==1 and boards[0]['public_board']=='4s7cQh8s'
+          assert not reg['certified_3_to_5_exact_flop_boards'] and reg['label']==cross['board_specific_certification_status']=='APPROX'
+          assert refs['reference_count']==len(refs['references'])==1 and refs['references'][0]['source_sha256']==boards[0]['source_sha256']
+          PY
+              node tools/hu_extension_runtime_test.cjs "$registry"
+              bash tools/hu_exact_batch_audit.sh "$registry"
+              python tools/hu_b491_incremental_medium.py
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b483_lock_medium_ui.cjs
+              node tools/hu_b485_medium_viewers.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              if test -f data/nl2_hu_b530_locked_medium.json; then node tools/hu_b530_history_rates_ui.cjs; fi
+              python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/current-medium-coverage.json"
+              git add -A -- data
+              git diff --cached --check
+              if ! git diff --cached --quiet; then
+                git commit -m 'B553: restore ISO rank125 to APPROX and retain its independently playable exact turn'
+              fi
+            )
+            candidate=$(git -C "$live" rev-parse HEAD)
+            for attempt in 1 2 3 4 5; do
+              git fetch -q --no-tags origin "$branch"
+              tip=$(git rev-parse FETCH_HEAD)
+              git merge-base --is-ancestor "$base" "$tip"
+              if test "$base" != "$tip"; then
+                if ! git diff --quiet "$base" "$tip" -- . ':(exclude).github/workflows/*'; then break; fi
+                if test "$candidate" = "$base"; then exit 0; fi
+                git -C "$live" switch --quiet --detach "$tip"
+                git -C "$live" cherry-pick "$candidate"
+              fi
+              if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            done
+            git worktree remove "$live"
+          done
+          exit 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B553-corrected-coverage
+          path: ${{ runner.temp }}/current-medium-coverage.json
