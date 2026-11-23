@@ -1,0 +1,53 @@
+name: B490 complete frozen CERT source inventory and remaining original joint masks
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b490-residual-joint-source-inventory.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  confirm-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Fetch hash-pinned original Actions evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/originals"
+          python3 - <<'PY'
+          from concurrent.futures import ThreadPoolExecutor
+          from pathlib import Path
+          import hashlib, json, os, subprocess
+          records=json.loads(Path('data/nl2_hu_b490_original_artifacts.json').read_bytes())
+          destination=Path(os.environ['RUNNER_TEMP'])/'originals'
+          def retrieve(p):
+              api=f"repos/{os.environ['GITHUB_REPOSITORY']}/actions/artifacts/{p['id']}"
+              metadata=json.loads(subprocess.check_output(['gh','api',api]))
+              assert metadata['name']==p['name'] and metadata['digest']=='sha256:'+p['sha256']
+              assert metadata['workflow_run']['id']==p['run'] and metadata['workflow_run']['head_sha']==p['commit']
+              output=destination/f"{p['id']}.zip"
+              with output.open('wb') as fp:subprocess.run(['gh','api',api+'/zip'],stdout=fp,check=True)
+              assert hashlib.sha256(output.read_bytes()).hexdigest()==p['sha256']
+          with ThreadPoolExecutor(max_workers=8) as pool:list(pool.map(retrieve,records))
+          PY
+      - name: Reproduce every source decision and verified correction from the immutable freeze
+        run: |
+          set -euo pipefail
+          python3 tools/hu_b490_residual_inventory.py --downloads "$RUNNER_TEMP/originals" --verify
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path('data/nl2_hu_b490_locked_medium.json').read_bytes())
+          assert len(report['unresolved'])==4 and report['totals']['all_source_decisions']==744
+          assert sum(report['totals']['new_zero_reach'].values())==5
+          PY
+      - name: Run the full HU audit and publish cumulative source references on the draft branch
+        run: bash tools/hu_publish_cert_extensions.sh
