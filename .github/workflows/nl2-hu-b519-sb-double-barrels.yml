@@ -1,0 +1,203 @@
+name: B519 solve rank15 and rank16 SB double-barrel rivers at the actual trainer prices
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b519-sb-double-barrels.yml', 'tools/hu_b519_sb_barrels.py', 'data/nl2_hu_b519_artifacts.json']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {flop: AsTh4d, artifact: 14529096110}
+          - {flop: Js9h4d, artifact: 14599361276}
+          - {flop: As9h2d, artifact: 14598935222}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Authenticate and solve the original flop range with the new per-street NL2 lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ORIGINAL: ${{ matrix.artifact }}
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          originals="$RUNNER_TEMP/originals"
+          mkdir -p "$originals"
+          api="repos/$GITHUB_REPOSITORY/actions/artifacts/$ORIGINAL"
+          gh api "$api" > "$originals/$ORIGINAL.json"
+          gh api "$api/zip" > "$originals/$ORIGINAL.zip"
+          args=(--originals "$originals" --solver pinned-solver --flop "$FLOP")
+          python tools/hu_b519_sb_barrels.py "${args[@]}"
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          python tools/hu_b519_sb_barrels.py "${args[@]}" --run "$GITHUB_RUN_ID" --results "$RUNNER_TEMP/result" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B519-native-${{ matrix.flop }}
+          path: ${{ runner.temp }}/result/NL2_B519_*.json.gz
+          if-no-files-found: error
+          retention-days: 90
+  fresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [QsTc5h, Jh8s5d, Ks9h5d]
+        version: [gto, exp_oop]
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned Rust solver
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          mkdir -p trainer/evidence
+          cp solver/inputs/pool_stats.json trainer/evidence/pool_stats.json
+          git -C solver rev-parse HEAD > trainer/evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > trainer/evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve the original pot-bet flop and half-pot turn from both preflop ranges
+        working-directory: trainer
+        env:
+          FLOP: ${{ matrix.flop }}
+          VERSION: ${{ matrix.version }}
+        run: |
+          set -euo pipefail
+          status=0
+          python3 tools/solve_hu_multiboard_100bb.py --solver-root ../solver --spot SB_BB \
+            --flop "$FLOP" --version "$VERSION" --flop-size-profile full --flop-line-policy oop-b100only \
+            --lock-marginals-by-street --turn-count 1 --manifest "evidence/$FLOP-$VERSION.json" || status=$?
+          python3 - "$status" "evidence/$FLOP-$VERSION.json" <<'PY'
+          import json,sys
+          m=json.load(open(sys.argv[2]))
+          assert not m["failures"] and len(m["cases"]) == m["solved_cases"] <= 1
+          assert int(sys.argv[1]) == (0 if m["cases"] else 1)
+          assert m["cases"] or len(m["skipped"]) == 1
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B519-R16-${{ matrix.flop }}-${{ matrix.version }}
+          path: |
+            trainer/evidence
+            solver/postflop/out/SB_BB/${{ matrix.version }}
+          if-no-files-found: error
+          retention-days: 90
+
+  verify:
+    needs: [native, fresh]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 'B519-native-*'
+          path: ${{ runner.temp }}/results
+      - name: Rebuild both private-hand ranges, exact bet menus and half-pot equity from original files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          originals="$RUNNER_TEMP/originals"
+          mkdir -p "$originals" "$RUNNER_TEMP/results"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq '.artifacts[]|select(.name|startswith("B519-R16-"))|.id' > "$RUNNER_TEMP/ids"
+          jq -r 'keys[]' data/nl2_hu_b519_artifacts.json >> "$RUNNER_TEMP/ids"
+          while read -r id; do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+            gh api "$api" > "$originals/$id.json"
+            gh api "$api/zip" > "$originals/$id.zip"
+          done < "$RUNNER_TEMP/ids"
+          python tools/hu_b519_sb_barrels.py --originals "$originals" --solver pinned-solver --results "$RUNNER_TEMP/results" --run "$GITHUB_RUN_ID" --head "$GITHUB_SHA"
+      - name: Audit all current routes and register only verified paired boards
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          files=(data/nl2_hu_b519_sb_barrel_results.json data/solver_evidence/NL2_B519_*)
+          if test -f data/nl2_hu_b519_locked_medium.json; then files+=(data/nl2_hu_b519_locked_medium.json); fi
+          for rank in 15 16; do
+            group="data/solver_evidence/reverified/rank$rank.json"
+            if test -e "$group"; then files+=("$group" data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R${rank}_*.json.gz); fi
+          done
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            for file in "${files[@]}"; do
+              if test -e "$live/$file"; then cmp "$file" "$live/$file"; fi
+            done
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              python - "$status" <<'PYREG'
+          import json, sys
+          from pathlib import Path
+          reg = json.loads(Path(sys.argv[1]).read_bytes())["records"]
+          assert len(reg) == 392
+          for rank in (15, 16):
+              group = Path(f"data/solver_evidence/reverified/rank{rank}.json")
+              if group.exists():
+                  g = json.loads(group.read_bytes())
+                  r = reg[g["model_id"]]
+                  assert r["label"] == "CERT-MULTIBOARD"
+                  assert {b["flop"] for b in g["boards"]} <= {b["flop"] for b in r["certified_3_to_5_exact_flop_boards"]}
+          PYREG
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B519: publish jointly reachable SB double barrels at their original flop and turn prices'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1

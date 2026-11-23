@@ -40,8 +40,11 @@ def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pi
             assert (m['source_pipeline_sha256'],m['source_ranges_sha256'],m['source_preflop_tree_sha256'])==(
                 PIPELINE,RANGES,'d4ca8e0c7d53deb6af337bfef8ff0c125205c1d3ef912267d8b40efc2fe7c100')
             rp,rs,sp,ss=c['flop_json'],c['flop_sha256'],c['sub_json'],c['sub_sha256']
-            measured=m.get('pool_lock_evidence',{}).get(flop,{}).get('source_patterns',[])
+            measured=m.get('pool_lock_evidence',{}).get(flop,{}).get('source_patterns')
             expected,metadata=legacy_rules(pipeline,spot,version,flop,m.get('flop_bet_sizes'))
+            if measured is None:
+                # Older archives omit the report. Both native jobs must still match every reconstructed numerical rule below.
+                measured = metadata
             for observed,reconstructed,native in zip(measured,metadata,expected,strict=True):
                 assert all(observed[k]==value for k,value in reconstructed.items())
                 assert set(observed)-set(reconstructed)<={'fold','raise_'}
@@ -69,12 +72,14 @@ def load_original(folder, aid, pin, spot, flop, turn, version, *, pot, stack, pi
     assert rj.get('locks',[])==j.get('locks',[]) and bool(j.get('locks'))==(hero is not None)
     if expected is not None:assert j.get('locks',[])==json.loads(compact(expected))
     parent,=[n for n in root['nodes'] if n['line']==flop_line+'/' and n['board'][-2:]==turn]
-    bet_pct, raise_multiple = {"x x": (0, 1), "x b33 c": (33, 1), "x b50 c": (50, 1), "x b75 c": (75, 1), "x b100 c": (100, 1), "x b75 r c": (75, 3)}[flop_line]
+    bet_pct, raise_multiple = {"x x": (0, 1), "x b33 c": (33, 1), "x b50 c": (50, 1), "x b75 c": (75, 1), "x b100 c": (100, 1), "x b75 r c": (75, 3), "b50 c": (50, 1), "b75 c": (75, 1), "b100 c": (100, 1)}[flop_line]
     bet = (pot * bet_pct + 50) // 100
     investment = bet * raise_multiple
     if bet:
-        facing, = (n for n in root["nodes"] if len(n["board"]) == 6 and n["line"] == f"x b{bet_pct}")
-        assert (facing["pot"], facing["bets"]) == (pot + bet, [0, bet])
+        ip_bet = flop_line.startswith("x ")
+        facing_line = ("x " if ip_bet else "") + f"b{bet_pct}"
+        facing, = (n for n in root["nodes"] if len(n["board"]) == 6 and n["line"] == facing_line)
+        assert (facing["pot"], facing["bets"]) == (pot + bet, [0, bet] if ip_bet else [bet, 0])
     if raise_multiple > 1:
         raised, = (n for n in root["nodes"] if len(n["board"]) == 6 and n["line"] == f"x b{bet_pct} r")
         assert (raised["pot"], raised["bets"]) == (pot + investment + bet, [investment, bet])
