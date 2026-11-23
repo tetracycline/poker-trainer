@@ -50,8 +50,9 @@ def audit_patterns(game, job, manifest, pool):
                 path = "x x/" * (i-1) + suffix
                 assert bool(re.search(record["pat"], path)) == (i == street)
     matches = {}
+    villain = 1-job["hero"]
     for node in game["nodes"]:
-        if node["player"] != 1 or len(node["acts"]) < 2 or not any(w > 1e-4 for w in node["w"][1]):
+        if node["player"] != villain or len(node["acts"]) < 2 or not any(w > 1e-4 for w in node["w"][villain]):
             continue
         line = node["line"]
         record = next((r for r in records if re.search(r["pat"], line)), None)
@@ -99,10 +100,10 @@ def original(directory, flop, turn, version, *, batch="B470", spot=SPOT, flop_li
     if version == "gto":
         assert flop_job.get("hero") is None and not flop_job.get("locks")
     else:
-        assert flop_job["hero"] == 0 and flop_job["locks"] and any((p.get("n") or 0)>=500 for p in m["locks"])
+        assert flop_job["hero"] == int(version == "exp_ip") and flop_job["locks"] and any((p.get("n") or 0)>=500 for p in m["locks"])
     out = dict(version=version, manifest=m, root=root, root_sha256=sha(root_raw), root_job=flop_job,
                subgame=None, subgame_job=None, source_sha256=None)
-    if version == "exp_oop":
+    if version != "gto":
         out["actual_flop_job_lock_coverage"] = audit_patterns(root, flop_job, m, pool)
     outcomes = m["cases"] + m["skipped"]
     assert len(outcomes) == len(expected_flop)
@@ -128,9 +129,9 @@ def original(directory, flop, turn, version, *, batch="B470", spot=SPOT, flop_li
     if version == "gto":
         assert job.get("hero") is None and not job.get("locks") and c["hero_gap_pct"] is None
     else:
-        assert job["hero"] == 0 and job["locks"] and sub["info"]["lock_stats"]
+        assert job["hero"] == int(version == "exp_ip") and job["locks"] and sub["info"]["lock_stats"]
         assert c["hero_gap_pct"] == sub["info"]["hero_gap_pct"]
-    if version == "exp_oop":
+    if version != "gto":
         out["actual_turn_job_lock_coverage"] = audit_patterns(sub, job, m, pool)
     out.update(subgame=sub, subgame_job=job, source_sha256=sha(subraw))
     return out

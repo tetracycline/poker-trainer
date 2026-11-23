@@ -1,0 +1,151 @@
+name: B486 reverify BB facing SB on rank12 and rank102 with the missing independent locks
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-hybrid-b486-sb-checked-turn-river.yml'
+permissions:
+  contents: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {flop: As7h3d, version: exp_ip}
+          - {flop: Kd8c3h, version: gto}
+          - {flop: Kd8c3h, version: exp_ip}
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile pinned Rust solver
+        run: |
+          set -euo pipefail
+          python3 -m pip install numpy matplotlib
+          git clone https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          mkdir -p trainer/evidence
+          cp solver/inputs/pool_stats.json trainer/evidence/pool_stats.json
+          git -C solver rev-parse HEAD > trainer/evidence/poker-solver-pin.txt
+          git -C solver/postflop/postflop-solver rev-parse HEAD > trainer/evidence/rust-pin.txt
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve one full flop and the frozen b50-call turn subgame for this board and version
+        working-directory: trainer
+        env:
+          FLOP: ${{ matrix.flop }}
+          VERSION: ${{ matrix.version }}
+        run: |
+          set -euo pipefail
+          status=0
+          python3 tools/solve_hu_multiboard_100bb.py --solver-root ../solver --spot SB_BB \
+            --flop "$FLOP" --version "$VERSION" --flop-size-profile full --flop-line-policy oop-b50only \
+            --turn-line-policy checkcheck --archive-empty-river-extraction --lock-marginals-by-street --turn-count 1 --manifest "evidence/$FLOP-$VERSION.json" || status=$?
+          python3 - "$status" "evidence/$FLOP-$VERSION.json" <<'PY'
+          import json,sys
+          m=json.load(open(sys.argv[2]))
+          assert not m["failures"] and len(m["cases"]) == m["solved_cases"] <= 1
+          assert int(sys.argv[1]) == (0 if m["cases"] else 1)
+          assert len(m["cases"]) + len(m["skipped"]) == 1
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NL2-B486-${{ matrix.flop }}-${{ matrix.version }}
+          path: |
+            trainer/evidence
+            solver/postflop/out/SB_BB/${{ matrix.version }}
+          if-no-files-found: error
+          retention-days: 30
+
+  gate:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: NL2-B486-*
+          path: downloads
+      - name: Authenticate historical GitHub ZIPs and replay both players on the original and new solves
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          originals="$RUNNER_TEMP/b486-originals"
+          mkdir -p "$originals"
+          jq -r '.[]|[.id,.run,.commit,.sha256,.name]|@tsv' data/nl2_hu_b486_sb_bb_original_artifacts.json |
+          while IFS=$'\t' read -r id run commit digest name; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" | jq -e --argjson run "$run" --arg digest "sha256:$digest" --arg name "$name" --arg commit "$commit" '.workflow_run.id==$run and .workflow_run.head_sha==$commit and .digest==$digest and .name==$name' >/dev/null
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$originals/$id.zip"
+          done
+          python3 tools/hu_b486_sb_checked_calls.py --originals "$originals" --new-solves downloads --run "$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B486-reverified-BB-originals
+          path: |
+            data/nl2_hu_b486_sb_checked_originals.json
+            data/solver_evidence/NL2_B486_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R12_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R102_*.json.gz
+            data/solver_evidence/reverified/rank12.json
+            data/solver_evidence/reverified/rank102.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish authenticated evidence and audit the exact live registry
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          shopt -s nullglob
+          files=(data/nl2_hu_b486_sb_checked_originals.json data/solver_evidence/NL2_B486_*.json.gz data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R12_*.json.gz data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R102_*.json.gz)
+          for rank in 12 102; do
+            ext="data/solver_evidence/reverified/rank$rank.json"
+            if test -f "$ext"; then files+=("$ext"); fi
+          done
+          for attempt in {1..8}; do
+            git fetch --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live="$RUNNER_TEMP/b486-current-$attempt"
+            git worktree add --quiet --detach "$live" FETCH_HEAD
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              registry=data/nl2_hu_multiboard_status_current.json
+              python3 tools/hu_apply_cert_extensions.py --out "$registry" || exit 2
+              node tools/hu_extension_runtime_test.cjs "$registry" || exit 2
+              git add "${files[@]}" "$registry" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json || exit 2
+              if ! git diff --cached --quiet; then
+                git commit -m 'B486: publish independently reverified SB versus BB turn and river pairs' || exit 2
+              fi
+              git push origin "HEAD:refs/heads/$branch" || exit 3
+            ) && result=0 || result=$?
+            if [ "$result" -eq 0 ]; then
+              cd "$live"
+              bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+              exit 0
+            fi
+            git worktree remove --force "$live"
+            if [ "$result" -ne 3 ]; then exit "$result"; fi
+          done
+          exit 1
