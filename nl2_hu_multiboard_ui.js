@@ -61,6 +61,9 @@ function render(){
          li.append(document.createTextNode(
            b.public_board+'（'+flavor+'）｜歷史 '+b.actual_exact_action_line
            +'｜SPR '+b.actual_spr
+           +(Number.isFinite(b.trainer_assumed_river_pot_bb) && Number.isFinite(b.trainer_assumed_river_effective_stack_bb)
+             ? '｜河牌底池／有效後手 '+b.actual_pot_bb+'／'+b.actual_effective_stack_bb+' bb（訓練表假設 '+
+               b.trainer_assumed_river_pot_bb+'／'+b.trainer_assumed_river_effective_stack_bb+' bb）' : '')
            +(b.restricted_flop_bet_sizes_pct?.length?'｜翻牌下注尺寸 '+b.restricted_flop_bet_sizes_pct.join(' / ')+'%':'')
            +(b.restricted_flop_bet_sizes_by_seat?'｜翻牌先手下注 '+b.restricted_flop_bet_sizes_by_seat.oop.join(' / ')+'%，後手下注 '+b.restricted_flop_bet_sizes_by_seat.ip.join(' / ')+'%':'')
            +(b.conditional_turn_oop_bet_sizes_pct?.length?'｜轉牌先手下注尺寸 '+b.conditional_turn_oop_bet_sizes_pct.join(' / ')+'%':'')

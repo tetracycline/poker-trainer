@@ -3643,15 +3643,55 @@
       "solver_profile": "SB_BB",
       "model_root_spr": 16.167,
       "model_node_spr": 3.667,
-      "reference_count": 0,
-      "references": [],
+      "reference_count": 3,
+      "references": [
+        {
+          "source_run_id": 45129965580,
+          "source_sha256": "febc2cebf8c58401d4888d4b5a01257b8b3842df0cc7de6ef6dd80dd7f8c68d5",
+          "spot": "SB_BB",
+          "family": "SRP",
+          "version": "gto",
+          "flop": "9c6h2d",
+          "turn": "4s",
+          "exact_solver_node_line": "b50 c/b50 c/x",
+          "flop_line": "b50 c",
+          "turn_spr": 3.666667,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
+        {
+          "source_run_id": 45129965580,
+          "source_sha256": "3562e3ba053eeb934c5c65e92662acf6866377b09c5f2d29ebf76b4ce3017ca4",
+          "spot": "SB_BB",
+          "family": "SRP",
+          "version": "gto",
+          "flop": "8s5d3c",
+          "turn": "2h",
+          "exact_solver_node_line": "b50 c/b50 c/x",
+          "flop_line": "b50 c",
+          "turn_spr": 3.666667,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
+        {
+          "source_run_id": 45129965580,
+          "source_sha256": "c78330b66903f30d0ca26434ab9c2b67b6eab7acdb7dd29388f90508fb284ada",
+          "spot": "SB_BB",
+          "family": "SRP",
+          "version": "gto",
+          "flop": "7h5c3s",
+          "turn": "2d",
+          "exact_solver_node_line": "b50 c/b50 c/x",
+          "flop_line": "b50 c",
+          "turn_spr": 3.666667,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        }
+      ],
       "status": "REFERENCE_ONLY_NOT_CERTIFIED",
       "blockers": [
         "MODEL_HAS_NO_EXACT_FLOP_TURN_RIVER",
         "MODEL_ACTION_AND_POT_HISTORY_NOT_MATCHED_TO_SOLVER",
         "MODEL_COMBO_REACH_NOT_DERIVED_FROM_EXACT_BOARD"
       ],
-      "note": "Fewer than three named flops survive the original two-seat action-path replay."
+      "note": "Exact GTO and separately solved hero lock on each named board. Generic texture rows remain approximate."
     },
     "ln-ipc-r_model-1at1re2": {
       "model_id": "ln-ipc-r_model-1at1re2",
