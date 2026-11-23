@@ -1,0 +1,65 @@
+name: B506 verify rank47 on three original LMP turn GTO and CO-IP lock pairs
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b506-rank47-original-turn-replay.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download the six pinned original GitHub archives and verify source identities
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/b506"
+          pins="$RUNNER_TEMP/b506/pins.json"
+          python3 tools/hu_b506_rank47_native_turns.py --pins > "$pins"
+          for id in $(jq -r 'keys[]' "$pins"); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$RUNNER_TEMP/b506/$id.json"
+            jq -e --arg id "$id" --slurpfile p "$pins" '
+              ($p[0][$id]) as $pin |
+              .id==($id|tonumber) and .name==$pin.name and .digest==("sha256:"+$pin.sha256)
+              and .workflow_run.id==$pin.run and .workflow_run.head_sha==$pin.head
+              and .workflow_run.repository_id==1438346845' "$RUNNER_TEMP/b506/$id.json" >/dev/null
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/b506/$id.zip"
+          done
+          python tools/hu_b506_rank47_native_turns.py --originals "$RUNNER_TEMP/b506"
+      - name: Rebuild current registry, audit both views and publish the exact three-board group
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          files=(data/solver_evidence/reverified/rank47.json data/nl2_hu_b506_locked_medium.json data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R47_*.json.gz)
+          test "${#files[@]}" = 7
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              bash tools/hu_exact_batch_audit.sh "$status"
+              git add -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B506: restore rank47 on three original GTO and CO-IP lock turn decisions'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1

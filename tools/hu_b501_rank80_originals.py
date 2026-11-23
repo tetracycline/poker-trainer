@@ -22,7 +22,7 @@ REPORT = DATA/"nl2_hu_b501_rank80_original_rivers.json"
 MEDIUM = DATA/"nl2_hu_b501_locked_medium.json"
 
 
-def replay(folder, artifact, meta, version):
+def load_limp_call(folder, artifact, meta, version, flop_line):
     file = folder/f"{artifact}.zip"
     assert sha(file.read_bytes()) == meta["sha256"]
     with ZipFile(file) as z:
@@ -34,7 +34,7 @@ def replay(folder, artifact, meta, version):
             "LMP_CO_BB","LMP",version,POOL,[])
         ranges = manifest["preflop_ranges"]
         assert ranges["source"] == "ASSUMED_EXPLICIT_169CLASS" and len(ranges["oop_169"]) == len(ranges["ip_169"]) == 169
-        c, = [c for c in manifest["cases"] if c["line"] == "b33 c"]
+        c, = [c for c in manifest["cases"] if c["line"] == flop_line]
         def original(path, digest):
             path = "solver/postflop/"+path
             raw, job = z.read(path), z.read(path[:-5]+".job.json")
@@ -43,8 +43,8 @@ def replay(folder, artifact, meta, version):
         root,rj,rj_sha = original(manifest["file_flop"],manifest["file_flop_sha256"])
         sub,j,j_sha = original(c["source_path"],c["source_sha256"])
     assert (root["flop"],root["pot"],root["stack"],rj["flop_oop"],rj["flop_ip"]) == (flop,250,9900,"33%,50%,75%,100%","33%,50%,75%,100%")
-    assert (sub["flop"],sub["turn"],sub["line0"],sub["pot"],sub["stack"]) == (flop,c["turn"],"b33 c",416,9817)
-    assert j["line0"] == ["b33","c","/"] and j["turn"] == c["turn"]
+    assert (sub["flop"],sub["turn"],sub["line0"],sub["pot"],sub["stack"]) == (flop,c["turn"],flop_line,416,9817)
+    assert j["line0"] == [*flop_line.split(),"/"] and j["turn"] == c["turn"]
     assert (j["turn_oop"],j["turn_ip"],j["river_ip"]) == ("50%,100%","50%,100%","50%,100%,a")
     inherited = manifest.get("gto_parent_source_run_id")
     patterns = manifest.get("locks", [])
@@ -58,7 +58,7 @@ def replay(folder, artifact, meta, version):
         assert 0 <= game["info"]["gto_expl_pct"] <= .5
         if hero is not None:
             assert expected and 0 <= game["info"]["hero_gap_pct"] <= .5
-    parent, = [n for n in root["nodes"] if n["line"]=="b33 c/" and n["board"][-2:]==c["turn"]]
+    parent, = [n for n in root["nodes"] if n["line"]==flop_line+"/" and n["board"][-2:]==c["turn"]]
     assert (parent["pot"],root["stack"]-max(parent["bets"])) == (j["pot"],j["stack"])
     for seat,k in enumerate(("oop_w","ip_w")):
         assert j[k] == [[h,w] for h,w in zip(root["hands"][seat],parent["wr"][seat],strict=True) if w>1e-4]
@@ -66,6 +66,13 @@ def replay(folder, artifact, meta, version):
     applied = [sum(x["nodes"] for x in g["info"].get("lock_stats",{}).values()) for g in (root,sub)]
     if version=="exp_ip":
         assert applied[1]>0 and scope["observed_marginal_source_nodes"]>0
+    return manifest, c, root, sub, rj, rj_sha, j_sha, inherited, scope, applied
+
+
+def replay(folder, artifact, meta, version):
+    manifest, c, root, sub, rj, rj_sha, j_sha, inherited, scope, applied = load_limp_call(
+        folder, artifact, meta, version, "b33 c")
+    flop = manifest["flop"]
     masks = game_reach(root,sub)[0]
     observations={}
     for n in sub["nodes"]:
