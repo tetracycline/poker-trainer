@@ -4839,15 +4839,55 @@
       "solver_profile": "SB_BB",
       "model_root_spr": 16.167,
       "model_node_spr": 2.833,
-      "reference_count": 0,
-      "references": [],
+      "reference_count": 3,
+      "references": [
+        {
+          "source_run_id": 44666285424,
+          "source_sha256": "a917a2047522326933adc6d1a2a2f07ef7d1ec1d778664e751460b601a0c5646",
+          "spot": "SB_BB",
+          "family": "SRP",
+          "version": "gto",
+          "flop": "As9h2d",
+          "turn": "Kd",
+          "exact_solver_node_line": "x b33 c/x b100 c/x",
+          "flop_line": "x b33 c",
+          "turn_spr": 2.84672,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
+        {
+          "source_run_id": 44736420272,
+          "source_sha256": "71a59216d3df2fcca55b9ddc13cb95f74933c84e2793a991f336d0a6bb6eded1",
+          "spot": "SB_BB",
+          "family": "SRP",
+          "version": "gto",
+          "flop": "As7h3d",
+          "turn": "Kd",
+          "exact_solver_node_line": "x b33 c/x b100 c/x",
+          "flop_line": "x b33 c",
+          "turn_spr": 2.84672,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
+        {
+          "source_run_id": 45111521959,
+          "source_sha256": "ff6d24aff98c94bb9f7154c42e85a533d059a029b897844e100be8b9b87d047b",
+          "spot": "SB_BB",
+          "family": "SRP",
+          "version": "gto",
+          "flop": "Ac8d2h",
+          "turn": "Tc",
+          "exact_solver_node_line": "x b33 c/x b100 c/x",
+          "flop_line": "x b33 c",
+          "turn_spr": 2.84672,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        }
+      ],
       "status": "REFERENCE_ONLY_NOT_CERTIFIED",
       "blockers": [
         "MODEL_HAS_NO_EXACT_FLOP_TURN_RIVER",
         "MODEL_ACTION_AND_POT_HISTORY_NOT_MATCHED_TO_SOLVER",
         "MODEL_COMBO_REACH_NOT_DERIVED_FROM_EXACT_BOARD"
       ],
-      "note": "Fewer than three named flops survive the original two-seat action-path replay."
+      "note": "Exact GTO and separately solved hero lock on each named board. Generic texture rows remain approximate."
     },
     "ln-ipc-r_model-2hq8dh": {
       "model_id": "ln-ipc-r_model-2hq8dh",
