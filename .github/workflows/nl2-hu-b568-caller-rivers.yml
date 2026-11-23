@@ -1,0 +1,147 @@
+name: B568 rank64 BB river decisions after two half-pot SB barrels
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b568-caller-rivers.yml'
+      - 'tools/hu_b568_caller_rivers.py'
+      - 'tools/hu_b568_caller_routes.cjs'
+      - 'tools/hu_b568_board_amounts.patch'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [9c6h2d, 8s5d3c, 7h5c3s]
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Solve the half-pot SB flop and both BB river policies
+        env:
+          RAYON_NUM_THREADS: 2
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          python tools/hu_b568_caller_rivers.py --solver pinned-solver --results "$RUNNER_TEMP/sources" \
+            --run "$GITHUB_RUN_ID" --flop "$FLOP" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B568-R64-${{ matrix.flop }}
+          path: ${{ runner.temp }}/sources/${{ matrix.flop }}
+          if-no-files-found: warn
+          retention-days: 90
+  verify:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions: {contents: write, actions: read}
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 'B568-R64-*'
+          path: ${{ runner.temp }}/sources
+      - name: Prepare the three current native workers
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          python -m pip install numpy phevaluator==0.5.3.1
+          for archive in "$RUNNER_TEMP"/sources/B568-R64-*; do
+            mv "$archive" "$RUNNER_TEMP/sources/${archive##*-}"
+          done
+      - name: Register reachable named decisions and both source policies atomically
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          registry=data/nl2_hu_multiboard_status_current.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch -q --no-tags origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          for generation in 1 2 3 4 5; do
+            git fetch -q --no-tags origin "$branch"
+            base=$(git rev-parse FETCH_HEAD)
+            git merge-base --is-ancestor "$GITHUB_SHA" "$base"
+            live=$(mktemp -d "$RUNNER_TEMP/b568.XXXXXX")
+            git worktree add --quiet --detach "$live" "$base"
+            (
+              cd "$live"
+              python tools/hu_b568_caller_rivers.py --solver "$GITHUB_WORKSPACE/pinned-solver" \
+                --results "$RUNNER_TEMP/sources" --run "$GITHUB_RUN_ID"
+              python tools/hu_apply_cert_extensions.py --out "$registry"
+              python - <<'PYREG'
+          import json
+          from pathlib import Path
+          report=json.loads(Path('data/nl2_hu_b568_caller_results.json').read_bytes())
+          group=report['paired']
+          assert 0<=report['count']==len({b['flop'] for b in group['boards']})<=3
+          if report['count']==3:
+              record=json.loads(Path('data/nl2_hu_multiboard_status_current.json').read_bytes())['records'][group['model_id']]
+              assert record['label']=='CERT-MULTIBOARD'
+              assert {b['public_board'] for b in record['certified_3_to_5_exact_flop_boards']}=={b['public_board'] for b in group['boards']}
+          for pin in group['pins']:
+              assert pin['rendered_decision_hands']
+              for h in pin['rendered_decision_hands']:
+                  assert all(h[k]['accepted_mask']>0 and abs(sum(h[k]['strategy'].values())-1)<1e-5 for k in ('gto','nl2'))
+          PYREG
+              node tools/hu_extension_runtime_test.cjs "$registry"
+              bash tools/hu_exact_batch_audit.sh "$registry"
+              python tools/hu_b491_incremental_medium.py
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b483_lock_medium_ui.cjs
+              node tools/hu_b485_medium_viewers.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              if test -f data/nl2_hu_b530_locked_medium.json; then node tools/hu_b530_history_rates_ui.cjs; fi
+              python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/current-medium-coverage.json"
+              git add -A -- data nl2_hu_multiboard_ui.js
+              git diff --cached --check
+              if ! git diff --cached --quiet; then
+                git commit -m 'B568: verify the BB river decision after two actual SB half-pot barrels'
+              fi
+            )
+            candidate=$(git -C "$live" rev-parse HEAD)
+            for attempt in 1 2 3 4 5; do
+              git fetch -q --no-tags origin "$branch"
+              tip=$(git rev-parse FETCH_HEAD)
+              git merge-base --is-ancestor "$base" "$tip"
+              if test "$base" != "$tip"; then
+                if ! git diff --quiet "$base" "$tip" -- . ':(exclude).github/workflows/*'; then break; fi
+                if test "$candidate" = "$base"; then exit 0; fi
+                git -C "$live" switch --quiet --detach "$tip"
+                git -C "$live" cherry-pick "$candidate"
+              fi
+              if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            done
+            git worktree remove "$live"
+          done
+          exit 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B568-decision-coverage
+          path: ${{ runner.temp }}/current-medium-coverage.json
