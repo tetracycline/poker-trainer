@@ -24,7 +24,7 @@ jobs:
           path: pinned-solver
           persist-credentials: false
       - uses: actions/setup-python@v5
-        with: {python-version: '3.12'}
+        with: {python-version: '3.11'}
       - run: python -m pip install numpy phevaluator==0.5.3.1
       - name: Recompute reach using the original GitHub flop archives and the native policy outputs
         env:

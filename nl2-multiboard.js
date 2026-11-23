@@ -18,24 +18,45 @@ function buildLinks(caseInfo,actual){
  src.textContent='原始 GitHub Actions run '+sourceRun(caseInfo);
  return src;
 }
+function namedRiverChoices(model) {
+ const choices = new Map();
+ for (const [i, board] of (model?.certified_3_to_5_exact_flop_boards || []).entries()) {
+   choices.set(String(i), board);
+   for (const [j, branch] of (board.optional_named_rivers || []).entries()) {
+     const other = branch.board, pin = branch.pin;
+     if (other.flop !== board.flop || other.turn !== board.turn ||
+         other.public_board === board.public_board || other.public_board.slice(0,8) !== board.public_board.slice(0,8) ||
+         other.actual_exact_action_line !== board.actual_exact_action_line || other.acting_seat !== board.acting_seat ||
+         other.source_run_id !== board.source_run_id || other.source_sha256 !== board.source_sha256 ||
+         pin.public_board !== other.public_board || pin.original_GTO_SHA256 !== other.source_sha256 ||
+         !other.nl2_locked_variants.some(v => v.sha256 === pin.actual_NL2_SHA256 &&
+           board.nl2_locked_variants.some(parent => parent.version === v.version &&
+             parent.run_id === v.run_id && parent.sha256 === v.sha256)) ||
+         !pin.rendered_decision_hands?.length) throw Error('同一翻牌的河牌對照找不到對應的原始來源');
+     choices.set(i+'.'+j, {...other, optionalRiver:branch});
+   }
+ }
+ return choices;
+}
 function selectedModel(){
  chosenModel=models[Number(el('model').value)]||null;
  el('board').replaceChildren();
  if(!chosenModel){setMessage('尚無任何滿足三至五張不同代表翻牌的來源。');return;}
- chosenModel.certified_3_to_5_exact_flop_boards.forEach((b,i)=>{
-   opt(el('board'),String(i),b.public_board+' / '+b.actual_exact_action_line+
-     '｜SPR '+fmt(b.actual_spr)+'｜'+b.flop_texture);
- });
- if(q.has('board')){
-   const i=chosenModel.certified_3_to_5_exact_flop_boards.findIndex(b=>b.public_board===q.get('board'));
-   if(i>=0)el('board').value=String(i);
+ const choices = namedRiverChoices(chosenModel);
+ for (const [key, board] of choices) {
+   const prefix = board.optionalRiver ? '同一翻牌的另一河牌　' : '';
+   opt(el('board'),key,prefix+board.public_board+' / '+board.actual_exact_action_line+
+     '｜SPR '+fmt(board.actual_spr)+'｜'+board.flop_texture);
+   if (q.get('board') === board.public_board) el('board').value = key;
  }
  selectBoard();
 }
 let originalBoard=null, leadResult=null, boardRequest=0;
 function selectBoard(){
  const request=++boardRequest;
- originalBoard=chosenModel?.certified_3_to_5_exact_flop_boards[Number(el('board').value)]||null;
+ const selection=String(el('board').value);
+ originalBoard=(selection.includes('.') ? namedRiverChoices(chosenModel).get(selection) :
+   chosenModel?.certified_3_to_5_exact_flop_boards[Number(selection)]) || null;
  chosenBoard=originalBoard;leadResult=null;
  const tree=el('lead-tree'),box=el('lead-tree-label'),source=globalThis.nl2HalfPotLeads;
  if(box)box.hidden=true;
@@ -114,7 +135,7 @@ async function getProof(run){
  return getProofForSource(run,null);
 }
 async function getProofForSource(run,source){
- const pin=chosenBoard?.leadComparison?.pin||status.exact_source_extensions?.[chosenModel?.model_id]?.find(p=>
+ const pin=chosenBoard?.optionalRiver?.pin||chosenBoard?.leadComparison?.pin||status.exact_source_extensions?.[chosenModel?.model_id]?.find(p=>
    p.flop===chosenBoard.flop && p.turn===chosenBoard.turn && p.public_board===chosenBoard.public_board);
  let batch, expectedDigest;
  const extra=source && chosenBoard.nl2_locked_variants.find(v=>
@@ -225,8 +246,8 @@ async function selectVersion(){
    medium.textContent='';
    setMessage('正在核對來源與雙方可達性……');
    try{
-     const audit=globalThis.nl2LockedMedium, report=chosenBoard?.leadComparison
-       ?globalThis.nl2HalfPotLeads.reachReport(chosenModel,chosenBoard.leadComparison):await audit.load();
+     const audit=globalThis.nl2LockedMedium, report=chosenBoard?.optionalRiver?.reach_report || (chosenBoard?.leadComparison
+       ?globalThis.nl2HalfPotLeads.reachReport(chosenModel,chosenBoard.leadComparison):await audit.load());
      if(request!==versionRequest)return;
      jointReport=report;
      const row=audit.lookup(report,chosenModel,chosenBoard,source);
@@ -478,7 +499,7 @@ function selectNode(){
  if(chosenModel.frequency_rank===218&&status.B465_rank218_four_original_sources){
    lines.push('四組彩虹翻牌驗證此下注線。練習表僅啟用單色面／強聽牌，該格仍為 APPROX。');
  }
- const pin=chosenBoard.leadComparison?.pin || origin?.reach_comparison || status.exact_source_extensions?.[chosenModel.model_id]?.find(v=>
+ const pin=chosenBoard.optionalRiver?.pin || chosenBoard.leadComparison?.pin || origin?.reach_comparison || status.exact_source_extensions?.[chosenModel.model_id]?.find(v=>
    v.public_board===node.public_board && v.flop===chosenBoard.flop && v.turn===chosenBoard.turn &&
    node.exact_node_line===chosenBoard.actual_exact_action_line && node.acting_seat===chosenBoard.acting_seat);
  if(pin && Number.isSafeInteger(pin.GTO_strict_combos) && Number.isSafeInteger(pin.NL2_strict_combos)){
