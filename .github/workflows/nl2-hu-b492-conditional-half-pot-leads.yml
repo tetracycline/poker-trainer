@@ -1,0 +1,152 @@
+name: B492 conditional half-pot leads from original reached turn ranges
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b492-conditional-half-pot-leads.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [SB_BB_9s6h3d_Ts, SB_BB_Jh9d6s_3c, SB_BB_Ks7h2d_9d, SB_BB_8s8h3d_5s, SB_BB_As9h2d_Kd, BTN_BB_Ks7s2s_9d, BTN_BB_Js9h4d_Ts, BTN_BB_KsQh4d_Tc, LMP_CO_BB_4s4h2d_8s, LMP_CO_BB_7s5h3d_6c, LMP_CO_BB_3s3h2d_7d]
+    env:
+      GROUP: ${{ matrix.group }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Download this group's two pinned original artifacts
+        id: originals
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/originals"
+          for id in $(python3 tools/hu_b492_half_pot_leads.py --group "$GROUP" --list-artifacts); do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+            gh api "$api" > "$RUNNER_TEMP/originals/$id.json"
+            gh api "$api/zip" > "$RUNNER_TEMP/originals/$id.zip"
+          done
+      - name: Compile pinned Rust solver
+        id: compile
+        run: |
+          set -euo pipefail
+          git clone https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd pinned-solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve conditional GTO from the pinned GTO turn boundary
+        run: |
+          python3 tools/hu_b492_half_pot_leads.py --group "$GROUP" --version gto --solver pinned-solver \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver --originals "$RUNNER_TEMP/originals" \
+            --work "$RUNNER_TEMP/B492-source-$GROUP-gto" --run-id "$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B492-source-${{ matrix.group }}-gto
+          path: |
+            ${{ runner.temp }}/B492-source-${{ matrix.group }}-gto/outcome.json
+            ${{ runner.temp }}/B492-source-${{ matrix.group }}-gto/NL2_B492_*.zip
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Solve conditional EXP against the measured street-specific pool
+        if: ${{ !cancelled() && steps.originals.outcome == 'success' && steps.compile.outcome == 'success' }}
+        run: |
+          python3 tools/hu_b492_half_pot_leads.py --group "$GROUP" --version exp_oop --solver pinned-solver \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver --originals "$RUNNER_TEMP/originals" \
+            --work "$RUNNER_TEMP/B492-source-$GROUP-exp_oop" --run-id "$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B492-source-${{ matrix.group }}-exp_oop
+          path: |
+            ${{ runner.temp }}/B492-source-${{ matrix.group }}-exp_oop/outcome.json
+            ${{ runner.temp }}/B492-source-${{ matrix.group }}-exp_oop/NL2_B492_*.zip
+          if-no-files-found: warn
+          retention-days: 90
+  gate:
+    needs: solve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: B492-source-*
+          path: ${{ runner.temp }}/b492-gate
+      - name: Authenticate original ranges and jobs, conditional output, legal pairs and exact half-pot edge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/originals"
+          for id in $(python3 tools/hu_b492_half_pot_leads.py --list-artifacts); do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+            gh api "$api" > "$RUNNER_TEMP/originals/$id.json"
+            gh api "$api/zip" > "$RUNNER_TEMP/originals/$id.zip"
+          done
+          python3 tools/hu_b492_half_pot_leads.py --assemble --solver pinned-solver --originals "$RUNNER_TEMP/originals" \
+            --work "$RUNNER_TEMP/b492-gate" --run-id "$GITHUB_RUN_ID"
+          python3 tools/hu_b492_half_pot_leads.py --verify-published
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B492-conditional-source-comparison
+          path: |
+            data/nl2_hu_b492_half_pot_leads.json
+            data/solver_evidence/NL2_B492_*.zip
+            data/solver_evidence/NL2_MULTIBOARD_B492_*.json.gz
+          if-no-files-found: error
+          retention-days: 90
+      - name: Full exact audit and publish paired comparison to the live draft branch
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          shopt -s nullglob
+          files=(data/nl2_hu_b492_half_pot_leads.json data/solver_evidence/NL2_B492_*.zip data/solver_evidence/NL2_MULTIBOARD_B492_*.json.gz)
+          for attempt in 1 2 3; do
+            git fetch --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add --detach "$live" FETCH_HEAD
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python3 tools/hu_b492_half_pot_leads.py --verify-published
+              node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+              bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+              git add -f -- "${files[@]}"
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B492: publish conditional half-pot leads with exact original reach and paired source evidence'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1

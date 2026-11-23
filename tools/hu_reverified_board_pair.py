@@ -37,7 +37,7 @@ def source_case(model, source, public, line, seat):
     return c,hands,reach['compatible_hole_card_pairs']
 
 
-def emit_board(model,gto,lock,public_board,line,texture):
+def emit_board(model,gto,lock,public_board,line,texture,*,viewer_code=None):
     """Return (board, pin) on success or (None, None) when either original lacks a compatible deal."""
     seat=int(lock['version']=='exp_ip')
     assert gto['version']=='gto' and lock['version'] in ('exp_ip','exp_oop')
@@ -50,7 +50,9 @@ def emit_board(model,gto,lock,public_board,line,texture):
     run,locked_run=gto['run'],lock['run']
     rank=model['frequency_rank'];flop=g['flop']
     def publish(source,cases):
-        code=f'REVERIFIED_R{rank}_{source["run"]}_{flop}'
+        code=viewer_code or f'REVERIFIED_R{rank}_{source["run"]}_{flop}'
+        if not code.replace("_","").isalnum() or (viewer_code and run!=locked_run):
+            raise ValueError("A named comparison requires a unique code and one shared solve run")
         bundle=dict(schema='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1',source_run_id=source['run'],
                     original_archive_sha256=source['archive_sha256'],errors=[],no_generic_texture_certification=True,artifacts=[dict(cases=cases)])
         blob=gzip.compress(compact(bundle),mtime=0)
