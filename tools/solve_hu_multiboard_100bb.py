@@ -131,7 +131,7 @@ def main():
         help='Match the pooled bet-size and raise fallback to the actual flop, turn, or river before applying it')
     a.add_argument('--allow-turn-lead', action='store_true',
         help='Solve an alternative turn tree with OOP leads after an IP half-pot flop stab and call')
-    a.add_argument('--turn-line-policy',choices=('default','b100only','checked-b50only','checkcheck'),default='default',
+    a.add_argument('--turn-line-policy',choices=('default','b100only','checked-b50only','checkcheck','checked-b33-b50'),default='default',
         help='Select exact turn continuations for extraction from the default 50/100 tree')
     a.add_argument('--turn-size-menu',choices=('default','river-gaps','exact-b66-only','exact-b50-only','33-50-75-100'),default='default',
         help='river-gaps: predeclared 33/66/75pct turn size tree for x x / turn bet-call river MODEL proofs')
@@ -268,7 +268,11 @@ def main():
     if args.turn_size_menu=='33-50-75-100':
         pipeline.SUB.update(turn_oop='33%,50%,75%,100%',turn_ip='33%,50%,75%,100%')
         pipeline.TURN_LINES=['b33 c','b50 c','b75 c','b100 c']
-    if args.turn_line_policy != 'default':
+    if args.turn_line_policy == 'checked-b33-b50':
+        if args.turn_size_menu != '33-50-75-100':
+            a.error('The 33%/50% checked-turn extraction requires the four-size turn menu')
+        pipeline.TURN_LINES = ['x b33 c','x b50 c']
+    elif args.turn_line_policy != 'default':
         if args.turn_size_menu!='default':
             a.error('targeted turn-line extraction requires default turn size menu (50/100)')
         pipeline.TURN_LINES=[{'b100only':'b100 c', 'checked-b50only':'x b50 c', 'checkcheck':'x x'}[args.turn_line_policy]]
