@@ -16,3 +16,16 @@ B19 的 CO 局部鎖按順序嘗試規則。三街面對同尺寸下注共用一
 B19 的 b50 與 b100 分別匹配 145 個求解樹節點。兩者皆為跨街數字。過牌後對手下注率與尺寸拆分沿用原始來源所列假設。
 
 [原始 CFR Run](https://github.com/tetracycline/poker-trainer/actions/runs/44762388523) · [釘定 NL2 玩家池](https://github.com/tetracycline/poker-solver/blob/abe310c3aad02dd4a7c77fb2831801fd490cf51b/inputs/pool_stats.json)
+
+## 同牌面逐街鎖頻重算
+
+獨立 Rust 重算在相同父節點、範圍、底池與尺寸下鎖定 CO；BB 有 689 個可達組合。半池具備 371 個合格組合。各動作的來源加權頻率為 x 17.837%、b50 40.69%、b100 41.473%。
+
+| 街 | 面對尺寸 | 重算後棄／加 % | Rust 匹配節點 |
+|---|---:|---:|---:|
+| 轉牌 | 50% | 44.0 / 8.3 | 1 |
+| 轉牌 | 100% | 57.8 / 6.7 | 1 |
+| 河牌 | 50% | 53.1 / 9.3 | 144 |
+| 河牌 | 100% | 64.6 / 6.2 | 144 |
+
+[獨立重算 Run](https://github.com/tetracycline/poker-trainer/actions/runs/45097676214) · [原始 Rust 與逐組合證據](../data/solver_evidence/NL2_B472_R1_STREET_LOCK.json.gz)

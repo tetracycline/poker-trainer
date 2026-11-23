@@ -1,0 +1,167 @@
+{
+  "run": 45097676214,
+  "model": "ln-iso-lmp_t_model-19hfq8v",
+  "source_sha256": "a947232fc8253fcfc63355e5db9cea5522c20039b51d733d62f824b898af2655",
+  "original_source_sha256": "04374eed1d73fbc9eab3f7b89e8f9671f95420660e61a9a47d48634ab9967978",
+  "old_job_sha256": "8e8b97a51056c9756c48e92d8bdd27d8107f034be087f55baf2cc8e150ff5474",
+  "pool_sha256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+  "achieved": [
+    {
+      "street": 2,
+      "token": "b50",
+      "fold_pct": 44.0,
+      "raise_pct": 8.3,
+      "nodes": 1
+    },
+    {
+      "street": 2,
+      "token": "b100",
+      "fold_pct": 57.8,
+      "raise_pct": 6.7,
+      "nodes": 1
+    },
+    {
+      "street": 3,
+      "token": "b50",
+      "fold_pct": 53.1,
+      "raise_pct": 9.3,
+      "nodes": 144
+    },
+    {
+      "street": 3,
+      "token": "b100",
+      "fold_pct": 64.6,
+      "raise_pct": 6.2,
+      "nodes": 144
+    }
+  ],
+  "new_compatible_combos": 689,
+  "compatible_hole_card_pairs": 177699,
+  "gto_expl_pct": 0.49355313181877136,
+  "hero_gap_pct": 0.4404745101928711,
+  "action_frequencies_pct": {
+    "x": 17.837,
+    "b50": 40.69,
+    "b100": 41.473
+  },
+  "b50": {
+    "eligible": 371,
+    "preferred": 201,
+    "best_ev_b50_fraction_pct": 54.178,
+    "low_count": 154,
+    "middle_count": 146,
+    "high_count": 71,
+    "mid_reach_mass_fraction_pct": 39.372,
+    "candidate": true,
+    "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+  },
+  "lock_scope": {
+    "villain_decision_nodes": 40,
+    "pattern_matched_nodes": 25,
+    "observed_marginal_source_nodes": 14,
+    "imputed_assumption_nodes": 11,
+    "unmatched_nodes": 15,
+    "coverage_pct": 62.5,
+    "all_villain_nodes_locked": false,
+    "matching_examples": [
+      {
+        "line": "b50 c/x",
+        "board": "2d4h4s8s",
+        "first_pattern": ".*/x$",
+        "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+        "source_observed_count": 0,
+        "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+      },
+      {
+        "line": "b50 c/b50",
+        "board": "2d4h4s8s",
+        "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b50$",
+        "source": "NL2.HU_facing_bet[2].by_size[34-55%]",
+        "source_observed_count": 144567,
+        "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+      },
+      {
+        "line": "b50 c/b100",
+        "board": "2d4h4s8s",
+        "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b100$",
+        "source": "NL2.HU_facing_bet[2].by_size[81-110%]",
+        "source_observed_count": 43254,
+        "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+      },
+      {
+        "line": "b50 c/x b50 c/x",
+        "board": "2d4h4s8s5c",
+        "first_pattern": ".*/x$",
+        "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+        "source_observed_count": 0,
+        "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+      },
+      {
+        "line": "b50 c/x b50 c/x",
+        "board": "2d4h4s8s3h",
+        "first_pattern": ".*/x$",
+        "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+        "source_observed_count": 0,
+        "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+      },
+      {
+        "line": "b50 c/x b100 c/x",
+        "board": "2d4h4s8s5c",
+        "first_pattern": ".*/x$",
+        "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+        "source_observed_count": 0,
+        "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+      },
+      {
+        "line": "b50 c/x b100 c/x",
+        "board": "2d4h4s8s3h",
+        "first_pattern": ".*/x$",
+        "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+        "source_observed_count": 0,
+        "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+      },
+      {
+        "line": "b50 c/x x/x",
+        "board": "2d4h4s8s5c",
+        "first_pattern": ".*/x$",
+        "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+        "source_observed_count": 0,
+        "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+      },
+      {
+        "line": "b50 c/x x/b50",
+        "board": "2d4h4s8s5c",
+        "first_pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+        "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+        "source_observed_count": 64272,
+        "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+      },
+      {
+        "line": "b50 c/x x/b100",
+        "board": "2d4h4s8s5c",
+        "first_pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b100$",
+        "source": "NL2.HU_facing_bet[3].by_size[81-110%]",
+        "source_observed_count": 43634,
+        "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+      },
+      {
+        "line": "b50 c/x x/x",
+        "board": "2d4h4s8s3h",
+        "first_pattern": ".*/x$",
+        "source": "ASSUMED_CHECKED_TO_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+        "source_observed_count": 0,
+        "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+      },
+      {
+        "line": "b50 c/x x/b50",
+        "board": "2d4h4s8s3h",
+        "first_pattern": "^(?:[^/]*/){2}(?:[^/]+ )?b50$",
+        "source": "NL2.HU_facing_bet[3].by_size[34-55%]",
+        "source_observed_count": 64272,
+        "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+      }
+    ],
+    "caveat": "Regex/source bucket matching does not prove the Rust driver locked every combo nor its conditional opponent behavior."
+  },
+  "archive_sha256": "a22cc39120567f4d91099ca6571d1ce2715512942368c2412c6d457457c95af3"
+}
