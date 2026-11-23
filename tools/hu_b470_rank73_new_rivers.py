@@ -67,7 +67,7 @@ def audit_patterns(game, job, manifest, pool):
 def original(directory, flop, turn, version, *, batch="B470", spot=SPOT, flop_line=FLOP_LINE,
              flop_policy="checked-b33only", turn_policy="b100only", turn_extract="b100 c",
              root_pot=550, root_stack=9750, flop_lines=None, turn_extracts=None,
-             turn_mode="default", turn_menu="50%,100%"):
+             turn_mode="default", turn_menu="50%,100%", preflop_source="PINNED_POKER_SOLVER_PREFLOP_CFR"):
     expected_flop = [flop_line] if flop_lines is None else list(flop_lines)
     expected_turn = [turn_extract] if turn_extracts is None else list(turn_extracts)
     base = directory / f"NL2-{batch}-{flop}-{version}"
@@ -79,7 +79,7 @@ def original(directory, flop, turn, version, *, batch="B470", spot=SPOT, flop_li
     pool = json.loads(pool_bytes)["NL2"]
     m = json.loads((evidence / f"{flop}-{version}.json").read_bytes())
     assert (m["schema"], m["spot"], m["flop"], m["version"]) == ("NL2_MULTIBOARD_AUTHENTIC_SOURCE_V1", spot, flop, version)
-    assert m["preflop_ranges"]["source"] == "PINNED_POKER_SOLVER_PREFLOP_CFR"
+    assert m["preflop_ranges"]["source"] == preflop_source
     assert m["flop_size_profile"] == "full" and not m["restricted_tree_assumption"]
     assert m["flop_line_policy"] == flop_policy and m["selected_lines"] == expected_flop
     assert m["turn_line_policy"] == turn_policy and m["selected_turn_lines"] == expected_turn

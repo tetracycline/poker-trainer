@@ -22,7 +22,7 @@ TARGETS = {
 }
 
 
-def replay_tree(source, flop_line, size):
+def replay_tree(source, flop_line, size, turn_geometry):
     root, sub = source["root"], source["subgame"]
     if sub is None:
         return "SKIPPED_NO_LEGAL_TURN_CASE"
@@ -38,7 +38,7 @@ def replay_tree(source, flop_line, size):
     else:
         reply, = (n for n in root["nodes"] if len(n["board"]) == 6 and n["line"] == "x" and n["player"] == 1)
         assert "x" in reply["acts"]
-    assert (sub["pot"], sub["stack"]) == ((1300,9425) if flop_line == "b50 c" else (650,9750))
+    assert (sub["pot"], sub["stack"]) == turn_geometry
     action = f"b{size}"
     if action not in turn_root["acts"]:
         return "REQUESTED_TURN_SIZE_ABSENT_FROM_SOLVED_MENU"
@@ -55,9 +55,16 @@ def replay_tree(source, flop_line, size):
 
 def board_pair(rank, source_pair, archive_pin, texture):
     _, _, flop_line, size, spr, pot, stack = TARGETS[rank]
+    turn_geometry = (1300,9425) if flop_line == "b50 c" else (650,9750)
+    return paired_river_board(rank, source_pair, archive_pin, texture, flop_line, size, spr, pot, stack,
+                              turn_geometry, "PINNED_PREFLOP_CFR", False)
+
+
+def paired_river_board(rank, source_pair, archive_pin, texture, flop_line, size, spr, pot, stack,
+                       turn_geometry, source_kind, assumed_preflop):
     line = f"{flop_line}/b{size} c/"
     report = dict(flop=archive_pin["flop"], turn=archive_pin["turn"], archive_sha256=archive_pin["archive_sha256"],
-                  source_gates={s["version"]: replay_tree(s,flop_line,size) for s in source_pair}, rivers={})
+                  source_gates={s["version"]: replay_tree(s,flop_line,size,turn_geometry) for s in source_pair}, rivers={})
     if any(r != "CHECK_RIVER_DEALS" for r in report["source_gates"].values()):
         return report
     available = []
@@ -86,7 +93,7 @@ def board_pair(rank, source_pair, archive_pin, texture):
         report["result"] = "NO_PAIRED_EXACT_RIVER"
         return report
     public = eligible[0]
-    parent = dict(public_board=public[:8], source_kind="PINNED_PREFLOP_CFR", assumed_preflop_ranges=False, flop_texture=texture)
+    parent = dict(public_board=public[:8], source_kind=source_kind, assumed_preflop_ranges=assumed_preflop, flop_texture=texture)
     code = f'R{rank}_{archive_pin["source_run_id"]}_{archive_pin["flop"]}'
     b,p = export_board(archive_pin, parent, source_pair, rank, line, spr, False,
                        archive_digest=archive_pin["archive_sha256"], viewer_code=code, public_board=public)
