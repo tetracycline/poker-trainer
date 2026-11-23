@@ -139,7 +139,7 @@ def solve_or_replay(args, old, pipeline, pool, out):
     return source, path, rates
 
 
-def register(out, model, board, old, source, raw_path, rates, observations, masks):
+def register(out, model, board, old, source, raw_path, rates, observations, masks, *, batch="B504", river_only=None):
     rank = model['frequency_rank']
     sub = source['subgame']
     target = (board['public_board'], board['actual_exact_action_line'], board['acting_seat'])
@@ -157,12 +157,13 @@ def register(out, model, board, old, source, raw_path, rates, observations, mask
         return dict(summary, status='CONVERGENCE_OUTSIDE_GATE')
     if not reach['compatible_hole_card_pairs']:
         return dict(summary, status='ZERO_JOINT_REACH')
-    if {r['street'] for r in rates} != {2,3} or not scope['observed_marginal_source_nodes']:
+    expected_streets = {3} if river_only is not None else {2,3}
+    if {r['street'] for r in rates} != expected_streets or not scope['observed_marginal_source_nodes']:
         return dict(summary, status='MISSING_VERIFIED_TURN_OR_RIVER_LOCK')
     case, _, pairs = source_case(model, source, identity['public_board'], identity['line'], identity['acting_seat'])
     node, = case['nodes']
     assert pairs == reach['compatible_hole_card_pairs'] and node['strictly_reachable_masks_b64'] == reach['compatible_action_mask_b64']
-    name = f'B504_R{rank}_NATIVE_STREET_LOCK'
+    name = f'{batch}_R{rank}_NATIVE_STREET_LOCK'
     viewer_sha = packed(out/f'NL2_MULTIBOARD_{name}.json.gz',dict(schema='NL2_HU_MULTIBOARD_PINNED_CFR_CERT_EVIDENCE_V1',
                         source_run_id=source['run'], errors=[], no_generic_texture_certification=True, artifacts=[dict(cases=[case])]))
     lock = dict(version=source['version'], run_id=source['run'], sha256=source['source_sha256'], viewer_archive_code=name,
@@ -175,10 +176,13 @@ def register(out, model, board, old, source, raw_path, rates, observations, mask
                 villain_observed_pattern_node_share_pct=scope['coverage_pct'], source_not_real_per_combo_observation=True,
                 strictly_reachable_combos=reach['strict_legal_combos'], medium_50pct_eligible_combos=reach['b50']['eligible'],
                 b50_nonpolarized_relative_equity_research_candidate=reach['b50']['candidate'])
+    if river_only is not None:
+        lock.update(variant_label='轉牌下注率採假設・河牌用實測棄牌／加注率',
+                    turn_checked_to_bet_assumption=river_only)
     overlay = dict(model_id=model['model_id'], flop=old['flop'], turn=old['turn'], **identity, gto_run=board['source_run_id'],
                    gto_sha256=board['source_sha256'], parent_lock_run=old['run'], parent_lock_sha256=old['source_sha256'],
                    original_package=raw_path.name, original_package_sha256=source['archive_sha256'], lock=lock)
-    write(out/f'lock_variants/rank{rank}_b504.json', overlay)
+    write(out/f'lock_variants/rank{rank}_{batch.lower()}.json', overlay)
     obs = dict(reach, spot=old['spot'], family=model['family'], flop=old['flop'], turn=old['turn'], version=source['version'],
                source_run_id=source['run'], source_sha256=source['source_sha256'], archive_sha256=source['archive_sha256'],
                root_sha256=old['root_sha256'], gto_gap_pct=stats['gto_expl_pct'], locked_hero_gap_pct=stats['hero_gap_pct'], lock_scope=scope,

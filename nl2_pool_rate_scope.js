@@ -24,6 +24,11 @@
     if(lock.measurement_policy==='STREET_SPECIFIC_POOL_MARGINALS' && lock.viewer_sha256 &&
        lock.pool_sha256===report.pool_sha256 && Array.isArray(lock.applied_street_rates)){
       details.appendChild(element('summary','NL2 鎖 '+lock.run_id+'｜已核實逐街池頻率'));
+      const assumed=lock.turn_checked_to_bet_assumption;
+      if(assumed){
+        details.appendChild(element('p','轉牌過牌給對手時，下注率採用 '+(100*assumed.bet).toFixed(0)+
+          '% 假設。這條規則在轉河子樹共套用於 '+assumed.applied_subgame_nodes+' 個節點。'));
+      }
       for(const r of lock.applied_street_rates){
         const rate=report.pool_by_action_and_street[r.token]?.[r.street-1];
         if(r.nodes>0 && Number.isSafeInteger(r.n) && r.n>=500 &&
