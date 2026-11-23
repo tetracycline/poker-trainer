@@ -70,7 +70,9 @@ def verify_native_lock(model, board, item, case, node, locked, originals, packag
         row = refs.get(source_key(model["model_id"], identity))
         assert row and row["status"] == "POSITIVE_JOINT_REACH", "Native-menu variant needs both exact positive original replays"
         assert row["compatible_hole_card_pairs"] >= row["strict_legal_combos"] > 0
-        assert row["source_actions"] == board["exact_node_actions"] and "b50" in row["source_actions"]
+        assert row["source_actions"] == board["exact_node_actions"]
+        if "b50" not in row["source_actions"]:
+            assert row["source_actions"] == ["x"] and row["b50"]["eligible"] == 0 and not row["b50"]["candidate"]
         return row
     observation(originals, board["source_run_id"], board["source_sha256"])
     row = observation(locked, lock["run_id"], lock["sha256"])

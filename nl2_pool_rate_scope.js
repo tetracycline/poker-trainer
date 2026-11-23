@@ -26,7 +26,13 @@
       details.appendChild(element('summary','NL2 鎖 '+lock.run_id+'｜已核實逐街池頻率'));
       for(const r of lock.applied_street_rates){
         const rate=report.pool_by_action_and_street[r.token]?.[r.street-1];
-        if(rate) details.appendChild(element('p',streets[r.street-1]+' '+r.token.slice(1)+'% pot：'+
+        if(r.nodes>0 && Number.isSafeInteger(r.n) && r.n>=500 &&
+           Number.isFinite(r.target_fold_pct) && Number.isFinite(r.target_raise_pct)){
+          const action=r.token==='r'?'下注後面對加注':'面對 '+r.token.slice(1)+'% 底池下注';
+          details.appendChild(element('p',streets[r.street-1]+' '+action+'，'+r.n.toLocaleString('zh-TW')+
+            ' 次池決策。實測棄／加 '+r.target_fold_pct.toFixed(1)+'%／'+r.target_raise_pct.toFixed(1)+
+            '%。Rust 在 '+r.nodes+' 個節點套用，棄／加 '+r.fold_pct.toFixed(2)+'%／'+r.raise_pct.toFixed(2)+'%。'));
+        }else if(rate) details.appendChild(element('p',streets[r.street-1]+' '+r.token.slice(1)+'% pot：'+
           rate.n.toLocaleString('zh-TW')+' 次池決策，Rust 鎖後棄／加 '+r.fold_pct+'%／'+r.raise_pct+'%。'));
       }
       parent.appendChild(details);return;

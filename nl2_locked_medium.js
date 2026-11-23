@@ -145,7 +145,9 @@
       const base=lookup(report,model,board,{version:'gto',source_run_id:board.source_run_id,source_sha256:board.source_sha256});
       if(row?.status!=='POSITIVE_JOINT_REACH'||base?.status!=='POSITIVE_JOINT_REACH'||
          !same(row.source_actions,board.exact_node_actions)||!same(base.source_actions,row.source_actions)||
-         !row.source_actions.includes('b50')||row.strict_legal_combos!==source.strictly_reachable_combos||
+         (!row.source_actions.includes('b50') && (!same(row.source_actions,['x']) ||
+          [base,row].some(r=>r.b50?.eligible!==0 || r.b50.candidate!==false)))||
+         row.strict_legal_combos!==source.strictly_reachable_combos||
          !(row.subgame_applied_rust_lock_nodes>0))throw Error('附加鎖頻缺少原始選單的雙方可達性證據');
     }
     if(!row)return null;

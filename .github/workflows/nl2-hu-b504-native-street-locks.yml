@@ -1,0 +1,92 @@
+name: B504 measured native turn and river locks on six root-only decisions
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b504-native-street-locks.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify the three original locked flop boundaries and all six native decisions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/originals"
+          for id in 14594206088 14591994917 14530962451; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/originals/$id.zip"
+          done
+          python3 tools/hu_b504_root_only_locks.py --originals "$RUNNER_TEMP/originals" --solver pinned-solver
+      - name: Solve the three original turn trees with street-specific NL2 response frequencies
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          args=(--solver pinned-solver --run "$GITHUB_RUN_ID" --originals "$RUNNER_TEMP/originals")
+          python3 tools/hu_b504_root_only_locks.py "${args[@]}" --out "$RUNNER_TEMP/fresh" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          python3 tools/hu_b504_root_only_locks.py "${args[@]}" --out "$RUNNER_TEMP/replay" --replay "$RUNNER_TEMP/fresh"
+          diff -r "$RUNNER_TEMP/fresh/data" "$RUNNER_TEMP/replay/data"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B504-native-street-locks
+          path: ${{ runner.temp }}/fresh/data
+          if-no-files-found: error
+          retention-days: 90
+  publish:
+    needs: solve
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/download-artifact@v4
+        with:
+          name: B504-native-street-locks
+          path: ${{ runner.temp }}/verified/data
+      - name: Rebuild, audit and publish the cumulative exact-board registry
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          registry=data/nl2_hu_multiboard_status_current.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          verified="$RUNNER_TEMP/verified"
+          mapfile -t files < <(cd "$verified" && find data -type f)
+          for attempt in 1 2 3; do
+            git fetch --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            cp -a "$verified/data/." "$live/data/"
+            (
+              cd "$live"
+              python3 tools/hu_apply_cert_extensions.py --out "$registry"
+              node tools/hu_extension_runtime_test.cjs "$registry"
+              bash tools/hu_exact_batch_audit.sh "$registry"
+              git add -f -- "${files[@]}" "$registry" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B504: publish native NL2 locks and half-pot evidence by exact decision'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
