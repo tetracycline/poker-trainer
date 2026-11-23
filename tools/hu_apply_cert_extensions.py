@@ -199,7 +199,8 @@ def main():
     variants = [read(p) for p in sorted((SOURCE/"lock_variants").glob("*.json"))]
     sources, locked, originals, links = read_replays()
     for item in variants:
-        append_lock(registry, item, locked, originals)
+        if not item.get("after_reverification"):
+            append_lock(registry, item, locked, originals)
     seen, seen_gto = set(), set()
 
     def apply_replays(model_ids=None):
@@ -222,7 +223,12 @@ def main():
         restored = promote(registry, deepcopy(repair))
         restored.pop("remaining_exact_board_evidence", None)
         update_references(restored, xwalk, refs)
-    repair_changes = apply_replays({r["model_id"] for r in repairs})
+    repaired_ids = {r["model_id"] for r in repairs}
+    for item in variants:
+        if item.get("after_reverification"):
+            assert item["model_id"] in repaired_ids
+            append_lock(registry, item, locked, originals)
+    repair_changes = apply_replays(repaired_ids)
     assert seen == set(locked) and seen_gto == set(originals), "Raw source missing from the named registry boards"
     labels = collections.Counter(r["label"] for r in registry["records"].values())
     registry.update(CERT_MULTIBOARD=labels["CERT-MULTIBOARD"], APPROX=labels["APPROX"])

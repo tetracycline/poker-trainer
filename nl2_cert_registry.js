@@ -79,7 +79,7 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
     extensions[e.model_id] = e.pins;
   }
   for (const e of manifest.models) promote(e);
-  for (const item of manifest.lock_variants || []) {
+  function appendLock(item, reachUpdates) {
     const m=records[item.model_id], v=item.lock;
     if(m?.label!=='CERT-MULTIBOARD') throw Error('附加鎖頻缺少原始認證模型');
     const boards=m.certified_3_to_5_exact_flop_boards;
@@ -92,7 +92,7 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
        !/^[A-Za-z0-9_]+$/.test(v.viewer_archive_code||'') || !Number.isFinite(v.true_hero_gap_pct) || v.true_hero_gap_pct<0 || v.true_hero_gap_pct>.5)
       throw Error('附加鎖頻的公牌、原始 GTO 或獨立求解來源不符');
     if(v.requires_native_joint_replay){
-      const replay=manifest.board_reach_updates[item.model_id]?.find(r=>r.public_board===b.public_board &&
+      const replay=reachUpdates[item.model_id]?.find(r=>r.public_board===b.public_board &&
         r.line===b.actual_exact_action_line && r.seat===b.acting_seat && r.gto_run===b.source_run_id && r.gto_sha256===b.source_sha256);
       const lock=replay?.locks.find(l=>l.run_id===v.run_id && l.sha256===v.sha256);
       if(!positive(replay?.gto?.strictly_reachable_combos) || !lock || lock.strictly_reachable_combos!==v.strictly_reachable_combos ||
@@ -100,6 +100,10 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
     }
     records[item.model_id]={...m,certified_3_to_5_exact_flop_boards:boards.map(x=>
       x===b?{...x,nl2_locked_variants:[...x.nl2_locked_variants,v]}:x)};
+  }
+  const variants=manifest.lock_variants || [];
+  for(const item of variants){
+    if(!item.after_reverification) appendLock(item, manifest.board_reach_updates);
   }
   function applyReplays(changes){
     for (const [id, updates] of Object.entries(changes)) {
@@ -168,7 +172,14 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
     promote(repair);
     delete records[repair.model_id].remaining_exact_board_evidence;
   }
-  applyReplays(manifest.reverified_board_reach_updates || {});
+  const repairedIds=new Set(manifest.reverified_models.map(m=>m.model_id));
+  const repairUpdates=manifest.reverified_board_reach_updates || {};
+  for(const item of variants){
+    if(!item.after_reverification) continue;
+    if(!repairedIds.has(item.model_id)) throw Error('附加鎖頻缺少重新驗證的模型');
+    appendLock(item, repairUpdates);
+  }
+  applyReplays(repairUpdates);
   const models = Object.values(records);
   const cert = models.filter(m=>m.label==='CERT-MULTIBOARD').length;
   const approx = models.filter(m=>m.label==='APPROX').length;

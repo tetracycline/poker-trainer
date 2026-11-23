@@ -1,0 +1,150 @@
+name: B529 verify street-specific NL2 locks on nine previously reverified decisions
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b529-reverified-locks.yml', 'tools/hu_b529_reverified_locks.py', 'data/nl2_hu_b529_originals.json']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        key: ["7c1b47dda6b0", "4588b6c37706", "845868a114c5", "b5773fc9d1b5"]
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Solve one additional native boundary with the pinned Rust driver
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEY: ${{ matrix.key }}
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          mkdir -p "$RUNNER_TEMP/originals"
+          args=(--solver pinned-solver --originals "$RUNNER_TEMP/originals" --out "$RUNNER_TEMP/fresh" --run "$GITHUB_RUN_ID")
+          aid=$(jq -er --arg key "$KEY" '.[$key] | select(.reuse_batch == null) | .artifact_id' data/nl2_hu_b529_originals.json)
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$aid/zip" > "$RUNNER_TEMP/originals/$aid.zip"
+          python tools/hu_b529_reverified_locks.py "${args[@]}" --key "$KEY" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B529-native-${{ matrix.key }}
+          path: ${{ runner.temp }}/fresh/data/solver_evidence/NL2_B529_*.json.gz
+          if-no-files-found: error
+          retention-days: 90
+  verify:
+    runs-on: ubuntu-latest
+    needs: solve
+    if: ${{ !cancelled() }}
+    timeout-minutes: 24
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 'B529-native-*'
+          merge-multiple: true
+          path: ${{ runner.temp }}/fresh/data/solver_evidence
+      - name: Read the four completed B525 native fits from their pinned run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api="repos/$GITHUB_REPOSITORY/actions/runs/45118205682"
+          gh api "$api" | jq -e '.head_sha == "5682379f0bad43f4794f1bb443e63072b1758681" and .path == ".github/workflows/nl2-hu-b525-shared-native-locks.yml" and .run_attempt == 1' >/dev/null
+          src="$RUNNER_TEMP/b525"
+          dst="$RUNNER_TEMP/fresh/data/solver_evidence"
+          mkdir -p "$src" "$dst"
+          gh api "$api/artifacts?per_page=100" > "$src/artifacts.json"
+          for key in $(jq -r 'to_entries[] | select(.value.reuse_batch == "B525") | .key' data/nl2_hu_b529_originals.json); do
+            shard=$(jq -r --arg key "$key" 'keys | index($key) % 10' data/nl2_hu_b525_originals.json)
+            name="B525-native-$shard"
+            id=$(jq -r --arg n "$name" '.artifacts[] | select(.name == $n and (.expired | not)) | .id' "$src/artifacts.json")
+            test -n "$id" || continue
+            digest=$(jq -er --arg n "$name" '.artifacts[] | select(.name == $n) | .digest | ltrimstr("sha256:")' "$src/artifacts.json")
+            if ! test -f "$src/$id.zip"; then
+              gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$src/$id.zip"
+              echo "$digest  $src/$id.zip" | sha256sum --check --status
+            fi
+            filename="NL2_B525_${key}.json.gz"
+            if unzip -Z1 "$src/$id.zip" | grep -Fx "$filename" >/dev/null; then
+              unzip -p "$src/$id.zip" "$filename" > "$dst/$filename"
+            fi
+          done
+      - name: Replay every named original strategy through both players' previous actions and card blockers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/originals"
+          for aid in $(jq -r '[.[].artifact_id] | unique[]' data/nl2_hu_b529_originals.json); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$aid/zip" > "$RUNNER_TEMP/originals/$aid.zip"
+          done
+          python tools/hu_b529_reverified_locks.py --originals "$RUNNER_TEMP/originals" --solver pinned-solver \
+            --run "$GITHUB_RUN_ID" --replay "$RUNNER_TEMP/fresh" --out "$RUNNER_TEMP/verified"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B529-verified-certified-decisions
+          path: ${{ runner.temp }}/verified
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish verified native locks on the current PR branch and audit all routes
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          verified="$RUNNER_TEMP/verified"
+          mapfile -t files < <(cd "$verified" && find data -type f | sort)
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            for file in "${files[@]}"; do
+              if test -e "$live/$file"; then cmp "$verified/$file" "$live/$file"; fi
+            done
+            cp -a "$verified/data/." "$live/data/"
+            (
+              cd "$live"
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              git add -f -- "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B529: publish verified NL2 fits and half-pot evidence on reverified boards'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then
+              exit 0
+            fi
+            git worktree remove "$live"
+          done
+          exit 1

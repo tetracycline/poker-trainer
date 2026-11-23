@@ -12,7 +12,7 @@ async function run() {
   const result=await ctx.nl2ApplyVerifiedExtensions(base);
   assert.equal(result.CERT_MULTIBOARD,registry.CERT_MULTIBOARD);
   assert.equal(result.APPROX,registry.APPROX);
-  for(const id of Object.keys(manifest.board_reach_updates || {})){
+  for(const id of new Set([...Object.keys(manifest.board_reach_updates), ...Object.keys(manifest.reverified_board_reach_updates || {})])){
     const browserRecord=JSON.parse(JSON.stringify(result.records[id]));
     assert.deepEqual(browserRecord,registry.records[id],id);
     if(browserRecord.label==='APPROX'){
@@ -66,7 +66,8 @@ async function run() {
     ctx.jointReach={row:{...observed,compatible_action_mask_b64:''}};
     assert.throws(()=>ctx.verifiedCase(source,original));
     const missing=structuredClone(manifest);
-    const updates=missing.board_reach_updates[item.model_id].find(r=>r.public_board===item.public_board&&r.line===item.line&&r.seat===item.acting_seat);
+    const phase=item.after_reverification ? missing.reverified_board_reach_updates : missing.board_reach_updates;
+    const updates=phase[item.model_id].find(r=>r.public_board===item.public_board&&r.line===item.line&&r.seat===item.acting_seat);
     updates.locks=updates.locks.filter(r=>r.sha256!==source.sha256);
     ctx.fetch=async()=>({ok:true,json:async()=>missing});
     await assert.rejects(()=>ctx.nl2ApplyVerifiedExtensions(base));
