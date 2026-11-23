@@ -33,6 +33,16 @@ def reply_rules(pool, flop_line, pfr, family, actions, seat):
         return [dict(pattern="^"+flop_line+"/b(50|100)$", table="HU_facing_bet[2].by_pot[limped]",
                      size="all", **rate)]
     table = pool["postflop_HU"][family + "_PFR_" + pfr.upper()]
+    if seat and flop_line == "x x" and family=="3BP":
+        if pfr=="oop":
+            assert actions==["x","b50","b100"]
+            obs=pool["HU_facing_bet"]["2"]["by_pot"]["3BP"]
+            assert obs["n"]==53669
+            return [dict(pattern="^x x/x b(50|100)$",table="HU_facing_bet[2].by_pot[3BP]",size="all",**obs)]
+        assert pfr=="ip" and actions==["x","b33","b50","b75"]
+        obs=table["vs_delayed_cbet"]
+        assert obs["n"]==3776
+        return [dict(pattern="^x x/x b(33|50|75)$",table="vs_delayed_cbet",size="all",**obs)]
     if seat and flop_line == "x x":
         assert family == "SRP" and pfr == "ip" and actions == ["x","b50","b100"]
         rate = table["vs_delayed_cbet"]
@@ -142,7 +152,9 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
         masks=game_reach(root,game)[0]
         row=proof(root,game,node,masks)
         legal=base64.b64decode(row["compatible_action_mask_b64"],validate=True)
-        hands={h:round(node["strat"][len(legal)+i],6) for i,(h,m) in enumerate(zip(game["hands"][seat],legal,strict=True)) if m & 2}
+        medium_index=actions.index("b50")
+        hands={h:round(node["strat"][medium_index*len(legal)+i],6)
+               for i,(h,m) in enumerate(zip(game["hands"][seat],legal,strict=True)) if m & (1<<medium_index)}
         assert len(hands)==row["b50"]["eligible"] and row["compatible_hole_card_pairs"]>=row["strict_legal_combos"]>0
         return dict(legal_combos=row["strict_legal_combos"],compatible_pairs=row["compatible_hole_card_pairs"],
                     actions=node["acts"],half_pot=row["b50"],eligible_hand_frequencies=hands)
@@ -152,7 +164,7 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
         assert parent_job["root_no_bet"] is False
         for game in (original, locked):
             opener, = (n for n in game["nodes"] if (n["board"],n["line"],n["player"])==(public,turn_root,0))
-            assert opener["acts"] == ["x","b50","b100"]
+            assert opener["acts"][0]=="x" and len(opener["acts"])>1
     else:
         assert before["legal_combos"]==after["legal_combos"] and before["compatible_pairs"]==after["compatible_pairs"]
     assert before["half_pot"]["eligible"]==board["medium_50pct_eligible_combos"]

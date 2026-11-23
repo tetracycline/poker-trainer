@@ -27,7 +27,9 @@ from run10_common import classes, hcls
 from verify_hu_multiboard_100bb import lock_scope
 
 DATA = Path('data')
-BET = {109: 75, 110: 50, 111: 33}
+BETS = {619: {109: 75, 110: 50, 111: 33}, 639: {95: 75, 96: 33, 99: 50}}
+FLOP_LINE = {619: 'x x', 639: 'b50 c'}
+FLOP_PAID = {619: 0, 639: 325}
 TEMPLATE = 'NL2_B538_JH9S4C_QC_45119866932.json.gz'
 TEMPLATE_SHA = '716e87c13e000aa3d8593bce99ba4a87157d8e57fd05e672589547d8c9ce6a93'
 
@@ -46,10 +48,12 @@ def reproduce(job, original, driver, cache):
     assert cache[key] == normalized(original), (job['flop'], job['out'])
 
 
-def sources(rank, spec, template, pool, pipeline, run, driver, cache):
+def sources(batch, rank, spec, template, pool, pipeline, run, driver, cache):
     flop, turn = spec['flop'], spec['turn']
-    pct = BET[rank]
-    code = f'B619_R{rank}_{flop.upper()}'
+    pct = BETS[batch][rank]
+    flop_line, flop_paid = FLOP_LINE[batch], FLOP_PAID[batch]
+    turn_pot, turn_stack = 650 + 2*flop_paid, 9750 - flop_paid
+    code = f'B{batch}_R{rank}_{flop.upper()}'
     archive = EVIDENCE / f'NL2_{code}.zip'
     assert sha(archive.read_bytes()) == spec['archive_sha256']
     with ZipFile(archive) as bundle:
@@ -57,19 +61,20 @@ def sources(rank, spec, template, pool, pipeline, run, driver, cache):
     assert set(raw) == {s+ext for s in ('root', 'gto', 'native') for ext in ('.job.json', '.json')}
     assert turn in spec['root_turns'] and spec['river'] in spec['river_extracts']
     root_job = dict(template['root_job'], flop=flop, out='result.json', flop_oop='50%', flop_ip='50%',
-                    extract=[dict(prefix=[], street=True)] + [dict(prefix=['x','x',t], street=False, raw=True) for t in spec['root_turns']])
+                    extract=[dict(prefix=[], street=True)] + [dict(prefix=flop_line.split()+[t], street=False, raw=True) for t in spec['root_turns']])
     assert root_job == json.loads(raw['root.job.json'])
     root = json.loads(raw['root.json'])
     assert (root['flop'], root['pot'], root['stack']) == (flop, 650, 9750)
     assert 0 <= root['info']['gto_expl_pct'] <= .5 and not root['info'].get('lock_stats')
     if driver:
         reproduce(root_job, root, driver, cache)
-    for line, seat in [('', 0), ('x', 1)]:
+    first, second = flop_line.split()
+    for line, seat, price, bets, action in [('', 0, 650, [0,0], first), (first, 1, 650+flop_paid, [flop_paid,0], second)]:
         node, = [n for n in root['nodes'] if n['line'] == line]
-        assert (node['player'], node['pot'], node['bets']) == (seat, 650, [0,0]) and 'x' in node['acts']
-    parent, = [n for n in root['nodes'] if n['line'] == 'x x/' and n['board'].endswith(turn)]
-    assert (parent['pot'],parent['bets'],parent['player']) == (650,[0,0],0)
-    job = dict(template['subgame_job'], flop=flop, turn=turn, line0=['x','x','/'], pot=650, stack=9750, out='gto.json',
+        assert (node['player'], node['pot'], node['bets']) == (seat, price, bets) and action in node['acts']
+    parent, = [n for n in root['nodes'] if n['line'] == flop_line+'/' and n['board'].endswith(turn)]
+    assert (parent['pot'],parent['bets'],parent['player']) == (turn_pot,[flop_paid,flop_paid],0)
+    job = dict(template['subgame_job'], flop=flop, turn=turn, line0=flop_line.split()+['/'], pot=turn_pot, stack=turn_stack, out='gto.json',
                turn_oop=f'{pct}%', turn_ip='50%,100%', river_oop='50%,75%,100%,a', river_ip='50%,75%,100%,a',
                root_no_bet=False, iters=2200, rank_pct=.45, target_pct=.45,
                extract=[dict(prefix=[], street=True)] + [dict(prefix=[f'b{pct}', 'c', r], street=True) for r in spec['river_extracts']])
@@ -88,9 +93,9 @@ def sources(rank, spec, template, pool, pipeline, run, driver, cache):
         sub = json.loads(result)
         if driver:
             reproduce(expected, sub, driver, cache)
-        assert (sub['flop'], sub['pot'], sub['stack']) == (flop,650,9750)
+        assert (sub['flop'], sub['pot'], sub['stack']) == (flop,turn_pot,turn_stack)
         assert sub['nodes'][0]['board'] == parent['board'] and 0 <= sub['info']['gto_expl_pct'] <= .5
-        sub.update(line0='x x', turn=turn, rivers=spec['river_extracts'])
+        sub.update(line0=flop_line, turn=turn, rivers=spec['river_extracts'])
         source.update(subgame=sub, source_sha256=sha(result))
     ginfo, linfo = (s['subgame']['info'] for s in (gto, locked))
     assert not ginfo.get('lock_stats') and 0 <= linfo['hero_gap_pct'] <= .5
@@ -100,18 +105,20 @@ def sources(rank, spec, template, pool, pipeline, run, driver, cache):
     return (gto, locked), parent['board'] + spec['river']
 
 
-def decision(source, public, pct, route, spr):
+def decision(source, public, pct, route, spr, require_displayed_action=False):
     sub = source['subgame']
     bet = f'b{pct}'
-    paid = (650*pct+50)//100
-    line = f'x x/{bet} c/'
-    steps = [(public[:8], 'x x/', 0, 650, [0,0], bet),
-             (public[:8], 'x x/'+bet, 1, 650+paid, [paid,0], 'c'),
-             (public, line, 0, 650+2*paid, [paid,paid], 'b50')]
+    turn_pot, turn_stack = sub['pot'], sub['stack']
+    paid = (turn_pot*pct+50)//100
+    turn_line = sub['line0']+'/'
+    line = f'{turn_line}{bet} c/'
+    steps = [(public[:8], turn_line, 0, turn_pot, [0,0], bet),
+             (public[:8], turn_line+bet, 1, turn_pot+paid, [paid,0], 'c'),
+             (public, line, 0, turn_pot+2*paid, [paid,paid], 'b50')]
     for board, path, seat, pot, bets, action in steps:
         node, = [n for n in sub['nodes'] if (n['board'],n['line'],n['player']) == (board,path,seat)]
         assert (node['pot'],node['bets']) == (pot,bets) and action in node['acts']
-    assert abs((9750-paid)/(650+2*paid)/spr-1) <= .05
+    assert abs((turn_stack-paid)/(turn_pot+2*paid)/spr-1) <= .05
     root, info = source['root'], sub['info']
     row = proof(root, sub, node, game_reach(root,sub)[0])
     row.update(version=source['version'],spot='UTG_CO',family='SRP',flop=sub['flop'],turn=sub['turn'],
@@ -135,6 +142,10 @@ def decision(source, public, pct, route, spr):
         keys = [f'{board_row(public[:end])}:{COLUMNS.index(label)}' for end, label in zip((6, 8, 10), labels, strict=True)]
         if any(key not in route[street] for key, street in zip(keys, ('flop', 'turn', 'river'), strict=True)):
             continue
+        if require_displayed_action:
+            wanted = {'過': 'x', '下注 ¾': 'b75'}[route['river'][keys[-1]]]
+            if wanted not in actions or not mask & (1 << actions.index(wanted)):
+                continue
         weights = [max(0.0, node['strat'][i * len(masks) + index]) for i in range(len(actions))]
         total = sum(weights)
         assert total > 0
@@ -146,12 +157,14 @@ def decision(source, public, pct, route, spr):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--batch', type=int, choices=tuple(BETS), default=619)
     parser.add_argument('--solver', required=True, type=Path)
     parser.add_argument('--run', type=int)
     parser.add_argument('--reproduce-flop')
     parser.add_argument('--out', type=Path)
     args = parser.parse_args()
     assert args.run is None or args.run > 0 and not args.reproduce_flop
+    batch = args.batch
     solver = args.solver.resolve()
     assert subprocess.check_output(['git','-C',solver,'rev-parse','HEAD'],text=True).strip() == SOLVER
     py = solver/'postflop/py'
@@ -175,25 +188,33 @@ def main():
     pool = json.loads(poolraw)['NL2']
     registry = json.loads((DATA/'nl2_hu_multiboard_status_current.json').read_bytes())['records']
     contracts = json.loads((DATA/'nl2_hu_verified_extensions.json').read_bytes())['trainer_route_contract']['routes']
-    routes = json.loads(subprocess.check_output(['node','tools/hu_b619_utg_routes.cjs']))
-    specs = json.loads((DATA/'nl2_hu_b619_utg_inputs.json').read_bytes())
+    routes = json.loads(subprocess.check_output(['node','tools/hu_b619_utg_routes.cjs',str(batch)]))
+    specs = json.loads((DATA/f'nl2_hu_b{batch}_utg_inputs.json').read_bytes())
     report, cache = [], {}
-    medium = dict(schema='NL2_HU_B619_ORIGINAL_LOCKED_MEDIUM_V1', references={}, gto_references={})
+    medium = dict(schema=f'NL2_HU_B{batch}_ORIGINAL_LOCKED_MEDIUM_V1', references={}, gto_references={})
     for key, entries in specs.items():
         rank, route = int(key), routes[key]
-        pct = BET[rank]
-        line = f'x x/b{pct} c/'
+        pct = BETS[batch][rank]
+        line = f'{FLOP_LINE[batch]}/b{pct} c/'
         model = registry[route['id']]
         assert model['frequency_rank'] == rank
         assert 1 <= len(entries) <= 5 and len({suit_isomorphism_class(s['flop']) for s in entries}) == len(entries)
         group = dict(rank=rank,model_id=route['id'],boards=[],pins=[])
+        prior_path = EVIDENCE / 'reverified' / f'rank{rank}.json'
+        published_runs = {}
+        if args.run and prior_path.exists():
+            prior = json.loads(prior_path.read_bytes())
+            assert prior['model_id'] == route['id']
+            published_runs = {(p['flop'], p['archive_sha256']): p['source_run_id'] for p in prior['pins']}
         for spec in entries:
             flop = spec['flop']
             if args.reproduce_flop and flop != args.reproduce_flop:
                 continue
-            pair, public = sources(rank,spec,template,pool,pipeline,args.run,driver,cache)
+            # Reproducing identical published inputs retains their original verification run.
+            source_run = published_runs.get((flop, spec['archive_sha256']), args.run)
+            pair, public = sources(batch,rank,spec,template,pool,pipeline,source_run,driver,cache)
             assert compatible(contracts[route['id']],dict(public_board=public,actual_exact_action_line=line,acting_seat=0))
-            records = [decision(s,public,pct,route,model['assumed_model_node_spr']) for s in pair]
+            records = [decision(s, public, pct, route, model['assumed_model_node_spr'], require_displayed_action=batch == 639) for s in pair]
             rows, hands = zip(*records, strict=True)
             common = []
             for hand in sorted(hands[0].keys() & hands[1].keys()):
@@ -206,11 +227,11 @@ def main():
                                compatible_pairs=[r['compatible_hole_card_pairs'] for r in rows],locked_half_pot_candidate=rows[1]['b50']['candidate']))
             if args.run and len(entries) >= 3:
                 gto, locked = pair
-                board,pin = emit_board(model,gto,locked,public,line,texture(flop),viewer_code=f'B619_R{rank}_{flop.upper()}')
+                board,pin = emit_board(model,gto,locked,public,line,texture(flop),viewer_code=f'B{batch}_R{rank}_{flop.upper()}')
                 board.update(source_run_role='VERIFICATION_OF_LOCAL_NATIVE_RESULTS',origin_solve_run_id=None,restricted_flop_bet_sizes_pct=[50],
                              flop_bet_size_menu='50%',conditional_turn_oop_bet_sizes_pct=[pct],conditional_turn_ip_bet_sizes_pct=[50,100])
                 board['nl2_locked_variants'][0].update(source_run_role=board['source_run_role'],origin_solve_run_id=None,pool_sha256=POOL,
-                    measurement_policy='STREET_SPECIFIC_POOL_MARGINALS',applied_street_rates=rates(locked),gto_parent_source_run_id=args.run,
+                    measurement_policy='STREET_SPECIFIC_POOL_MARGINALS',applied_street_rates=rates(locked),gto_parent_source_run_id=source_run,
                     gto_parent_source_sha256=gto['root_sha256'],viewer_archive_code=pin['viewer_archive_code'],viewer_sha256=pin['viewer_sha256'])
                 pin.update(rendered_decision_hands=common,source_run_role=board['source_run_role'],template_archive_sha256=TEMPLATE_SHA)
                 group['boards'].append(board)
@@ -224,7 +245,7 @@ def main():
     if args.out:
         args.out.write_bytes(json_bytes(report))
     if args.run:
-        (DATA/'nl2_hu_b619_locked_medium.json').write_bytes(json_bytes(medium))
+        (DATA/f'nl2_hu_b{batch}_locked_medium.json').write_bytes(json_bytes(medium))
 
 
 if __name__ == '__main__':

@@ -37,18 +37,26 @@ function incoming(source, target, label) {
   return keys;
 }
 const root = 'ln-opfr-f_cbet-1ihx52e';
-const parent = 'ln-opfr-t_model-1ocorr7';
-const targets = {
+const batch = Number(process.argv[2] || 619);
+assert.ok([619, 639].includes(batch));
+const parent = batch === 619 ? 'ln-opfr-t_model-1ocorr7' : 'ln-opfr-t_model-1hmsxaw';
+const turnPot = batch === 619 ? 6.5 : 13;
+const turnStack = batch === 619 ? 97.5 : 94.25;
+const targets = batch === 619 ? {
   109: ['ln-opfr-r_model-1txz51y', '下注 ¾', 0.75],
   110: ['ln-opfr-r_model-bt63wt', '下注 ½', 0.50],
   111: ['ln-opfr-r_model-psu0y9', '下注 ⅓', 1 / 3]
+} : {
+  95: ['ln-opfr-r_model-107wn32', '下注 ¾', 0.75],
+  96: ['ln-opfr-r_model-18g2rvt', '下注 ⅓', 1 / 3],
+  99: ['ln-opfr-r_model-dfs9l1', '下注 ½', 0.5]
 };
 const output = {};
 for (const [rank, [id, label, fraction]] of Object.entries(targets)) {
   const model = nodes.get(id);
   assert.equal(model.source, parent);
-  assert.deepEqual([model.facts.root.spot, model.facts.pot, model.facts.stack], ['UTG_CO', Number((6.5 * (1 + 2 * fraction)).toFixed(3)), Number((97.5 - 6.5 * fraction).toFixed(3))]);
-  const flop = incoming(root, parent, '過');
+  assert.deepEqual([model.facts.root.spot, model.facts.pot, model.facts.stack], ['UTG_CO', Number((turnPot * (1 + 2 * fraction)).toFixed(3)), Number((turnStack - turnPot * fraction).toFixed(3))]);
+  const flop = incoming(root, parent, batch === 619 ? '過' : '下注 ½');
   const turn = incoming(parent, id, label);
   assert.deepEqual([...new Set(turn)].sort(), Array.from(model.allowed).sort());
   const river = {};
