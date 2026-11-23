@@ -29,7 +29,7 @@ def prior_group():
     return {k: prior[k] for k in ("rank", "model_id", "line", "spot", "actor", "boards", "pins")}
 
 
-def native_rivers(s):
+def native_rivers(s, *, gto_root=False):
     root, turn = s["root"], s["subgame"]
     assert (root["pot"], root["stack"]) == (650, 9750)
     for game in (root, turn):
@@ -37,7 +37,9 @@ def native_rivers(s):
             continue
         if not 0 <= game["info"]["gto_expl_pct"] <= .5:
             return "GTO_GAP_OUTSIDE_THRESHOLD", set()
-        if s["version"] == "exp_oop" and not 0 <= game["info"]["hero_gap_pct"] <= .5:
+        if gto_root and game is root:
+            assert not game["info"].get("lock_stats") and game["info"].get("hero_gap_pct") is None
+        elif s["version"] == "exp_oop" and not 0 <= game["info"]["hero_gap_pct"] <= .5:
             return "HERO_GAP_OUTSIDE_THRESHOLD", set()
     if turn is None:
         return "NO_LEGAL_TURN_CASE", set()
@@ -57,10 +59,10 @@ def native_rivers(s):
     return ("CHECK_LEGAL_DEALS" if nodes else "NO_EXACT_RIVER_NODE"), {n["board"] for n in nodes}
 
 
-def read_available(downloads, flop, turn):
+def read_available(downloads, flop, turn, batch="B479"):
     sources, missing = [], {}
     for version in VERSIONS:
-        folder = downloads / f"NL2-B479-{flop}-{version}"
+        folder = downloads / f"NL2-{batch}-{flop}-{version}"
         path = folder / "trainer/evidence" / f"{flop}-{version}.json"
         if not path.is_file():
             missing[version] = "MISSING_MANIFEST"
@@ -70,7 +72,7 @@ def read_available(downloads, flop, turn):
             missing[version] = dict(reason="SOLVER_FAILURE", manifest_sha256=sha(path.read_bytes()),
                                     errors=[e["reason"] for e in manifest["failures"]])
             continue
-        sources.append(original(downloads, flop, turn, version, batch="B479", spot="UTG_CO", flop_line="b50 c",
+        sources.append(original(downloads, flop, turn, version, batch=batch, spot="UTG_CO", flop_line="b50 c",
                                 flop_policy="oop-b50only", turn_policy="checkcheck", turn_extract="x x",
                                 root_pot=650, root_stack=9750))
     return sources, missing
@@ -100,12 +102,12 @@ def classify(pair, pin):
     return report
 
 
-def process(downloads, flop, turn, run, group):
-    sources, missing = read_available(downloads, flop, turn)
+def process(downloads, flop, turn, run, group, batch="B479", texture="HIGH"):
+    sources, missing = read_available(downloads, flop, turn, batch)
     report = dict(flop=flop, turn=turn, missing_originals=missing, selected_public_board=None)
     if not sources:
         return report
-    code = f"B479_R146_{flop.upper()}"
+    code = f"{batch}_R146_{flop.upper()}"
     pack = dict(run_id=run, solver=SOLVER, rust=RUST, flop=flop, turn=turn, source_arrays=sources)
     encoded = gzip.compress(compact(pack), compresslevel=6, mtime=0)
     (EVIDENCE / f"NL2_{code}.json.gz").write_bytes(encoded)
@@ -119,7 +121,7 @@ def process(downloads, flop, turn, run, group):
     report.update(classify(sources, pin))
     public = report["selected_public_board"]
     if public:
-        parent = dict(public_board=public[:8], source_kind="PINNED_PREFLOP_CFR", assumed_preflop_ranges=False, flop_texture="HIGH")
+        parent = dict(public_board=public[:8], source_kind="PINNED_PREFLOP_CFR", assumed_preflop_ranges=False, flop_texture=texture)
         board, evidence = export_board(pin, parent, sources, 146, LINE, MODEL_SPR, False, archive_digest=pin["archive_sha256"],
                                        viewer_code=f"R146_{run}_{flop}", public_board=public)
         assert (board["actual_pot_bb"], board["actual_effective_stack_bb"], board["acting_seat"]) == (13, 94.25, 0)
