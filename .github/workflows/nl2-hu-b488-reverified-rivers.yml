@@ -1,0 +1,90 @@
+name: B488 original river re-verification for ranks 85, 112, 177 and 256
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b488-reverified-rivers.yml'
+      - 'tools/hu_b488_*'
+      - 'data/nl2_hu_b488_reverified_file_sha256.json'
+permissions:
+  actions: read
+  contents: write
+jobs:
+  replay-and-audit:
+    timeout-minutes: 22
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Recompute all twelve river decisions and both seat-specific GTO and pool source proofs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/originals"
+          for run in $(python3 tools/hu_b488_archive_reevaluation.py --list-runs); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/artifacts?per_page=100" > "$RUNNER_TEMP/originals/$run.json"
+          done
+          for id in $(python3 tools/hu_b488_archive_reevaluation.py --list-artifacts); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/originals/$id.zip"
+          done
+          python3 tools/hu_b488_archive_reevaluation.py --downloads "$RUNNER_TEMP/originals" --solver pinned-solver
+          node tools/hu_b488_model_routes.cjs
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          pins=json.loads(Path('data/nl2_hu_b488_reverified_file_sha256.json').read_bytes())
+          assert len(pins)==16
+          for path,wanted in pins.items():
+              assert hashlib.sha256(Path(path).read_bytes()).hexdigest()==wanted,path
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B488-twelve-original-pairs-and-masks
+          path: |
+            data/solver_evidence/reverified/rank85.json
+            data/solver_evidence/reverified/rank112.json
+            data/solver_evidence/reverified/rank177.json
+            data/solver_evidence/reverified/rank256.json
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R85_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R112_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R177_*.json.gz
+            data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R256_*.json.gz
+          if-no-files-found: error
+          retention-days: 90
+      - name: Apply verified models to the live registry and audit every source and route
+        run: |
+          set -euo pipefail
+          branch=fix/nl2-hu-lines-audit-20261118
+          status=data/nl2_hu_multiboard_status_current.json
+          mapfile -t files < <(python3 -c "import json; print(*json.load(open('data/nl2_hu_b488_reverified_file_sha256.json')),sep='\n')")
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add --detach "$live" FETCH_HEAD
+            cp --parents "${files[@]}" "$live/"
+            (
+              cd "$live"
+              python3 tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              bash tools/hu_exact_batch_audit.sh "$status"
+              git add "${files[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              if ! git diff --cached --quiet; then
+                git commit -m 'B488: recover four models from twelve archived positive GTO and NL2 river pairs'
+              fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
