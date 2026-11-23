@@ -4,6 +4,7 @@ const report=read('data/nl2_hu_b583_frozen_rivers.json');
 const models=read('data/nl2_hu_multiboard_status_current.json').records;
 const element=()=>({children:[],textContent:'',appendChild(child){this.children.push(child);}});
 const ctx=vm.createContext({document:{createElement:element},fetch:async path=>{
+  if(path==='data/nl2_hu_b587_raw_river_weights.json')return {ok:true,json:async()=>({schema:'NL2_HU_B587_RAW_RIVER_RANGE_RECOVERY_V1',records:[]})};
   assert.equal(path,'data/nl2_hu_b583_frozen_rivers.json');
   return {ok:true,json:async()=>report};
 }});

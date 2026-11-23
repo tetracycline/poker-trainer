@@ -1,0 +1,40 @@
+name: B582 replay three rank29 roots and audit all CERT boards
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b582-rank29-reach.yml'
+      - 'tools/hu_b582_rank29*'
+      - 'data/nl2_hu_b582_rank29*'
+      - 'data/solver_evidence/NL2_B582_R29_*.zip'
+permissions: {contents: read}
+jobs:
+  verify-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, fetch-depth: 0, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Replay rank29 policy reach on three original flop roots
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python tools/hu_b582_rank29_reach.py --solver ../solver --out "$RUNNER_TEMP/reach.json"
+          cmp "$RUNNER_TEMP/reach.json" data/nl2_hu_b582_rank29_reach.json
+      - name: Audit every CERT board and HU route
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          registry=data/nl2_hu_multiboard_status_current.json
+          node tools/hu_extension_runtime_test.cjs "$registry"
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+          bash tools/hu_exact_batch_audit.sh "$registry"

@@ -1,0 +1,11 @@
+--- a/postflop/pfdriver/src/main.rs
++++ b/postflop/pfdriver/src/main.rs
+@@ -212,7 +212,7 @@
+     json!({"line": line_str(c), "player": p, "acts": labels, "pot": pot, "bets": b, "board": g.current_board().iter().map(|&x| card_str(x)).collect::<String>(),
+            "strat": s.iter().map(|&x| r4(x)).collect::<Vec<_>>(), "ev": ev.iter().map(|&x| ((x as f64)*100.0).round()/100.0).collect::<Vec<_>>(),
+            "eq": eq.iter().map(|&x| r4(x)).collect::<Vec<_>>(), "w": [w0, w1],
+-           "wr": if raw { json!([g.weights(0).iter().map(|&x| ((x as f64)*1e5).round()/1e5).collect::<Vec<_>>(), g.weights(1).iter().map(|&x| ((x as f64)*1e5).round()/1e5).collect::<Vec<_>>()]) } else { Value::Null }})
++           "wr": if raw { json!([g.weights(0).iter().map(|&x| x as f64).collect::<Vec<_>>(), g.weights(1).iter().map(|&x| x as f64).collect::<Vec<_>>()]) } else { Value::Null }})
+ }
+ 
+ fn dump_street(g: &mut PostFlopGame, c: &mut Ctx, out: &mut Vec<Value>, street_only: bool, raw: bool) {

@@ -157,24 +157,41 @@
     ['ln-3bp-3b_r_model-1bgfa05','2d7hKs9d5s'],['ln-ipfr-r_model-1cbkgix','8dQhAsKh9s'],
     ['ln-ipc-r_model-vvxn9n','4dQhKsTc4c']
   ]);
-  function matchingFrozenPolicies(report,model,board,source){
+  function recoveredPolicy(previous,row,extra){
+    if(!extra || previous.status!=='UNRESOLVED_ROUNDED_BOUNDARY')return previous;
+    if(extra.schema!=='NL2_HU_B587_RAW_RIVER_RANGE_RECOVERY_V1')throw Error('河牌權重來源格式不符');
+    const recovered=extra.records.find(x=>x.model_id===row.model_id && x.public_board===row.public_board &&
+      x.line===row.line && x.seat===row.seat && x.policy.original.source_sha256===previous.original.source_sha256);
+    if(!recovered)return previous;
+    const p=recovered.policy;
+    if(p.original.version!==previous.original.version || p.original.run!==previous.original.run ||
+       p.original.archive_sha256!==previous.original.archive_sha256 || p.status!=='VERIFIED' ||
+       p.prior_unresolved_output_sha256!==previous.output_sha256 || !sha(p.raw_weights_sha256) ||
+       !sha(p.raw_turn_output_sha256) || !(p.original_node_count>0) ||
+       !p.range_errors.every(e=>e.max_abs===0 && e.relative_sum===0))throw Error('原始河牌範圍來源不符');
+    return p;
+  }
+  function matchingFrozenPolicies(report,model,board,source,extra){
     const row=report.records.find(r=>r.model_id===model.model_id && r.public_board===board.public_board &&
       r.line===board.actual_exact_action_line && r.seat===board.acting_seat &&
       r.pot_bb===board.actual_pot_bb && r.stack_bb===board.actual_effective_stack_bb);
     if(!row || report.schema!=='NL2_HU_B583_ORIGINAL_POLICY_FROZEN_RIVERS_V1')return [];
     const originals=[{version:'gto',run_id:board.source_run_id,sha256:board.source_sha256},...board.nl2_locked_variants];
-    return row.policies.filter(p=>(!source || p.original.source_sha256===source) &&
+    return row.policies.map(p=>recoveredPolicy(p,row,extra)).filter(p=>(!source || p.original.source_sha256===source) &&
       originals.some(o=>o.version===p.original.version && o.run_id===p.original.run && o.sha256===p.original.source_sha256));
   }
   function showFrozenPolicies(parent,model,board,source){
     if(frozenRiverBoards.get(model.model_id)!==board.public_board)return;
     const slot=document.createElement('div');
     parent.appendChild(slot);
-    fetch('data/nl2_hu_b583_frozen_rivers.json',{cache:'no-store'}).then(r=>{
+    const read=name=>fetch('data/'+name,{cache:'no-store'}).then(r=>{
       if(!r.ok)throw Error('HTTP '+r.status);
       return r.json();
-    }).then(report=>{
-      const policies=matchingFrozenPolicies(report,model,board,source);
+    });
+    const hasRecovery=model.frequency_rank===71 || model.frequency_rank===159;
+    Promise.all([read('nl2_hu_b583_frozen_rivers.json'),hasRecovery?read('nl2_hu_b587_raw_river_weights.json'):null])
+    .then(([report,extra])=>{
+      const policies=matchingFrozenPolicies(report,model,board,source,extra);
       if(!policies.length)return;
       const details=document.createElement('details'),summary=document.createElement('summary');
       summary.textContent='沿用原策略抵達河牌後的半池對照';
@@ -191,6 +208,7 @@
            p.hands.reduce((n,h)=>n+h.compatible_pairs,0)!==p.compatible_pairs ||
            p.hands.reduce((n,h)=>n+((h.accepted_mask&2)?h.compatible_pairs:0),0)!==p.half_pot_pairs)
           throw Error('河牌逐手結果與配牌數不符');
+        if(p.raw_weights_sha256)add(label+' 的 '+p.original_node_count+' 個原始節點已完整重現。重新匯出的雙方逐手範圍均與原解吻合。');
         const menu=p.actions.includes('a')?'過牌、半池或全下':'過牌或半池';
         add(label+' 可選'+menu+'。'+p.b50.eligible+' / '+p.legal_combos+' 組手牌可以下半池，涵蓋 '+
           p.half_pot_pairs.toLocaleString('zh-TW')+' 組雙方配牌。'+(p.b50.candidate?'符合非極化研究門檻。':'未達非極化研究門檻。'));

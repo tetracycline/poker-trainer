@@ -18966,14 +18966,55 @@
       "solver_profile": "LMP_CO_BB",
       "model_root_spr": 39.6,
       "model_node_spr": 11.53,
-      "reference_count": 0,
-      "references": [],
+      "reference_count": 3,
+      "references": [
+        {
+          "source_run_id": 45141630305,
+          "source_sha256": "23a1048e976dd75b60c3af62da1d76c9ea2c1f218f9f1a06bb189005acad3721",
+          "spot": "LMP_CO_BB",
+          "family": "LMP",
+          "version": "gto",
+          "flop": "7h6d4s",
+          "turn": "9d",
+          "exact_solver_node_line": "b50 c/b33 c/",
+          "flop_line": "b50 c",
+          "turn_spr": 11.578313,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
+        {
+          "source_run_id": 45141630305,
+          "source_sha256": "8a03439965859d7766c7e3915a47c1671f71e998a5438f082d470c185f758068",
+          "spot": "LMP_CO_BB",
+          "family": "LMP",
+          "version": "gto",
+          "flop": "7h6h4c",
+          "turn": "8s",
+          "exact_solver_node_line": "b50 c/b33 c/",
+          "flop_line": "b50 c",
+          "turn_spr": 11.578313,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
+        {
+          "source_run_id": 45141630305,
+          "source_sha256": "d4676450797d0fb4fdc41f78ce34a5876cae9fcb91dcc1aef66d1ca347775f2c",
+          "spot": "LMP_CO_BB",
+          "family": "LMP",
+          "version": "gto",
+          "flop": "7h6c4h",
+          "turn": "8s",
+          "exact_solver_node_line": "b50 c/b33 c/",
+          "flop_line": "b50 c",
+          "turn_spr": 11.578313,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        }
+      ],
       "status": "REFERENCE_ONLY_NOT_CERTIFIED",
       "blockers": [
         "MODEL_HAS_NO_EXACT_FLOP_TURN_RIVER",
         "MODEL_ACTION_AND_POT_HISTORY_NOT_MATCHED_TO_SOLVER",
         "MODEL_COMBO_REACH_NOT_DERIVED_FROM_EXACT_BOARD"
-      ]
+      ],
+      "note": "Exact GTO and separately solved hero lock on each named board. Generic texture rows remain approximate."
     },
     "ln-iso-lmp_r_model-1n1ge2d": {
       "model_id": "ln-iso-lmp_r_model-1n1ge2d",

@@ -1,0 +1,51 @@
+name: B587 reproduce original turn policies and verify full-precision river weights
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b587-raw-river-weights.yml'
+      - 'tools/hu_b587_raw_weights.patch'
+      - 'tools/hu_b587_raw_weights.py'
+      - 'tools/hu_b587_medium_ui.cjs'
+      - 'data/nl2_hu_b587_raw_river_weights.json'
+      - 'data/solver_evidence/NL2_B587_RAW_RIVER_WEIGHTS.zip'
+permissions: {contents: read, actions: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the export-only change against the pinned native engine
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          echo '2f9e8c029fd54db499cf4bb8824c95fc118fcf12d9eb8f4b666a6a8ebef1c533  solver/postflop/pfdriver/src/main.rs' | sha256sum -c
+          git -C solver apply ../trainer/tools/hu_b587_raw_weights.patch
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Re-export both policies and validate every original node and river range
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAYON_NUM_THREADS: 1
+        run: |
+          set -euo pipefail
+          id=14696600313
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$RUNNER_TEMP/$id.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/$id.zip"
+          python tools/hu_b587_raw_weights.py --originals "$RUNNER_TEMP" --driver ../solver/postflop/pfdriver/target/release/pfdriver --out "$RUNNER_TEMP/replay.json"
+          cmp "$RUNNER_TEMP/replay.json" data/nl2_hu_b587_raw_river_weights.json
+          node tools/hu_b587_medium_ui.cjs

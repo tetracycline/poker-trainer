@@ -1,5 +1,6 @@
 """Audit the available half-pot actions and measured opponent locks on every active named board."""
 import argparse
+import hashlib
 from collections import Counter
 import json
 from pathlib import Path
@@ -74,6 +75,19 @@ def coverage(registry):
     river_rows=json.loads(path.read_bytes())['records'] if path.exists() else []
     rivers={(r['model_id'],r['public_board'],r['line'],r['seat']):r for r in river_rows}
     assert len(rivers)==len(river_rows)
+    recovery_path=Path('data/nl2_hu_b587_raw_river_weights.json')
+    if recovery_path.exists():
+        recovered=json.loads(recovery_path.read_bytes())
+        assert recovered['base_sha256']==hashlib.sha256(path.read_bytes()).hexdigest()
+        for r in recovered['records']:
+            target=rivers[r['model_id'],r['public_board'],r['line'],r['seat']]
+            policies=target['policies']
+            p=r['policy']
+            i,=(i for i,old in enumerate(policies) if old['original']==p['original'])
+            assert policies[i]['status']=='UNRESOLVED_ROUNDED_BOUNDARY' and p['status']=='VERIFIED'
+            assert p['prior_unresolved_output_sha256']==policies[i]['output_sha256'] and p['original_node_count']>0
+            assert all(e['max_abs']==0 and e['relative_sum']==0 for e in p['range_errors'])
+            policies[i]=p
     boards=[]
     for model in sorted(registry['records'].values(),key=lambda m:m['frequency_rank']):
         if model['label']!='CERT-MULTIBOARD':
