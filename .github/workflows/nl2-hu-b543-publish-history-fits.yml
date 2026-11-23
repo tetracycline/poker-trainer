@@ -1,0 +1,63 @@
+name: B543 publish completed B530 history-specific NL2 fits on the current registry
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['.github/workflows/nl2-hu-b543-publish-history-fits.yml']
+permissions: {contents: write, actions: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify the original archive and replay its 49 native policies on the current registry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          id=14792118689
+          archive="$RUNNER_TEMP/b530.zip"
+          api="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+          gh api "$api" | jq -e '.name=="B530-verified-certified-decisions" and .workflow_run.id==45118574794 and .workflow_run.head_sha=="8204c624dbbad7c6375c581fea5a57b60d0d4fe6"'
+          gh api "$api/zip" > "$archive"
+          echo "2b5236b44034bab3c64df22ec16139f5b46404397f1f712a97b1110a98520618  $archive" | sha256sum -c -
+          branch=fix/nl2-hu-lines-audit-20261118
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q --no-tags origin "$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+            live=$(mktemp -d)
+            git worktree add -q --detach "$live" FETCH_HEAD
+            (
+              cd "$live"
+              unzip -qn "$archive"
+              python - <<'PY'
+          from pathlib import Path
+          import json
+          variants=sorted(Path('data/solver_evidence/lock_variants').glob('*_b530_*.json'))
+          assert len(variants)==49
+          for file in variants:
+              item=json.loads(file.read_bytes())
+              assert item['lock']['run_id']==45112623332 and item['lock']['applied_street_rates']
+          PY
+              status=data/nl2_hu_multiboard_status_current.json
+              python tools/hu_apply_cert_extensions.py --out "$status"
+              node tools/hu_extension_runtime_test.cjs "$status"
+              node tools/hu_b530_history_rates_ui.cjs
+              node tools/hu_b491_incremental_medium.cjs
+              node tools/hu_b485_medium_viewers.cjs
+              node tools/hu_b492_medium_tree_ui.cjs
+              bash tools/hu_exact_batch_audit.sh "$status"
+              mapfile -t originals < <(unzip -Z1 "$archive" | sed '/\/$/d')
+              git add -f -- "${originals[@]}" "$status" data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+              git diff --cached --check
+              if ! git diff --cached --quiet; then git commit -m 'B543: register 49 previously verified opponent policies from original NL2 turn and river observations'; fi
+            )
+            if git -C "$live" push origin "HEAD:refs/heads/$branch"; then exit 0; fi
+            git worktree remove "$live"
+          done
+          exit 1
