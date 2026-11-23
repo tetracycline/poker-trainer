@@ -28,9 +28,9 @@ FLOP_LINE = 'x b50 c'
 BET = {72: 50, 74: 33}
 
 
-def source_pair(spec, rank, pipeline, pool, run):
+def source_pair(spec, rank, pipeline, pool, run, batch=588):
     flop, turn = spec['flop'], spec['turn']
-    code = f'B588_R{rank}_{flop.upper()}'
+    code = f'B{batch}_R{rank}_{flop.upper()}'
     archive = EVIDENCE / f'NL2_{code}.zip'
     assert sha(archive.read_bytes()) == spec['archive_sha256']
     with ZipFile(archive) as z:
@@ -125,6 +125,7 @@ def main():
     ap.add_argument('--solver', type=Path, required=True)
     ap.add_argument('--out', type=Path, required=True)
     ap.add_argument('--run', type=int)
+    ap.add_argument('--batch', type=int, choices=(588, 597), default=588)
     args = ap.parse_args()
     assert args.run is None or args.run > 0
     solver = args.solver.resolve()
@@ -138,9 +139,9 @@ def main():
     pool = json.loads(poolraw)['NL2']
     routes = json.loads(subprocess.check_output(['node', 'tools/hu_b588_bb_river_routes.cjs']))
     records = json.loads((DATA/'nl2_hu_multiboard_status_current.json').read_bytes())['records']
-    specs = json.loads((DATA/'nl2_hu_b588_bb_river_inputs.json').read_bytes())
+    specs = json.loads((DATA/f'nl2_hu_b{args.batch}_bb_river_inputs.json').read_bytes())
     attempts = []
-    medium = dict(schema='NL2_HU_B588_ORIGINAL_LOCKED_MEDIUM_V1', references={}, gto_references={})
+    medium = dict(schema=f'NL2_HU_B{args.batch}_ORIGINAL_LOCKED_MEDIUM_V1', references={}, gto_references={})
     groups = []
     for key, entries in specs.items():
         rank = int(key)
@@ -151,7 +152,7 @@ def main():
         assert (model['frequency_rank'], model['solver_profile'], model['family'], model['assumed_model_node_spr']) == (rank, SPOT, 'SRP', route['spr'])
         group = dict(model_id=mid, rank=rank, pins=[], boards=[])
         for spec in entries:
-            g, e, public = source_pair(spec, rank, pipeline, pool, args.run)
+            g, e, public = source_pair(spec, rank, pipeline, pool, args.run, args.batch)
             gr, gh = decision(g, public, route, rank)
             er, eh = decision(e, public, route, rank)
             named = []
@@ -186,7 +187,7 @@ def main():
     if args.run:
         for group in groups:
             (EVIDENCE/'reverified'/f"rank{group['rank']}.json").write_bytes(json_bytes(group))
-        (DATA/'nl2_hu_b588_locked_medium.json').write_bytes(json_bytes(medium))
+        (DATA/f'nl2_hu_b{args.batch}_locked_medium.json').write_bytes(json_bytes(medium))
     args.out.write_bytes(json_bytes(dict(verification_run=args.run, solver=SOLVER, original_execution='LOCAL_PINNED_RUST', observations=attempts)))
 
 if __name__ == '__main__':

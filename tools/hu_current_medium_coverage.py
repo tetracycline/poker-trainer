@@ -192,7 +192,12 @@ def coverage(registry):
                 assert (baseline['compatible_pairs'],baseline['legal_combos'])==(conditional['compatible_pairs'],conditional['legal_combos'])
                 assert len(conditional['eligible_hand_frequencies'])==conditional['half_pot']['eligible']
                 assert (barrel['pot_bb'],barrel['stack_bb'])==(pot,stack)
-                assert len(barrel['rules'])==4 and all(r['n']>0 and r['applied_nodes']>0 for r in barrel['rules'])
+                if row['line']=='x x/':
+                    rule, = barrel['rules']
+                    assert (rule['table'],rule['size'],rule['n'],rule['applied_nodes'])==('vs_delayed_cbet','all',26780,2)
+                else:
+                    assert len(barrel['rules'])==4
+                assert all(r['n']>0 and r['applied_nodes']>0 for r in barrel['rules'])
                 row['measured_barrel_reply_policy']=dict(source_sha256=barrel['output_sha256'],
                     eligible_combos=conditional['half_pot']['eligible'],nonpolarized_candidate=conditional['half_pot']['candidate'],
                     legal_combos=conditional['legal_combos'],compatible_pairs=conditional['compatible_pairs'])

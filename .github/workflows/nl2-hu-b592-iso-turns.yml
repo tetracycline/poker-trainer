@@ -1,11 +1,10 @@
 name: B592 reproduce isolation-pot roots, locks and rank124 turn decisions
 on:
+  workflow_dispatch:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
     paths:
-      - '.github/workflows/nl2-hu-b592-iso-turns.yml'
-      - 'tools/hu_b592_*'
-      - 'data/nl2_hu_b592_iso_*.json'
+      - 'data/nl2_hu_b592_iso_inputs.json'
       - 'data/solver_evidence/NL2_B592_R124_*.zip'
 permissions: {contents: read}
 jobs:

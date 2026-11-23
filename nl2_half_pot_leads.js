@@ -229,7 +229,8 @@
     const name={
       'ln-opfr-t_model-19esov6':'nl2_hu_b594_rank2_barrels.json',
       'ln-opfr-t_model-1wej9w5':'nl2_hu_b590_rank3_barrels.json',
-      'ln-opfr-t_model-trdt3w':'nl2_hu_b594_rank4_barrels.json'
+      'ln-opfr-t_model-trdt3w':'nl2_hu_b594_rank4_barrels.json',
+      'ln-opfr-t_model-id38uf':'nl2_hu_b596_rank5_barrels.json'
     }[model.model_id];
     if(!name || (source && source!==board.source_sha256))return;
     const slot=document.createElement('div');
@@ -244,25 +245,37 @@
         r.original.run===board.source_run_id && r.original.source_sha256===board.source_sha256 &&
         r.pot_bb===board.actual_pot_bb && r.stack_bb===board.actual_effective_stack_bb);
       if(!row)return;
+      const delayed=row.line==='x x/';
       if(!sha(row.output_sha256) || !sha(row.job_sha256) || !sha(report.archive_sha256) ||
          !(row.locked.legal_combos>0 && row.locked.compatible_pairs>=row.locked.legal_combos) ||
          row.locked.legal_combos!==row.gto.legal_combos || row.locked.compatible_pairs!==row.gto.compatible_pairs ||
-         row.rules.length!==4 || !row.rules.every(r=>r.n>0 && r.applied_nodes>0))throw Error('來源核對失敗');
+         row.rules.length!==(delayed?1:4) || (delayed && row.rules[0].table!=='vs_delayed_cbet') || !row.rules.every(r=>r.n>0 && r.applied_nodes>0))throw Error('來源核對失敗');
       const details=document.createElement('details');
       const summary=document.createElement('summary');
-      summary.textContent='小盲連續下注：按轉牌、河牌與尺寸實測大盲回應';details.appendChild(summary);
+      summary.textContent=delayed?'小盲延遲持續下注的大盲回應鎖':'小盲連續下注的轉牌及河牌尺寸鎖';details.appendChild(summary);
       const add=text=>{const p=document.createElement('p');p.textContent=text;details.appendChild(p);};
       add('沿用原 GTO 翻牌範圍。轉牌可過牌、下半池或滿池。');
       for(const [name,p] of [['原 GTO',row.gto],['實測回應鎖',row.locked]]){
         const mid=p.half_pot.middle_count??0;
         add(name+' 的半池合格手牌有 '+p.half_pot.eligible+' / '+p.legal_combos+
           ' 組，其中 '+mid+' 組屬中段勝率。'+(p.half_pot.candidate?'符合非極化研究門檻。':'未達非極化研究門檻。'));
+        const hands=Object.entries(p.eligible_hand_frequencies);
+        if(hands.length!==p.half_pot.eligible || hands.some(([h,f])=>!/^([2-9TJQKA][cdhs]){2}$/.test(h) ||
+            !Number.isFinite(f) || f<0 || f>1))throw Error('逐手半池頻率核對失敗');
+        if(hands.length){
+          const group=document.createElement('details'),title=document.createElement('summary'),list=document.createElement('p');
+          title.textContent=name+' 的逐手半池頻率';
+          list.textContent=hands.map(([h,f])=>h+' '+(100*f).toFixed(1)+'%').join('、');
+          group.appendChild(title);group.appendChild(list);details.appendChild(group);
+        }
       }
       for(const r of row.rules){
         const street=r.table==='vs_turn_barrel_by_size'?'轉牌':'河牌';
-        add(street+'面對 '+r.size+' 底池的下注，共 '+r.n.toLocaleString('zh-TW')+' 次。棄牌 '+r.fold+
+        const scope=delayed?'大盲面對延遲持續下注，各下注尺寸合計':street+'面對 '+r.size+' 底池的下注';
+        add(scope+'，共 '+r.n.toLocaleString('zh-TW')+' 次。棄牌 '+r.fold+
           '%、跟注 '+r.call+'%、加注 '+r.raise+'%。');
       }
+      if(delayed)add('此子局將同一組合併樣本頻率分別套用到半池與滿池回應。河牌保留自由求解。');
       slot.appendChild(details);
     }catch{slot.textContent='目前無法核對連續下注的鎖頻資料。';}
   }

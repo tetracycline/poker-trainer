@@ -1,0 +1,50 @@
+name: B599 verify published rank124 against three completed native re-solves
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b599-iso-publication.yml'
+      - 'tools/hu_checked_stab_turns.py'
+      - 'tools/hu_b592_*'
+      - 'data/nl2_hu_b592*'
+      - 'data/solver_evidence/reverified/rank124.json'
+      - 'data/solver_evidence/NL2_MULTIBOARD_B592_R124_*'
+permissions: {contents: read, actions: read}
+jobs:
+  publication:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Match the archived jobs and solutions to each successful native run
+        working-directory: trainer
+        env: {GH_TOKEN: "${{ github.token }}"}
+        run: |
+          set -euo pipefail
+          sha=7b31aa925fdb8747370595ae970bf7c5f82d10f8
+          git fetch --quiet --no-tags --depth=1 origin "$sha"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45151346575" | jq -e --arg sha "$sha" '.head_sha == $sha'
+          while read -r flop job; do
+            path="data/solver_evidence/NL2_B592_R124_${flop^^}.zip"
+            git diff --exit-code "$sha" HEAD -- "$path" data/nl2_hu_b592_iso_inputs.json
+            gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$job" |
+              jq -e --arg name "reproduce ($flop)" '.name == $name and .run_id == 45151346575 and .conclusion == "success"'
+          done <<'JOBS'
+          9c6h4s 137613223556
+          8s5h3d 137613224143
+          7h5h2h 137613224383
+          JOBS
+          python tools/hu_b592_iso_turns.py --solver ../solver --run 45151346575 --out "$RUNNER_TEMP/preview.json"
+          cmp "$RUNNER_TEMP/preview.json" data/nl2_hu_b592_iso_preview.json
+          git diff --exit-code -- data
+          node tools/hu_b558_river_policy_view.cjs data/solver_evidence/reverified/rank124.json

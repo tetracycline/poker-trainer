@@ -1,0 +1,420 @@
+{
+  "schema": "NL2_HU_B592_ORIGINAL_LOCKED_MEDIUM_V1",
+  "references": {
+    "[\"ln-iso-t_model-1gjwm8f\",\"3d5h8s2c\",\"x b50 c/x\",1,45151346575,\"2d0fc989d8195f2fd49101c9edc5494d15e742c36ad0ed34642130291d4e9367\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "3d5h8s2c",
+      "line": "x b50 c/x",
+      "acting_seat": 1,
+      "source_actions": [
+        "x",
+        "b33",
+        "b50",
+        "b75"
+      ],
+      "source_hand_order_sha256": "c95226346707ad01efe62d2a5f96c372366eaa775e7878f37678dce6b5fbc163",
+      "source_hand_count": 219,
+      "compatible_action_mask_b64": "CAgIAgIIAggBAAAAAgICAgICAQIBAQAAAAgACAgIAAAAAQQIAAABBAAAAQQACAACAgAACAIBCAgBCAgICAgAAAgECAgIAAgIBAAIAAgIBAAACAgIAAgICAAIBAAICAQEBAAIBAQEAAQEBAAICAgICAgICAgICAAAAAgICAgICAgACAgAAAgICAgICAgACAAACAgICAgICAAAAAICAgAICAgAAAAAAgIIAAgIAAAAAAIICAAIAAAAAAgICAAAAAACAgIIAAAAAgIACAgIAgAICAgACAAIAgICAgIC",
+      "strict_legal_combos": 150,
+      "compatible_opponent_combos": 107,
+      "compatible_hole_card_pairs": 14216,
+      "b50": {
+        "eligible": 16,
+        "preferred": 16,
+        "best_ev_b50_fraction_pct": 100.0,
+        "low_count": 13,
+        "middle_count": 3,
+        "high_count": 0,
+        "mid_reach_mass_fraction_pct": 9.46,
+        "candidate": false,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "version": "exp_ip",
+      "spot": "ISO_BTN_CO",
+      "family": "ISO",
+      "flop": "8s5h3d",
+      "turn": "2c",
+      "source_run_id": 45151346575,
+      "source_sha256": "2d0fc989d8195f2fd49101c9edc5494d15e742c36ad0ed34642130291d4e9367",
+      "archive_sha256": "d93fb72e84e555bb358625ee7b6d2cf47cd1e13dcc746229778197f1c181a944",
+      "root_sha256": "c071088e146bc196f528dee47de2ef10d502ba6d8d7dd8c288979507c43b3beb",
+      "gto_gap_pct": 0.44051995873451233,
+      "locked_hero_gap_pct": 0.42298007011413574,
+      "root_gto_stage_gap_pct": 0.42983946204185486,
+      "root_locked_hero_gap_pct": null,
+      "lock_scope": {
+        "villain_decision_nodes": 7,
+        "pattern_matched_nodes": 4,
+        "observed_marginal_source_nodes": 3,
+        "imputed_assumption_nodes": 1,
+        "unmatched_nodes": 3,
+        "coverage_pct": 57.143,
+        "all_villain_nodes_locked": false,
+        "matching_examples": [
+          {
+            "line": "x b50 c/",
+            "board": "3d5h8s2c",
+            "first_pattern": ".*/$",
+            "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b33",
+            "board": "3d5h8s2c",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b33$",
+            "source": "NL2.HU_facing_bet[2].by_size[≤33%]",
+            "source_observed_count": 71741,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x b50",
+            "board": "3d5h8s2c",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[2].by_size[34-55%]",
+            "source_observed_count": 144567,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x b75",
+            "board": "3d5h8s2c",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b75$",
+            "source": "NL2.HU_facing_bet[2].by_size[56-80%]",
+            "source_observed_count": 112817,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          }
+        ],
+        "caveat": "Regex/source bucket matching does not prove the Rust driver locked every combo nor its conditional opponent behavior."
+      },
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 1012
+    },
+    "[\"ln-iso-t_model-1gjwm8f\",\"4s6h9c2d\",\"x b50 c/x\",1,45151346575,\"112962c5640409e5ecf676831f520362ab62a5217913980668f89668fad6b383\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "4s6h9c2d",
+      "line": "x b50 c/x",
+      "acting_seat": 1,
+      "source_actions": [
+        "x",
+        "b33",
+        "b50",
+        "b75"
+      ],
+      "source_hand_order_sha256": "f6e3e49bd029b98e16bfc0800cbd4cca9fe71104c5baf1658cc696767881e172",
+      "source_hand_count": 222,
+      "compatible_action_mask_b64": "AAABAAEBCAgICAICAgIBAQAEAAAIBAQCAgECAQEAAAAICAAACAEIAAgBCAgBCAAAAAgAAAABCAgABggABAgAAgIAAAIICAIACAgKCgAICAIICAgIDAgIAAgIDAgIAAgECAgABAgIAAgICAgICAgICAgIAAAMCAgICAgICAgICAgAAAAACAgICAgICAgICAAACAgICAgICAgICAAEAAIKCAAICAgAAAgKCAgICAgAAAAACAgIAAgIAAAICAgIAAgACAACAgIIAAEIAgIACAAAAggAAAgICAgAAgICAgQC",
+      "strict_legal_combos": 163,
+      "compatible_opponent_combos": 103,
+      "compatible_hole_card_pairs": 14796,
+      "b50": {
+        "eligible": 12,
+        "preferred": 11,
+        "best_ev_b50_fraction_pct": 91.667,
+        "low_count": 4,
+        "middle_count": 7,
+        "high_count": 1,
+        "mid_reach_mass_fraction_pct": 51.92,
+        "candidate": false,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "version": "exp_ip",
+      "spot": "ISO_BTN_CO",
+      "family": "ISO",
+      "flop": "9c6h4s",
+      "turn": "2d",
+      "source_run_id": 45151346575,
+      "source_sha256": "112962c5640409e5ecf676831f520362ab62a5217913980668f89668fad6b383",
+      "archive_sha256": "77d2dec47e4922b81264811448b3d443a60e547081620ba970e39a0a268c5e08",
+      "root_sha256": "41390224adc658a462876460d2aa7509c702b761a352be8ebb07c13a9cdd7720",
+      "gto_gap_pct": 0.3998028635978699,
+      "locked_hero_gap_pct": 0.18171611428260803,
+      "root_gto_stage_gap_pct": 0.40449029207229614,
+      "root_locked_hero_gap_pct": null,
+      "lock_scope": {
+        "villain_decision_nodes": 4,
+        "pattern_matched_nodes": 4,
+        "observed_marginal_source_nodes": 3,
+        "imputed_assumption_nodes": 1,
+        "unmatched_nodes": 0,
+        "coverage_pct": 100.0,
+        "all_villain_nodes_locked": true,
+        "matching_examples": [
+          {
+            "line": "x b50 c/",
+            "board": "4s6h9c2d",
+            "first_pattern": ".*/$",
+            "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b33",
+            "board": "4s6h9c2d",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b33$",
+            "source": "NL2.HU_facing_bet[2].by_size[≤33%]",
+            "source_observed_count": 71741,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x b50",
+            "board": "4s6h9c2d",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[2].by_size[34-55%]",
+            "source_observed_count": 144567,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x b75",
+            "board": "4s6h9c2d",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b75$",
+            "source": "NL2.HU_facing_bet[2].by_size[56-80%]",
+            "source_observed_count": 112817,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          }
+        ],
+        "caveat": "Regex/source bucket matching does not prove the Rust driver locked every combo nor its conditional opponent behavior."
+      },
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 1012
+    },
+    "[\"ln-iso-t_model-1gjwm8f\",\"2h5h7h4h\",\"x b50 c/x\",1,45151346575,\"d57fe3d668059e147e706ff3ad4ab9a6a1364506738ea35e2541fa61dd86b875\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "2h5h7h4h",
+      "line": "x b50 c/x",
+      "acting_seat": 1,
+      "source_actions": [
+        "x",
+        "b33",
+        "b50",
+        "b75"
+      ],
+      "source_hand_order_sha256": "df47747060e35152bda896aa47a34cbf290db60351ee1b202dff3cdc8169c4a8",
+      "source_hand_count": 205,
+      "compatible_action_mask_b64": "AgIMAgwMAAAAAAACAAAAAAAAAAAAAAAAAAwMAgwCAgAEAgAEAAQAAAAABAAAAAAEAAAAAgAEAAAAAAQICAgAAAAECAgIAAAAAgICAgQICAgAAAAABAQAAAAEBAAAAgICAgQEAAAAAAgIAggICAIIAAACAAAACAgCCAgIAggAAAIAAAICAgICAgICAggIAggICAIIAAACAAACAAgIAggAAAIAAgAICAIIAAACAAICAgICAAACAAgIAggAAAIAAAIAAgIAAgIAAAAAAgICAg==",
+      "strict_legal_combos": 115,
+      "compatible_opponent_combos": 136,
+      "compatible_hole_card_pairs": 14135,
+      "b50": {
+        "eligible": 21,
+        "preferred": 12,
+        "best_ev_b50_fraction_pct": 57.143,
+        "low_count": 9,
+        "middle_count": 12,
+        "high_count": 0,
+        "mid_reach_mass_fraction_pct": 51.626,
+        "candidate": true,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "version": "exp_ip",
+      "spot": "ISO_BTN_CO",
+      "family": "ISO",
+      "flop": "7h5h2h",
+      "turn": "4h",
+      "source_run_id": 45151346575,
+      "source_sha256": "d57fe3d668059e147e706ff3ad4ab9a6a1364506738ea35e2541fa61dd86b875",
+      "archive_sha256": "4b248fd1a0f40aae54705f0175197e8412708bac8f6d8d6b1541f3a85560ecc7",
+      "root_sha256": "86edfaf4efb77f466e9963318772d4d863994e787b07b15bdab22bc222e62b44",
+      "gto_gap_pct": 0.4384165108203888,
+      "locked_hero_gap_pct": 0.40318214893341064,
+      "root_gto_stage_gap_pct": 0.4233052134513855,
+      "root_locked_hero_gap_pct": null,
+      "lock_scope": {
+        "villain_decision_nodes": 7,
+        "pattern_matched_nodes": 4,
+        "observed_marginal_source_nodes": 3,
+        "imputed_assumption_nodes": 1,
+        "unmatched_nodes": 3,
+        "coverage_pct": 57.143,
+        "all_villain_nodes_locked": false,
+        "matching_examples": [
+          {
+            "line": "x b50 c/",
+            "board": "2h5h7h4h",
+            "first_pattern": ".*/$",
+            "source": "ASSUMED_STREET_ROOT_BET_45PCT; ASSUMED_SIZE_SPLIT_35_35_20_10",
+            "source_observed_count": 0,
+            "scope": "ASSUMED_HISTORY_RATE_OR_SIZE"
+          },
+          {
+            "line": "x b50 c/x b33",
+            "board": "2h5h7h4h",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b33$",
+            "source": "NL2.HU_facing_bet[2].by_size[≤33%]",
+            "source_observed_count": 71741,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x b50",
+            "board": "2h5h7h4h",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b50$",
+            "source": "NL2.HU_facing_bet[2].by_size[34-55%]",
+            "source_observed_count": 144567,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          },
+          {
+            "line": "x b50 c/x b75",
+            "board": "2h5h7h4h",
+            "first_pattern": "^(?:[^/]*/){1}(?:[^/]+ )?b75$",
+            "source": "NL2.HU_facing_bet[2].by_size[56-80%]",
+            "source_observed_count": 112817,
+            "scope": "IMPUTED_HISTORY_FROM_TRUE_STREET_BY_SIZE_MARGINAL"
+          }
+        ],
+        "caveat": "Regex/source bucket matching does not prove the Rust driver locked every combo nor its conditional opponent behavior."
+      },
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 466
+    }
+  },
+  "gto_references": {
+    "[\"ln-iso-t_model-1gjwm8f\",\"3d5h8s2c\",\"x b50 c/x\",1,45151346575,\"74314ae5559d76484780dd81530049573bca9df429ea60c263f6a053f3dd40d8\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "3d5h8s2c",
+      "line": "x b50 c/x",
+      "acting_seat": 1,
+      "source_actions": [
+        "x",
+        "b33",
+        "b50",
+        "b75"
+      ],
+      "source_hand_order_sha256": "c95226346707ad01efe62d2a5f96c372366eaa775e7878f37678dce6b5fbc163",
+      "source_hand_count": 219,
+      "compatible_action_mask_b64": "AQEBCAgBCAEBAAAACAgICAgICAgICAAAAAkACQEBAAAAAQEIAAABAQAAAQEAAQAICAAACAgBAQgBAQgICAgAAAgICAgIAAEJCAAIAAEJCAAAAQEIAAgICAAICAAICAgICAAICAgIAAgICAAICAgJCQkJCAkJCQAAAAgICQkJAQkAAQEAAAgJCQkBCQEAAQAACQkBAQkJAQAAAAgICAABAQEAAAAACAgBAAEBAAAAAAgBAQABAAAAAAEBAQAAAAAICAgBAAAACAgAAQEBCAABAQEAAQABCAgICAgI",
+      "strict_legal_combos": 150,
+      "compatible_opponent_combos": 99,
+      "compatible_hole_card_pairs": 13166,
+      "b50": {
+        "eligible": 0,
+        "preferred": 0,
+        "candidate": false,
+        "status": "B50_UNREACHABLE_AFTER_PREVIOUS_STREET"
+      },
+      "version": "gto",
+      "spot": "ISO_BTN_CO",
+      "family": "ISO",
+      "flop": "8s5h3d",
+      "turn": "2c",
+      "source_run_id": 45151346575,
+      "source_sha256": "74314ae5559d76484780dd81530049573bca9df429ea60c263f6a053f3dd40d8",
+      "archive_sha256": "d93fb72e84e555bb358625ee7b6d2cf47cd1e13dcc746229778197f1c181a944",
+      "root_sha256": "c071088e146bc196f528dee47de2ef10d502ba6d8d7dd8c288979507c43b3beb",
+      "gto_gap_pct": 0.44051995873451233,
+      "locked_hero_gap_pct": null,
+      "root_gto_stage_gap_pct": 0.42983946204185486,
+      "root_locked_hero_gap_pct": null,
+      "lock_scope": {
+        "villain_decision_nodes": 0,
+        "pattern_matched_nodes": 0,
+        "observed_marginal_source_nodes": 0,
+        "imputed_assumption_nodes": 0,
+        "unmatched_nodes": 0,
+        "coverage_pct": null,
+        "all_villain_nodes_locked": false
+      },
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 0
+    },
+    "[\"ln-iso-t_model-1gjwm8f\",\"4s6h9c2d\",\"x b50 c/x\",1,45151346575,\"8ce9e98cbe2b4a439c6820839893effd5f14592524bbf1eebe3fa3978e407cac\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "4s6h9c2d",
+      "line": "x b50 c/x",
+      "acting_seat": 1,
+      "source_actions": [
+        "x",
+        "b33",
+        "b50",
+        "b75"
+      ],
+      "source_hand_order_sha256": "f6e3e49bd029b98e16bfc0800cbd4cca9fe71104c5baf1658cc696767881e172",
+      "source_hand_count": 222,
+      "compatible_action_mask_b64": "AAABAAEBAQgBCQgIAQgBAQABAAAJAQEICAgICAgAAAAJAQAACQgBAAgIAQgIAQAAAAEAAAAICQkACAkACAkACAgAAAgICAgACAgICAAICAgICAgICAgIAAgICAgIAAgICAgACAgIAAgICAgICQkICAgIAAABAQgICAgICAgICAgAAAAACAgICQkICAgIAQAAAQgICQkICAgIAQABAAgICAAJAQEAAAEICAgICAgAAAAACAEIAAEBAAABAQgBAAEAAQAICAgBAAEBCAgAAQAACAEAAAEBAQEACAgICAgI",
+      "strict_legal_combos": 163,
+      "compatible_opponent_combos": 133,
+      "compatible_hole_card_pairs": 19260,
+      "b50": {
+        "eligible": 0,
+        "preferred": 0,
+        "candidate": false,
+        "status": "B50_UNREACHABLE_AFTER_PREVIOUS_STREET"
+      },
+      "version": "gto",
+      "spot": "ISO_BTN_CO",
+      "family": "ISO",
+      "flop": "9c6h4s",
+      "turn": "2d",
+      "source_run_id": 45151346575,
+      "source_sha256": "8ce9e98cbe2b4a439c6820839893effd5f14592524bbf1eebe3fa3978e407cac",
+      "archive_sha256": "77d2dec47e4922b81264811448b3d443a60e547081620ba970e39a0a268c5e08",
+      "root_sha256": "41390224adc658a462876460d2aa7509c702b761a352be8ebb07c13a9cdd7720",
+      "gto_gap_pct": 0.3998028635978699,
+      "locked_hero_gap_pct": null,
+      "root_gto_stage_gap_pct": 0.40449029207229614,
+      "root_locked_hero_gap_pct": null,
+      "lock_scope": {
+        "villain_decision_nodes": 0,
+        "pattern_matched_nodes": 0,
+        "observed_marginal_source_nodes": 0,
+        "imputed_assumption_nodes": 0,
+        "unmatched_nodes": 0,
+        "coverage_pct": null,
+        "all_villain_nodes_locked": false
+      },
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 0
+    },
+    "[\"ln-iso-t_model-1gjwm8f\",\"2h5h7h4h\",\"x b50 c/x\",1,45151346575,\"19036d77bb131ee3e653a15a98f39d1eeeb0e2f71b98ced9f94a6986c8db8f03\"]": {
+      "status": "POSITIVE_JOINT_REACH",
+      "public_board": "2h5h7h4h",
+      "line": "x b50 c/x",
+      "acting_seat": 1,
+      "source_actions": [
+        "x",
+        "b33",
+        "b50",
+        "b75"
+      ],
+      "source_hand_order_sha256": "df47747060e35152bda896aa47a34cbf290db60351ee1b202dff3cdc8169c4a8",
+      "source_hand_count": 205,
+      "compatible_action_mask_b64": "AQEIAQgIAAAAAAACAAAAAAAAAAAAAAAAAAEBAgEICAABCAABAAEAAAAAAQAAAAABAAAAAgABAAAAAAEBAQEAAAABAQEBAAAAAgEBAQEBAQEAAAAAAQEAAAABAQAAAgEBAgEBAAAAAAEBBAEBAQEBAAAIAAAAAQEEAQEBAQEAAAgAAAICAwICAgECAgEBBAEBAQEBAAAIAAAEAAgIAQgAAAgABAAICAEIAAAIAAQEBAEEAAACAAgIAQgAAAgAAAEACAEACAEAAAAACAgICA==",
+      "strict_legal_combos": 115,
+      "compatible_opponent_combos": 270,
+      "compatible_hole_card_pairs": 27946,
+      "b50": {
+        "eligible": 9,
+        "preferred": 0,
+        "best_ev_b50_fraction_pct": 0.0,
+        "low_count": 0,
+        "middle_count": 9,
+        "high_count": 0,
+        "mid_reach_mass_fraction_pct": 100.0,
+        "candidate": false,
+        "status": "EXACT_BOARD_STRICT_PATH_NONPOLARIZED_RESEARCH_CANDIDATE_NOT_GENERIC_BET_RECOMMENDATION"
+      },
+      "version": "gto",
+      "spot": "ISO_BTN_CO",
+      "family": "ISO",
+      "flop": "7h5h2h",
+      "turn": "4h",
+      "source_run_id": 45151346575,
+      "source_sha256": "19036d77bb131ee3e653a15a98f39d1eeeb0e2f71b98ced9f94a6986c8db8f03",
+      "archive_sha256": "4b248fd1a0f40aae54705f0175197e8412708bac8f6d8d6b1541f3a85560ecc7",
+      "root_sha256": "86edfaf4efb77f466e9963318772d4d863994e787b07b15bdab22bc222e62b44",
+      "gto_gap_pct": 0.4384165108203888,
+      "locked_hero_gap_pct": null,
+      "root_gto_stage_gap_pct": 0.4233052134513855,
+      "root_locked_hero_gap_pct": null,
+      "lock_scope": {
+        "villain_decision_nodes": 0,
+        "pattern_matched_nodes": 0,
+        "observed_marginal_source_nodes": 0,
+        "imputed_assumption_nodes": 0,
+        "unmatched_nodes": 0,
+        "coverage_pct": null,
+        "all_villain_nodes_locked": false
+      },
+      "root_applied_rust_lock_nodes": 0,
+      "subgame_applied_rust_lock_nodes": 0
+    }
+  }
+}

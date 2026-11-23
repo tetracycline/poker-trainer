@@ -25,6 +25,10 @@ CASES = {
 def reply_rules(pool, flop_line):
     rows = []
     table = pool["postflop_HU"]["SRP_PFR_OOP"]
+    if flop_line=="x x":
+        rate=table["vs_delayed_cbet"]
+        assert rate["n"]==26780
+        return [dict(pattern="^x x/b(50|100)$",table="vs_delayed_cbet",size="all",**rate)]
     for street, prefix in (("turn", "^"+flop_line+"/"), ("river", "^"+flop_line+"/b(50|100) c/")):
         field = "vs_" + street + "_barrel_by_size"
         for action, interval in (("b50", "34-55%"), ("b100", "81-110%")):
@@ -46,7 +50,7 @@ def calculate(board, pin, originals, pool, archive, driver, verification_driver,
     root,original=parent["source"]["root"],parent["source"]["subgame"]
     parent_job,root_sha=parent["job"],parent["identity"]["root_sha256"]
     assert (original["line0"], original["turn"], board["actual_exact_action_line"], board["acting_seat"]) == (flop_line, public[-2:], line, 0)
-    investment={"b100 c":600, "b75 c":450, "b50 c":300}[flop_line]
+    investment={"x x":0, "b100 c":600, "b75 c":450, "b50 c":300}[flop_line]
     assert (root["pot"], root["stack"], parent_job["pot"], parent_job["stack"]) == (600, 9700, 600+2*investment, 9700-investment)
     assert (parent_job["rake_rate"], parent_job["rake_cap"], parent_job["line0"]) == (.05, 1000, [*flop_line.split(), "/"])
     assert not parent_job.get("locks") and parent_job.get("hero") is None and not original["info"].get("lock_stats")

@@ -25,6 +25,14 @@ async function main() {
     await new Promise(resolve => setImmediate(resolve));
     const content = ok.children[0].children[0].children.map(child => child.textContent).join('\n');
     assert.ok(content.includes(row.locked.half_pot.eligible+' / '+row.locked.legal_combos));
+    const groups=ok.children[0].children[0].children.filter(x=>x.children.length===2);
+    for(const [label,p] of [['原 GTO',row.gto],['實測回應鎖',row.locked]]){
+      const group=groups.find(x=>x.children[0].textContent===label+' 的逐手半池頻率');
+      const hands=Object.entries(p.eligible_hand_frequencies);
+      assert.equal(Boolean(group),hands.length>0);
+      for(const [hand,freq] of hands)assert.ok(group.children[1].textContent.includes(hand+' '+(100*freq).toFixed(1)+'%'));
+    }
+    if(row.line==='x x/')assert.ok(content.includes('同一組合併樣本頻率'));
     for (const r of row.rules) assert.ok(content.includes(r.n.toLocaleString('zh-TW')));
     assert.equal(wrong.children[0].children.length,0);
     assert.equal(other.children.length,0);
