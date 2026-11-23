@@ -1,0 +1,44 @@
+name: B557 verify completed SB river decisions and policy-specific actions
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b557-completed-sb.yml'
+      - 'tools/hu_b557_*'
+      - 'data/nl2_hu_b557_*'
+      - 'data/solver_evidence/NL2_B545_*.zip'
+permissions: {contents: read, actions: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Authenticate the three completed B545 worker uploads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          receipts="$RUNNER_TEMP/receipts"
+          mkdir -p "$receipts"
+          for aid in $(jq -r '.artifacts[].id' data/nl2_hu_b557_completed_archives.json); do
+            api="repos/$GITHUB_REPOSITORY/actions/artifacts/$aid"
+            gh api "$api" > "$receipts/$aid.json"
+            gh api "$api/zip" > "$receipts/$aid.zip"
+          done
+      - name: Replay the eight frozen SB originals and compare the shared-hand policies
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          python tools/hu_b557_completed_sb.py --solver pinned-solver --receipts "$RUNNER_TEMP/receipts"
+          git diff --exit-code -- data
+          test -z "$(git ls-files --others --exclude-standard -- data)"
