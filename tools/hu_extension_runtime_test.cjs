@@ -68,7 +68,22 @@ async function run() {
     if (!board) {
       const excluded=manifest.trainer_route_exclusions.some(row=>row.model_id===item.model_id && row.public_board===item.public_board);
       const partial=model.remaining_exact_board_evidence?.some(b=>b.public_board===item.public_board);
-      assert.ok(excluded || (model.label==='APPROX' && partial), 'Missing native lock lacks a matching route exclusion or retained partial proof');
+      const replacement = manifest.reverified_models.find(group => group.model_id === item.model_id);
+      const retired = replacement?.superseded_native_variants?.find(row =>
+        row.public_board === item.public_board && row.gto_run === item.gto_run && row.gto_sha256 === item.gto_sha256 &&
+        row.lock_run === source.run_id && row.lock_sha256 === source.sha256 &&
+        row.original_package_sha256 === item.original_package_sha256);
+      if (retired) {
+        assert.equal(model.label, 'CERT-MULTIBOARD');
+        assert.ok(replacement.boards.length >= 3 && replacement.boards.every(b =>
+          model.certified_3_to_5_exact_flop_boards.some(active => active.public_board === b.public_board)));
+        assert.equal(retired.common_rendered_hands, 0);
+        assert.ok(['NO_RENDERED_ORIGINAL_GTO_HAND', 'NO_PRICED_FLOP_LINK_ON_ACTUAL_TEXTURE'].includes(retired.reason));
+        const historical = fs.readFileSync('data/solver_evidence/' + item.original_package);
+        assert.equal(require('node:crypto').createHash('sha256').update(historical).digest('hex'), retired.original_package_sha256);
+      }
+      assert.ok(excluded || (model.label==='APPROX' && partial) || retired,
+        'Missing native lock lacks a matching route exclusion, retained partial proof, or source-verified supersession');
       continue;
     }
     assert.ok(board.nl2_locked_variants.some(v=>v.sha256===source.sha256));
