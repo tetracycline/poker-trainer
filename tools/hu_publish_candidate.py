@@ -1,4 +1,4 @@
-"""Create a reviewed data-only commit object after successful batch verification.
+"""Create a verified-data commit object, optionally with the frozen B674 prices.
 
 The branch is never moved here. The caller must inspect the successful Actions
 run and candidate commit, then publish it with a fast-forward lease.
@@ -25,6 +25,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--message", required=True)
     parser.add_argument("--paths", nargs="+", required=True)
+    parser.add_argument("--priced-model", action="store_true")
     args = parser.parse_args()
     assert os.environ["GITHUB_REPOSITORY"] == REPOSITORY
     head = os.environ["GITHUB_SHA"]
@@ -59,9 +60,18 @@ def main():
         selected.extend(matches)
     selected = sorted(set(selected))
     root = Path.cwd().resolve()
+    pinned_code = {
+        "nl2_hu_model.js": "a98cb80d7762b464064874de39dcff6f4bf5707d",
+        "nl2.js": "15aee97e53a156fe073c96a120638a8a3679958f",
+    }
+    if args.priced_model:
+        assert set(pinned_code) <= set(selected), "Both frozen price files are required"
+        for name, expected in pinned_code.items():
+            assert git("hash-object", name).decode().strip() == expected
     for name in selected:
         path = Path(name)
-        assert name.startswith("data/") and ".." not in path.parts
+        assert (name.startswith("data/") or (args.priced_model and name in pinned_code))
+        assert ".." not in path.parts
         assert path.is_file() and not path.is_symlink()
         assert path.resolve().is_relative_to(root)
     assert not git("diff", "--cached", "--name-only").strip(), "Index was not clean"

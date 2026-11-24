@@ -1,0 +1,53 @@
+name: B677 solve three native BB three-bet middle-pair checked rivers
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b677-rank264-checks.yml'
+      - 'tools/hu_b677_rank264_checks.py'
+      - 'tools/hu_b677_rank264_routes.cjs'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [Jh7c3d, Ts6h2d, 9d5c3h]
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the pinned native driver
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve and independently replay the actual two-seat displayed route
+        env:
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/source"
+          python tools/hu_b677_rank264_checks.py --solver pinned-solver --flop "$FLOP" --output "$output" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$output/proof.json" "$RUNNER_TEMP/native-proof.json"
+          python tools/hu_b677_rank264_checks.py --solver pinned-solver --flop "$FLOP" --output "$output"
+          cmp "$RUNNER_TEMP/native-proof.json" "$output/proof.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B677-R264-${{ matrix.flop }}
+          path: ${{ runner.temp }}/source
+          if-no-files-found: error
+          retention-days: 90
