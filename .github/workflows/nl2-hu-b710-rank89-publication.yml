@@ -1,0 +1,91 @@
+name: B710 certify rank89 from five original reachable river boards
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b710-rank89-publication.yml'
+      - 'tools/hu_b710_collect.py'
+      - 'tools/hu_b710_publish.py'
+      - 'tools/hu_b710_prior_receipts.py'
+      - 'tools/hu_b710_integrate.py'
+permissions: {contents: write, actions: read}
+jobs:
+  replay-audit-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate all original jobs and replay without a native driver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/hu_b710_collect.py tools/hu_b710_publish.py tools/hu_b710_integrate.py tools/hu_b710_prior_receipts.py
+          sha256sum nl2.js nl2_hu_model.js nl2_cert_registry.js tools/hu_trainer_route_contract.cjs \
+            data/nl2_hu_stage2_queue.json data/nl2_hu_multiboard_prerank.json > "$RUNNER_TEMP/b710-protected.sha256"
+          python tools/hu_b710_prior_receipts.py --output "$RUNNER_TEMP/b702-originals"
+          python tools/hu_b710_collect.py --output "$RUNNER_TEMP/b709-originals"
+          python tools/hu_b710_publish.py --solver pinned-solver --prior-receipts "$RUNNER_TEMP/b702-originals" \
+            --receipts "$RUNNER_TEMP/b709-originals" --output "$RUNNER_TEMP/b710-stage" > "$RUNNER_TEMP/b710-source-summary.txt"
+          git diff --exit-code -- data/
+          sha256sum -c "$RUNNER_TEMP/b710-protected.sha256"
+      - name: Promote only rank89 and preserve all other 391 records and earlier source files
+        run: |
+          set -euo pipefail
+          python tools/hu_b710_integrate.py --stage "$RUNNER_TEMP/b710-stage/data" --paths "$RUNNER_TEMP/b710-paths.txt"
+          node tools/hu_b679_policy_view.cjs data/solver_evidence/reverified/rank89.json
+          git diff --check
+          sha256sum data/nl2_hu_multiboard_status_current.json data/nl2_hu_verified_extensions.json \
+            data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json > "$RUNNER_TEMP/b710-integrated.sha256"
+      - name: Run the full registry, policy, route, native lock and half-pot audits
+        run: |
+          set -euo pipefail
+          registry=data/nl2_hu_multiboard_status_current.json
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b710-registry-replay.json"
+          cmp "$registry" "$RUNNER_TEMP/b710-registry-replay.json"
+          node tools/hu_extension_runtime_test.cjs "$registry"
+          bash tools/hu_exact_batch_audit.sh "$registry"
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b710-medium-coverage.json"
+          sha256sum -c "$RUNNER_TEMP/b710-integrated.sha256" "$RUNNER_TEMP/b710-protected.sha256"
+      - name: Create an immutable audited data candidate without moving the draft branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mapfile -t paths < "$RUNNER_TEMP/b710-paths.txt"
+          python tools/hu_publish_candidate.py \
+            --message 'B710 certify rank89 from five distinct original GTO and measured NL2 river boards; preserve 150 prior certificates, with 48 new reachable lock and half-pot assessments' \
+            --paths "${paths[@]}" | tee "$RUNNER_TEMP/b710-candidate.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B710-five-original-rank89-publication
+          path: |
+            ${{ runner.temp }}/b710-source-summary.txt
+            ${{ runner.temp }}/b710-stage/data/nl2_hu_b710_summary.json
+            ${{ runner.temp }}/b710-paths.txt
+            ${{ runner.temp }}/b710-medium-coverage.json
+            ${{ runner.temp }}/b710-candidate.txt
+            data/nl2_hu_b710_integration.json
+          if-no-files-found: warn
+          retention-days: 90

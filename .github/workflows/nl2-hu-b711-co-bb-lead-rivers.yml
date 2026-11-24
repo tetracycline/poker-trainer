@@ -1,0 +1,70 @@
+name: B711 solve three original CO-BB turn-lead river series for ranks92-94
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b711-co-bb-lead-rivers.yml'
+      - 'tools/hu_b711_bb_lead_routes.cjs'
+      - 'tools/hu_b711_bb_lead_rivers.py'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 27
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        flop: [9d7h4c, 8s6d2c, 7c5d3h]
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Freeze actual UI routes and verify pinned CO-BB ranges and exact prices
+        env:
+          FLOP: ${{ matrix.flop }}
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          python -m py_compile tools/hu_b711_bb_lead_rivers.py
+          node tools/hu_b711_bb_lead_routes.cjs > "$RUNNER_TEMP/b711-routes.json"
+          python tools/hu_b711_bb_lead_rivers.py --solver pinned-solver --flop "$FLOP" \
+            --routes "$RUNNER_TEMP/b711-routes.json" --output "$RUNNER_TEMP/B711/$FLOP" --preflight
+          git diff --exit-code -- nl2.js nl2_hu_model.js nl2_cert_registry.js tools/hu_trainer_route_contract.cjs data/
+      - name: Build the pinned native solver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve one original flop and the reachable multi-size GTO and actor-lock continuations
+        env:
+          FLOP: ${{ matrix.flop }}
+          NODE_OPTIONS: --max-old-space-size=1536
+          RAYON_NUM_THREADS: 2
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/B711/$FLOP"
+          python tools/hu_b711_bb_lead_rivers.py --solver pinned-solver --flop "$FLOP" \
+            --routes "$RUNNER_TEMP/b711-routes.json" --output "$folder" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$folder/proof.json" "$RUNNER_TEMP/B711-original-proof.json"
+          python tools/hu_b711_bb_lead_rivers.py --solver pinned-solver --flop "$FLOP" \
+            --routes "$RUNNER_TEMP/b711-routes.json" --output "$folder"
+          cmp "$folder/proof.json" "$RUNNER_TEMP/B711-original-proof.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B711-CO-BB-${{ matrix.flop }}
+          path: ${{ runner.temp }}/B711/${{ matrix.flop }}
+          if-no-files-found: error
+          retention-days: 90
