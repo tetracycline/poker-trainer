@@ -1,0 +1,138 @@
+name: B695 authenticate connected rank84 sources and publish only genuine evidence
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b695-rank84-publication.yml'
+      - 'tools/hu_b695_rank84_collect.py'
+      - 'tools/hu_b695_publish_rank84.py'
+permissions: {contents: write, actions: read}
+jobs:
+  replay-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      SOURCE_RUN: '45312594665'
+      SOURCE_HEAD: 'e4a29f3b5ff31229b5648fa78d3bb08f5a312471'
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Authenticate completed source workers and independently replay every native job
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/hu_b695_rank84_collect.py tools/hu_b695_publish_rank84.py
+          cp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b695-before.json"
+          python tools/hu_b695_rank84_collect.py --run "$SOURCE_RUN" --head "$SOURCE_HEAD" --output "$RUNNER_TEMP/b695-originals"
+          python tools/hu_b695_publish_rank84.py --solver ../solver --run "$SOURCE_RUN" --head "$SOURCE_HEAD" \
+            --receipts "$RUNNER_TEMP/b695-originals" --output "$RUNNER_TEMP/b695-replayed" > "$RUNNER_TEMP/b695-summary.json"
+          cat "$RUNNER_TEMP/b695-summary.json"
+      - name: Retain all authenticated partials and promote only three independent legal flops
+        id: integrate
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b695-replayed/data" "$RUNNER_TEMP/b695-before.json" "$GITHUB_OUTPUT" <<'PY'
+          import json,os,shutil,subprocess,sys
+          from pathlib import Path
+          stage=Path(sys.argv[1]);before=Path(sys.argv[2]).read_bytes()
+          report=json.loads((stage/'nl2_hu_b695_rank84_results.json').read_bytes())
+          eligible=report['cert_eligible'];count=report['boards']
+          assert eligible==(count>=3)and 0<=count<=3
+          assert report['source_flops']==report['retained_original_archives']==3
+          group_path=stage/('solver_evidence/reverified/rank84.json'if eligible else'solver_evidence/partial/B695_rank84.json')
+          group=json.loads(group_path.read_bytes())
+          assert group['rank']==84 and group['model_id']=='ln-3bp-3b_t_model-ciziut'
+          assert len(group['boards'])==len(group['pins'])==len({b['flop']for b in group['boards']})==count
+          for board,pin in zip(group['boards'],group['pins'],strict=True):
+              assert board['actual_exact_action_line']=='x b33 c/'and board['acting_seat']==0
+              assert pin['GTO_strict_combos']>0 and pin['NL2_strict_combos']>0 and pin['rendered_decision_hands']
+              assert pin['GTO_compatible_hole_card_pairs']>0 and pin['NL2_compatible_hole_card_pairs']>0
+          if not eligible:
+              assert not (stage/'solver_evidence/reverified').exists()
+              assert not list(stage.glob('*locked_medium.json'))
+          for source in stage.rglob('*'):
+              if source.is_file():
+                  target=Path('data')/source.relative_to(stage)
+                  assert 'b695'in str(target).lower()or eligible and str(target)=='data/solver_evidence/reverified/rank84.json'
+                  target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source,target)
+          if eligible:
+              subprocess.run([sys.executable,'tools/hu_apply_cert_extensions.py','--out','data/nl2_hu_multiboard_status_current.json'],check=True)
+          current=Path('data/nl2_hu_multiboard_status_current.json').read_bytes()
+          old,new=json.loads(before),json.loads(current);mid='ln-3bp-3b_t_model-ciziut'
+          assert set(new['records'])==set(old['records'])and new['TOTAL']==392
+          for key,record in old['records'].items():
+              if key!=mid:assert new['records'][key]==record,key
+              if record['label']=='CERT-MULTIBOARD':assert new['records'][key]==record,key
+          if eligible:assert new['records'][mid]['label']=='CERT-MULTIBOARD'
+          else:assert current==before and new['records'][mid]['label']=='APPROX'
+          if count:
+              subprocess.run(['node','tools/hu_b558_river_policy_view.cjs',str(group_path)],check=True)
+          with open(sys.argv[3],'a')as output:output.write('cert_eligible='+str(eligible).lower()+'\n')
+          PY
+          git diff --check
+          sha256sum data/nl2_hu_multiboard_status_current.json data/nl2_hu_verified_extensions.json \
+            data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json > "$RUNNER_TEMP/b695-integrated.sha256"
+      - name: Complete all original source, lock, half-pot and navigation audits
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b695-registry-replay.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b695-registry-replay.json"
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b695-medium-coverage.json"
+          sha256sum -c "$RUNNER_TEMP/b695-integrated.sha256"
+      - name: Create an audited data-only candidate without updating the branch
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CERT_ELIGIBLE: ${{ steps.integrate.outputs.cert_eligible }}
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b695-replayed/data" <<'PY'
+          import os,subprocess,sys
+          from pathlib import Path
+          stage=Path(sys.argv[1]);eligible=os.environ['CERT_ELIGIBLE']=='true'
+          paths=['data/'+str(path.relative_to(stage))for path in sorted(stage.rglob('*'))if path.is_file()]
+          protected={'data/solver_evidence/reverified/rank84.json'}
+          if eligible:
+              central=['data/nl2_hu_multiboard_status_current.json','data/nl2_hu_verified_extensions.json',
+                  'data/nl2_hu_model_history_crosswalk.json','data/nl2_hu_model_source_references.json']
+              paths+=central;protected.update(central)
+          assert all('b695'in path.lower()or eligible and path in protected for path in paths)
+          if subprocess.check_output(['git','status','--porcelain','--',*paths]).strip():
+              subprocess.run([sys.executable,'tools/hu_publish_candidate.py',
+                  '--message','B695 retain authenticated rank84 connected-board GTO/NL2 evidence; three-flop certification gate='+str(eligible),
+                  '--paths',*paths],check=True)
+          else:
+              print('The authenticated B689 evidence is already current.')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B695-authenticated-rank84-connected-evidence
+          path: |
+            ${{ runner.temp }}/b695-replayed/data
+            ${{ runner.temp }}/b695-summary.json
+            ${{ runner.temp }}/b695-medium-coverage.json
+          if-no-files-found: warn
+          retention-days: 90

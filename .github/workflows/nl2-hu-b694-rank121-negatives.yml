@@ -1,0 +1,108 @@
+name: B694 authenticate new rank121 root negatives and measured policy disagreements
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b694-rank121-negatives.yml'
+      - 'tools/hu_b694_collect.py'
+      - 'tools/hu_b694_publish.py'
+permissions: {contents: write, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Authenticate and replay only the three new original B691 workers
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/hu_b694_collect.py tools/hu_b694_publish.py
+          sha256sum data/nl2_hu_multiboard_status_current.json data/nl2_hu_verified_extensions.json \
+            data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json > "$RUNNER_TEMP/b694-central.sha256"
+          python tools/hu_b694_collect.py --output "$RUNNER_TEMP/b694-originals"
+          node tools/hu_b686_rank121_routes.cjs > "$RUNNER_TEMP/b694-routes.json"
+          python tools/hu_b694_publish.py --solver ../solver --receipts "$RUNNER_TEMP/b694-originals" \
+            --output "$RUNNER_TEMP/b694-replayed" --routes "$RUNNER_TEMP/b694-routes.json" > "$RUNNER_TEMP/b694-summary.json"
+          cat "$RUNNER_TEMP/b694-summary.json"
+          sha256sum -c "$RUNNER_TEMP/b694-central.sha256"
+      - name: Keep genuine policy disagreement outside certification and global medium reports
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b694-replayed/data" <<'PY'
+          import hashlib,json,sys
+          from pathlib import Path
+          data=Path(sys.argv[1]);result=json.loads((data/'nl2_hu_b694_rank121_negatives.json').read_bytes())
+          assert result['summary']==dict(new_positive_flops=0,new_negative_flops=3,prior_positive_flops=1,
+              total_positive_flops=1,certification_eligible=False,previous_source_replayed=False,
+              new_gto_turns=3,new_actor_locked_public_boards=3,new_half_pot_assessed_public_boards=3,
+              nonpolarized_candidates=0)
+          assert not (data/'solver_evidence/reverified').exists()
+          assert not (data/'solver_evidence/partial/rank121.json').exists()
+          assert not list(data.glob('*locked_medium.json'))
+          comparisons=json.loads((data/'solver_evidence/partial/b694_policy_disagreements.json').read_bytes())
+          assert len(comparisons)==3
+          assert [r['gto_rendered_hands'] for r in comparisons]==[11,11,13]
+          assert [r['nl2_rendered_hands'] for r in comparisons]==[0,0,0]
+          assert [r['nl2_half_pot']['eligible'] for r in comparisons]==[11,13,13]
+          assert all(r['not_a_certification'] and r['common_rendered_hands']==0 for r in comparisons)
+          for comparison in comparisons:
+              for hand in comparison['policy_disagreements']:
+                  assert not hand['nl2_displayed_action_accepted']
+                  assert not (hand['gto_displayed_action_accepted'] and hand['nl2_displayed_action_accepted'])
+                  for policy in (hand['gto'],hand['nl2']):
+                      assert abs(sum(policy['strategy'].values())-1)<.002
+                      assert policy['accepted_actions']==[a for i,a in enumerate(policy['action_order']) if policy['accepted_mask']&(1<<i)]
+          for record in result['records']:
+              proof=data/Path(record['proof_path']).relative_to('data')
+              assert hashlib.sha256(proof.read_bytes()).hexdigest()==record['proof_sha256']
+              assert json.loads(proof.read_bytes())['positive_distinct_flops']==0
+          source,=[p for p in result['workers'] if p['flop']=='QhTh7s']
+          assert hashlib.sha256((data/'solver_evidence/NL2_B691_R121_QHTH7S.zip').read_bytes()).hexdigest()==source['sha256']
+          PY
+          cp -R "$RUNNER_TEMP/b694-replayed/data/." data/
+          sha256sum -c "$RUNNER_TEMP/b694-central.sha256"
+          git diff --check
+      - name: Create only the new-negative data candidate without moving any branch
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b694-replayed/data" <<'PY'
+          import subprocess,sys
+          from pathlib import Path
+          stage=Path(sys.argv[1])
+          paths=['data/'+str(p.relative_to(stage)) for p in sorted(stage.rglob('*')) if p.is_file()]
+          assert len(paths)==8 and all('b694' in p.lower() or 'B691_R121_QHTH7S' in p for p in paths)
+          if subprocess.check_output(['git','status','--porcelain','--',*paths]).strip():
+              subprocess.run([sys.executable,'tools/hu_publish_candidate.py',
+                  '--message','B694 preserve three new rank121 negatives and actual NL2 half-pot policy disagreements; no certification change',
+                  '--paths',*paths],check=True)
+          else:
+              print('All new B691 negative evidence is already current.')
+          PY
+      # The repository's existing full-batch-audit runs on every push.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B694-authenticated-rank121-negatives
+          path: |
+            ${{ runner.temp }}/b694-replayed/data
+            ${{ runner.temp }}/b694-summary.json
+          if-no-files-found: warn
+          retention-days: 90
+
