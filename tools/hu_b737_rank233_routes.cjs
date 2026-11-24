@@ -1,0 +1,58 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const args=process.argv.slice(2),option=n=>args.includes(n)?args[args.indexOf(n)+1]:null;
+const modelFile=option('--model-file')||'nl2_hu_model.js',uiFile=option('--ui-file')||'nl2.js';
+const app={innerHTML:'',querySelectorAll:()=>[],addEventListener(){}};
+const ctx={console,__LINES_QA:true,location:{hash:'#lines'},scrollTo(){},addEventListener(){},
+ document:{querySelector:()=>app,querySelectorAll:()=>[],getElementById:()=>null}};
+ctx.window=ctx;vm.createContext(ctx);
+for(const file of ['lines_data.js','nl2_rules.js','hwrange.js','nl2_reach.js','nl2_titles.js','nl2_hu_model.js','nl2.js'])
+ vm.runInContext(fs.readFileSync(file==='nl2_hu_model.js'?modelFile:file==='nl2.js'?uiFile:file,'utf8'),ctx,{filename:file});
+ctx.__linesQA.render('3bp');
+const id='ln-3bp-3b_t_model-ciziut',source='ln-3bp-3b_f_vs_donk-12vwqfc',initial='ln-3bp-3b_f_cbet-1ueswd8';
+const model=ctx.__HU_MODEL_LAST.nodes.find(n=>n.id===id);assert.ok(model);
+assert.equal(model.source,source);assert.equal(model.flopCallPct,33);
+assert.equal(model.pre,'翻前：BTN 開， 你 SB 3-bet ，BTN 跟');
+assert.equal(model.key,'你過、對手下注、你跟|');
+assert.deepEqual([model.facts.root.spot,model.facts.root.pot,model.facts.root.stack],['SB3_BTN',21.0,90]);
+assert.deepEqual([model.facts.pot,model.facts.stack,model.facts.spr],[34.86,83.07,2.383]);
+assert.deepEqual(Array.from(model.allowed).sort(),['KQ_high:2','low:2','mid_high:2']);
+function section(name){const s=app.innerHTML.split('id="'+name+'"')[1];assert.ok(s,name);return s.split('<div class="sec"')[0];}
+function cells(name,texture){
+ const row=section(name).match(new RegExp('<tr[^>]+id="'+name+'-'+texture+'">([\\s\\S]*?)</tr>'));assert.ok(row);
+ return [...row[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)].map(m=>m[1]);
+}
+assert.ok(section(source).includes('BTN 下注 33%（6.9bb），你要跟 6.9bb（底池 27.9bb）'));
+const classes=['TPG','TPW','MID','DRAW','WDRAW'],routes={};
+for(const texture of ['low','mid_high','KQ_high']){
+ const start=cells(initial,texture),facing=cells(source,texture),now=cells(id,texture);
+ const parents=[],decisions={};
+ for(const [i,cls]of classes.entries()){
+  const first=start[i].match(/<a class="jmp" href="#[^"]+">([^<]+)<\/a>/);
+  const checks=first?.[1].replace(/≈$/,'')==='過'&&start[i].includes('class="jmp sub" href="#'+source+'-'+texture+'"');
+  const calls=[...facing[i].matchAll(/<a class="jmp" href="#([^"]+)">([^<]+)<\/a>/g)]
+    .some(m=>m[1]===id+'-'+texture&&m[2].replace(/≈$/,'')==='跟');
+  if(checks&&calls)parents.push(cls);
+  if(model.allowed.includes(texture+':'+i)){
+   const label=now[i].split('<small')[0].split('<a class="jmp sub"')[0].replace(/<[^>]*>/g,'').replaceAll('≈','').trim();
+   assert.equal(label,'過');decisions[cls]=label;
+  }
+ }
+ assert.deepEqual(parents,['MID']);assert.deepEqual(decisions,{MID:'過'});
+ routes[texture]={parents,decisions,initial_action:'x',facing_action:'b33',call_action:'c'};
+}
+
+const riv='ln-3bp-3b_r_model-4k40h1',rm=ctx.__HU_MODEL_LAST.nodes.find(n=>n.id===riv);assert.equal(rm.source,id);
+assert.equal(rm.key,'你過、對手下注、你跟|你過、對手過|');
+assert.deepEqual([rm.facts.pot,rm.facts.stack,rm.facts.spr],[34.86,83.07,2.383]);
+assert.deepEqual(Array.from(rm.allowed).sort(),['KQ_high:2','low:2','mid_high:2']);
+const out={};for(const tx of ['low','mid_high','KQ_high','A_high','mono','paired']){
+ const cc=cells(id,tx),rc=cells(riv,tx);for(const [i,cls] of classes.entries()){
+  const m=cc[i].match(/<a class="jmp" href="#([^"]+)">([^<]+)<\/a>/);
+  if(m&&m[1]===riv+'-'+tx) {
+   if(m[2].replace(/≈$/,'')!=='過')throw Error(m[2]);
+   out[tx+':'+i]=rc[i].split('<small')[0].split('<a class="jmp sub"')[0].replace(/<[^>]*>/g,'').replaceAll('≈','').trim();
+  }
+ }}
+assert.deepEqual(out,{'low:2':'過','mid_high:2':'過','KQ_high:2':'過'});
+console.log(JSON.stringify({model:riv,parent:id,actor:0,line:'x b33 c/x x/',spot:'SB3_BTN',root:[2100,9000],
+  turn_river:[3486,8307],spr:rm.facts.spr,flop_turn:routes,river:out}));
