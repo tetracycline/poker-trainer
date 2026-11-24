@@ -1,0 +1,89 @@
+name: B719 certify rank255 from four original reachable river boards
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b719-rank255-publication.yml'
+      - 'tools/hu_b719_collect.py'
+      - 'tools/hu_b719_publish.py'
+      - 'tools/hu_b719_integrate.py'
+permissions: {contents: write, actions: read}
+jobs:
+  replay-audit-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate all original jobs and replay without a native driver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/hu_b719_collect.py tools/hu_b719_publish.py tools/hu_b719_integrate.py
+          sha256sum nl2.js nl2_hu_model.js nl2_cert_registry.js tools/hu_trainer_route_contract.cjs \
+            data/nl2_hu_stage2_queue.json data/nl2_hu_multiboard_prerank.json > "$RUNNER_TEMP/b719-protected.sha256"
+          python tools/hu_b719_collect.py --output "$RUNNER_TEMP/b719-originals"
+          python tools/hu_b719_publish.py --solver pinned-solver \
+            --receipts "$RUNNER_TEMP/b719-originals" --output "$RUNNER_TEMP/b719-stage" > "$RUNNER_TEMP/b719-source-summary.txt"
+          git diff --exit-code -- data/
+          sha256sum -c "$RUNNER_TEMP/b719-protected.sha256"
+      - name: Promote only rank255 and preserve all other 391 records and earlier source files
+        run: |
+          set -euo pipefail
+          python tools/hu_b719_integrate.py --stage "$RUNNER_TEMP/b719-stage/data" --paths "$RUNNER_TEMP/b719-paths.txt"
+          node tools/hu_b679_policy_view.cjs data/solver_evidence/reverified/rank255.json
+          git diff --check
+          sha256sum data/nl2_hu_multiboard_status_current.json data/nl2_hu_verified_extensions.json \
+            data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json > "$RUNNER_TEMP/b719-integrated.sha256"
+      - name: Run the full registry, policy, route, native lock and half-pot audits
+        run: |
+          set -euo pipefail
+          registry=data/nl2_hu_multiboard_status_current.json
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b719-registry-replay.json"
+          cmp "$registry" "$RUNNER_TEMP/b719-registry-replay.json"
+          node tools/hu_extension_runtime_test.cjs "$registry"
+          bash tools/hu_exact_batch_audit.sh "$registry"
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b719-medium-coverage.json"
+          sha256sum -c "$RUNNER_TEMP/b719-integrated.sha256" "$RUNNER_TEMP/b719-protected.sha256"
+      - name: Create an immutable audited data candidate without moving the draft branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mapfile -t paths < "$RUNNER_TEMP/b719-paths.txt"
+          python tools/hu_publish_candidate.py \
+            --message 'B719 certify rank255 on four distinct original flops; preserve 151 prior certificates; 58 new reachable lock and half-pot assessments, zero nonpolarized candidates' \
+            --paths "${paths[@]}" | tee "$RUNNER_TEMP/b719-candidate.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B719-four-original-rank255-publication
+          path: |
+            ${{ runner.temp }}/b719-source-summary.txt
+            ${{ runner.temp }}/b719-stage/data/nl2_hu_b719_summary.json
+            ${{ runner.temp }}/b719-paths.txt
+            ${{ runner.temp }}/b719-medium-coverage.json
+            ${{ runner.temp }}/b719-candidate.txt
+            data/nl2_hu_b719_integration.json
+          if-no-files-found: warn
+          retention-days: 90
