@@ -1,0 +1,44 @@
+name: B672 authenticate four completed rank80 native flop negatives
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b672-rank80-completed.yml'
+      - 'tools/hu_b672_rank80_completed.py'
+      - 'data/nl2_hu_b672_rank80_completed.json'
+permissions: {contents: read, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate worker bytes and replay both-seat flop reach
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          originals="$RUNNER_TEMP/b671-originals"
+          mkdir -p "$originals"
+          for id in $(jq -r '.records[].artifact_id' data/nl2_hu_b672_rank80_completed.json); do
+            for suffix in json zip; do
+              endpoint="repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+              if [ "$suffix" = zip ]; then endpoint="$endpoint/zip"; fi
+              for attempt in 1 2 3; do
+                if gh api "$endpoint" > "$originals/$id.$suffix"; then break; fi
+                if [ "$attempt" = 3 ]; then exit 1; fi
+                sleep 2
+              done
+            done
+          done
+          python tools/hu_b672_rank80_completed.py --solver ../solver --originals "$originals"
