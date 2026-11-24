@@ -1,0 +1,138 @@
+{
+  "schema": "NL2_HU_SB_ISOLATOR_CO_CALLER_PREFLOP_SOURCE_AUDIT_V1",
+  "ranks": [
+    122,
+    123
+  ],
+  "all_same_ingress_approx_ranks": [
+    122,
+    123,
+    225,
+    247,
+    248,
+    257,
+    274,
+    275,
+    276,
+    277,
+    278
+  ],
+  "roles": {
+    "oop": "SB isolator",
+    "ip": "CO limp/caller"
+  },
+  "solver_head": "abe310c3aad02dd4a7c77fb2831801fd490cf51b",
+  "solver_source_sha256": {
+    "inputs/pool_stats.json": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+    "exploit_v2/data/pool_ranges.json": "7d0eea0d8443c2cacb9ab0cfdbc9799918211f916773dd8dbb2ae4ad18486727",
+    "exploit_v2/parse_pool.py": "c95b92a30af08e5b51fcdc207a0bb98537ff987a3a06aa34c016507400577eab",
+    "exploit_v3/data/iso_ranges.json": "759035ccec130a8296152aa1fbfc4a8b35cc5eef9e067e2a6519d1b46a1434c8",
+    "exploit_v3/iso.py": "30307c7838f5265c965c71f618bff3faa2b3eb69a4a18f68fe0cf149eba18033",
+    "preflop/pfsolve.py": "d4ca8e0c7d53deb6af337bfef8ff0c125205c1d3ef912267d8b40efc2fe7c100",
+    "preflop/gto_rake.json": "e73f1eb9fef6aabdbf565804a0e1a68610656b30cf0e3d273a432acfee110969"
+  },
+  "trainer_source_sha256": "91ac5f060b98752baceee8004210e31dea60db78da10e538e1e6edd219edf7ef",
+  "observed": {
+    "SB_iso_pct_all_limp_opportunities": 17.8,
+    "SB_iso_opportunities": 246125,
+    "CO_limp_vs_all_raises": {
+      "n": 42988,
+      "fold": 25.9,
+      "call": 70.5,
+      "raise": 3.6
+    },
+    "all_position_limp_call_showdowns_grouped_by_hand_family": 45658,
+    "CO_open_limp_showdowns": 2574,
+    "CO_open_limp_estimated_hand_classes": 169
+  },
+  "available_conditional_chart": {
+    "key": "CO>SB",
+    "iso_to_bb": 5.0,
+    "modeled_iso_pct": 25.2,
+    "action_class_counts": {
+      "iso": 56,
+      "limp": 67
+    },
+    "CO_limp_call_hand_assignment": "strength-ranked allocation of pooled CO responses",
+    "source": "exploit_v3/iso.py",
+    "scenario_sweep": 9,
+    "per_hand_frequencies_observed": false
+  },
+  "prices": {
+    "rendered_model_4bb": {
+      "root_pot_bb": 9,
+      "root_stack_bb": 96,
+      "native_integer_percent_branch_projections": {
+        "122": {
+          "flop_bet_chips": 450,
+          "turn_pot_bb": 18,
+          "turn_stack_bb": 91.5,
+          "integer_percent_turn_spr": 5.083333
+        },
+        "123": {
+          "flop_bet_chips": 297,
+          "turn_pot_bb": 14.94,
+          "turn_stack_bb": 93.03,
+          "integer_percent_turn_spr": 6.226908
+        }
+      }
+    },
+    "raw_postflop_example": {
+      "root_pot_bb": 9.5,
+      "root_stack_bb": 95.5,
+      "native_integer_percent_branch_projections": {
+        "122": {
+          "flop_bet_chips": 475,
+          "turn_pot_bb": 19,
+          "turn_stack_bb": 90.75,
+          "integer_percent_turn_spr": 4.776316
+        },
+        "123": {
+          "flop_bet_chips": 314,
+          "turn_pot_bb": 15.78,
+          "turn_stack_bb": 92.36,
+          "integer_percent_turn_spr": 5.852978
+        }
+      }
+    },
+    "preflop_chart_5bb_100bb_start": {
+      "root_pot_bb": 11,
+      "root_stack_bb": 95,
+      "native_integer_percent_branch_projections": {
+        "122": {
+          "flop_bet_chips": 550,
+          "turn_pot_bb": 22,
+          "turn_stack_bb": 89.5,
+          "integer_percent_turn_spr": 4.068182
+        },
+        "123": {
+          "flop_bet_chips": 363,
+          "turn_pot_bb": 18.26,
+          "turn_stack_bb": 91.37,
+          "integer_percent_turn_spr": 5.003834
+        }
+      }
+    }
+  },
+  "registry_spr": {
+    "122": 5.083,
+    "123": 6.2
+  },
+  "chart_5bb_spr_relative_error_pct": {
+    "122": 19.964942,
+    "123": 19.293
+  },
+  "supported_postflop_iso_profiles": [
+    "ISO_BTN_CO"
+  ],
+  "missing_inputs": [
+    "SB isolation range conditional on one CO limp at the displayed four-blind size",
+    "CO call range conditional on that SB isolation size",
+    "one agreed pot and effective stack for the matched source"
+  ],
+  "eligible_native_source_boards": 0,
+  "new_native_solves": 0,
+  "actor_locked_public_boards": 0,
+  "half_pot_assessed": 0,
+  "disposition": "Retain APPROX. The verified five-blind conditional chart, pooled observations and BTN-isolator sources do not supply the two displayed-price ranges."
+}
