@@ -1,0 +1,79 @@
+name: B781 authenticate the second verified rank229 flop and replay both policies
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b781-rank229-originals.yml'
+      - 'tools/hu_b781_collect.py'
+      - 'tools/hu_b781_rank229_partial.py'
+      - 'data/nl2_hu_b781_source_manifest.json'
+      - 'data/nl2_hu_b781_results.json'
+      - 'data/solver_evidence/NL2_B780_R229_KD9C5H.zip'
+      - 'data/solver_evidence/partial/b781_rank229*.json'
+      - 'data/solver_evidence/NL2_MULTIBOARD_B781_R229_KD9C5H.json.gz'
+permissions: {contents: read, actions: read}
+jobs:
+  authenticate-and-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate the source and replay the committed observations under two hash seeds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 23e07c1640b6cfcfc2d0b10f76130957f6ee273a HEAD
+          python tools/hu_b781_collect.py --output "$RUNNER_TEMP/b781-original"
+          for seed in 23 867; do
+            PYTHONHASHSEED="$seed" python tools/hu_b781_rank229_partial.py --solver pinned-solver \
+              --archives "$RUNNER_TEMP/b781-original" --output "$RUNNER_TEMP/b781-data-$seed"
+          done
+          python - "$RUNNER_TEMP/b781-data-23" "$RUNNER_TEMP/b781-data-867" <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import json
+          import sys
+          first, second = map(Path, sys.argv[1:])
+          data = Path('data')
+          archive = 'solver_evidence/NL2_B780_R229_KD9C5H.zip'
+          group = 'solver_evidence/partial/b781_rank229.json'
+          expected = {archive, group, 'solver_evidence/partial/b781_rank229_locked_medium.json',
+                      'solver_evidence/partial/b781_rank229_turns.json', 'solver_evidence/NL2_MULTIBOARD_B781_R229_KD9C5H.json.gz',
+                      'nl2_hu_b781_source_manifest.json','nl2_hu_b781_results.json'}
+          for folder in (first, second):
+              assert {p.relative_to(folder).as_posix() for p in folder.rglob('*') if p.is_file()} == expected
+              for name in sorted(expected):
+                  assert (folder/name).read_bytes() == (data/name).read_bytes(), name
+          summary = json.loads((data/'nl2_hu_b781_results.json').read_bytes())
+          assert (summary['rank'], summary['source_run'], summary['source_head']) == (229, 45347370837, '23e07c1640b6cfcfc2d0b10f76130957f6ee273a')
+          assert (summary['positive_distinct_flops'], summary['new_positive_flops'], summary['cert_eligible_ranks']) == (2, 1, [])
+          assert (summary['locked_public_boards'], summary['joint_halfpot_assessed'], summary['halfpot_candidates']) == (18, 18, 0)
+          current = json.loads((data/group).read_bytes())
+          previous = json.loads((data/'solver_evidence/partial/rank229.json').read_bytes())
+          assert current['boards'][:1] == previous['boards'] and current['pins'][:1] == previous['pins']
+          assert [b['flop'] for b in current['boards']] == ['Kc9d4h','Kd9c5h']
+          with ZipFile(data/archive) as z:
+              proof = json.loads(z.read('proof.json'))
+              selected = proof['selected']
+              assert (selected['sb'], selected['turn'], selected['public_board']) == ('6d9d', '7d', '5h9cKd7d3c')
+              assert selected == summary['selected'] and selected['btn_hands']
+              assert proof['original_nodes_unchanged'] == 14 and len(proof['new_raw_boundary_sha256']) == 3
+              assert [v['turn'] for v in proof['turns']] == ['8d','7d']
+              assert proof['turns'][0]['common'] == {} and len(proof['turns'][1]['common']) == 10
+          PY
+          node tools/hu_b679_policy_view.cjs data/solver_evidence/partial/b781_rank229.json
+          git diff --exit-code -- data/
