@@ -1,0 +1,96 @@
+name: B683 authenticate only the three new rank229 negative workers
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b683-rank229-negatives.yml'
+      - 'tools/hu_b683_collect.py'
+      - 'tools/hu_b683_publish.py'
+permissions: {contents: write, actions: read}
+jobs:
+  verify-new-negatives:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Authenticate and replay only the three new original B681 workers
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/hu_b683_collect.py tools/hu_b683_publish.py
+          sha256sum data/nl2_hu_multiboard_status_current.json \
+            data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json \
+            data/nl2_hu_model_source_references.json > "$RUNNER_TEMP/b683-central.sha256"
+          python tools/hu_b683_collect.py --output "$RUNNER_TEMP/b683-originals"
+          node tools/hu_b676_checked_routes.cjs > "$RUNNER_TEMP/b683-routes.json"
+          python tools/hu_b683_publish.py --solver ../solver \
+            --receipts "$RUNNER_TEMP/b683-originals" --output "$RUNNER_TEMP/b683-replayed" \
+            --routes "$RUNNER_TEMP/b683-routes.json" > "$RUNNER_TEMP/b683-summary.json"
+          cat "$RUNNER_TEMP/b683-summary.json"
+          sha256sum -c "$RUNNER_TEMP/b683-central.sha256"
+      - name: Preserve exact negative proofs and receipts without changing certification
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b683-replayed/data" <<'PY'
+          import hashlib,json,sys
+          from pathlib import Path
+          data=Path(sys.argv[1])
+          report=json.loads((data/'nl2_hu_b683_rank229_negatives.json').read_bytes())
+          assert report['new_positive_boards']==0 and report['new_negative_boards']==3
+          assert report['prior_positive_boards']==report['total_positive_flops']==1
+          assert not report['certification_eligible'] and not report['previous_source_replayed']
+          assert report['new_actor_locked_boards']==report['new_half_pot_assessed']==0
+          assert not list(data.glob('*locked_medium.json'))
+          assert not (data/'solver_evidence/reverified').exists()
+          for record in report['records']:
+              path=data/Path(record['proof_path']).relative_to('data')
+              assert hashlib.sha256(path.read_bytes()).hexdigest()==record['proof_sha256']
+              assert json.loads(path.read_bytes())['selected']=={'229':None}
+          PY
+          cp -R "$RUNNER_TEMP/b683-replayed/data/." data/
+          sha256sum -c "$RUNNER_TEMP/b683-central.sha256"
+          git diff --check
+      - name: Create the new-negative data candidate without moving any branch
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b683-replayed/data" <<'PY'
+          import subprocess,sys
+          from pathlib import Path
+          stage=Path(sys.argv[1])
+          paths=['data/'+str(p.relative_to(stage)) for p in sorted(stage.rglob('*')) if p.is_file()]
+          assert len(paths)==5 and all('b683' in p for p in paths)
+          if subprocess.check_output(['git','status','--porcelain','--',*paths]).strip():
+              subprocess.run([sys.executable,'tools/hu_publish_candidate.py',
+                  '--message','B683 preserve three authenticated new rank229 negatives; prior partial remains one flop',
+                  '--paths',*paths],check=True)
+          else:
+              print('The three authenticated B681 negative receipts are already current.')
+          PY
+      # The repository's full-batch-audit workflow runs on every push.
+      # This job adds only the new negative replay and does not rerun old solves.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B683-authenticated-rank229-negatives
+          path: |
+            ${{ runner.temp }}/b683-replayed/data
+            ${{ runner.temp }}/b683-summary.json
+          if-no-files-found: warn
+          retention-days: 90
+

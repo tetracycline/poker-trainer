@@ -4,7 +4,8 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import urllib.request
+import subprocess
+import time
 
 REPO="tetracycline/poker-trainer"
 RUN=45307442376
@@ -18,11 +19,15 @@ def main():
     args=cli.parse_args();assert os.environ["GITHUB_REPOSITORY"]==REPO
     args.output.mkdir(parents=True,exist_ok=True)
     def get(resource,raw=False):
-        req=urllib.request.Request("https://api.github.com/repos/"+REPO+"/"+resource,headers={
-            "Authorization":"Bearer "+os.environ["GH_TOKEN"],"Accept":"application/vnd.github+json",
-            "X-GitHub-Api-Version":"2022-11-28","User-Agent":"nl2-b678-original-worker-audit"})
-        with urllib.request.urlopen(req,timeout=90) as response:body=response.read()
-        return body if raw else json.loads(body)
+        # gh strips GitHub Authorization on signed artifact redirects to another host.
+        # Authenticate metadata and SHA exactly as before; retry failed reads only.
+        for attempt in range(4):
+            response=subprocess.run(["gh","api","repos/"+REPO+"/"+resource],
+                capture_output=True,timeout=90)
+            if response.returncode==0:
+                return response.stdout if raw else json.loads(response.stdout)
+            if attempt==3:raise RuntimeError(response.stderr.decode(errors="replace")[-800:])
+            time.sleep(2*(attempt+1))
     run=get(f"actions/runs/{RUN}")
     assert (run["id"],run["head_sha"],run["head_branch"],run["status"],run["conclusion"],run["path"])==(
         RUN,HEAD,"fix/nl2-hu-lines-audit-20261118","completed","success",PATH)
