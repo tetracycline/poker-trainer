@@ -1,0 +1,98 @@
+name: B674 verify exact three-bet flop-call prices and solve rank75
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b674-threebet-call-prices.yml'
+      - 'tools/hu_b674_*.py'
+      - 'tools/hu_b674_*.cjs'
+      - 'tools/staged/hu_b674_*.js'
+permissions: {contents: read, actions: read}
+jobs:
+  prices-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Apply the isolated prices and preserve every existing certificate
+        env:
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          set -euo pipefail
+          cp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/before-registry.json"
+          node tools/hu_b674_threebet_call_routes.cjs --snapshot "$RUNNER_TEMP/before-render.json"
+          python tools/hu_b674_stage_prices.py --apply
+          node tools/hu_b674_threebet_call_routes.cjs --compare "$RUNNER_TEMP/before-render.json" > "$RUNNER_TEMP/b674-routes.json"
+          python tools/hu_apply_cert_extensions.py --out data/nl2_hu_multiboard_status_current.json
+          python - "$RUNNER_TEMP/before-registry.json" <<'PY'
+          import json,sys
+          before=json.load(open(sys.argv[1]))
+          after=json.load(open('data/nl2_hu_multiboard_status_current.json'))
+          assert set(before['records'])==set(after['records']) and len(after['records'])==392
+          assert (before['CERT_MULTIBOARD'],before['APPROX'])==(after['CERT_MULTIBOARD'],after['APPROX'])
+          certified=[k for k,v in before['records'].items() if v['label']=='CERT-MULTIBOARD']
+          assert len(certified)>=146
+          for key in certified:
+              assert before['records'][key]==after['records'][key],key
+          print('All',len(certified),'certificates unchanged; all 392 models retained')
+          PY
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+          git diff --binary -- nl2_hu_model.js nl2.js data/nl2_hu_multiboard_status_current.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json data/nl2_hu_verified_extensions.json > "$RUNNER_TEMP/b674-verified-prices.patch"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B674-verified-price-candidate
+          path: |
+            ${{ runner.temp }}/b674-verified-prices.patch
+            ${{ runner.temp }}/b674-routes.json
+          if-no-files-found: error
+          retention-days: 90
+  solve:
+    needs: prices-and-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [8h6d3c, 7d7c3h, As9s4d]
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Solve original CO-BTN flop and independently lock the exact turn
+        env:
+          FLOP: ${{ matrix.flop }}
+          RAYON_NUM_THREADS: 2
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          python tools/hu_b674_stage_prices.py --apply
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          folder="$RUNNER_TEMP/B674/$FLOP"
+          python tools/hu_b674_rank75.py --solver pinned-solver --flop "$FLOP" --output "$folder" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$folder/proof.json" "$RUNNER_TEMP/b674-original-proof.json"
+          python tools/hu_b674_rank75.py --solver pinned-solver --flop "$FLOP" --output "$folder"
+          cmp "$folder/proof.json" "$RUNNER_TEMP/b674-original-proof.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B674-R75-${{ matrix.flop }}
+          path: ${{ runner.temp }}/B674/${{ matrix.flop }}
+          if-no-files-found: error
+          retention-days: 90
