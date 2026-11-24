@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from hu_b467_river_source_gate import json_bytes, sha
 from hu_b710_collect import api
-from hu_b736_publish import run_receipt, job_receipt, artifact_receipt
+
 
 RUN=45331068744
 HEAD='24c4d5229b9e498b5c2dc5d936354f30effa2c17'
@@ -15,6 +15,40 @@ FILES={WORKFLOW:'012ba655c59e2f3b483f4316ecae9b0caebd1a69','tools/hu_b737_rank23
        'tools/hu_b737_rank233_routes.cjs':'8b3510f0fd0c85bdc031acf4703dadf3c6f698d9'}
 STEPS=['Verify three-street check links, original range, both original policies and exact source jobs','Build the pinned native solver',
        'Extend the original turn extractions and verify all 18 old nodes per policy','Run actions/upload-artifact@v4']
+
+
+BRANCH='fix/nl2-hu-lines-audit-20261118'
+
+
+def fields(obj, names):
+    return {name:obj[name] for name in names.split()}
+
+
+def run_receipt(raw,pin,ref,workflow):
+    row=fields(raw,'id head_sha head_branch path status conclusion run_attempt')
+    row['repository']=fields(raw['repository'],'id full_name')
+    assert row['repository']==dict(id=1438346845,full_name='tetracycline/poker-trainer')
+    assert (row['id'],row['head_sha'],row['head_branch'],row['path'],row['status'],row['conclusion'])==(
+        pin,ref,BRANCH,workflow,'completed','success')
+    return row
+
+
+def job_receipt(raw,run,job_id,name,steps):
+    row=fields(raw,'id run_id head_sha run_attempt name status conclusion')
+    row['steps']=[fields(s,'number name status conclusion') for s in raw['steps']]
+    assert (row['id'],row['run_id'],row['head_sha'],row['run_attempt'],row['name'],row['status'],row['conclusion'])==(
+        job_id,run['id'],run['head_sha'],run['run_attempt'],name,'completed','success')
+    assert set(steps)<={s['name'] for s in row['steps'] if (s['status'],s['conclusion'])==('completed','success')}
+    return row
+
+
+def artifact_receipt(raw,run,artifact_id,name,digest):
+    row=fields(raw,'id name digest size_in_bytes created_at expires_at expired')
+    row['workflow_run']=fields(raw['workflow_run'],'id head_sha head_branch repository_id head_repository_id')
+    assert (row['id'],row['name'],row['digest'],row['expired'])==(artifact_id,name,'sha256:'+digest,False)
+    assert row['workflow_run']==dict(id=run['id'],head_sha=run['head_sha'],head_branch=BRANCH,
+        repository_id=1438346845,head_repository_id=1438346845)
+    return row
 
 
 def validate(raw):
