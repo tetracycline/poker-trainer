@@ -1,0 +1,82 @@
+name: B740 verify and publish the exact half-pot lead and triple raise-call prices
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b740-raise-call-price-publication.yml'
+      - 'tools/hu_b740_integrate_prices.py'
+      - 'tools/hu_b740_publish_candidate.py'
+      - 'tools/hu_b740_price_runtime.cjs'
+      - 'tools/staged/hu_b740_nl2_cert_registry.js'
+      - 'tools/staged/hu_b740_nl2_hu_model.js'
+      - 'tools/staged/hu_b740_route_contract.cjs'
+permissions: {contents: write, actions: read}
+jobs:
+  price-audit-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate three original games and 24 playable entries, then rebuild only five APPROX prices
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/hu_b740_integrate_prices.py tools/hu_b740_publish_candidate.py
+          node --check tools/staged/hu_b740_nl2_cert_registry.js
+          node --check tools/hu_b740_price_runtime.cjs
+          python tools/hu_b740_integrate_prices.py \
+            --paths "$RUNNER_TEMP/b740-paths.txt"
+          node tools/hu_b740_price_runtime.cjs
+          sha256sum nl2.js nl2_hu_model.js nl2_cert_registry.js tools/hu_trainer_route_contract.cjs \
+            data/nl2_hu_multiboard_status_current.json data/nl2_hu_model_source_references.json \
+            data/nl2_hu_model_history_crosswalk.json data/nl2_hu_verified_extensions.json \
+            data/nl2_hu_stage2_queue.json > "$RUNNER_TEMP/b740-integrated.sha256"
+          git diff --check
+          git diff --exit-code -- nl2.js
+      - name: Run every certificate, native lock, medium-size, route and runtime audit
+        run: |
+          set -euo pipefail
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b740-registry-replay.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b740-registry-replay.json"
+          node tools/hu_cert_inventory.js "$RUNNER_TEMP/b740-queue-replay.json"
+          cmp data/nl2_hu_stage2_queue.json "$RUNNER_TEMP/b740-queue-replay.json"
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b740-medium-coverage.json"
+          sha256sum -c "$RUNNER_TEMP/b740-integrated.sha256"
+      - name: Create the immutable three-code-file and atomic-data candidate without moving the draft branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mapfile -t paths < "$RUNNER_TEMP/b740-paths.txt"
+          python tools/hu_b740_publish_candidate.py \
+            --message 'B740 correct five APPROX prices derived from the half-pot BB lead and CO raise to three times the bet, preserve all certificates and atomically update the queue' \
+            --paths "${paths[@]}" | tee "$RUNNER_TEMP/b740-candidate.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B740-price-only-publication
+          path: |
+            ${{ runner.temp }}/b740-paths.txt
+            ${{ runner.temp }}/b740-integrated.sha256
+            ${{ runner.temp }}/b740-medium-coverage.json
+            ${{ runner.temp }}/b740-candidate.txt
+            data/nl2_hu_b740_raise_call_prices.json
+          if-no-files-found: error
+          retention-days: 90
