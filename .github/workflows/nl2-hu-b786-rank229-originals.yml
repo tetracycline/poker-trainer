@@ -1,0 +1,91 @@
+name: B786 replay three original SB check-through roots and preserve two rank229 witnesses
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b786-rank229-originals.yml'
+      - 'tools/hu_b786_collect.py'
+      - 'tools/hu_b786_rank229.py'
+      - 'data/nl2_hu_b786_source_manifest.json'
+      - 'data/nl2_hu_b786_results.json'
+      - 'data/solver_evidence/NL2_B783_*R229_*.zip'
+      - 'data/solver_evidence/partial/b786_rank229*.json'
+permissions: {contents: read, actions: read}
+jobs:
+  authenticate-and-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate the source and replay the committed observations under two hash seeds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 6e9ed6e5213f171d810f13f4edb382b6853d7fdf HEAD
+          python tools/hu_b786_collect.py --output "$RUNNER_TEMP/b786-original"
+          for seed in 23 867; do
+            PYTHONHASHSEED="$seed" python tools/hu_b786_rank229.py --solver pinned-solver \
+              --archives "$RUNNER_TEMP/b786-original" --output "$RUNNER_TEMP/b786-data-$seed"
+          done
+          python - "$RUNNER_TEMP/b786-data-23" "$RUNNER_TEMP/b786-data-867" <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import json
+          import sys
+          first, second = map(Path, sys.argv[1:])
+          data = Path('data')
+          evidence = Path('solver_evidence')
+          cases = ('Ks9d2h', 'Kc9h7d', 'Kh9s8d')
+          group = evidence/'partial/b786_rank229.json'
+          medium = evidence/'partial/b786_rank229_locked_medium.json'
+          expected = {group, medium, Path('nl2_hu_b786_source_manifest.json'), Path('nl2_hu_b786_results.json')}
+          for f in cases:
+              for prefix in ('', 'ROOT_'):
+                  expected.add(evidence/('NL2_B783_'+prefix+'R229_'+f.upper()+'.zip'))
+          assert len(expected) == 10
+          for folder in (first, second):
+              assert {p.relative_to(folder) for p in folder.rglob('*') if p.is_file()} == expected
+              for name in sorted(expected):
+                  assert (folder/name).read_bytes() == (data/name).read_bytes(), name
+          def read(rel):
+              return json.loads((data/rel).read_bytes())
+          summary = read('nl2_hu_b786_results.json')
+          assert (summary['rank'], summary['source_run'], summary['source_head']) == (229, 45348606768, '6e9ed6e5213f171d810f13f4edb382b6853d7fdf')
+          assert summary['positive_distinct_flops'] == 2 and summary['cert_eligible_ranks'] == [] and not summary['selected_by_flop']
+          assert (summary['locked_public_boards'], summary['joint_halfpot_assessed'], summary['halfpot_candidates']) == (0, 0, 0)
+          current, previous = read(group), read(evidence/'partial/b781_rank229.json')
+          assert current['boards'] == previous['boards'] and current['pins'] == previous['pins']
+          assert [b['flop'] for b in current['boards']] == ['Kc9d4h', 'Kd9c5h']
+          m, prior = read(medium), read(evidence/'partial/b781_rank229_locked_medium.json')
+          assert all(m[k] == prior[k] for k in ('references', 'gto_references'))
+          for f in cases:
+              name = 'R229_'+f.upper()+'.zip'
+              with ZipFile(data/evidence/('NL2_B783_ROOT_'+name)) as original, ZipFile(data/evidence/('NL2_B783_'+name)) as new:
+                  for key in ('flop/job.json', 'flop/result.json'):
+                      assert original.read(key) == new.read(key)
+                  proof = json.loads(new.read('proof.json'))
+                  assert json.loads(original.read('checkpoint.json')) == proof['original_flop_source']
+                  assert (proof['flop'], proof['actor'], proof['line']) == (f, 0, 'x x/x x/')
+                  assert proof['selected'] is None and proof['positive_distinct_flops'] == proof['original_flop_repeated'] == 0
+                  assert len(proof['turns']) == 4 and len({t['turn'] for t in proof['turns']}) == 4
+                  for t in proof['turns']:
+                      gate=t['root_gate']
+                      assert gate['flop_sb_check_combos'] == 0 and not gate['hero_flop_check'] and not gate['eligible_rivers']
+                      assert not t['policies'] and not t['common']
+          PY
+          node tools/hu_b679_policy_view.cjs data/solver_evidence/partial/b786_rank229.json
+          git diff --exit-code -- data/
