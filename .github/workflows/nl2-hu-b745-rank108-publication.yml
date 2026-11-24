@@ -1,0 +1,72 @@
+name: B745 audit rank108 across five genuine BB raise-call flops
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b745-rank108-publication.yml'
+      - 'tools/hu_b745_rank108.py'
+permissions: {contents: write, actions: read}
+jobs:
+  replay-audit-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate the original workflows and rebuild all five public flop comparisons
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha256sum nl2.js nl2_hu_model.js nl2_cert_registry.js tools/hu_trainer_route_contract.cjs data/nl2_hu_stage2_queue.json > "$RUNNER_TEMP/b745-protected.sha256"
+          python tools/hu_b745_rank108.py --collect --solver pinned-solver --receipts "$RUNNER_TEMP/b745-source" --stage "$RUNNER_TEMP/b745-stage" --paths "$RUNNER_TEMP/b745-paths.txt"
+          node tools/hu_b679_policy_view.cjs data/solver_evidence/reverified/rank108.json
+          git diff --check
+      - name: Full current registry, native policy, two-seat reach and medium audits
+        run: |
+          set -euo pipefail
+          registry=data/nl2_hu_multiboard_status_current.json
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b745-registry-replay.json"
+          cmp "$registry" "$RUNNER_TEMP/b745-registry-replay.json"
+          node tools/hu_extension_runtime_test.cjs "$registry"
+          bash tools/hu_exact_batch_audit.sh "$registry"
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b745-coverage.json"
+          sha256sum -c "$RUNNER_TEMP/b745-protected.sha256"
+      - name: Create the audited commit candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mapfile -t paths < "$RUNNER_TEMP/b745-paths.txt"
+          count=$(python -c "import json; print(json.load(open('data/nl2_hu_b745_summary.json'))['positive_distinct_flops'])")
+          python tools/hu_publish_candidate.py --message "B745 publish rank108 paired policies on ${count} distinct genuine flops at the verified BB raise-call price" --paths "${paths[@]}" | tee "$RUNNER_TEMP/b745-candidate.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B745-rank108-comparison-publication
+          path: |
+            ${{ runner.temp }}/b745-candidate.txt
+            ${{ runner.temp }}/b745-paths.txt
+            ${{ runner.temp }}/b745-coverage.json
+            data/nl2_hu_b745_summary.json
+          if-no-files-found: warn
+          retention-days: 90
