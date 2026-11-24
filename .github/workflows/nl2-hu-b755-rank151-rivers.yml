@@ -1,0 +1,71 @@
+name: B755 verify three original half-pot-only flop strategies and solve rank151 rivers
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b755-rank151-rivers.yml'
+      - 'tools/hu_b755_rank151.py'
+      - 'tools/hu_b753_rank151_routes.cjs'
+permissions: {contents: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        flop: [7s5h3d, 7h6d4s, 7h6h4c]
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify three-street CO check witnesses against the original BB and CO flop ranges
+        env:
+          FLOP: ${{ matrix.flop }}
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          python -m py_compile tools/hu_b755_rank151.py
+          node tools/hu_b753_rank151_routes.cjs > "$RUNNER_TEMP/b755-routes.json"
+          python tools/hu_b755_rank151.py --solver pinned-solver --flop "$FLOP" \
+            --output "$RUNNER_TEMP/preflight" --routes "$RUNNER_TEMP/b755-routes.json" --preflight
+          git diff --exit-code -- nl2_hu_model.js nl2.js tools/hu_trainer_route_contract.cjs data/
+      - name: Build the pinned native solver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Compare all original flop nodes and solve eligible checked-through rivers
+        env:
+          FLOP: ${{ matrix.flop }}
+          RAYON_NUM_THREADS: 2
+          PYTHONDONTWRITEBYTECODE: 1
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/b755-source"
+          python tools/hu_b755_rank151.py --solver pinned-solver --flop "$FLOP" \
+            --routes "$RUNNER_TEMP/b755-routes.json" --output "$folder" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$folder/proof.json" "$RUNNER_TEMP/b755-original-proof.json"
+          python tools/hu_b755_rank151.py --solver pinned-solver --flop "$FLOP" \
+            --routes "$RUNNER_TEMP/b755-routes.json" --output "$folder"
+          cmp "$folder/proof.json" "$RUNNER_TEMP/b755-original-proof.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B755-R151-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b755-source
+          if-no-files-found: error
+          retention-days: 90
