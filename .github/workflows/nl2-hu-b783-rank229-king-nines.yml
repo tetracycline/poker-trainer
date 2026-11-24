@@ -1,0 +1,80 @@
+name: B783 test three new K9 flops for the remaining rank229 witness
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b783-rank229-king-nines.yml'
+      - 'tools/hu_b783_rank229_king_nines.py'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        flop: [Ks9d2h, Kc9h7d, Kh9s8d]
+    env:
+      FLOP: ${{ matrix.flop }}
+      NODE_OPTIONS: --max-old-space-size=1536
+      RAYON_NUM_THREADS: 2
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify the two prior same-deal sources, restricted root menu and exact UI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          if [ -f data/solver_evidence/NL2_B780_R229_KD9C5H.zip ]; then
+            cp data/solver_evidence/NL2_B780_R229_KD9C5H.zip "$RUNNER_TEMP/b780.zip"
+          else
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14898088914/zip" > "$RUNNER_TEMP/b780.zip"
+          fi
+          python tools/hu_b783_rank229_king_nines.py --preflight --solver pinned-solver --flop "$FLOP" --second-archive "$RUNNER_TEMP/b780.zip" --output "$RUNNER_TEMP/preflight"
+      - name: Build the pinned native solver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve the new original flop and record all check-through boundaries
+        run: |
+          python tools/hu_b783_rank229_king_nines.py --solver pinned-solver --flop "$FLOP" --second-archive "$RUNNER_TEMP/b780.zip" \
+            --checkpoint-only --output "$RUNNER_TEMP/b783-root" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+      - name: Save the original root before any conditional turn solve
+        uses: actions/upload-artifact@v4
+        with:
+          name: B783-root-R229-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b783-root
+          if-no-files-found: error
+          retention-days: 90
+      - name: Verify the original two-seat gate and replay completed conditional policies
+        run: |
+          set -euo pipefail
+          args=(--solver pinned-solver --flop "$FLOP" --second-archive "$RUNNER_TEMP/b780.zip" --output "$RUNNER_TEMP/b783-worker")
+          python tools/hu_b783_rank229_king_nines.py "${args[@]}" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver --checkpoint "$RUNNER_TEMP/b783-root"
+          cp "$RUNNER_TEMP/b783-worker/proof.json" "$RUNNER_TEMP/b783-proof"
+          python tools/hu_b783_rank229_king_nines.py "${args[@]}"
+          cmp "$RUNNER_TEMP/b783-proof" "$RUNNER_TEMP/b783-worker/proof.json"
+          cmp "$RUNNER_TEMP/b783-worker/flop/result.json" "$RUNNER_TEMP/b783-root/flop/result.json"
+      - name: Preserve the rank229 GTO and measured NL2 decisions
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B783-R229-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b783-worker
+          if-no-files-found: error
+          retention-days: 90
