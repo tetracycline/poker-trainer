@@ -1,0 +1,75 @@
+name: B830 study two untested QJo gutshot monotone rank75 flops and preserve the original boundary extractions
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b830-rank75-new-monotone.yml'
+      - 'tools/hu_b830_rank75_new_monotone.py'
+permissions: {contents: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        flop: [Td9d6d, Td8d7d]
+    env:
+      FLOP: ${{ matrix.flop }}
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: 1
+      RAYON_NUM_THREADS: 2
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify original CO donk and BTN call witnesses, monotone UI and both preflop ranges
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          python tools/hu_b830_rank75_new_monotone.py --preflight --solver pinned-solver --flop "$FLOP" --output "$RUNNER_TEMP/preflight"
+      - name: Build the pinned native solver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve each genuinely new full-menu original once
+        run: |
+          python tools/hu_b830_rank75_new_monotone.py --solver pinned-solver --flop "$FLOP" --checkpoint-only \
+            --output "$RUNNER_TEMP/b830-root" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+      - name: Preserve the completed original before conditional work
+        uses: actions/upload-artifact@v4
+        with:
+          name: B830-root-R75-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b830-root
+          if-no-files-found: error
+          retention-days: 90
+      - name: Read the saved original and verify both policies at reachable turn decisions
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/b830-source"
+          python tools/hu_b830_rank75_new_monotone.py --solver pinned-solver --flop "$FLOP" --output "$folder" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver --checkpoint "$RUNNER_TEMP/b830-root"
+          cp "$folder/proof.json" "$RUNNER_TEMP/original-proof"
+          python tools/hu_b830_rank75_new_monotone.py --solver pinned-solver --flop "$FLOP" --output "$folder"
+          cmp "$RUNNER_TEMP/original-proof" "$folder/proof.json"
+          cmp "$RUNNER_TEMP/b830-root/flop/job.json" "$folder/flop/job.json"
+          cmp "$RUNNER_TEMP/b830-root/flop/result.json" "$folder/flop/result.json"
+      - name: Preserve the conditional jobs and original decisions
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B830-R75-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b830-source
+          if-no-files-found: error
+          retention-days: 90
