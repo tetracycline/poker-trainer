@@ -1,0 +1,73 @@
+name: B794 verify the three original rank136 sources and all measured half-pot observations
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b794-rank136-originals.yml'
+      - 'tools/hu_b794_collect.py'
+      - 'tools/hu_b794_rank136.py'
+      - 'data/nl2_hu_b794_source_manifest.json'
+      - 'data/nl2_hu_b794_results.json'
+      - 'data/solver_evidence/NL2_B792_R136_*.zip'
+permissions: {contents: read, actions: read}
+jobs:
+  authenticate-and-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate the source and replay the committed observations under two hash seeds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 693a5d7cf92ba22c5f4e8da4f6ee29312c5779d3 HEAD
+          python tools/hu_b794_collect.py --output "$RUNNER_TEMP/b794-original"
+          for seed in 23 867; do
+            PYTHONHASHSEED="$seed" python tools/hu_b794_rank136.py --solver pinned-solver \
+              --archives "$RUNNER_TEMP/b794-original" --output "$RUNNER_TEMP/b794-data-$seed"
+          done
+          python - "$RUNNER_TEMP/b794-data-23" "$RUNNER_TEMP/b794-data-867" <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import json
+          import sys
+          first, second = map(Path, sys.argv[1:])
+          data = Path('data')
+          flops={'Ad9c6h':(0,0,0),'Ac8h5d':(32,32,12),'Ah8d4s':(32,32,29)}
+          expected={'nl2_hu_b794_source_manifest.json','nl2_hu_b794_results.json'}
+          for f in flops:
+              expected.add('solver_evidence/NL2_B792_R136_'+f.upper()+'.zip')
+          for folder in (first, second):
+              assert {p.relative_to(folder).as_posix() for p in folder.rglob('*') if p.is_file()} == expected
+              for name in sorted(expected):
+                  assert (folder/name).read_bytes() == (data/name).read_bytes(), name
+          summary=json.loads((data/'nl2_hu_b794_results.json').read_bytes())
+          assert (summary['source_run'],summary['source_head'],summary['rank'])==(45351501007,'693a5d7cf92ba22c5f4e8da4f6ee29312c5779d3',136)
+          assert summary['cert_eligible_ranks']==[] and summary['positive_distinct_flops']==0 and not summary['selected_by_flop']
+          assert summary['checked_distinct_flops']==3 and summary['original_flop_native_solves_repeated']==0
+          keys=('locked_public_boards','joint_halfpot_assessed','halfpot_candidates')
+          assert tuple(summary[k] for k in keys)==(64,64,41)
+          assert {r['flop']:tuple(r[k] for k in keys) for r in summary['workers']}==flops
+          for r in summary['workers']:
+              with ZipFile(data/('solver_evidence/NL2_B792_R136_'+r['flop'].upper()+'.zip')) as z:
+                  claim=json.loads(z.read('proof.json'))
+                  assert len(claim['origin']['held_out_seat_weight_sha256'])==10
+                  assert len(claim['turns'])==2 and all(not t['common'] for t in claim['turns'])
+                  for t in claim['turns']:
+                      assert not t['policies'].get('exp_ip',{}).get('common_deal_candidates')
+          PY
+          git diff --exit-code -- data/
