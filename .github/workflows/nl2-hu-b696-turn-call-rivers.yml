@@ -1,0 +1,143 @@
+name: B696 solve exact half-pot turn-call river routes for ranks76 and89
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b696-turn-call-rivers.yml'
+      - 'tools/hu_b696_stage_prices.py'
+      - 'tools/hu_b696_turn_call_routes.cjs'
+      - 'tools/hu_b696_turn_call_rivers.py'
+      - 'tools/staged/hu_b696_nl2_hu_model.js'
+      - 'tools/staged/hu_b696_trainer_route_contract.cjs'
+permissions: {contents: read, actions: read}
+jobs:
+  prices-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Preserve all existing certificates and all390 other models while fixing two named prices
+        env:
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/B696-prices"
+          mkdir -p "$folder"
+          cp data/nl2_hu_multiboard_status_current.json "$folder/before-registry.json"
+          cp data/nl2_hu_model_source_references.json "$folder/before-references.json"
+          cp data/nl2_hu_model_history_crosswalk.json "$folder/before-crosswalk.json"
+          cp data/nl2_hu_stage2_queue.json "$folder/before-queue.json"
+          node tools/hu_b696_turn_call_routes.cjs --snapshot "$RUNNER_TEMP/b696-before-render.json"
+          python tools/hu_b696_stage_prices.py --apply
+          python tools/hu_b696_stage_prices.py --apply
+          node tools/hu_b696_turn_call_routes.cjs --compare "$RUNNER_TEMP/b696-before-render.json" > "$folder/rendered-routes.json"
+          python tools/hu_apply_cert_extensions.py --out data/nl2_hu_multiboard_status_current.json
+          node tools/hu_cert_inventory.js data/nl2_hu_stage2_queue.json
+          python - "$folder" <<'PY'
+          from copy import deepcopy
+          import hashlib,json,sys
+          from pathlib import Path
+          folder=Path(sys.argv[1])
+          read=lambda path:json.loads(Path(path).read_bytes())
+          targets={'ln-opfr-r_model-1phsqr4':(12.,94.,7.833),'ln-ipfr-r_model-bqgbuq':(11.,94.75,8.614)}
+          before=read(folder/'before-registry.json')
+          after=read('data/nl2_hu_multiboard_status_current.json')
+          assert set(before['records'])==set(after['records']) and len(after['records'])==392
+          certs=[k for k,v in before['records'].items() if v['label']=='CERT-MULTIBOARD']
+          assert len(certs)>=148
+          expected=deepcopy(before)
+          for mid,(_,_,spr) in targets.items():
+              assert before['records'][mid]['label']==after['records'][mid]['label']=='APPROX'
+              expected['records'][mid]['assumed_model_node_spr']=spr
+          assert after==expected,'Any registry change beyond the two APPROX prices is rejected'
+          for mid in certs:assert before['records'][mid]==after['records'][mid],mid
+          before_refs=read(folder/'before-references.json')
+          for mid,(_,_,spr) in targets.items():before_refs['items'][mid]['model_node_spr']=spr
+          assert before_refs==read('data/nl2_hu_model_source_references.json')
+          assert read(folder/'before-crosswalk.json')==read('data/nl2_hu_model_history_crosswalk.json')
+          queue=read(folder/'before-queue.json')
+          queue['source_sha256']['nl2_hu_model.js']=hashlib.sha256(Path('nl2_hu_model.js').read_bytes()).hexdigest()
+          for row in queue['records']:
+              if row['model_id'] in targets:
+                  row['approx_pot_bb'],row['approx_remaining_bb'],row['approx_spr']=targets[row['model_id']]
+          assert queue==read('data/nl2_hu_stage2_queue.json'),'Legacy queue changed outside the two prices and pinned model hash'
+          report=dict(schema='NL2_B696_ISOLATED_TURN_PRICE_GATE_V1',total=392,certified_unchanged=len(certs),
+              other_models_unchanged=390,CERT_MULTIBOARD=after['CERT_MULTIBOARD'],APPROX=after['APPROX'],
+              corrected_prices=targets,labels_unchanged=True,live_branch_modified=False)
+          (folder/'price-gate.json').write_text(json.dumps(report,indent=2)+'\n')
+          print('Preserved',len(certs),'certificates and390 other models; both corrected river leaves remain APPROX')
+          PY
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+          git diff -- nl2_hu_model.js tools/hu_trainer_route_contract.cjs \
+            data/nl2_hu_multiboard_status_current.json data/nl2_hu_model_source_references.json \
+            data/nl2_hu_stage2_queue.json > "$folder/isolated-price-fix.patch"
+          git diff --exit-code -- nl2.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B696-verified-turn-call-prices
+          path: ${{ runner.temp }}/B696-prices
+          if-no-files-found: error
+          retention-days: 90
+  solve:
+    needs: prices-and-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include:
+          - {rank: 76, flop: 8c6h3d}
+          - {rank: 76, flop: 7h5d2c}
+          - {rank: 76, flop: 9d6d4c}
+          - {rank: 89, flop: Kd8c4h}
+          - {rank: 89, flop: Qs7h3d}
+          - {rank: 89, flop: Jc6d2s}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Solve original native roots and reachable exact-priced GTO and measured NL2 river pairs
+        env:
+          RANK: ${{ matrix.rank }}
+          FLOP: ${{ matrix.flop }}
+          RAYON_NUM_THREADS: 2
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          python tools/hu_b696_stage_prices.py --apply
+          node tools/hu_b696_turn_call_routes.cjs > "$RUNNER_TEMP/b696-routes.json"
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          folder="$RUNNER_TEMP/B696/$RANK/$FLOP"
+          python tools/hu_b696_turn_call_rivers.py --solver pinned-solver --rank "$RANK" --flop "$FLOP" \
+            --routes "$RUNNER_TEMP/b696-routes.json" --output "$folder" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$folder/proof.json" "$RUNNER_TEMP/b696-original-proof.json"
+          python tools/hu_b696_turn_call_rivers.py --solver pinned-solver --rank "$RANK" --flop "$FLOP" \
+            --routes "$RUNNER_TEMP/b696-routes.json" --output "$folder"
+          cmp "$folder/proof.json" "$RUNNER_TEMP/b696-original-proof.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B696-R${{ matrix.rank }}-${{ matrix.flop }}
+          path: ${{ runner.temp }}/B696/${{ matrix.rank }}/${{ matrix.flop }}
+          if-no-files-found: error
+          retention-days: 90
