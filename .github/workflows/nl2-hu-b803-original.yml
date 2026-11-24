@@ -1,8 +1,8 @@
-name: B803 archive the successful B802 original rank230 worker
+name: B803 B805 archive completed rank230 originals
 on:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
-    paths: ['tools/hu_b803_original.py']
+    paths: ['tools/hu_b803_original.py', 'tools/hu_b805_original.py']
 permissions: {contents: write, actions: read, pull-requests: read}
 jobs:
   replay-audit-candidate:
@@ -29,8 +29,11 @@ jobs:
         run: |
           set -euo pipefail
           python tools/hu_b803_original.py --collect --archives "$RUNNER_TEMP/original"
+          python tools/hu_b805_original.py --collect --archives "$RUNNER_TEMP/original-b805"
           for seed in 23 867; do
             PYTHONHASHSEED="$seed" python tools/hu_b803_original.py --archives "$RUNNER_TEMP/original" --solver pinned-solver --output "$RUNNER_TEMP/data-$seed"
+            PYTHONHASHSEED="$seed" python tools/hu_b805_original.py --archives "$RUNNER_TEMP/original-b805" --solver pinned-solver --output "$RUNNER_TEMP/b805-$seed"
+            cp -a "$RUNNER_TEMP/b805-$seed/." "$RUNNER_TEMP/data-$seed/"
           done
           diff -r "$RUNNER_TEMP/data-23" "$RUNNER_TEMP/data-867"
           git diff --exit-code -- data
@@ -72,15 +75,16 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t paths < "$RUNNER_TEMP/candidate-paths.txt"
-          python tools/hu_publish_candidate.py --message 'B803 archive successful rank230 native evidence and failed preflight without altering certification' --paths "${paths[@]}" | tee "$RUNNER_TEMP/candidate.txt"
+          python tools/hu_publish_candidate.py --message 'B803 B805 archive both original rank230 workers and failed preflight without altering certification' --paths "${paths[@]}" | tee "$RUNNER_TEMP/candidate.txt"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: B803-audited-candidate
+          name: B803-B805-audited-candidate
           path: |
             ${{ runner.temp }}/candidate.txt
             ${{ runner.temp }}/candidate-paths.txt
             ${{ runner.temp }}/coverage.json
             ${{ runner.temp }}/data-23/nl2_hu_b803_results.json
+            ${{ runner.temp }}/data-23/nl2_hu_b805_results.json
           if-no-files-found: warn
           retention-days: 90

@@ -5,7 +5,15 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 import hu_b802_rank230_low_connected as worker
 from hu_b467_river_source_gate import json_bytes,sha
-from hu_b710_collect import api
+# gh sanitizes terminal escapes in workflow logs; preserve the exact bytes for SHA checks.
+def api(path):
+    import time
+    for attempt in range(4):
+        result = subprocess.run(['gh','api','--allow-escape-sequences','repos/tetracycline/poker-trainer/'+path],capture_output=True)
+        if result.returncode==0: return result.stdout
+        if attempt==3: raise RuntimeError(result.stderr.decode(errors='replace')[-800:])
+        time.sleep(2*(attempt+1))
+
 from hu_b710_publish import unpack_original
 from hu_b738_collect import fields,job_receipt,artifact_receipt
 
