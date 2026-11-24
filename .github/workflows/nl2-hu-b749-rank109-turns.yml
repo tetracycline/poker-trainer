@@ -1,0 +1,62 @@
+name: B749 exact UTG value barrels on newly three-suited turns
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b749-rank109-turns.yml'
+      - 'tools/hu_b749_rank109.py'
+permissions: {contents: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 27
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        flop: [8h6h2d, 9c7c4d, Jh8h3d]
+    env:
+      FLOP: ${{ matrix.flop }}
+      RAYON_NUM_THREADS: 2
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Check preserved UTG flop ranges and three-suited turn routes
+        run: |
+          set -euo pipefail
+          python -m pip -q install numpy phevaluator==0.5.3.1
+          python tools/hu_b749_rank109.py --flop "$FLOP" --solver pinned-solver --output "$RUNNER_TEMP/preflight" --preflight
+      - name: Compile the pinned native solver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve both missing turn barrels on the original flop and replay both policies
+        timeout-minutes: 22
+        run: |
+          set -euo pipefail
+          args=(--flop "$FLOP" --solver pinned-solver --output "$RUNNER_TEMP/b749-out")
+          python tools/hu_b749_rank109.py "${args[@]}" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$RUNNER_TEMP/b749-out/proof.json" "$RUNNER_TEMP/b749-original-proof.json"
+          python tools/hu_b749_rank109.py "${args[@]}"
+          cmp "$RUNNER_TEMP/b749-original-proof.json" "$RUNNER_TEMP/b749-out/proof.json"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B749-R109-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b749-out
+          if-no-files-found: error
+          retention-days: 90
