@@ -20,6 +20,12 @@ jobs:
           ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
           path: pinned-solver
           persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: b-inary/postflop-solver
+          ref: 9d1509fe5077d019825f833eed04b16d342dfda1
+          path: pinned-solver/postflop/postflop-solver
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with: {python-version: '3.11'}
       - run: python -m pip install numpy phevaluator==0.5.3.1
