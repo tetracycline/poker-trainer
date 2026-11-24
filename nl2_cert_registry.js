@@ -48,11 +48,33 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
     throw Error('具名來源格式不符');
   }
   const records = {...base.records};
+  // These two named river leaves price a 50% turn call after a checked flop.
+  // Keep the existing flop-price gate for every other model.
+  const turnCallPrices = {
+    'ln-opfr-r_model-1phsqr4': {rank:76, source:'ln-opfr-t_vs_probe-8xl9mh', spot:'SB_BB', seat:0,
+      history:'你過、對手過|你過、對手下注、你跟|', streets:['x x','x b50 c',''], spr:7.833},
+    'ln-ipfr-r_model-bqgbuq': {rank:89, source:'ln-ipfr-t_vs_probe-1993kni', spot:'BTN_BB', seat:1,
+      history:'對手過、你過|對手下注、你跟|對手過', streets:['x x','b50 c','x'], spr:8.614}
+  };
   for (const [id,route] of Object.entries(manifest.trainer_route_contract?.routes || {})) {
-    if (route.priced_model_spr === undefined) continue;
-    if (!records[id] || !Number.isFinite(route.priced_model_spr) || route.priced_model_spr <= 0 ||
-        !/^x? ?b[1-9]\d* c$/.test(route.streets[0])) throw Error('翻牌跟注的來源尺寸或 SPR 不符');
-    records[id] = {...records[id],assumed_model_node_spr:route.priced_model_spr};
+    const turnPrice=turnCallPrices[id], model=records[id];
+    if (route.priced_model_spr === undefined) {
+      if (turnPrice && Array.isArray(route.streets) && route.streets.some(s=>/(^| )b[0-9]+( |$)/.test(s)))
+        throw Error('轉牌跟注的來源尺寸或 SPR 不符');
+      continue;
+    }
+    if (!model || !Number.isFinite(route.priced_model_spr) || route.priced_model_spr <= 0 ||
+        !Array.isArray(route.streets)) throw Error('跟注的來源尺寸或 SPR 不符');
+    if (turnPrice) {
+      if (model.model_id!==id || model.frequency_rank!==turnPrice.rank || model.street!==2 || model.family!=='SRP' ||
+          model.source_model_id!==turnPrice.source || model.solver_profile!==turnPrice.spot ||
+          model.abstract_action_history!==turnPrice.history || route.seat!==turnPrice.seat ||
+          route.streets.length!==3 || !route.streets.every((street,i)=>street===turnPrice.streets[i]) ||
+          route.priced_model_spr!==turnPrice.spr) throw Error('轉牌跟注的來源尺寸或 SPR 不符');
+    } else if (!/^x? ?b[1-9]\d* c$/.test(route.streets[0])) {
+      throw Error('翻牌跟注的來源尺寸或 SPR 不符');
+    }
+    records[id] = {...model,assumed_model_node_spr:route.priced_model_spr};
   }
   const extensions = {};
   const digest = x => typeof x === 'string' && /^[0-9a-f]{64}$/.test(x);

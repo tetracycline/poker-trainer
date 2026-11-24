@@ -191,12 +191,24 @@ function repair(html,sp,catalog){
         ? s.part.match(/data-iso-call-price="([0-9.]+)\/([0-9]+)"/) : null;
     const priced = printed && Number(printed[1])===m.root.pot;
     const facing = priced ? Math.min(m.root.stack,Math.round(m.root.pot*Number(printed[2]))/100) : 0;
-    const next = priced
-      ? {pot:round(m.root.pot+2*facing),stack:round(m.root.stack-facing),root:m.root}
+    // These two named river leaves follow a checked flop and an explicit 50% turn bet.
+    // The facing pot already contains that bet; calling does not invest half of it again.
+    const pricedTurn = {
+      'ln-opfr-r_model-1phsqr4':['ln-opfr-t_vs_probe-8xl9mh','SB_BB','你過、對手過|你過、對手下注',6,97],
+      'ln-ipfr-r_model-bqgbuq':['ln-ipfr-t_vs_probe-1993kni','BTN_BB','對手過、你過|對手下注',5.5,97.5]
+    }[id];
+    if(pricedTurn && (s.modelMeta || action!=='call' || s.st!==1 || s.id!==pricedTurn[0] ||
+        m.root.spot!==pricedTurn[1] || s.key!==pricedTurn[2] || m.root.pot!==pricedTurn[3] || m.root.stack!==pricedTurn[4]))
+      throw Error('Changed exact checked-flop turn-call source: '+id);
+    const turnFacing = pricedTurn ? Math.round(m.root.pot*50)/100 : 0;
+    const next = pricedTurn
+      ? {pot:round(m.root.pot+2*turnFacing),stack:round(m.root.stack-turnFacing),root:m.root}
+      : priced ? {pot:round(m.root.pot+2*facing),stack:round(m.root.stack-facing),root:m.root}
       : transition(m,action,size,s.st);
     const flopCallPct = priced ? Number(printed[2]) : s.flopCallPct;
+    const turnCallPct = pricedTurn ? 50 : s.turnCallPct;
     const line=keyNext(s,action,stage);
-    const x={id,sp:s.sp,nd,st:stage,pfx:s.pfx,source:s.id,action,size:round(size),flopCallPct,flopBetPct,
+    const x={id,sp:s.sp,nd,st:stage,pfx:s.pfx,source:s.id,action,size:round(size),flopCallPct,flopBetPct,turnCallPct,
       pre:s.pre,modelMeta:next,key:line,title:titleFor(s.pre,line,stage),allowed:new Set(),
       facts:{root:next.root,pot:next.pot,stack:next.stack,spr:next.pot?round(next.stack/next.pot):0}};
     model.set(key,x);created.push(x);return x;
@@ -282,6 +294,7 @@ function repair(html,sp,catalog){
     const sizeDesc='100bb；'+rootP.family+'；'+rootP.range+'；根底池 '+rootP.pot+'bb／根餘額 '+rootP.stack+
       'bb／根 SPR '+rootP.rootSPR+'；模型節點底池約 '+P.pot+'bb、剩餘有效籌碼約 '+P.stack+'bb、SPR 約 '+P.spr+
       (n.flopCallPct ? '；翻牌跟注按來源行動線的 '+n.flopCallPct+'% 底池下注計價' : '')+
+      (n.turnCallPct ? '；轉牌跟注按來源行動線的 '+n.turnCallPct+'% 底池下注計價' : '')+
       '；每街採常見 ⅓／½／¾ 底池下注、加注到 3 倍並由對手跟注；所有值是明示假設，非真實逐 combo 解算。';
     const exactViewerSpots=['BTN_BB','BB3_BTN','CO_BB','SB_BB','SB3_BTN','UTG_CO','CO3_BTN'];
     const sourceRef=exactViewerSpots.includes(rootP.spot)
@@ -304,7 +317,7 @@ function repair(html,sp,catalog){
   root.__HU_MODEL_LAST={spot:sp,synthetic:created.length,assumption:true,sourceSections:sections.length,
     nodes:created.map(n=>({id:n.id,source:n.source,sp:n.sp,nd:n.nd,st:n.st,
       pre:n.pre,action:n.action,size:n.size,key:n.key,allowed:[...n.allowed].sort(),
-      facts:n.facts,flopCallPct:n.flopCallPct,flopBetPct:n.flopBetPct}))};
+      facts:n.facts,flopCallPct:n.flopCallPct,flopBetPct:n.flopBetPct,turnCallPct:n.turnCallPct}))};
   return patched;
 }
 root.NL2HUModel={repair,version:'hu-nl2-100bb-assumption-v1'};

@@ -115,8 +115,14 @@ for (const spot of new Set(ids.map(id => id.split('-')[1]))) {
       assert(betIndex >= 0 && streets[0][betIndex+1] === 'c' && Number.isInteger(model.flopCallPct));
       streets[0][betIndex] = 'b'+model.flopCallPct;
     }
+    if (model.turnCallPct) {
+      assert.equal(streets[0].join(' '),'x x',model.id);
+      const betIndex=streets[1].indexOf('bet');
+      assert(betIndex>=0 && streets[1][betIndex+1]==='c' && model.turnCallPct===50,model.id);
+      streets[1][betIndex]='b'+model.turnCallPct;
+    }
     const route = {seat,streets:streets.map(tokens => tokens.join(' ')),links};
-    if (model.flopCallPct || model.flopBetPct) route.priced_model_spr = model.facts.spr;
+    if (model.flopCallPct || model.flopBetPct || model.turnCallPct) route.priced_model_spr = model.facts.spr;
     if(model.id==='ln-ipfr-r_model-1iypoop') {
       const edges=incoming.get(model.id).filter(e=>e.from===model.source);
       assert.equal(model.source,'ln-ipfr-t_model-dzbacd');
