@@ -1,0 +1,64 @@
+name: B782 extract checked branches and solve three original rank230 middle-pair flops
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b782-rank230-mid-pairs.yml'
+      - 'tools/hu_b782_rank230_mid_pairs.py'
+permissions: {contents: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        flop: [Th9h7c, Ts8s7h, Ts9s6h]
+    env:
+      FLOP: ${{ matrix.flop }}
+      RAYON_NUM_THREADS: 2
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: 1
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: b-inary/postflop-solver
+          ref: 9d1509fe5077d019825f833eed04b16d342dfda1
+          path: pinned-solver/postflop/postflop-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify the genuine SB3_BTN thirty-three-percent root and both checked seats
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          python tools/hu_b782_rank230_mid_pairs.py --preflight --flop "$FLOP" --solver pinned-solver --output "$RUNNER_TEMP/preflight"
+      - name: Build the pinned native driver
+        working-directory: pinned-solver/postflop/pfdriver
+        run: RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Re-export the checked ranges, match every original node and verify the new native turns
+        run: |
+          set -euo pipefail
+          path="$RUNNER_TEMP/b782-source"
+          python tools/hu_b782_rank230_mid_pairs.py --flop "$FLOP" --solver pinned-solver --output "$path" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$path/proof.json" "$RUNNER_TEMP/b782-proof"
+          python tools/hu_b782_rank230_mid_pairs.py --flop "$FLOP" --solver pinned-solver --output "$path"
+          cmp "$RUNNER_TEMP/b782-proof" "$path/proof.json"
+      - name: Preserve the matched root and genuine conditional jobs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B782-R230-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b782-source
+          if-no-files-found: error
+          retention-days: 90
