@@ -176,8 +176,19 @@ function repair(html,sp,catalog){
     ids.add(id);
     const flopBetPct=s.flopBetPct||(!s.modelMeta && limpedFlopPrice(s));
     const m=s.modelMeta||walkActions(s,flopBetPct);
-    const printed = !s.modelMeta && action==='call' && s.st===0 && m.root.family==='ISO'
-      ? s.part.match(/data-iso-call-price="([0-9.]+)\/([0-9]+)"/) : null;
+    // Settle the actual 33% flop bet on these four named 3BP call routes.
+    // The former generic call transition charged 50% of the already enlarged pot.
+    const priced3bp = {
+      'ln-3bp-3b_t_model-10ve86c':['ln-3bp-3b_f_vs_donk-1vxcsw1',16.5],
+      'ln-3bp-3b_t_model-ciziut':['ln-3bp-3b_f_vs_donk-12vwqfc',21],
+      'ln-3bp-3c_t_model-owdwy':['ln-3bp-3c_f_vs_cbet-1pj8rrc',20.5],
+      'ln-3bp-3b_t_model-yap927':['ln-3bp-3b_f_vs_donk-76tzdu',20.5]
+    }[id];
+    if(priced3bp && (s.modelMeta || action!=='call' || s.st!==0 || s.id!==priced3bp[0] || m.root.pot!==priced3bp[1]))
+      throw Error('Changed exact 3BP flop-call source: '+id);
+    const printed = priced3bp ? ['',String(priced3bp[1]),'33'] :
+      !s.modelMeta && action==='call' && s.st===0 && m.root.family==='ISO'
+        ? s.part.match(/data-iso-call-price="([0-9.]+)\/([0-9]+)"/) : null;
     const priced = printed && Number(printed[1])===m.root.pot;
     const facing = priced ? Math.min(m.root.stack,Math.round(m.root.pot*Number(printed[2]))/100) : 0;
     const next = priced

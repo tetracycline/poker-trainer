@@ -1,0 +1,95 @@
+name: B684 solve rank103 BB-BTN exact flop-call turns
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b684-rank103-turns.yml'
+      - 'tools/hu_b684_rank103.py'
+      - 'tools/hu_b684_rank103_routes.cjs'
+permissions: {contents: read, actions: read}
+jobs:
+  routes-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Verify exact displayed prices and preserve every existing certificate
+        env:
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          set -euo pipefail
+          cp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/before-registry.json"
+          node tools/hu_b674_threebet_call_routes.cjs --snapshot "$RUNNER_TEMP/before-render.json"
+          python tools/hu_b682_stage_prices.py --apply
+          node tools/hu_b674_threebet_call_routes.cjs --compare "$RUNNER_TEMP/before-render.json" > /dev/null
+          node tools/hu_b684_rank103_routes.cjs > "$RUNNER_TEMP/b684-routes.json"
+          python tools/hu_apply_cert_extensions.py --out data/nl2_hu_multiboard_status_current.json
+          python - "$RUNNER_TEMP/before-registry.json" <<'PY'
+          import json,sys
+          before=json.load(open(sys.argv[1]))
+          after=json.load(open('data/nl2_hu_multiboard_status_current.json'))
+          assert set(before['records'])==set(after['records']) and len(after['records'])==392
+          assert (before['CERT_MULTIBOARD'],before['APPROX'])==(after['CERT_MULTIBOARD'],after['APPROX'])
+          certified=[k for k,v in before['records'].items() if v['label']=='CERT-MULTIBOARD']
+          assert len(certified)>=147
+          for key in certified:
+              assert before['records'][key]==after['records'][key],key
+          print('All',len(certified),'certificates unchanged; all 392 models retained')
+          PY
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B684-verified-rank103-routes
+          path: ${{ runner.temp }}/b684-routes.json
+          if-no-files-found: error
+          retention-days: 90
+  solve:
+    needs: routes-and-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [Qs8h4d, Jh8d3c, 9c6c3h]
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Solve original BB-BTN flop and independently lock the exact turn
+        env:
+          FLOP: ${{ matrix.flop }}
+          RAYON_NUM_THREADS: 2
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          python tools/hu_b682_stage_prices.py --apply
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          folder="$RUNNER_TEMP/B684/$FLOP"
+          python tools/hu_b684_rank103.py --solver pinned-solver --flop "$FLOP" --output "$folder" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$folder/proof.json" "$RUNNER_TEMP/b684-original-proof.json"
+          python tools/hu_b684_rank103.py --solver pinned-solver --flop "$FLOP" --output "$folder"
+          cmp "$folder/proof.json" "$RUNNER_TEMP/b684-original-proof.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B684-R103-${{ matrix.flop }}
+          path: ${{ runner.temp }}/B684/${{ matrix.flop }}
+          if-no-files-found: error
+          retention-days: 90

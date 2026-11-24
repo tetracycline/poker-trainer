@@ -1,0 +1,120 @@
+name: B685 authenticate the three native rank84 negative workers
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b685-rank84-negatives.yml'
+      - 'tools/hu_b685_rank84_collect.py'
+      - 'tools/hu_b685_publish_rank84.py'
+permissions: {contents: write, actions: read}
+jobs:
+  replay-negatives:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      SOURCE_RUN: '45309479062'
+      SOURCE_HEAD: 'b63c9e753b68036c0935a209daa1e77095151da3'
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Authenticate the completed source jobs and replay all original negative paths
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/hu_b685_rank84_collect.py tools/hu_b685_publish_rank84.py
+          sha256sum data/nl2_hu_multiboard_status_current.json \
+            data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json \
+            data/nl2_hu_model_source_references.json nl2_hu_model.js nl2.js > "$RUNNER_TEMP/b685-central.sha256"
+          python tools/hu_b682_stage_prices.py --apply
+          sha256sum -c "$RUNNER_TEMP/b685-central.sha256"
+          python tools/hu_b685_rank84_collect.py --run "$SOURCE_RUN" --head "$SOURCE_HEAD" --output "$RUNNER_TEMP/b685-originals"
+          python tools/hu_b685_publish_rank84.py --solver ../solver --run "$SOURCE_RUN" --head "$SOURCE_HEAD" \
+            --receipts "$RUNNER_TEMP/b685-originals" --output "$RUNNER_TEMP/b685-replayed" > "$RUNNER_TEMP/b685-summary.json"
+          cat "$RUNNER_TEMP/b685-summary.json"
+          sha256sum -c "$RUNNER_TEMP/b685-central.sha256"
+      - name: Preserve the authenticated raw negatives without changing any registry record
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b685-replayed/data" <<'PY'
+          import json,sys
+          from pathlib import Path
+          data=Path(sys.argv[1])
+          report=json.loads((data/'nl2_hu_b685_rank84_results.json').read_bytes())
+          assert report['boards']==0 and not report['cert_eligible']
+          assert report['source_flops']==report['negative_flops']==report['retained_original_archives']==3
+          assert report['gto_turns_assessed']==12
+          assert report['actor_locked_boards']==report['half_pot_assessed']==report['gto_half_pot_assessed']==report['half_pot_candidates']==0
+          assert not (data/'solver_evidence/reverified').exists()
+          assert not list(data.glob('*locked_medium.json'))
+          for worker in report['workers']:
+              assert not worker['positive'] and worker['root_ancestry']['oop_check_call_intersection']==0
+              assert len(worker['attempts'])==4
+              for attempt in worker['attempts']:
+                  assert attempt['reason']=='ZERO_GTO_JOINT_REACH'
+                  assert attempt['gto_strict_combos']==attempt['gto_compatible_pairs']==attempt['shared']==0
+                  assert attempt['layers']['final_rendered_check']==0 and not attempt['locked']
+          paths=[p for p in data.rglob('*')if p.is_file()]
+          assert len(paths)==17 and all('b685'in str(p.relative_to(data)).lower()for p in paths)
+          PY
+          cp -R "$RUNNER_TEMP/b685-replayed/data/." data/
+          sha256sum -c "$RUNNER_TEMP/b685-central.sha256"
+          git diff --check
+      - name: Run the complete source, lock, medium-size and navigation audit
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b685-registry.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b685-registry.json"
+          git diff --exit-code -- data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b685-medium-coverage.json"
+          sha256sum -c "$RUNNER_TEMP/b685-central.sha256"
+      - name: Create the verified data-only candidate without moving a branch
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b685-replayed/data" <<'PY'
+          import subprocess,sys
+          from pathlib import Path
+          stage=Path(sys.argv[1])
+          paths=['data/'+str(p.relative_to(stage))for p in sorted(stage.rglob('*'))if p.is_file()]
+          assert len(paths)==17 and all('b685'in path.lower()for path in paths)
+          if subprocess.check_output(['git','status','--porcelain','--',*paths]).strip():
+              subprocess.run([sys.executable,'tools/hu_publish_candidate.py',
+                  '--message','B685 retain three native rank84 negatives: root check-call intersection is zero; all certificates unchanged',
+                  '--paths',*paths],check=True)
+          else:
+              print('The authenticated B682 negative sources are already current.')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B685-authenticated-rank84-negatives
+          path: |
+            ${{ runner.temp }}/b685-replayed/data
+            ${{ runner.temp }}/b685-summary.json
+            ${{ runner.temp }}/b685-medium-coverage.json
+          if-no-files-found: warn
+          retention-days: 90

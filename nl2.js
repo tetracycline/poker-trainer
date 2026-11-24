@@ -462,7 +462,12 @@ function faceHtml(sp, nd, line, ro) { // 這個節點你面對什麼：例題的
   for (const r of [0]) {
     for (const e of cand) {
       if (line && line.eg && sig(e) !== sig(line.eg)) continue;
-      const s = story(e); if (!s || s.length !== stOf(nd) + 2) continue; const l = s[s.length - 1];
+      // The CO-versus-BTN solver/preflop tree uses an IP 3-bet to 7.5bb.
+      // Keep this exact flop-call example consistent with its 16.5bb root.
+      const pricedExample = sp==='3bp' && nd==='3b_f_vs_donk' && e.t==='3BP' &&
+        e.me==='BTN' && e.pa==='BTN' && e.pc.length===1 && e.pc[0]==='CO' &&
+        e.l==='CO:b0.33' ? {...e,pot:16.5} : e;
+      const s = story(pricedExample); if (!s || s.length !== stOf(nd) + 2) continue; const l = s[s.length - 1];
       const face = isVs(nd) ? `你要跟 ${r1(s.facing)}bb（底池 ${s.pot}bb）` : `輪到你（底池 ${l.pot}bb）`;
       const cs = x => stOf(nd) ? ' ' + pretty(x.cards) : ''; // 轉牌／河牌：例題寫出每街實際發的牌
       const prev = s.slice(1, -1).map(x => `${x.st}${cs(x)}：${esc(x.txt)}`).join(' → ');
