@@ -1,0 +1,68 @@
+name: B733 BB check-call facing exact 66% CO turn bet in a limped pot
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b733-rank114-rivers.yml'
+      - 'tools/hu_b733_rank114.py'
+      - 'tools/hu_b733_rank114_routes.cjs'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 27
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        flop: [8s8h3d, 7s7h4d, JcJh5d]
+    env:
+      FLOP: ${{ matrix.flop }}
+      RAYON_NUM_THREADS: 2
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Check the original ranges, branch prices and displayed middle pairs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip -q install numpy phevaluator==0.5.3.1
+          mkdir -p "$RUNNER_TEMP/b733-receipts"
+          artifact=14600026283
+          gh api "repos/tetracycline/poker-trainer/actions/artifacts/$artifact" > "$RUNNER_TEMP/b733-receipts/$artifact.json"
+          gh api "repos/tetracycline/poker-trainer/actions/artifacts/$artifact/zip" > "$RUNNER_TEMP/b733-receipts/$artifact.zip"
+          python tools/hu_b733_rank114.py --flop "$FLOP" --solver pinned-solver --receipts "$RUNNER_TEMP/b733-receipts" --output "$RUNNER_TEMP/preflight" --preflight
+      - name: Compile the pinned native solver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve the missing river trees and replay both policies
+        run: |
+          set -euo pipefail
+          args=(--flop "$FLOP" --solver pinned-solver --receipts "$RUNNER_TEMP/b733-receipts" --output "$RUNNER_TEMP/b733-out")
+          python tools/hu_b733_rank114.py "${args[@]}" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$RUNNER_TEMP/b733-out/proof.json" "$RUNNER_TEMP/b733-original-proof.json"
+          python tools/hu_b733_rank114.py "${args[@]}"
+          cmp "$RUNNER_TEMP/b733-original-proof.json" "$RUNNER_TEMP/b733-out/proof.json"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B733-R114-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b733-out
+          if-no-files-found: error
+          retention-days: 90
