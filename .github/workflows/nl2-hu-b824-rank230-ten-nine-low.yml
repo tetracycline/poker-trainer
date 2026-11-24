@@ -1,10 +1,10 @@
-name: B824 solve two distinct rank230 queen-high flops
+name: B824 solve two distinct rank230 ten-nine-low flops
 on:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
     paths:
-      - '.github/workflows/nl2-hu-b824-rank230-queen-high.yml'
-      - 'tools/hu_b824_rank230_queen_high.py'
+      - '.github/workflows/nl2-hu-b824-rank230-ten-nine-low.yml'
+      - 'tools/hu_b824_rank230_ten_nine_low.py'
 permissions: {contents: read}
 jobs:
   solve:
@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        flop: [QsTs7h, Qs9s7h]
+        flop: [Ts7h2s, 9s7h2s]
     env:
       FLOP: ${{ matrix.flop }}
       RAYON_NUM_THREADS: 2
@@ -41,14 +41,14 @@ jobs:
         run: |
           set -euo pipefail
           pip -q install numpy phevaluator==0.5.3.1
-          python tools/hu_b824_rank230_queen_high.py --preflight --flop "$FLOP" --solver pinned-solver --output "$RUNNER_TEMP/preflight"
+          python tools/hu_b824_rank230_ten_nine_low.py --preflight --flop "$FLOP" --solver pinned-solver --output "$RUNNER_TEMP/preflight"
       - name: Build the pinned native driver
         working-directory: pinned-solver/postflop/pfdriver
         run: RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
       - name: Solve the original native flop once with two statically legal checked boundaries
         run: |
           set -euo pipefail
-          python tools/hu_b824_rank230_queen_high.py --flop "$FLOP" --solver pinned-solver --output "$RUNNER_TEMP/b824-source" --root-only --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          python tools/hu_b824_rank230_ten_nine_low.py --flop "$FLOP" --solver pinned-solver --output "$RUNNER_TEMP/b824-source" --root-only --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
       - name: Preserve the completed original before turn solves
         uses: actions/upload-artifact@v4
         with:
@@ -62,9 +62,9 @@ jobs:
         run: |
           set -euo pipefail
           path="$RUNNER_TEMP/b824-source"
-          python tools/hu_b824_rank230_queen_high.py --flop "$FLOP" --solver pinned-solver --output "$path" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          python tools/hu_b824_rank230_ten_nine_low.py --flop "$FLOP" --solver pinned-solver --output "$path" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
           cp "$path/proof.json" "$RUNNER_TEMP/b824-proof"
-          python tools/hu_b824_rank230_queen_high.py --flop "$FLOP" --solver pinned-solver --output "$path"
+          python tools/hu_b824_rank230_ten_nine_low.py --flop "$FLOP" --solver pinned-solver --output "$path"
           cmp "$RUNNER_TEMP/b824-proof" "$path/proof.json"
       - name: Preserve both strategies and all positive and negative source decisions
         uses: actions/upload-artifact@v4

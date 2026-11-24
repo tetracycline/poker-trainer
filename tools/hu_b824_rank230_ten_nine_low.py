@@ -1,4 +1,4 @@
-"""B824: two previously untested non-isomorphic SB3_BTN queen-high seven-pair front-door-draw flops.
+"""B824: two previously untested non-isomorphic SB3_BTN ten-nine-low seven-pair front-door-draw flops.
 The pinned rank230 worker first checks the exact rendered J7s route, then
 solves a single original per board and tests two registered checked turns.
 No registry changes without independent artifact replay and full audit.
@@ -10,10 +10,10 @@ import hu_b789_rank230_seven_draws as parent
 from hu_b467_river_source_gate import json_bytes
 from hu_b580_rank27_rivers import suit_isomorphism_class
 
-WORKER='tools/hu_b824_rank230_queen_high.py'
+WORKER='tools/hu_b824_rank230_ten_nine_low.py'
 PARENT_BLOB='84f0186a2b0d96ab7f10ccf81fb7818b0a0db5ae'
-CASES={'QsTs7h':('7sJs',['4c','5d']),
-       'Qs9s7h':('7sJs',['4c','5d'])}
+CASES={'Ts7h2s':('7sJs',['4c','5d']),
+       '9s7h2s':('7sJs',['4c','5d'])}
 
 def run(a):
     assert parent.base.blob(parent.WORKER)==PARENT_BLOB
