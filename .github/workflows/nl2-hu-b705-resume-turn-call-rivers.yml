@@ -1,0 +1,112 @@
+name: B705 resume original B696 roots without repeating completed native solves
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b705-resume-turn-call-rivers.yml'
+      - 'tools/hu_b705_resume_turn_call.py'
+      - 'tools/hu_b702_collect.py'
+permissions: {contents: read, actions: read}
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate the completed original roots and reuse the successful price audit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          set -euo pipefail
+          python tools/hu_b702_collect.py --output "$RUNNER_TEMP/b705-originals"
+          node tools/hu_b696_turn_call_routes.cjs \
+            --model-file tools/staged/hu_b696_nl2_hu_model.js \
+            > "$RUNNER_TEMP/b705-originals/current-rendered-routes.json"
+          python - "$RUNNER_TEMP/b705-originals" <<'PY'
+          import json,sys
+          from pathlib import Path
+          from zipfile import ZipFile
+          sys.path.insert(0,'tools')
+          from hu_b702_collect import PRICE
+          folder=Path(sys.argv[1])
+          with ZipFile(folder/(str(PRICE['id'])+'.zip')) as archive:
+              assert archive.read('rendered-routes.json')==(folder/'current-rendered-routes.json').read_bytes()
+          print('Current displayed routes equal the completed B696 price audit; no original preflight or native flop repeated')
+          PY
+          git diff --exit-code -- nl2.js nl2_hu_model.js tools/hu_trainer_route_contract.cjs data/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B705-authenticated-B696-roots
+          path: ${{ runner.temp }}/b705-originals
+          if-no-files-found: error
+          retention-days: 90
+  resume:
+    needs: collect
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include:
+          - {rank: 76, flop: 8c6h3d}
+          - {rank: 76, flop: 7h5d2c}
+          - {rank: 76, flop: 9d6d4c}
+          - {rank: 89, flop: Kd8c4h}
+          - {rank: 89, flop: Qs7h3d}
+          - {rank: 89, flop: Jc6d2s}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@v4
+        with:
+          name: B705-authenticated-B696-roots
+          path: ${{ runner.temp }}/b705-originals
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Replay the original root and solve only missing turn, river and actor-lock results
+        env:
+          RANK: ${{ matrix.rank }}
+          FLOP: ${{ matrix.flop }}
+          RAYON_NUM_THREADS: 2
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+          folder="$RUNNER_TEMP/B705/$RANK/$FLOP"
+          python tools/hu_b705_resume_turn_call.py --solver pinned-solver \
+            --receipts "$RUNNER_TEMP/b705-originals" \
+            --routes "$RUNNER_TEMP/b705-originals/current-rendered-routes.json" \
+            --rank "$RANK" --flop "$FLOP" --output "$folder" \
+            --resume-run "$GITHUB_RUN_ID" --resume-head "$GITHUB_SHA" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$folder/proof.json" "$RUNNER_TEMP/b705-first-proof.json"
+          cp "$folder/resume-source.json" "$RUNNER_TEMP/b705-first-origin.json"
+          python tools/hu_b705_resume_turn_call.py --solver pinned-solver \
+            --receipts "$RUNNER_TEMP/b705-originals" \
+            --routes "$RUNNER_TEMP/b705-originals/current-rendered-routes.json" \
+            --rank "$RANK" --flop "$FLOP" --output "$folder" \
+            --resume-run "$GITHUB_RUN_ID" --resume-head "$GITHUB_SHA"
+          cmp "$folder/proof.json" "$RUNNER_TEMP/b705-first-proof.json"
+          cmp "$folder/resume-source.json" "$RUNNER_TEMP/b705-first-origin.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B705-R${{ matrix.rank }}-${{ matrix.flop }}
+          path: ${{ runner.temp }}/B705/${{ matrix.rank }}/${{ matrix.flop }}
+          if-no-files-found: error
+          retention-days: 90
