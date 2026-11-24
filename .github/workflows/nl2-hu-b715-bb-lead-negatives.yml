@@ -1,0 +1,98 @@
+name: B715 preserve three original CO-BB turn-lead negative workers
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b715-bb-lead-negatives.yml'
+      - 'tools/hu_b715_collect.py'
+      - 'tools/hu_b715_publish.py'
+permissions: {contents: write, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate the completed original jobs and replay all three CO-BB archives
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          set -euo pipefail
+          sha256sum data/nl2_hu_multiboard_status_current.json data/nl2_hu_verified_extensions.json \
+            data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json \
+            data/nl2_hu_stage2_queue.json nl2.js nl2_hu_model.js nl2_cert_registry.js \
+            tools/hu_trainer_route_contract.cjs > "$RUNNER_TEMP/b715-protected.sha256"
+          git fetch --quiet --no-tags --depth=1 origin d9886707905cb909e60ded0fe213321286457a4e
+          python tools/hu_b715_collect.py --output "$RUNNER_TEMP/b715-receipts"
+          python tools/hu_b715_publish.py --solver ../solver --receipts "$RUNNER_TEMP/b715-receipts" \
+            --output "$RUNNER_TEMP/b715-replayed" > "$RUNNER_TEMP/b715-summary.json"
+          cat "$RUNNER_TEMP/b715-summary.json"
+          python - "$RUNNER_TEMP/b715-replayed/data" "$RUNNER_TEMP/b715-paths.txt" <<'PYTHON'
+          import json,sys
+          from pathlib import Path
+          stage=Path(sys.argv[1])
+          summary=json.loads((stage/'nl2_hu_b715_summary.json').read_bytes())
+          assert summary['cert_eligible_ranks']==[] and summary['positive_distinct_flops_by_rank']=={'92':0,'93':0,'94':0}
+          assert summary['gto_river_decisions']==60 and summary['gto_unique_public_boards']==36
+          assert summary['medium_assessed_unique_public_boards']==summary['actor_locked_unique_public_boards']==0
+          expected={'nl2_hu_b715_workers.json','nl2_hu_b715_results.json','nl2_hu_b715_summary.json','solver_evidence/partial/b715_auth_receipt.json'}
+          for flop in ('9D7H4C','8S6D2C','7C5D3H'):
+              expected.add(f'solver_evidence/NL2_B711_CO_BB_{flop}.zip')
+              expected.add(f'solver_evidence/partial/b715_{flop}_proof.json')
+          assert {p.relative_to(stage).as_posix() for p in stage.rglob('*') if p.is_file()}==expected
+          for rel in sorted(expected):
+              src=stage/rel
+              dst=Path('data')/rel
+              assert not src.is_symlink() and (not dst.exists() or dst.read_bytes()==src.read_bytes())
+              dst.parent.mkdir(parents=True,exist_ok=True)
+              dst.write_bytes(src.read_bytes())
+          Path(sys.argv[2]).write_text(''.join('data/'+rel+'\n' for rel in sorted(expected)))
+          PYTHON
+          sha256sum -c "$RUNNER_TEMP/b715-protected.sha256"
+          git diff --check
+      - name: Run the complete batch audit and preserve all existing certificates
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b715-registry.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b715-registry.json"
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b715-named-board-coverage.json"
+          sha256sum -c "$RUNNER_TEMP/b715-protected.sha256"
+      - name: Create the verified evidence commit object
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mapfile -t paths < "$RUNNER_TEMP/b715-paths.txt"
+          python tools/hu_publish_candidate.py --message 'B715 preserve three original CO-BB workers and 60 zero-reach river decisions on 36 public boards; no certifications or locks' --paths "${paths[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B715-authenticated-CO-BB-negative-workers
+          path: |
+            ${{ runner.temp }}/b715-replayed/data
+            ${{ runner.temp }}/b715-summary.json
+          if-no-files-found: warn
+          retention-days: 90
