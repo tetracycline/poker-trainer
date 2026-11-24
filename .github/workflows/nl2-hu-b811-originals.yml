@@ -1,0 +1,92 @@
+name: B811 archive completed rank230 ten-seven originals
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['tools/hu_b811_originals.py', '.github/workflows/nl2-hu-b811-originals.yml']
+permissions: {contents: write, actions: read, pull-requests: read}
+jobs:
+  replay-audit-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: b-inary/postflop-solver
+          ref: 9d1509fe5077d019825f833eed04b16d342dfda1
+          path: pinned-solver/postflop/postflop-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate successful B810; replay both policies under two hash seeds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python tools/hu_b811_originals.py --collect --archives "$RUNNER_TEMP/original"
+          for seed in 23 867; do
+            PYTHONHASHSEED="$seed" python tools/hu_b811_originals.py --archives "$RUNNER_TEMP/original" --solver pinned-solver --output "$RUNNER_TEMP/data-$seed"
+          done
+          diff -r "$RUNNER_TEMP/data-23" "$RUNNER_TEMP/data-867"
+          git diff --exit-code -- data
+      - name: Install only new observations and verify the complete registry
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          stage=Path(os.environ['RUNNER_TEMP'])/'data-23'
+          paths=[]
+          for p in sorted(stage.rglob('*')):
+              if not p.is_file(): continue
+              dst=Path('data')/p.relative_to(stage)
+              assert not dst.exists() and not dst.is_symlink()
+              dst.parent.mkdir(parents=True,exist_ok=True)
+              dst.write_bytes(p.read_bytes())
+              paths.append(dst.as_posix())
+          (Path(os.environ['RUNNER_TEMP'])/'candidate-paths.txt').write_text('\n'.join(paths)+'\n')
+          PY
+          registry=data/nl2_hu_multiboard_status_current.json
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/rebuilt.json"
+          cmp "$registry" "$RUNNER_TEMP/rebuilt.json"
+          git diff --exit-code -- data/nl2_hu_multiboard_status_current.json data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json
+          node tools/hu_extension_runtime_test.cjs "$registry"
+          bash tools/hu_exact_batch_audit.sh "$registry"
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/coverage.json"
+      - name: Create audited single-parent candidate only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mapfile -t paths < "$RUNNER_TEMP/candidate-paths.txt"
+          python tools/hu_publish_candidate.py --message 'B811 archive verified rank230 original evidence without altering certification' --paths "${paths[@]}" | tee "$RUNNER_TEMP/candidate.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B811-audited-candidate
+          path: |
+            ${{ runner.temp }}/candidate.txt
+            ${{ runner.temp }}/candidate-paths.txt
+            ${{ runner.temp }}/coverage.json
+            ${{ runner.temp }}/data-23/nl2_hu_b811_results.json
+          if-no-files-found: warn
+          retention-days: 90
