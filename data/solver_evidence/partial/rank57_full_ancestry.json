@@ -1,0 +1,127 @@
+{
+  "schema": "NL2_R57_RENDERED_ANCESTRY_RANK_UPPER_BOUND_V1",
+  "rank": 57,
+  "model_id": "ln-opfr-r_model-8ze7gv",
+  "registry_head": "61681538aa2d03411ecbf21bc69c2ebb2b823c71",
+  "renderer_sha256": {
+    "lines_data.js": "bf3add8f74d87e8fbfbbb0bdf7d532c8cac9d58b23a048b00139a4f73e7cc3a0",
+    "nl2_rules.js": "a65214d1820cb9fdc307fe1dd6fc5f587afdfe76110552662186fdf31ca15460",
+    "hwrange.js": "bee8026b4d5b159a7a2d777875809c864497ae0b2a3baf72c50efaa3503a49e5",
+    "nl2_reach.js": "e1213281a573552b94a294053e006488d91e37099be183f1beb616234d49dc9e",
+    "nl2_titles.js": "80f2d51de3f6fb1b4d00947f7ad804555d645e2fc41db68e08dc5047135d0a9a",
+    "nl2_hu_model.js": "fb2cb3d76452914f0b5810bed60f5090dac8f92ffdbbabe02ed790115d7d241a",
+    "nl2.js": "14be3413d63d36085d076bd69592dbe2f7969c7c763344f272fcd9b623b8cdb9"
+  },
+  "classifier_source_git_blobs": {
+    "tools/lines_pipeline/common.py": "7338a5593f19dd878aba5cb21690bc9cf90365b3",
+    "tools/lines_pipeline/vclass.py": "512f315c14baa2eb1af908a9f3cbc1f68d57e533",
+    "tools/hu_b546_rank70_conditional.py": "8e25e8ae111c2d30c81898a727c71cc0efc752ab"
+  },
+  "view": {
+    "start": "ln-opfr-f_cbet-milqtu",
+    "facing": "ln-opfr-f_vs_donk-1wk9say",
+    "turn": "ln-opfr-t_model-4t8fsk",
+    "river": "ln-opfr-r_model-8ze7gv",
+    "routes": {
+      "low": {
+        "flop": [],
+        "turn": [],
+        "river": []
+      },
+      "mid_high": {
+        "flop": [
+          "TPW",
+          "MID",
+          "WDRAW"
+        ],
+        "turn": [],
+        "river": []
+      },
+      "KQ_high": {
+        "flop": [
+          "MID"
+        ],
+        "turn": [],
+        "river": []
+      },
+      "A_high": {
+        "flop": [],
+        "turn": [],
+        "river": []
+      },
+      "paired": {
+        "flop": [
+          "TPW",
+          "MID"
+        ],
+        "turn": [
+          "TPG"
+        ],
+        "river": [
+          "TPG"
+        ]
+      },
+      "mono": {
+        "flop": [],
+        "turn": [],
+        "river": []
+      }
+    }
+  },
+  "profile": {
+    "spot": "SB_BB",
+    "actor": 0,
+    "root": [
+      600,
+      9700
+    ],
+    "turn": [
+      1200,
+      9400
+    ],
+    "river": [
+      3000,
+      8500
+    ],
+    "model_spr": 2.733
+  },
+  "upper_bound_counts": {
+    "rank_states": 244218,
+    "passes_flop_upper_bound": 58327,
+    "passes_turn_upper_bound": 12209,
+    "passes_both_upper_bounds": 0
+  },
+  "by_flop_texture": {
+    "mid_high": {
+      "rank_states": 17472,
+      "passes_flop_upper_bound": 15000,
+      "passes_turn_upper_bound": 1100,
+      "passes_both_upper_bounds": 0
+    },
+    "KQ_high": {
+      "rank_states": 27300,
+      "passes_flop_upper_bound": 8565,
+      "passes_turn_upper_bound": 977,
+      "passes_both_upper_bounds": 0
+    },
+    "paired": {
+      "rank_states": 199446,
+      "passes_flop_upper_bound": 34762,
+      "passes_turn_upper_bound": 10132,
+      "passes_both_upper_bounds": 0
+    }
+  },
+  "proof_scope": "All legal rank multisets, all turn ranks and private ranks. Ignoring suit, opponent blockers, CFR policy and treating any unmatched starting hand as a possible WDRAW can only increase the eligible set.",
+  "finding": "NO_HERO_HOLDING_CAN_PASS_BOTH_RENDERED_STREETS",
+  "parent_reference_only": {
+    "rank": 9,
+    "label_at_audit": "CERT-MULTIBOARD",
+    "original_certified_boards_at_audit": 5,
+    "parent_registry_or_certification_not_modified": true
+  },
+  "original_flops_repeated": 0,
+  "new_native_solves": 0,
+  "new_node_locked_boards": 0,
+  "new_medium_assessed_boards": 0,
+  "changed_labels": 0
+}

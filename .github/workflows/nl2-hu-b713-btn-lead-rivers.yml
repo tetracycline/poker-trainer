@@ -1,0 +1,76 @@
+name: B713 verify BTN barrel rivers from three preserved rank8 native flops
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b713-btn-lead-rivers.yml'
+      - 'tools/hu_b713_btn_lead_rivers.py'
+      - 'tools/hu_b713_btn_lead_routes.cjs'
+permissions: {contents: read, actions: read}
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - {flop: 6s5h4d, artifact: '14792976867'}
+          - {flop: 7d5c4c, artifact: '14792312789'}
+          - {flop: 6d4c3h, artifact: '14793340092'}
+    env:
+      FLOP: ${{ matrix.flop }}
+      ARTIFACT: ${{ matrix.artifact }}
+      RAYON_NUM_THREADS: 2
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: 1
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Authenticate immutable old artifact and actual compatible BTN and BB ranges
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          python -m py_compile tools/hu_b713_btn_lead_rivers.py
+          mkdir -p "$RUNNER_TEMP/b713-receipts"
+          gh api "repos/tetracycline/poker-trainer/actions/artifacts/$ARTIFACT" > "$RUNNER_TEMP/b713-receipts/$ARTIFACT.json"
+          node tools/hu_b713_btn_lead_routes.cjs > "$RUNNER_TEMP/b713-routes.json"
+          python tools/hu_b713_btn_lead_rivers.py --solver pinned-solver --flop "$FLOP" \
+            --routes "$RUNNER_TEMP/b713-routes.json" --receipts "$RUNNER_TEMP/b713-receipts" \
+            --output "$RUNNER_TEMP/b713-source" --preflight
+      - name: Compile pinned native engine
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve only missing turn and river policies and replay both model gates
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/b713-source"
+          args=(--solver pinned-solver --flop "$FLOP" --routes "$RUNNER_TEMP/b713-routes.json" --receipts "$RUNNER_TEMP/b713-receipts" --output "$folder" --run "$GITHUB_RUN_ID" --head "$GITHUB_SHA")
+          python tools/hu_b713_btn_lead_rivers.py "${args[@]}" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$folder/proof.json" "$RUNNER_TEMP/original-b713-proof.json"
+          python tools/hu_b713_btn_lead_rivers.py "${args[@]}"
+          cmp "$folder/proof.json" "$RUNNER_TEMP/original-b713-proof.json"
+          cp "$RUNNER_TEMP/b713-receipts/$ARTIFACT.json" "$folder/original-flop-artifact.json"
+          git diff --exit-code -- nl2.js nl2_hu_model.js data/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B713-BTN-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b713-source
+          if-no-files-found: error
+          retention-days: 90
