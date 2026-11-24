@@ -1,0 +1,61 @@
+name: B723 CO delayed one-third-pot bets from preserved BB half-pot flop solutions
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b723-rank115-limp-rivers.yml'
+      - 'tools/hu_b723_rank115_limp_rivers.py'
+permissions: {contents: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: {flop: [7s5h3d, 7h6d4s, 7h6c4h, 7h6h4c]}
+    env:
+      FLOP: ${{ matrix.flop }}
+      RAYON_NUM_THREADS: 2
+      PYTHONDONTWRITEBYTECODE: 1
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Authenticate saved flop strategy, both ranges and exact CO route
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          node tools/hu_b718_limp_routes.cjs > "$RUNNER_TEMP/b723-routes.json"
+          python tools/hu_b723_rank115_limp_rivers.py --solver pinned-solver --flop "$FLOP" --routes "$RUNNER_TEMP/b723-routes.json" --output "$RUNNER_TEMP/b723-source" --preflight
+      - name: Build pinned Rust driver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve missing continuation and replay original strategies
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/b723-source"
+          args=(--solver pinned-solver --flop "$FLOP" --routes "$RUNNER_TEMP/b723-routes.json" --output "$folder" --run "$GITHUB_RUN_ID" --head "$GITHUB_SHA")
+          python tools/hu_b723_rank115_limp_rivers.py "${args[@]}" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$folder/proof.json" "$RUNNER_TEMP/b723-proof.json"
+          python tools/hu_b723_rank115_limp_rivers.py "${args[@]}"
+          cmp "$folder/proof.json" "$RUNNER_TEMP/b723-proof.json"
+          git diff --exit-code -- data/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B723-R115-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b723-source
+          if-no-files-found: error
+          retention-days: 90
