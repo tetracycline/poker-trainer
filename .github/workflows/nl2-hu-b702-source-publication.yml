@@ -1,0 +1,123 @@
+name: B702 preserve authenticated resumed rank76 and89 partial sources
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b702-source-publication.yml'
+      - 'tools/hu_b702_resume_collect.py'
+      - 'tools/hu_b702_publish.py'
+permissions: {contents: write, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate both original workflows and replay exact jobs in the source Python runtime
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/hu_b702_resume_collect.py tools/hu_b702_publish.py
+          sha256sum data/nl2_hu_multiboard_status_current.json data/nl2_hu_verified_extensions.json \
+            data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json \
+            data/nl2_hu_stage2_queue.json nl2.js nl2_hu_model.js nl2_cert_registry.js \
+            tools/hu_trainer_route_contract.cjs > "$RUNNER_TEMP/b702-protected.sha256"
+          python tools/hu_b702_resume_collect.py --output "$RUNNER_TEMP/b702-originals"
+          python tools/hu_b702_publish.py --solver ../solver --receipts "$RUNNER_TEMP/b702-originals" \
+            --output "$RUNNER_TEMP/b702-replayed" > "$RUNNER_TEMP/b702-summary.json"
+          cat "$RUNNER_TEMP/b702-summary.json"
+          sha256sum -c "$RUNNER_TEMP/b702-protected.sha256"
+      - name: Preserve two distinct partial flops, four policy negatives and every original archive
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b702-replayed/data" <<'PY'
+          import json,sys
+          from pathlib import Path
+          data=Path(sys.argv[1]);summary=json.loads((data/'nl2_hu_b702_summary.json').read_bytes())
+          expected=dict(cert_eligible_ranks=[],positive_boards_by_rank={'76':0,'89':2},source_workers=6,
+              negative_flops=4,native_gto_turn_jobs=18,native_locked_turn_jobs=10,native_locked_river_nodes=160,
+              actor_locked_boards=48,half_pot_assessed=48,half_pot_candidates=4,both_policies_rendered_positive_rivers=5,
+              selected_cert_boards=0,original_native_flop_solves_repeated=0,publisher_native_cfr_rerun=False,
+              original_root_run_id=45316213646,original_root_workers=6,continuation_source_run_id=45320372683,
+              live_prices_written=False)
+          assert summary==expected
+          assert not (data/'solver_evidence/reverified').exists()
+          assert not list(data.glob('*locked_medium.json'))
+          group=json.loads((data/'solver_evidence/partial/b702_rank89.json').read_bytes())
+          assert group['rank']==89 and group['model_id']=='ln-ipfr-r_model-bqgbuq'
+          assert {b['flop'] for b in group['boards']}=={'Qs7h3d','Jc6d2s'}
+          assert len(group['boards'])==len(group['pins'])==2
+          assert all(p['GTO_strict_combos']>0 and p['NL2_strict_combos']>0 and p['rendered_decision_hands'] for p in group['pins'])
+          empty=json.loads((data/'solver_evidence/partial/b702_rank76.json').read_bytes())
+          assert empty['boards']==empty['pins']==[]
+          registry=json.load(open('data/nl2_hu_multiboard_status_current.json'))
+          assert registry['CERT_MULTIBOARD']>=150 and registry['TOTAL']==392
+          assert all(registry['records'][mid]['label']=='APPROX' for mid in ('ln-ipfr-r_model-bqgbuq','ln-opfr-r_model-1phsqr4'))
+          PY
+          cp -R "$RUNNER_TEMP/b702-replayed/data/." data/
+          node tools/hu_b679_policy_view.cjs data/solver_evidence/partial/b702_rank89.json
+          sha256sum -c "$RUNNER_TEMP/b702-protected.sha256"
+          git diff --check
+      - name: Run the complete batch audit and preserve all existing certificates
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b702-registry.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b702-registry.json"
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b702-named-board-coverage.json"
+          sha256sum -c "$RUNNER_TEMP/b702-protected.sha256"
+      - name: Create a partial evidence candidate without moving any branch
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b702-replayed/data" <<'PY'
+          import subprocess,sys
+          from pathlib import Path
+          from importlib import import_module
+          sys.path.insert(0,'tools');native=import_module('hu_b696_turn_call_rivers')
+          stage=Path(sys.argv[1]);paths=['data/'+str(p.relative_to(stage)) for p in sorted(stage.rglob('*')) if p.is_file()]
+          roots={f'data/solver_evidence/NL2_B{batch}_R{rank}_{flop.upper()}.zip'
+              for batch in (696,705) for rank,flops in native.CASES.items() for flop in flops}
+          assert paths and all('b702' in p.lower() or p in roots for p in paths)
+          assert not any('/reverified/' in p for p in paths)
+          if subprocess.check_output(['git','status','--porcelain','--',*paths]).strip():
+              subprocess.run([sys.executable,'tools/hu_publish_candidate.py','--message',
+                  'B702 preserve two real rank89 partial flops and four native negatives; 160 locked river nodes, 112 zero reach, 48 valid medium assessments; no CERT change',
+                  '--paths',*paths],check=True)
+          else:
+              print('Authenticated B702 evidence is already current.')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B702-authenticated-rank76-rank89-partials
+          path: |
+            ${{ runner.temp }}/b702-replayed/data
+            ${{ runner.temp }}/b702-summary.json
+          if-no-files-found: warn
+          retention-days: 90
