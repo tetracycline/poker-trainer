@@ -1,0 +1,63 @@
+name: B822 rank75 two saved B816 roots held-out low-rank same-suit turns
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b822-rank75-b816-roots.yml'
+      - 'tools/hu_b822_rank75_b816_roots.py'
+permissions: {contents: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [9d8d5d, 9d8d7d]
+    env:
+      FLOP: ${{ matrix.flop }}
+      RAYON_NUM_THREADS: 2
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: 1
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: b-inary/postflop-solver
+          ref: 9d1509fe5077d019825f833eed04b16d342dfda1
+          path: pinned-solver/postflop/postflop-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Reconstruct original held-out jobs and verify B809 two-seat witness
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          python tools/hu_b822_rank75_b816_roots.py --flop "$FLOP" --preflight --solver pinned-solver --output "$RUNNER_TEMP/preflight"
+      - name: Build the pinned native driver
+        working-directory: pinned-solver/postflop/pfdriver
+        run: RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve the missing conditional games and replay evidence from native output
+        run: |
+          set -euo pipefail
+          path="$RUNNER_TEMP/b822-source"
+          python tools/hu_b822_rank75_b816_roots.py --flop "$FLOP" --solver pinned-solver --output "$path" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$path/proof.json" "$RUNNER_TEMP/b822-proof"
+          python tools/hu_b822_rank75_b816_roots.py --flop "$FLOP" --solver pinned-solver --output "$path"
+          cmp "$RUNNER_TEMP/b822-proof" "$path/proof.json"
+      - name: Preserve original jobs, decisions and range reconstruction
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B822-R75-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b822-source
+          if-no-files-found: error
+          retention-days: 90
