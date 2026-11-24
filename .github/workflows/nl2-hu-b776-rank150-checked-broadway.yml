@@ -1,0 +1,55 @@
+name: B776 solve only the missing locked rank150 turn for the B765 broadway draw
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b776-rank150-checked-broadway.yml'
+      - 'tools/hu_b776_rank150_checked_broadway.py'
+permissions: {contents: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: 1
+      RAYON_NUM_THREADS: 2
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify the pinned GTO and all ten actual KdJd river-check deals
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          python tools/hu_b776_rank150_checked_broadway.py --preflight --solver pinned-solver --output "$RUNNER_TEMP/preflight"
+      - name: Build the pinned native solver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve just the missing measured IP-hero policy and replay the exact jobs
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/b776"
+          python tools/hu_b776_rank150_checked_broadway.py --solver pinned-solver --output "$folder" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$folder/proof.json" "$RUNNER_TEMP/original-proof"
+          python tools/hu_b776_rank150_checked_broadway.py --solver pinned-solver --output "$folder"
+          cmp "$RUNNER_TEMP/original-proof" "$folder/proof.json"
+      - name: Preserve the original GTO and new exp_ip source
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B776-R150-TdTc3d-2c
+          path: ${{ runner.temp }}/b776
+          if-no-files-found: error
+          retention-days: 90
