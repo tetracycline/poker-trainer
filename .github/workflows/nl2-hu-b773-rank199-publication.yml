@@ -1,0 +1,92 @@
+name: B773 replay rank199 and audit its immutable data candidate
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['data/nl2_hu_b773_source_manifest.json']
+permissions: {contents: write, actions: read, pull-requests: read}
+jobs:
+  replay-audit-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nl2-hu-lines-audit-20261118
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate the final native workers and replay the exact original jobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$GITHUB_SHA" HEAD
+          git merge-base --is-ancestor 28a793f7df724892631de6f516fe78e4b07fb879 HEAD
+          python tools/hu_b773_collect.py --output "$RUNNER_TEMP/b773-original"
+          cmp data/nl2_hu_b773_source_manifest.json "$RUNNER_TEMP/b773-original/receipt.json"
+          python tools/hu_b773_rank199_publish.py --solver pinned-solver \
+            --receipts "$RUNNER_TEMP/b773-original/receipt.json" --archives "$RUNNER_TEMP/b773-original" \
+            --output "$RUNNER_TEMP/b773-stage/data" > "$RUNNER_TEMP/b773-replay.txt"
+          git diff --exit-code -- data/
+      - name: Preserve 391 unrelated decisions and stage only verified rank199 evidence
+        run: |
+          set -euo pipefail
+          python tools/hu_b773_integrate.py --stage "$RUNNER_TEMP/b773-stage/data" \
+            --paths "$RUNNER_TEMP/b773-paths.txt" --group "$RUNNER_TEMP/b773-group.txt"
+          group=$(cat "$RUNNER_TEMP/b773-group.txt")
+          if python -c 'import json,sys;sys.exit(not json.load(open(sys.argv[1]))["boards"])' "$group"; then
+            node tools/hu_b679_policy_view.cjs "$group"
+          fi
+          sha256sum data/nl2_hu_multiboard_status_current.json data/nl2_hu_verified_extensions.json \
+            data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json > "$RUNNER_TEMP/b773-integrated.sha256"
+      - name: Run the complete published-batch audit on the candidate tree
+        run: |
+          set -euo pipefail
+          registry=data/nl2_hu_multiboard_status_current.json
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b773-rebuilt.json"
+          cmp "$registry" "$RUNNER_TEMP/b773-rebuilt.json"
+          node tools/hu_extension_runtime_test.cjs "$registry"
+          bash tools/hu_exact_batch_audit.sh "$registry"
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b773-coverage.json"
+          sha256sum -c "$RUNNER_TEMP/b773-integrated.sha256"
+      - name: Create the audited single-parent candidate for the open draft PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          parent=$(git rev-parse HEAD)
+          mapfile -t paths < "$RUNNER_TEMP/b773-paths.txt"
+          GITHUB_SHA="$parent" python tools/hu_publish_candidate.py \
+            --message 'B773 preserve rank199 original native river evidence and certify only three distinct flops with shared physical CO and BB hands' \
+            --paths "${paths[@]}" | tee "$RUNNER_TEMP/b773-candidate.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B773-original-rank199-publication
+          path: |
+            ${{ runner.temp }}/b773-stage/data/nl2_hu_b773_summary.json
+            ${{ runner.temp }}/b773-replay.txt
+            ${{ runner.temp }}/b773-paths.txt
+            ${{ runner.temp }}/b773-coverage.json
+            ${{ runner.temp }}/b773-candidate.txt
+            data/nl2_hu_b773_integration.json
+          if-no-files-found: warn
+          retention-days: 90

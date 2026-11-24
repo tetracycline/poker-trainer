@@ -2,7 +2,12 @@ name: B772 authenticate the rank75 conditional turns and check the published evi
 on:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
-    paths: ['data/nl2_hu_b772_source_manifest.json']
+    paths:
+      - 'data/nl2_hu_b772_source_manifest.json'
+      - 'data/nl2_hu_b772_results.json'
+      - 'tools/hu_b772_rank75_receipts.py'
+      - 'tools/hu_b772_rank75_replay.py'
+      - '.github/workflows/nl2-hu-b772-rank75-originals.yml'
 permissions: {contents: read, actions: read}
 jobs:
   replay:
@@ -36,16 +41,29 @@ jobs:
           set -euo pipefail
           python tools/hu_b772_rank75_receipts.py --output "$RUNNER_TEMP/b772-receipts"
           cmp data/nl2_hu_b772_source_manifest.json "$RUNNER_TEMP/b772-receipts/receipt.json"
-          python tools/hu_b772_rank75_replay.py --solver pinned-solver --rust-source pinned-rust \
-            --receipts "$RUNNER_TEMP/b772-receipts" --output "$RUNNER_TEMP/b772-data"
-          python - "$RUNNER_TEMP/b772-data" <<'PY'
+          for seed in 23 867; do
+            PYTHONHASHSEED="$seed" python tools/hu_b772_rank75_replay.py --solver pinned-solver --rust-source pinned-rust \
+              --receipts "$RUNNER_TEMP/b772-receipts" --output "$RUNNER_TEMP/b772-data-$seed"
+          done
+          python - "$RUNNER_TEMP/b772-data-23" "$RUNNER_TEMP/b772-data-867" <<'PY'
           from pathlib import Path
+          import difflib
+          import hashlib
           import sys
-          stage=Path(sys.argv[1])
-          files=sorted(p for p in stage.rglob('*') if p.is_file())
-          assert len(files)==6
-          for p in files:
-              target=Path('data')/p.relative_to(stage)
-              assert p.read_bytes()==target.read_bytes(),target
+          first, second = map(Path, sys.argv[1:])
+          paths = sorted(p.relative_to(first) for p in first.rglob('*') if p.is_file())
+          assert len(paths) == 6 and paths == sorted(p.relative_to(second) for p in second.rglob('*') if p.is_file())
+          for name in paths:
+              published = (Path('data') / name).read_bytes()
+              for seed, stage in ((23, first), (867, second)):
+                  replayed = (stage / name).read_bytes()
+                  if replayed == published:
+                      continue
+                  print(f'{name} seed={seed} published={hashlib.sha256(published).hexdigest()} replayed={hashlib.sha256(replayed).hexdigest()}')
+                  if name.suffix == '.json':
+                      from itertools import islice
+                      delta = difflib.unified_diff(published.decode().splitlines(), replayed.decode().splitlines(), fromfile='published', tofile='replayed', n=2, lineterm='')
+                      print('\n'.join(islice(delta, 35)))
+                  raise SystemExit(f'Published B772 evidence differs at {name}')
           PY
           git diff --exit-code -- data/

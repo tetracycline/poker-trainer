@@ -105,7 +105,7 @@ def publish(args):
         expected = {f'{t}-gto/{n}.json' for t in TURNS for n in ('job','result')}
         expected.update({'proof.json','2d-exp_ip/job.json','2d-exp_ip/result.json'})
         assert files == expected
-        before = {p:sha((folder/p).read_bytes()) for p in files}
+        before = {p:sha((folder/p).read_bytes()) for p in sorted(files)}
         subprocess.run([sys.executable,str(frozen/source.WORKER),'--solver',str(args.solver.resolve()),
                         '--rust-source',str(args.rust_source.resolve()),'--evidence',str(args.evidence.resolve()),
                         '--output',str(folder)],cwd=frozen,check=True)
