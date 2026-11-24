@@ -56,16 +56,36 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
     'ln-ipfr-r_model-bqgbuq': {rank:89, source:'ln-ipfr-t_vs_probe-1993kni', spot:'BTN_BB', seat:1,
       history:'對手過、你過|對手下注、你跟|對手過', streets:['x x','b50 c','x'], spr:8.614}
   };
+  const limpRaiseCalls = {
+    'ln-iso-lmp_t_model-1iwngt8':[108, '', 9.525],
+    'ln-iso-lmp_r_model-1n1ge2d':[222, 'b75 c', 3.51],
+    'ln-iso-lmp_r_model-1otnixw':[223, 'b33 c', 5.539],
+    'ln-iso-lmp_r_model-1wo1hx8':[224, 'b50 c', 4.513],
+    'ln-iso-lmp_r_model-1iqsf2n':[234, 'x x', 9.525]
+  };
   for (const [id,route] of Object.entries(manifest.trainer_route_contract?.routes || {})) {
     const turnPrice=turnCallPrices[id], model=records[id];
     if (route.priced_model_spr === undefined) {
+      if (limpRaiseCalls[id] && route.streets?.[0]!=='bet raise c')
+        throw Error('BB 半池下注後跟加注的 SPR 缺失');
       if (turnPrice && Array.isArray(route.streets) && route.streets.some(s=>/(^| )b[0-9]+( |$)/.test(s)))
         throw Error('轉牌跟注的來源尺寸或 SPR 不符');
       continue;
     }
     if (!model || !Number.isFinite(route.priced_model_spr) || route.priced_model_spr <= 0 ||
         !Array.isArray(route.streets)) throw Error('跟注的來源尺寸或 SPR 不符');
-    if (turnPrice) {
+    const limpRaise=limpRaiseCalls[id];
+    if (limpRaise) {
+      const [rank,turn,spr]=limpRaise;
+      const parent=rank===108?'ln-iso-lmp_f_vs_xr-50pww0':'ln-iso-lmp_t_model-1iwngt8';
+      const expected=rank===108?['b50 r c','']:['b50 r c',turn,''];
+      const history='你下注、對手加注、你跟|'+(rank===108?'':rank===234?'你過、對手過|':'你下注、對手跟|');
+      if(model.model_id!==id || model.street!==(rank===108?1:2) || model.abstract_action_history!==history ||
+          model.frequency_rank!==rank || model.source_model_id!==parent || model.solver_profile!=='LMP_CO_BB' ||
+          model.family!=='LMP' || route.seat!==0 || route.priced_model_spr!==spr ||
+          route.streets.length!==expected.length || !expected.every((s,i)=>route.streets[i]===s))
+        throw Error('BB 半池下注後跟 CO 三倍加注的行動線或 SPR 不符');
+    } else if (turnPrice) {
       if (model.model_id!==id || model.frequency_rank!==turnPrice.rank || model.street!==2 || model.family!=='SRP' ||
           model.source_model_id!==turnPrice.source || model.solver_profile!==turnPrice.spot ||
           model.abstract_action_history!==turnPrice.history || route.seat!==turnPrice.seat ||
@@ -224,7 +244,7 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
     for (const [id,m] of Object.entries(records)) {
       const route = contract.routes[id];
       if (!route || ![0,1].includes(route.seat) || !Array.isArray(route.streets) || route.streets.length !== m.street+1 ||
-          !route.streets.every(s=>typeof s==='string' && s.split(' ').every(t=>/^(?:|x|c|bet|raise|overbet|b[1-9][0-9]*)$/.test(t)))) {
+          !route.streets.every(s=>typeof s==='string' && s.split(' ').every(t=>/^(?:|x|c|bet|raise|overbet|b[1-9][0-9]*)$/.test(t) || (t==='r' && !!limpRaiseCalls[id])))) {
         throw Error('訓練表尺寸或行動順序資料缺失');
       }
       if ((id==='ln-ipfr-r_model-1iypoop') !== (route.requires_three_suited_turn===true)) throw Error('轉牌過牌路徑缺少單色牌面條件');
