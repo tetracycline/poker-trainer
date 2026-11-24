@@ -1,0 +1,51 @@
+name: B772 authenticate the rank75 conditional turns and check the published evidence
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['data/nl2_hu_b772_source_manifest.json']
+permissions: {contents: read, actions: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: b-inary/postflop-solver
+          ref: 9d1509fe5077d019825f833eed04b16d342dfda1
+          path: pinned-rust
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Check the original run, job, artifact, every native input and published bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python tools/hu_b772_rank75_receipts.py --output "$RUNNER_TEMP/b772-receipts"
+          cmp data/nl2_hu_b772_source_manifest.json "$RUNNER_TEMP/b772-receipts/receipt.json"
+          python tools/hu_b772_rank75_replay.py --solver pinned-solver --rust-source pinned-rust \
+            --receipts "$RUNNER_TEMP/b772-receipts" --output "$RUNNER_TEMP/b772-data"
+          python - "$RUNNER_TEMP/b772-data" <<'PY'
+          from pathlib import Path
+          import sys
+          stage=Path(sys.argv[1])
+          files=sorted(p for p in stage.rglob('*') if p.is_file())
+          assert len(files)==6
+          for p in files:
+              target=Path('data')/p.relative_to(stage)
+              assert p.read_bytes()==target.read_bytes(),target
+          PY
+          git diff --exit-code -- data/
