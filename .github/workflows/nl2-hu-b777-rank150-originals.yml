@@ -1,0 +1,76 @@
+name: B777 replay the measured rank150 turn lock and its original GTO
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b777-rank150-originals.yml'
+      - 'tools/hu_b777_collect.py'
+      - 'tools/hu_b777_rank150.py'
+      - 'data/nl2_hu_b777_source_manifest.json'
+      - 'data/nl2_hu_b777_results.json'
+      - 'data/solver_evidence/NL2_B776_R150_TDTC3D.zip'
+      - 'data/solver_evidence/partial/b777_rank150*.json'
+permissions: {contents: read, actions: read}
+jobs:
+  authenticate-and-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate the source and replay the committed observations under two hash seeds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 4d62d03453a4316ec3377c67d7b07f78e5c0311f HEAD
+          python tools/hu_b777_collect.py --output "$RUNNER_TEMP/b777-original"
+          for seed in 23 867; do
+            PYTHONHASHSEED="$seed" python tools/hu_b777_rank150.py --solver pinned-solver \
+              --archives "$RUNNER_TEMP/b777-original" --output "$RUNNER_TEMP/b777-data-$seed"
+          done
+          python - "$RUNNER_TEMP/b777-data-23" "$RUNNER_TEMP/b777-data-867" <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import json
+          import sys
+          first, second = map(Path, sys.argv[1:])
+          data = Path('data')
+          archive = 'solver_evidence/NL2_B776_R150_TDTC3D.zip'
+          group = 'solver_evidence/partial/b777_rank150.json'
+          expected = {archive, group, 'solver_evidence/partial/b777_rank150_locked_medium.json',
+                      'nl2_hu_b777_source_manifest.json', 'nl2_hu_b777_results.json'}
+          for folder in (first, second):
+              assert {p.relative_to(folder).as_posix() for p in folder.rglob('*') if p.is_file()} == expected
+              for name in sorted(expected):
+                  assert (folder/name).read_bytes() == (data/name).read_bytes(), name
+          summary = json.loads((data/'nl2_hu_b777_results.json').read_bytes())
+          assert (summary['rank'], summary['source_run'], summary['source_head']) == (150, 45344964385, '4d62d03453a4316ec3377c67d7b07f78e5c0311f')
+          assert (summary['positive_distinct_flops'], summary['selected'], summary['cert_eligible_ranks']) == (2, None, [])
+          assert (summary['locked_named_boards'], summary['joint_halfpot_assessed'], summary['nonpolarized_candidates']) == (12, 12, 5)
+          current = json.loads((data/group).read_bytes())
+          previous = json.loads((data/'solver_evidence/partial/b768_rank150.json').read_bytes())
+          assert current['boards'] == previous['boards'] and current['pins'] == previous['pins']
+          assert len(current['boards']) == len(current['pins']) == 2
+          with ZipFile(data/archive) as new, ZipFile(data/'solver_evidence/NL2_B765_R150_TDTC3D.zip') as original:
+              for name in ('rendered-routes.json','original-manifest.json','flop/job.json','flop/result.json','2c-gto/job.json','2c-gto/result.json'):
+                  assert new.read(name) == original.read(name), name
+              proof = json.loads(new.read('proof.json'))
+              assert proof['selected'] is None and not proof['common']
+              assert proof['original_flop_cfr_repeated'] == proof['original_gto_turn_cfr_repeated'] == 0
+              assert proof['new_locked_turn_subgames'] == 1
+          PY
+          node tools/hu_b679_policy_view.cjs data/solver_evidence/partial/b777_rank150.json
+          git diff --exit-code -- data/
