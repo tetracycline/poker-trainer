@@ -1,0 +1,80 @@
+name: B692 resume the fully audited B685 negative artifact
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b692-resume-rank84.yml'
+      - 'tools/hu_b692_resume_rank84.py'
+permissions: {contents: write, actions: read}
+jobs:
+  resume-audited-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate the completed replay and full-audit steps; recover exact artifact bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/hu_b692_resume_rank84.py
+          sha256sum data/nl2_hu_multiboard_status_current.json \
+            data/nl2_hu_verified_extensions.json data/nl2_hu_model_history_crosswalk.json \
+            data/nl2_hu_model_source_references.json nl2_hu_model.js nl2.js > "$RUNNER_TEMP/b692-central.sha256"
+          python tools/hu_b692_resume_rank84.py --output "$RUNNER_TEMP/b692-stage"
+          sha256sum -c "$RUNNER_TEMP/b692-central.sha256"
+      - name: Restore only the seventeen immutable B685 evidence files
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b692-stage" <<'PY'
+          import hashlib,json,shutil,sys
+          from pathlib import Path
+          sys.path.insert(0,'tools')
+          from hu_b692_resume_rank84 import FILES,check_registry
+          stage=Path(sys.argv[1]);data=stage/'data'
+          report=json.loads((stage/'resume-report.json').read_bytes())
+          assert report['restored_files']==len(FILES)==17
+          assert report['original_native_solves_repeated']==report['completed_full_suites_repeated']==0
+          assert set(report['files'])==set(FILES)
+          payload={name:(data/name).read_bytes()for name in FILES}
+          check_registry(payload,Path('data/nl2_hu_multiboard_status_current.json').read_bytes())
+          for name,raw in payload.items():
+              assert hashlib.sha256(raw).hexdigest()==report['files'][name]
+              target=Path('data')/name
+              assert 'b685'in str(target).lower()
+              target.parent.mkdir(parents=True,exist_ok=True)
+              target.write_bytes(raw)
+              assert target.read_bytes()==raw
+          PY
+          sha256sum -c "$RUNNER_TEMP/b692-central.sha256"
+          git diff --check
+      - name: Create the resumed data-only candidate with the unchanged head lease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import subprocess,sys
+          sys.path.insert(0,'tools')
+          from hu_b692_resume_rank84 import FILES
+          paths=['data/'+name for name in FILES]
+          assert len(paths)==17 and all('b685'in path.lower()for path in paths)
+          if subprocess.check_output(['git','status','--porcelain','--',*paths]).strip():
+              subprocess.run([sys.executable,'tools/hu_publish_candidate.py',
+                  '--message','B692 resume B685 audited native negatives after queue-only head movement; all 147 certificates unchanged',
+                  '--paths',*paths],check=True)
+          else:
+              print('The seventeen audited B685 evidence files are already current.')
+          PY
+      # The original native solves and complete B685 suite are authenticated above.
+      # Every subsequent push runs the repository full-batch-audit workflow.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B692-resumed-audited-rank84-negatives
+          path: ${{ runner.temp }}/b692-stage
+          if-no-files-found: warn
+          retention-days: 90

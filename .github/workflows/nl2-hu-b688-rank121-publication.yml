@@ -1,0 +1,102 @@
+name: B688 authenticate rank121 native partial evidence and root negatives
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b688-rank121-publication.yml'
+      - 'tools/hu_b688_collect.py'
+      - 'tools/hu_b688_publish.py'
+permissions: {contents: write, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Authenticate original source blobs, run, successful jobs and archive bytes
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/hu_b688_collect.py tools/hu_b688_publish.py
+          sha256sum data/nl2_hu_multiboard_status_current.json data/nl2_hu_verified_extensions.json \
+            data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json > "$RUNNER_TEMP/b688-central.sha256"
+          python tools/hu_b688_collect.py --output "$RUNNER_TEMP/b688-originals"
+          node tools/hu_b686_rank121_routes.cjs > "$RUNNER_TEMP/b688-routes.json"
+          python tools/hu_b688_publish.py --solver ../solver --receipts "$RUNNER_TEMP/b688-originals" \
+            --output "$RUNNER_TEMP/b688-replayed" --routes "$RUNNER_TEMP/b688-routes.json" > "$RUNNER_TEMP/b688-summary.json"
+          cat "$RUNNER_TEMP/b688-summary.json"
+          sha256sum -c "$RUNNER_TEMP/b688-central.sha256"
+      - name: Preserve one partial positive and two root negatives without certification changes
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b688-replayed/data" <<'PY'
+          import hashlib,json,sys
+          from pathlib import Path
+          data=Path(sys.argv[1]);summary=json.loads((data/'nl2_hu_b688_summary.json').read_bytes())
+          assert summary==dict(positive_distinct_flops=1,negative_flops=2,certification_eligible=False,
+              native_flop_solves=3,native_gto_turns=1,native_locked_turns=1,actor_locked_boards=1,
+              half_pot_assessed=1,nl2_half_pot_eligible_combos=4,nonpolarized_candidates=0)
+          assert not (data/'solver_evidence/reverified').exists()
+          assert not list(data.glob('*locked_medium.json'))
+          group=json.loads((data/'solver_evidence/partial/rank121.json').read_bytes())
+          assert group['rank']==121 and group['model_id']=='ln-3bp-3b_t_model-yap927'
+          assert len(group['boards'])==len(group['pins'])==1
+          pin=group['pins'][0]
+          assert pin['flop']=='Ts8s6h' and len(pin['rendered_decision_hands'])==4
+          assert pin['GTO_strict_combos']==pin['NL2_strict_combos']==17
+          assert pin['GTO_compatible_hole_card_pairs']==pin['NL2_compatible_hole_card_pairs']==1400
+          for prefix,digest in [('NL2_'+pin['archive_code']+'.zip',pin['archive_sha256']),
+                                ('NL2_MULTIBOARD_'+pin['viewer_archive_code']+'.json.gz',pin['viewer_sha256'])]:
+              assert hashlib.sha256((data/'solver_evidence'/prefix).read_bytes()).hexdigest()==digest
+          registry=json.load(open('data/nl2_hu_multiboard_status_current.json'))
+          assert registry['CERT_MULTIBOARD']>=147 and registry['TOTAL']==392
+          PY
+          cp -R "$RUNNER_TEMP/b688-replayed/data/." data/
+          node tools/hu_b679_policy_view.cjs data/solver_evidence/partial/rank121.json
+          sha256sum -c "$RUNNER_TEMP/b688-central.sha256"
+          git diff --check
+      - name: Create a partial-only immutable candidate without moving a branch
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b688-replayed/data" <<'PY'
+          import subprocess,sys
+          from pathlib import Path
+          stage=Path(sys.argv[1])
+          paths=['data/'+str(p.relative_to(stage)) for p in sorted(stage.rglob('*')) if p.is_file()]
+          assert paths and all(('b688' in p.lower() or 'B686_R121_TS8S6H' in p or p.endswith('/partial/rank121.json')) for p in paths)
+          assert not any(p.endswith('/reverified/rank121.json') for p in paths)
+          if subprocess.check_output(['git','status','--porcelain','--',*paths]).strip():
+              subprocess.run([sys.executable,'tools/hu_publish_candidate.py',
+                  '--message','B688 preserve authenticated rank121 partial GTO and actor-lock evidence; two root negatives, no CERT change',
+                  '--paths',*paths],check=True)
+          else:
+              print('Authenticated rank121 partial evidence is already current.')
+          PY
+      # The existing full-batch-audit workflow runs on every push.
+      # All new partial policy comparisons and native reach gates are checked above.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B688-authenticated-rank121-partial
+          path: |
+            ${{ runner.temp }}/b688-replayed/data
+            ${{ runner.temp }}/b688-summary.json
+          if-no-files-found: warn
+          retention-days: 90
+

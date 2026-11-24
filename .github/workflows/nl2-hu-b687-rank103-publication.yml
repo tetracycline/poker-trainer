@@ -1,0 +1,114 @@
+name: B687 publish independently replayed rank103 native pairs
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b687-rank103-publication.yml'
+      - 'tools/hu_b687_collect.py'
+      - 'tools/hu_b687_publish_rank103.py'
+permissions: {contents: write, actions: read}
+jobs:
+  replay-audit-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate original run and independently replay every native policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          set -euo pipefail
+          cp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b687-before.json"
+          python tools/hu_b682_stage_prices.py --apply
+          git diff --exit-code -- nl2.js nl2_hu_model.js
+          python tools/hu_b687_collect.py --run 45310713025 \
+            --head 30c81f5d06a94610cdb2b9aa3100f4c495352c5f --output "$RUNNER_TEMP/b687-originals"
+          python tools/hu_b687_publish_rank103.py --solver pinned-solver \
+            --run 45310713025 --head 30c81f5d06a94610cdb2b9aa3100f4c495352c5f \
+            --receipts "$RUNNER_TEMP/b687-originals" --workers "$RUNNER_TEMP/b687-originals/workers.json" \
+            --output "$RUNNER_TEMP/b687-publication"
+          cp -R "$RUNNER_TEMP/b687-publication/data/." data/
+          python tools/hu_apply_cert_extensions.py --out data/nl2_hu_multiboard_status_current.json
+          python - "$RUNNER_TEMP/b687-before.json" <<'PY'
+          import json,sys
+          before=json.load(open(sys.argv[1]))
+          after=json.load(open('data/nl2_hu_multiboard_status_current.json'))
+          summary=json.load(open('data/nl2_hu_b687_rank103_summary.json'))
+          model='ln-3bp-3c_t_model-owdwy'
+          assert set(before['records'])==set(after['records']) and len(after['records'])==392
+          old_certs=[k for k,v in before['records'].items() if v['label']=='CERT-MULTIBOARD']
+          assert len(old_certs)>=147 and before['records'][model]['label']=='APPROX'
+          for key in old_certs:
+              assert before['records'][key]==after['records'][key],key
+          for key in before['records']:
+              if key!=model:assert before['records'][key]==after['records'][key],key
+          change=int(summary['cert_eligible'])
+          assert (after['CERT_MULTIBOARD'],after['APPROX'])==(before['CERT_MULTIBOARD']+change,before['APPROX']-change)
+          if change:
+              row=after['records'][model]
+              assert row['label']=='CERT-MULTIBOARD' and row['proven_exact_board_count']==3
+              assert len(row['certified_3_to_5_exact_flop_boards'])==summary['certifiable_distinct_flops']==3
+          else:
+              assert before['records'][model]==after['records'][model]
+          print('Preserved',len(old_certs),'existing certificates and every other model; rank103 delta',change)
+          PY
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b687-registry-replay.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b687-registry-replay.json"
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b687-medium-coverage.json"
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+      - name: Create a verified candidate without moving the PR branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b687-publication" > "$RUNNER_TEMP/b687-paths.txt" <<'PY'
+          from pathlib import Path
+          import sys
+          root=Path(sys.argv[1])
+          for path in sorted((root/'data').rglob('*')):
+              if path.is_file():print(path.relative_to(root))
+          for path in ['data/nl2_hu_multiboard_status_current.json','data/nl2_hu_model_history_crosswalk.json',
+                       'data/nl2_hu_model_source_references.json','data/nl2_hu_verified_extensions.json']:
+              print(path)
+          PY
+          mapfile -t paths < "$RUNNER_TEMP/b687-paths.txt"
+          if python - <<'PY'
+          import json
+          assert json.load(open('data/nl2_hu_b687_rank103_summary.json'))['cert_eligible']
+          PY
+          then
+            message="B687: certify rank103 from three original BB-BTN GTO and NL2 turn pairs"
+          else
+            message="B687: preserve rank103 native partial evidence without certification"
+          fi
+          python tools/hu_publish_candidate.py --message "$message" --paths "${paths[@]}" \
+            | tee "$RUNNER_TEMP/b687-candidate.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B687-rank103-publication
+          path: |
+            ${{ runner.temp }}/b687-publication
+            ${{ runner.temp }}/b687-candidate.txt
+          if-no-files-found: error
+          retention-days: 90
+
