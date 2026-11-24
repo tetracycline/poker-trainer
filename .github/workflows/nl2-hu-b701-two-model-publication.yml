@@ -1,0 +1,108 @@
+name: B701 certify ranks84 and121 from six independent original flops
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b701-two-model-publication.yml'
+      - 'tools/hu_b701_integrate.py'
+      - 'tools/hu_b699_rank84_collect.py'
+      - 'tools/hu_b699_publish_rank84.py'
+      - 'tools/hu_b700_collect.py'
+      - 'tools/hu_b700_publish.py'
+permissions: {contents: write, actions: read}
+jobs:
+  replay-audit-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate both completed runs and independently replay original native evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/hu_b699_rank84_collect.py tools/hu_b699_publish_rank84.py \
+            tools/hu_b700_collect.py tools/hu_b700_publish.py tools/hu_b701_integrate.py
+          cp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b701-before.json"
+          sha256sum data/nl2_hu_multiboard_status_current.json data/nl2_hu_verified_extensions.json \
+            data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json \
+            nl2.js nl2_hu_model.js tools/hu_trainer_route_contract.cjs > "$RUNNER_TEMP/b701-before.sha256"
+          python tools/hu_b699_rank84_collect.py --run 45314875758 \
+            --head 0b380efff4d043e750bc5d5262566036d3634499 --output "$RUNNER_TEMP/b699-originals"
+          python tools/hu_b699_publish_rank84.py --solver pinned-solver \
+            --run 45314875758 --head 0b380efff4d043e750bc5d5262566036d3634499 \
+            --receipts "$RUNNER_TEMP/b699-originals" --output "$RUNNER_TEMP/b699-staged" \
+            > "$RUNNER_TEMP/b699-summary.json"
+          cat "$RUNNER_TEMP/b699-summary.json"
+          python tools/hu_b700_collect.py --output "$RUNNER_TEMP/b700-originals"
+          python tools/hu_b700_publish.py --solver pinned-solver \
+            --receipts "$RUNNER_TEMP/b700-originals" --output "$RUNNER_TEMP/b700-staged" \
+            > "$RUNNER_TEMP/b700-summary.json"
+          cat "$RUNNER_TEMP/b700-summary.json"
+          sha256sum -c "$RUNNER_TEMP/b701-before.sha256"
+      - name: Combine two disjoint evidence groups and preserve every other record
+        run: |
+          set -euo pipefail
+          python tools/hu_b701_integrate.py --rank84 "$RUNNER_TEMP/b699-staged/data" \
+            --rank121 "$RUNNER_TEMP/b700-staged/data" --before "$RUNNER_TEMP/b701-before.json" \
+            --paths "$RUNNER_TEMP/b701-paths.txt"
+          node tools/hu_b558_river_policy_view.cjs data/solver_evidence/reverified/rank84.json
+          node tools/hu_b679_policy_view.cjs data/solver_evidence/reverified/rank121.json
+          git diff --check
+          git diff --exit-code -- nl2.js nl2_hu_model.js tools/hu_trainer_route_contract.cjs
+          sha256sum data/nl2_hu_multiboard_status_current.json data/nl2_hu_verified_extensions.json \
+            data/nl2_hu_model_history_crosswalk.json data/nl2_hu_model_source_references.json \
+            > "$RUNNER_TEMP/b701-integrated.sha256"
+      - name: Run complete original-source, reach, locks, medium-size and navigation audits
+        run: |
+          set -euo pipefail
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b701-registry-replay.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b701-registry-replay.json"
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b701-medium-coverage.json"
+          sha256sum -c "$RUNNER_TEMP/b701-integrated.sha256"
+      - name: Create a fully audited data-only candidate without moving the draft branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mapfile -t paths < "$RUNNER_TEMP/b701-paths.txt"
+          python tools/hu_publish_candidate.py \
+            --message 'B701 certify ranks84 and121 from six genuine original GTO and NL2 flops; preserve all prior certificates' \
+            --paths "${paths[@]}" | tee "$RUNNER_TEMP/b701-candidate.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B701-two-model-authenticated-publication
+          path: |
+            ${{ runner.temp }}/b699-staged/data
+            ${{ runner.temp }}/b700-staged/data
+            ${{ runner.temp }}/b699-summary.json
+            ${{ runner.temp }}/b700-summary.json
+            ${{ runner.temp }}/b701-paths.txt
+            ${{ runner.temp }}/b701-medium-coverage.json
+            ${{ runner.temp }}/b701-candidate.txt
+            data/nl2_hu_b701_two_model_integration.json
+          if-no-files-found: error
+          retention-days: 90
