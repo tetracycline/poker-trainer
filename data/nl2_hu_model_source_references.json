@@ -19636,15 +19636,55 @@
       "solver_profile": "LMP_CO_BB",
       "model_root_spr": 39.6,
       "model_node_spr": 11.53,
-      "reference_count": 0,
-      "references": [],
+      "reference_count": 3,
+      "references": [
+        {
+          "source_run_id": 45339909699,
+          "source_sha256": "9abaf2af5843888fb5c14fe24ba549c2af811763a7b6ee94a5709733e396629b",
+          "spot": "LMP_CO_BB",
+          "family": "LMP",
+          "version": "gto",
+          "flop": "7h6d4s",
+          "turn": "8d",
+          "exact_solver_node_line": "x b50 c/x b33 c/x",
+          "flop_line": "x b50 c",
+          "turn_spr": 11.578313,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
+        {
+          "source_run_id": 45340862830,
+          "source_sha256": "4ea46567692c5c08cf7b4786f5b50293d42b3abda075090ca2f93c13006d6397",
+          "spot": "LMP_CO_BB",
+          "family": "LMP",
+          "version": "gto",
+          "flop": "7h6h4c",
+          "turn": "Qc",
+          "exact_solver_node_line": "x b50 c/x b33 c/x",
+          "flop_line": "x b50 c",
+          "turn_spr": 11.578313,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        },
+        {
+          "source_run_id": 45341697139,
+          "source_sha256": "dcfc63f1018d95b41a704751d5c17d88b67548c59a52bae30fad23433fdd45be",
+          "spot": "LMP_CO_BB",
+          "family": "LMP",
+          "version": "gto",
+          "flop": "7h6c4h",
+          "turn": "Qc",
+          "exact_solver_node_line": "x b50 c/x b33 c/x",
+          "flop_line": "x b50 c",
+          "turn_spr": 11.578313,
+          "reference_status": "CERT_EXACT_BOARD_GTO_ONLY"
+        }
+      ],
       "status": "REFERENCE_ONLY_NOT_CERTIFIED",
       "blockers": [
         "MODEL_HAS_NO_EXACT_FLOP_TURN_RIVER",
         "MODEL_ACTION_AND_POT_HISTORY_NOT_MATCHED_TO_SOLVER",
         "MODEL_COMBO_REACH_NOT_DERIVED_FROM_EXACT_BOARD"
       ],
-      "note": "Fewer than three named flops match the rendered trainer action order and bet sizes."
+      "note": "Exact GTO and separately solved hero lock on each named board. Generic texture rows remain approximate."
     },
     "ln-iso-lmp_r_model-16qn8ev": {
       "model_id": "ln-iso-lmp_r_model-16qn8ev",
