@@ -10,7 +10,7 @@ import hu_b789_rank230_seven_draws as parent
 from hu_b467_river_source_gate import json_bytes
 from hu_b580_rank27_rivers import suit_isomorphism_class
 
-WORKER='tools/hu_b824_rank230_seven_three.py'
+WORKER='tools/hu_b824_rank230_queen_high.py'
 PARENT_BLOB='84f0186a2b0d96ab7f10ccf81fb7818b0a0db5ae'
 CASES={'QsTs7h':('7sJs',['4c','5d']),
        'Qs9s7h':('7sJs',['4c','5d'])}
