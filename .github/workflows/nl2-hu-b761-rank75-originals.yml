@@ -1,0 +1,45 @@
+name: B761 authenticate the published rank75 monotone decisions
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['data/nl2_hu_b761_source_manifest.json']
+permissions: {contents: read, actions: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Verify source receipts and compare every staged byte to the published tree
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python tools/hu_b761_collect.py --output "$RUNNER_TEMP/b761-receipts"
+          cmp data/nl2_hu_b761_source_manifest.json "$RUNNER_TEMP/b761-receipts/receipt.json"
+          python tools/hu_b761_rank75_replay.py --solver pinned-solver --archives "$RUNNER_TEMP/b761-receipts" \
+            --receipts "$RUNNER_TEMP/b761-receipts/receipt.json" --output "$RUNNER_TEMP/b761-data"
+          python - "$RUNNER_TEMP/b761-data" <<'PY'
+          from pathlib import Path
+          import sys
+          stage=Path(sys.argv[1])
+          files=sorted(p for p in stage.rglob('*') if p.is_file())
+          assert len(files)==14
+          for p in files:
+              target=Path('data')/p.relative_to(stage)
+              assert p.read_bytes()==target.read_bytes(),target
+          PY
+          git diff --exit-code -- data/
