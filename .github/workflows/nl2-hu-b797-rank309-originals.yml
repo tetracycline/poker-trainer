@@ -1,0 +1,61 @@
+name: B797 replay the measured rank309 Qc turn and river evidence
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b797-rank309-originals.yml'
+      - 'tools/hu_b797_collect.py'
+      - 'tools/hu_b797_rank309.py'
+      - 'data/nl2_hu_b797_source_manifest.json'
+      - 'data/nl2_hu_b797_results.json'
+      - 'data/solver_evidence/NL2_B796_R309_9H7H5H_QC.zip'
+      - 'data/solver_evidence/partial/b797_rank309*.json'
+permissions: {contents: read, actions: read}
+jobs:
+  authenticate-and-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Authenticate the source and replay the committed observations under two hash seeds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor cc225dbdd69d9769a84a3316f7ddb9136834d99f HEAD
+          python tools/hu_b797_collect.py --output "$RUNNER_TEMP/b797-original"
+          for seed in 23 867; do
+            PYTHONHASHSEED="$seed" python tools/hu_b797_rank309.py --solver pinned-solver \
+              --archives "$RUNNER_TEMP/b797-original" --output "$RUNNER_TEMP/b797-data-$seed"
+          done
+          python - "$RUNNER_TEMP/b797-data-23" "$RUNNER_TEMP/b797-data-867" <<'PY'
+          import json, sys
+          from pathlib import Path
+          paths={
+              'nl2_hu_b797_source_manifest.json','nl2_hu_b797_results.json',
+              'solver_evidence/NL2_B796_R309_9H7H5H_QC.zip',
+              'solver_evidence/partial/b797_rank309.json',
+              'solver_evidence/partial/b797_rank309_locked_medium.json',
+          }
+          for folder in map(Path,sys.argv[1:]):
+              assert {p.relative_to(folder).as_posix() for p in folder.rglob('*') if p.is_file()}==paths
+              for name in sorted(paths):
+                  assert (folder/name).read_bytes()==(Path('data')/name).read_bytes(),name
+          result=json.loads(Path('data/nl2_hu_b797_results.json').read_bytes())
+          assert result['cert_eligible_ranks']==[] and result['positive_distinct_flops']==0
+          assert (result['locked_public_boards'],result['joint_halfpot_assessed'],result['halfpot_candidates'])==(16,16,9)
+          PY
+          git diff --exit-code -- data
