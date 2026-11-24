@@ -1,7 +1,7 @@
 {
   "schema": "NL2_HU_392_MULTIBOARD_CERT_STATUS_VERIFIED_EXTENSIONS_V1",
-  "CERT_MULTIBOARD": 152,
-  "APPROX": 240,
+  "CERT_MULTIBOARD": 153,
+  "APPROX": 239,
   "TOTAL": 392,
   "top_N_rank_cutoff": 24,
   "exact_board_min": 3,
@@ -65881,7 +65881,7 @@
     "ln-3bp-3b_r_model-4k40h1": {
       "model_id": "ln-3bp-3b_r_model-4k40h1",
       "source_model_id": "ln-3bp-3b_t_model-ciziut",
-      "label": "APPROX",
+      "label": "CERT-MULTIBOARD",
       "must_not_extrapolate_to_all_texture_cards": true,
       "model_frequencies_are_not_observed_combo_counts": true,
       "frequency_rank": 233,
@@ -65893,9 +65893,385 @@
       "preflop_text": "翻前：BTN 開， 你 SB 3-bet ，BTN 跟",
       "abstract_action_history": "你過、對手下注、你跟|你過、對手過|",
       "assumed_model_node_spr": 2.383,
-      "certified_3_to_5_exact_flop_boards": [],
-      "proven_exact_board_count": 0,
-      "blocked_reason": "LOWER_FREQUENCY_BELOW_PREREGISTERED_TOP24_CUTOFF",
+      "certified_3_to_5_exact_flop_boards": [
+        {
+          "flop": "Ts9s6h",
+          "turn": "2c",
+          "public_board": "6h9sTs2c3h",
+          "actual_exact_action_line": "x b33 c/x x/",
+          "acting_seat": 0,
+          "exact_flop_action": "x b33 c",
+          "actual_pot_bb": 34.86,
+          "actual_effective_stack_bb": 83.07,
+          "actual_spr": 2.38296,
+          "model_assumed_spr": 2.383,
+          "relative_spr_error_pct": 0.001679,
+          "genuine_gto_exploitability_pct": 0.3438587188720703,
+          "source_run_id": 45331068744,
+          "source_sha256": "0a36111841d3ed5c9b2cebd40280b266034eb949c648a5856472dc10c564de6f",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 98,
+          "strict_full_street_combo_reachable": 39,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b75",
+            "b100",
+            "a"
+          ],
+          "medium_50pct_eligible_combos": 26,
+          "b50_nonpolarized_relative_equity_research_candidate": true,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 45331068744,
+              "sha256": "a69bb52870953b480ddb74a925133640705c7dddef842bdc592b30e19f133493",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "observed_marginal_source_nodes": 4,
+              "assumed_default_source_nodes": 1,
+              "unlocked_source_nodes": 4,
+              "unknown_history_frequency_filled_with_default": true,
+              "source_not_real_per_combo_observation": true,
+              "villain_observed_pattern_node_share_pct": 55.556,
+              "true_hero_gap_pct": 0.38268527388572693,
+              "hero_model_gain_bb": 5.38866,
+              "medium_50pct_eligible_combos": 0,
+              "b50_nonpolarized_relative_equity_research_candidate": false,
+              "source_run_role": "ORIGINAL_NATIVE_VERIFIED_TURN_NEW_RIVER_EXTRACTS",
+              "origin_solve_run_id": 45331068744,
+              "pool_sha256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+              "measurement_policy": "STREET_SPECIFIC_POOL_MARGINALS",
+              "applied_street_rates": [
+                {
+                  "street": 2,
+                  "token": "b33",
+                  "n": 71741,
+                  "nodes": 1,
+                  "fold_pct": 29.900003069167635,
+                  "raise_pct": 12.89999616776959
+                },
+                {
+                  "street": 2,
+                  "token": "b50",
+                  "n": 144567,
+                  "nodes": 1,
+                  "fold_pct": 44.00000040955349,
+                  "raise_pct": 8.299997735766103
+                },
+                {
+                  "street": 2,
+                  "token": "b75",
+                  "n": 112817,
+                  "nodes": 1,
+                  "fold_pct": 51.39999887237954,
+                  "raise_pct": 7.2999980873768955
+                },
+                {
+                  "street": 2,
+                  "token": "b100",
+                  "n": 43254,
+                  "nodes": 1,
+                  "fold_pct": 57.7999985052269,
+                  "raise_pct": 6.699998472465814
+                },
+                {
+                  "street": 3,
+                  "token": "b50",
+                  "n": 64272,
+                  "nodes": 144,
+                  "fold_pct": 53.100000349687726,
+                  "raise_pct": 9.299998037999421
+                },
+                {
+                  "street": 3,
+                  "token": "b75",
+                  "n": 58736,
+                  "nodes": 96,
+                  "fold_pct": 58.6999986634386,
+                  "raise_pct": 7.599997998964043
+                },
+                {
+                  "street": 3,
+                  "token": "b100",
+                  "n": 43634,
+                  "nodes": 48,
+                  "fold_pct": 64.59999899056669,
+                  "raise_pct": 6.199998478350761
+                }
+              ],
+              "gto_parent_source_run_id": 45312594665,
+              "gto_parent_source_sha256": "64cd154362b83cc5f95108fc94e739d4ce60c5f18517ea178a7128704cd120a4",
+              "viewer_archive_code": "B738_R233_TS9S6H",
+              "viewer_sha256": "7e627d047cb2aff9dae1f79bed77bbbfbff535b0d1e7f14d64dc7ef11c1dc1fb",
+              "root_applied_rust_lock_nodes": 0,
+              "subgame_applied_rust_lock_nodes": 725,
+              "strictly_reachable_combos": 33,
+              "compatible_hole_card_pairs": 1190
+            }
+          ],
+          "flop_texture": "JT_HIGH",
+          "river": "3h",
+          "source_run_role": "ORIGINAL_NATIVE_VERIFIED_TURN_NEW_RIVER_EXTRACTS",
+          "origin_solve_run_id": 45331068744,
+          "original_flop_run_id": 45312594665,
+          "original_18_turn_nodes_unchanged": true,
+          "flop_native_solves_repeated": 0,
+          "compatible_hole_card_pairs": 1215
+        },
+        {
+          "flop": "Th9h7c",
+          "turn": "2s",
+          "public_board": "7c9hTh2s6c",
+          "actual_exact_action_line": "x b33 c/x x/",
+          "acting_seat": 0,
+          "exact_flop_action": "x b33 c",
+          "actual_pot_bb": 34.86,
+          "actual_effective_stack_bb": 83.07,
+          "actual_spr": 2.38296,
+          "model_assumed_spr": 2.383,
+          "relative_spr_error_pct": 0.001679,
+          "genuine_gto_exploitability_pct": 0.35963404178619385,
+          "source_run_id": 45331068744,
+          "source_sha256": "071417afc558aba12b933d0bdbf14b6a5bfd9b6bae004e6c7b3704f9a073e80d",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 105,
+          "strict_full_street_combo_reachable": 23,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b75",
+            "b100",
+            "a"
+          ],
+          "medium_50pct_eligible_combos": 15,
+          "b50_nonpolarized_relative_equity_research_candidate": false,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 45331068744,
+              "sha256": "57ac51f989562cadc3487646188a60662eabaf0fd2d80a932bd4268a6bcc2aad",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "observed_marginal_source_nodes": 4,
+              "assumed_default_source_nodes": 1,
+              "unlocked_source_nodes": 4,
+              "unknown_history_frequency_filled_with_default": true,
+              "source_not_real_per_combo_observation": true,
+              "villain_observed_pattern_node_share_pct": 55.556,
+              "true_hero_gap_pct": 0.4207630753517151,
+              "hero_model_gain_bb": 5.8764,
+              "medium_50pct_eligible_combos": 0,
+              "b50_nonpolarized_relative_equity_research_candidate": false,
+              "source_run_role": "ORIGINAL_NATIVE_VERIFIED_TURN_NEW_RIVER_EXTRACTS",
+              "origin_solve_run_id": 45331068744,
+              "pool_sha256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+              "measurement_policy": "STREET_SPECIFIC_POOL_MARGINALS",
+              "applied_street_rates": [
+                {
+                  "street": 2,
+                  "token": "b33",
+                  "n": 71741,
+                  "nodes": 1,
+                  "fold_pct": 29.90000324292958,
+                  "raise_pct": 12.899995826752173
+                },
+                {
+                  "street": 2,
+                  "token": "b50",
+                  "n": 144567,
+                  "nodes": 1,
+                  "fold_pct": 43.99999990211884,
+                  "raise_pct": 8.299997697445177
+                },
+                {
+                  "street": 2,
+                  "token": "b75",
+                  "n": 112817,
+                  "nodes": 1,
+                  "fold_pct": 51.399998561886854,
+                  "raise_pct": 7.2999982115024435
+                },
+                {
+                  "street": 2,
+                  "token": "b100",
+                  "n": 43254,
+                  "nodes": 1,
+                  "fold_pct": 57.79999802388636,
+                  "raise_pct": 6.699999278534238
+                },
+                {
+                  "street": 3,
+                  "token": "b50",
+                  "n": 64272,
+                  "nodes": 144,
+                  "fold_pct": 53.10000001328664,
+                  "raise_pct": 9.299998112132876
+                },
+                {
+                  "street": 3,
+                  "token": "b75",
+                  "n": 58736,
+                  "nodes": 96,
+                  "fold_pct": 58.69999814059985,
+                  "raise_pct": 7.599998013422798
+                },
+                {
+                  "street": 3,
+                  "token": "b100",
+                  "n": 43634,
+                  "nodes": 48,
+                  "fold_pct": 64.59999838449764,
+                  "raise_pct": 6.199998437619412
+                }
+              ],
+              "gto_parent_source_run_id": 45314875758,
+              "gto_parent_source_sha256": "0c52b5f2c2085c5966d4f44139c71fe38c83fd69552c14872a915eaa80fa06e5",
+              "viewer_archive_code": "B738_R233_TH9H7C",
+              "viewer_sha256": "17aa79a22946ca61559a4ddb865bea48331487a81c908ed35aa85ebc4b92a4b3",
+              "root_applied_rust_lock_nodes": 0,
+              "subgame_applied_rust_lock_nodes": 725,
+              "strictly_reachable_combos": 13,
+              "compatible_hole_card_pairs": 458
+            }
+          ],
+          "flop_texture": "JT_HIGH",
+          "river": "6c",
+          "source_run_role": "ORIGINAL_NATIVE_VERIFIED_TURN_NEW_RIVER_EXTRACTS",
+          "origin_solve_run_id": 45331068744,
+          "original_flop_run_id": 45314875758,
+          "original_18_turn_nodes_unchanged": true,
+          "flop_native_solves_repeated": 0,
+          "compatible_hole_card_pairs": 820
+        },
+        {
+          "flop": "Ts8s7h",
+          "turn": "2c",
+          "public_board": "7h8sTs2cKc",
+          "actual_exact_action_line": "x b33 c/x x/",
+          "acting_seat": 0,
+          "exact_flop_action": "x b33 c",
+          "actual_pot_bb": 34.86,
+          "actual_effective_stack_bb": 83.07,
+          "actual_spr": 2.38296,
+          "model_assumed_spr": 2.383,
+          "relative_spr_error_pct": 0.001679,
+          "genuine_gto_exploitability_pct": 0.35437870025634766,
+          "source_run_id": 45331068744,
+          "source_sha256": "9c4412509b785164b0b8a7196d8615980f8a06b90144fa6705029e2a9f0338c8",
+          "source_kind": "PINNED_PREFLOP_CFR",
+          "assumed_preflop_ranges": false,
+          "exact_combo_reachable": 91,
+          "strict_full_street_combo_reachable": 8,
+          "exact_node_actions": [
+            "x",
+            "b50",
+            "b75",
+            "b100",
+            "a"
+          ],
+          "medium_50pct_eligible_combos": 2,
+          "b50_nonpolarized_relative_equity_research_candidate": false,
+          "nl2_locked_variants": [
+            {
+              "version": "exp_oop",
+              "run_id": 45331068744,
+              "sha256": "fd936e4761d30796fc8fc600266a0b22866043020050c03abe42a187755c972b",
+              "source_scope": "PARTIALLY_LOCKED_NL2_MARGINAL_PROXY",
+              "observed_marginal_source_nodes": 4,
+              "assumed_default_source_nodes": 1,
+              "unlocked_source_nodes": 4,
+              "unknown_history_frequency_filled_with_default": true,
+              "source_not_real_per_combo_observation": true,
+              "villain_observed_pattern_node_share_pct": 55.556,
+              "true_hero_gap_pct": 0.34934309124946594,
+              "hero_model_gain_bb": 5.10635,
+              "medium_50pct_eligible_combos": 0,
+              "b50_nonpolarized_relative_equity_research_candidate": false,
+              "source_run_role": "ORIGINAL_NATIVE_VERIFIED_TURN_NEW_RIVER_EXTRACTS",
+              "origin_solve_run_id": 45331068744,
+              "pool_sha256": "c2d7c8a6b0dd044a5e546256207a6e46f626b083ecb598b1e6d98bb928611c4a",
+              "measurement_policy": "STREET_SPECIFIC_POOL_MARGINALS",
+              "applied_street_rates": [
+                {
+                  "street": 2,
+                  "token": "b33",
+                  "n": 71741,
+                  "nodes": 1,
+                  "fold_pct": 29.900003095490412,
+                  "raise_pct": 12.89999619442486
+                },
+                {
+                  "street": 2,
+                  "token": "b50",
+                  "n": 144567,
+                  "nodes": 1,
+                  "fold_pct": 44.00000031507973,
+                  "raise_pct": 8.2999978872103
+                },
+                {
+                  "street": 2,
+                  "token": "b75",
+                  "n": 112817,
+                  "nodes": 1,
+                  "fold_pct": 51.399998964186,
+                  "raise_pct": 7.2999982149640905
+                },
+                {
+                  "street": 2,
+                  "token": "b100",
+                  "n": 43254,
+                  "nodes": 1,
+                  "fold_pct": 57.79999845763331,
+                  "raise_pct": 6.699998347537058
+                },
+                {
+                  "street": 3,
+                  "token": "b50",
+                  "n": 64272,
+                  "nodes": 144,
+                  "fold_pct": 53.10000000382339,
+                  "raise_pct": 9.299998055304199
+                },
+                {
+                  "street": 3,
+                  "token": "b75",
+                  "n": 58736,
+                  "nodes": 96,
+                  "fold_pct": 58.699998388211384,
+                  "raise_pct": 7.599997987367904
+                },
+                {
+                  "street": 3,
+                  "token": "b100",
+                  "n": 43634,
+                  "nodes": 48,
+                  "fold_pct": 64.59999872230891,
+                  "raise_pct": 6.199998526343972
+                }
+              ],
+              "gto_parent_source_run_id": 45314875758,
+              "gto_parent_source_sha256": "08f09182e597e4312a22dc769f57aec4df7b788ab684f2a8a11cc04e31eb4432",
+              "viewer_archive_code": "B738_R233_TS8S7H",
+              "viewer_sha256": "16fbb29121b8542ebd4c4d863ef40ff26d86ff59405ff4622b46308d110289a2",
+              "root_applied_rust_lock_nodes": 0,
+              "subgame_applied_rust_lock_nodes": 725,
+              "strictly_reachable_combos": 3,
+              "compatible_hole_card_pairs": 133
+            }
+          ],
+          "flop_texture": "JT_HIGH",
+          "river": "Kc",
+          "source_run_role": "ORIGINAL_NATIVE_VERIFIED_TURN_NEW_RIVER_EXTRACTS",
+          "origin_solve_run_id": 45331068744,
+          "original_flop_run_id": 45314875758,
+          "original_18_turn_nodes_unchanged": true,
+          "flop_native_solves_repeated": 0,
+          "compatible_hole_card_pairs": 302
+        }
+      ],
+      "proven_exact_board_count": 3,
+      "blocked_reason": null,
       "source_credibility": "GITHUB_ACTIONS_AUTHENTIC_CFR_SHA256_AND_FULL_STREET_COMBO_REACH"
     },
     "ln-iso-lmp_r_model-1iqsf2n": {
@@ -184062,6 +184438,542 @@
         "original_locked_artifact_id": 14785144150
       }
     ],
+    "ln-3bp-3b_r_model-4k40h1": [
+      {
+        "flop": "Ts9s6h",
+        "turn": "2c",
+        "public_board": "6h9sTs2c3h",
+        "source_run_id": 45331068744,
+        "archive_code": "B737_R233_TS9S6H",
+        "archive_sha256": "204cd92bbd740e9f9b8a7a5317e1313cc9c1809c19b8d185d0ed57849a80c380",
+        "viewer_archive_code": "B738_R233_TS9S6H",
+        "viewer_sha256": "7e627d047cb2aff9dae1f79bed77bbbfbff535b0d1e7f14d64dc7ef11c1dc1fb",
+        "original_GTO_SHA256": "0a36111841d3ed5c9b2cebd40280b266034eb949c648a5856472dc10c564de6f",
+        "actual_NL2_SHA256": "a69bb52870953b480ddb74a925133640705c7dddef842bdc592b30e19f133493",
+        "actual_spr": 2.38296,
+        "GTO_strict_combos": 39,
+        "NL2_strict_combos": 33,
+        "GTO_compatible_hole_card_pairs": 1215,
+        "NL2_compatible_hole_card_pairs": 1190,
+        "common_legal_hero_combos": 25,
+        "pool_observed_marginal_lock_nodes": 4,
+        "pool_assumed_lock_nodes": 1,
+        "pool_unlocked_nodes": 4,
+        "medium50_exact_research_candidate": true,
+        "locked_original_archive_code": "B737_R233_TS9S6H",
+        "locked_original_archive_sha256": "204cd92bbd740e9f9b8a7a5317e1313cc9c1809c19b8d185d0ed57849a80c380",
+        "river": "3h",
+        "rendered_decision_hands": [
+          {
+            "hand": "8c8s",
+            "flop_class": "MID",
+            "turn_class": "MID",
+            "river_class": "MID",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 3,
+              "accepted_actions": [
+                "x",
+                "b50"
+              ],
+              "strategy": {
+                "x": 0.4332,
+                "b50": 0.5639,
+                "b75": 0.0022,
+                "b100": 0.0007,
+                "a": 0.0
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9853,
+                "b50": 0.0125,
+                "b75": 0.0006,
+                "b100": 0.0012,
+                "a": 0.0004
+              }
+            }
+          },
+          {
+            "hand": "8d8s",
+            "flop_class": "MID",
+            "turn_class": "MID",
+            "river_class": "MID",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 3,
+              "accepted_actions": [
+                "x",
+                "b50"
+              ],
+              "strategy": {
+                "x": 0.4332,
+                "b50": 0.5639,
+                "b75": 0.0022,
+                "b100": 0.0007,
+                "a": 0.0
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9853,
+                "b50": 0.0125,
+                "b75": 0.0006,
+                "b100": 0.0012,
+                "a": 0.0004
+              }
+            }
+          },
+          {
+            "hand": "8h8s",
+            "flop_class": "MID",
+            "turn_class": "MID",
+            "river_class": "MID",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 3,
+              "accepted_actions": [
+                "x",
+                "b50"
+              ],
+              "strategy": {
+                "x": 0.4368,
+                "b50": 0.5589,
+                "b75": 0.003,
+                "b100": 0.0013,
+                "a": 0.0
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9851,
+                "b50": 0.0126,
+                "b75": 0.0006,
+                "b100": 0.0013,
+                "a": 0.0004
+              }
+            }
+          }
+        ],
+        "worker_artifact": 14891622522,
+        "worker_sha256": "204cd92bbd740e9f9b8a7a5317e1313cc9c1809c19b8d185d0ed57849a80c380",
+        "worker_head": "24c4d5229b9e498b5c2dc5d936354f30effa2c17",
+        "original_job_id": 138232144194,
+        "original_flop_run_id": 45312594665,
+        "original_flop_archive_sha256": "edf549f1ea8f2acd1c3b839b29a3334efdf89476e9a87a11a8f7658e23063299",
+        "original_flop_sha256": "2c29976968bb83969345e439a789908ad6a0ada6c78ee4484b4c42b0db650617",
+        "original_turn_gto_sha256": "2b3e82fd26506db5a28db9563fb292606f0f3e6b0469ee8547fe61bfbc51ee71",
+        "original_turn_nl2_sha256": "e986a743edd123bad9db632841eb9ea0027c6d222682cc8e4f53ec77dcd37b5c"
+      },
+      {
+        "flop": "Th9h7c",
+        "turn": "2s",
+        "public_board": "7c9hTh2s6c",
+        "source_run_id": 45331068744,
+        "archive_code": "B737_R233_TH9H7C",
+        "archive_sha256": "830545ce252ef79673beb1676627dc861fbcbf019ac394d56992524d388e5465",
+        "viewer_archive_code": "B738_R233_TH9H7C",
+        "viewer_sha256": "17aa79a22946ca61559a4ddb865bea48331487a81c908ed35aa85ebc4b92a4b3",
+        "original_GTO_SHA256": "071417afc558aba12b933d0bdbf14b6a5bfd9b6bae004e6c7b3704f9a073e80d",
+        "actual_NL2_SHA256": "57ac51f989562cadc3487646188a60662eabaf0fd2d80a932bd4268a6bcc2aad",
+        "actual_spr": 2.38296,
+        "GTO_strict_combos": 23,
+        "NL2_strict_combos": 13,
+        "GTO_compatible_hole_card_pairs": 820,
+        "NL2_compatible_hole_card_pairs": 458,
+        "common_legal_hero_combos": 4,
+        "pool_observed_marginal_lock_nodes": 4,
+        "pool_assumed_lock_nodes": 1,
+        "pool_unlocked_nodes": 4,
+        "medium50_exact_research_candidate": false,
+        "locked_original_archive_code": "B737_R233_TH9H7C",
+        "locked_original_archive_sha256": "830545ce252ef79673beb1676627dc861fbcbf019ac394d56992524d388e5465",
+        "river": "6c",
+        "rendered_decision_hands": [
+          {
+            "hand": "7dJd",
+            "flop_class": "MID",
+            "turn_class": "MID",
+            "river_class": "MID",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.6615,
+                "b50": 0.3307,
+                "b75": 0.0072,
+                "b100": 0.0002,
+                "a": 0.0004
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.715,
+                "b50": 0.0274,
+                "b75": 0.2576,
+                "b100": 0.0,
+                "a": 0.0
+              }
+            }
+          },
+          {
+            "hand": "7hJh",
+            "flop_class": "MID",
+            "turn_class": "MID",
+            "river_class": "MID",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9827,
+                "b50": 0.0125,
+                "b75": 0.0043,
+                "b100": 0.0,
+                "a": 0.0005
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9951,
+                "b50": 0.0031,
+                "b75": 0.0018,
+                "b100": 0.0,
+                "a": 0.0
+              }
+            }
+          },
+          {
+            "hand": "7sJs",
+            "flop_class": "MID",
+            "turn_class": "MID",
+            "river_class": "MID",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.6615,
+                "b50": 0.3307,
+                "b75": 0.0072,
+                "b100": 0.0002,
+                "a": 0.0004
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.715,
+                "b50": 0.0274,
+                "b75": 0.2576,
+                "b100": 0.0,
+                "a": 0.0
+              }
+            }
+          }
+        ],
+        "worker_artifact": 14892465533,
+        "worker_sha256": "830545ce252ef79673beb1676627dc861fbcbf019ac394d56992524d388e5465",
+        "worker_head": "24c4d5229b9e498b5c2dc5d936354f30effa2c17",
+        "original_job_id": 138232144375,
+        "original_flop_run_id": 45314875758,
+        "original_flop_archive_sha256": "8712803dce0228c02fd854dd1efd39b4c7b4ffa38f1d08f07c5039209979f381",
+        "original_flop_sha256": "4b73e863b8dc856562dde9e574eba0ba37c108c24713ee526b99ae239571d0d5",
+        "original_turn_gto_sha256": "597e9d8df6097f65fccdb5004dec8b001baa51dceaf4362dcfb5c5c26f8ae6d2",
+        "original_turn_nl2_sha256": "83995c8b78b783c12f428ab04d66fb2641d1b5c92ad77a9500a8ef2446b4e81d"
+      },
+      {
+        "flop": "Ts8s7h",
+        "turn": "2c",
+        "public_board": "7h8sTs2cKc",
+        "source_run_id": 45331068744,
+        "archive_code": "B737_R233_TS8S7H",
+        "archive_sha256": "d434c2bd1d1fe162656122d7045d382b08293f201e9a31016c6991425c96af38",
+        "viewer_archive_code": "B738_R233_TS8S7H",
+        "viewer_sha256": "16fbb29121b8542ebd4c4d863ef40ff26d86ff59405ff4622b46308d110289a2",
+        "original_GTO_SHA256": "9c4412509b785164b0b8a7196d8615980f8a06b90144fa6705029e2a9f0338c8",
+        "actual_NL2_SHA256": "fd936e4761d30796fc8fc600266a0b22866043020050c03abe42a187755c972b",
+        "actual_spr": 2.38296,
+        "GTO_strict_combos": 8,
+        "NL2_strict_combos": 3,
+        "GTO_compatible_hole_card_pairs": 302,
+        "NL2_compatible_hole_card_pairs": 133,
+        "common_legal_hero_combos": 3,
+        "pool_observed_marginal_lock_nodes": 4,
+        "pool_assumed_lock_nodes": 1,
+        "pool_unlocked_nodes": 4,
+        "medium50_exact_research_candidate": false,
+        "locked_original_archive_code": "B737_R233_TS8S7H",
+        "locked_original_archive_sha256": "d434c2bd1d1fe162656122d7045d382b08293f201e9a31016c6991425c96af38",
+        "river": "Kc",
+        "rendered_decision_hands": [
+          {
+            "hand": "7sJs",
+            "flop_class": "MID",
+            "turn_class": "MID",
+            "river_class": "MID",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.8690869,
+                "b50": 0.120212,
+                "b75": 0.0008001,
+                "b100": 0.009901,
+                "a": 0.0
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9989,
+                "b50": 0.001,
+                "b75": 0.0,
+                "b100": 0.0001,
+                "a": 0.0
+              }
+            }
+          },
+          {
+            "hand": "9c9s",
+            "flop_class": "MID",
+            "turn_class": "MID",
+            "river_class": "MID",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9213079,
+                "b50": 0.0736926,
+                "b75": 0.0007999,
+                "b100": 0.0041996,
+                "a": 0.0
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9986,
+                "b50": 0.0014,
+                "b75": 0.0,
+                "b100": 0.0,
+                "a": 0.0
+              }
+            }
+          },
+          {
+            "hand": "9d9s",
+            "flop_class": "MID",
+            "turn_class": "MID",
+            "river_class": "MID",
+            "displayed_suggestion": "過",
+            "gto": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.872,
+                "b50": 0.1186,
+                "b75": 0.0014,
+                "b100": 0.008,
+                "a": 0.0
+              }
+            },
+            "nl2": {
+              "action_order": [
+                "x",
+                "b50",
+                "b75",
+                "b100",
+                "a"
+              ],
+              "accepted_mask": 1,
+              "accepted_actions": [
+                "x"
+              ],
+              "strategy": {
+                "x": 0.9978,
+                "b50": 0.0022,
+                "b75": 0.0,
+                "b100": 0.0,
+                "a": 0.0
+              }
+            }
+          }
+        ],
+        "worker_artifact": 14891632575,
+        "worker_sha256": "d434c2bd1d1fe162656122d7045d382b08293f201e9a31016c6991425c96af38",
+        "worker_head": "24c4d5229b9e498b5c2dc5d936354f30effa2c17",
+        "original_job_id": 138232143979,
+        "original_flop_run_id": 45314875758,
+        "original_flop_archive_sha256": "a121527bc646b49df6d9989def4e0e29fbab196b61c88f834fc874afefa895a8",
+        "original_flop_sha256": "08f09182e597e4312a22dc769f57aec4df7b788ab684f2a8a11cc04e31eb4432",
+        "original_turn_gto_sha256": "7e1eb8a460571e84e93e00311c16edcf4e0e24127e4de67bca57d9a4ea4cb042",
+        "original_turn_nl2_sha256": "1c616ac6ae72dd7b278df59ae3072addde031d022ae44520e395b119a62728c0"
+      }
+    ],
     "ln-3bp-3c_r_model-knstxa": [
       {
         "flop": "8h6s4c",
@@ -192796,18 +193708,18 @@
   "base_registry": "nl2_hu_multiboard_status_v53_b465_rank218.json",
   "base_registry_sha256": "c774b2c3e44aadead2b4e12f4618796097336ae0669e2140674b338e22eb7ca1",
   "all_cert_lock_medium": {
-    "lock_variants_with_separately_audited_b50": 664,
+    "lock_variants_with_separately_audited_b50": 667,
     "lock_variants_with_b50_candidate": 249,
-    "paired_hero_locked_source_variants": 664,
-    "variants_with_assumed_defaults": 489,
-    "variants_with_measured_aggregate_marginals": 661,
-    "source_nodes_from_measured_NL2_marginals": 8760,
-    "source_nodes_from_assumed_defaults": 3342,
-    "source_villain_nodes_unmatched_unlocked": 9737,
-    "named_board_proofs": 534,
-    "board_examples_with_b50_candidate": 109,
-    "strictly_reachable_combo_rows": 68880,
-    "board_examples_without_nonpolarized_evidence": 425,
-    "models_with_3_to_5_gto_and_hero_lock_source": 152
+    "paired_hero_locked_source_variants": 667,
+    "variants_with_assumed_defaults": 492,
+    "variants_with_measured_aggregate_marginals": 664,
+    "source_nodes_from_measured_NL2_marginals": 8772,
+    "source_nodes_from_assumed_defaults": 3345,
+    "source_villain_nodes_unmatched_unlocked": 9749,
+    "named_board_proofs": 537,
+    "board_examples_with_b50_candidate": 110,
+    "strictly_reachable_combo_rows": 68950,
+    "board_examples_without_nonpolarized_evidence": 427,
+    "models_with_3_to_5_gto_and_hero_lock_source": 153
   }
 }
