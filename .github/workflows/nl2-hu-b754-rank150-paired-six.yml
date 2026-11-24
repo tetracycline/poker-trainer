@@ -1,0 +1,75 @@
+name: B754 solve two new paired-six rank150 flops and preserve their original roots
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b754-rank150-paired-six.yml'
+      - 'tools/hu_b754_rank150_paired_six.py'
+permissions: {contents: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        flop: [8d8c6d, JcJh6c]
+    env:
+      FLOP: ${{ matrix.flop }}
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: 1
+      RAYON_NUM_THREADS: 2
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify two previous original flops, the A4/A5 suited policies and the new rendered routes
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          python tools/hu_b754_rank150_paired_six.py --preflight --solver pinned-solver --flop "$FLOP" --output "$RUNNER_TEMP/preflight"
+      - name: Build the pinned native solver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve just the new full-size flop root
+        run: |
+          python tools/hu_b754_rank150_paired_six.py --solver pinned-solver --flop "$FLOP" --checkpoint-only \
+            --output "$RUNNER_TEMP/b754-root" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+      - name: Preserve the completed original before conditional work
+        uses: actions/upload-artifact@v4
+        with:
+          name: B754-root-R150-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b754-root
+          if-no-files-found: error
+          retention-days: 90
+      - name: Resume the original root and verify both policies on reachable river checks
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/b754-source"
+          python tools/hu_b754_rank150_paired_six.py --solver pinned-solver --flop "$FLOP" --output "$folder" \
+            --driver pinned-solver/postflop/pfdriver/target/release/pfdriver --checkpoint "$RUNNER_TEMP/b754-root"
+          cp "$folder/proof.json" "$RUNNER_TEMP/original-proof"
+          python tools/hu_b754_rank150_paired_six.py --solver pinned-solver --flop "$FLOP" --output "$folder"
+          cmp "$RUNNER_TEMP/original-proof" "$folder/proof.json"
+          cmp "$RUNNER_TEMP/b754-root/flop/job.json" "$folder/flop/job.json"
+          cmp "$RUNNER_TEMP/b754-root/flop/result.json" "$folder/flop/result.json"
+      - name: Preserve the conditional jobs and original decisions
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B754-R150-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b754-source
+          if-no-files-found: error
+          retention-days: 90
