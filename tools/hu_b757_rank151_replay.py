@@ -186,7 +186,7 @@ def publish(args):
     route_file=partial/'b757_rank151_routes.json';route_file.write_bytes(rawroute)
     auth=receipt.validate(read(args.receipts));(stage/'nl2_hu_b757_source_receipts.json').write_bytes(json_bytes(auth))
     group=dict(rank=151,model_id=native.MODEL,boards=[],pins=[]);pairs.EVIDENCE=ev
-    medium=dict(schema='NL2_HU_B757_NATIVE_HALF_POT_V1',gto_references={},references={})
+    medium=dict(schema='NL2_HU_B757_ORIGINAL_LOCKED_MEDIUM_V1',gto_references={},references={})
     results=[]
     with TemporaryDirectory(prefix='b757-replay-') as temp:
         for flop,(aid,_) in receipt.PINS.items():

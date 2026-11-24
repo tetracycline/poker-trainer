@@ -58,7 +58,7 @@ def previous(temp,solver,model,pipeline,pool,route):
     assert (pairs.EVIDENCE/OLD_VIEW).read_bytes()==(EVIDENCE/OLD_VIEW).read_bytes()
     assert group==read(EVIDENCE/OLD_GROUP) and medium==read(EVIDENCE/OLD_MEDIUM)
     assert [b['flop'] for b in group['boards']]==['9c9h6c','TsTc6s']
-    medium['schema']='NL2_B756_ORIGINAL_RANK150_LOCKED_MEDIUM_V1'
+    medium['schema']='NL2_HU_B756_ORIGINAL_LOCKED_MEDIUM_V1'
     return group,medium
 
 
