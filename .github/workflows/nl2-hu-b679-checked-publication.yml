@@ -1,0 +1,127 @@
+name: B679 authenticate SB checked-river evidence without promoting partial groups
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b679-checked-publication.yml'
+      - 'tools/hu_b679_collect.py'
+      - 'tools/hu_b679_publish.py'
+      - 'tools/hu_b679_policy_view.cjs'
+permissions: {contents: write, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Authenticate immutable original worker metadata and replay native jobs
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/hu_b679_collect.py tools/hu_b679_publish.py tools/hu_publish_candidate.py
+          cp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b679-before.json"
+          python tools/hu_b679_collect.py --output "$RUNNER_TEMP/b679-originals"
+          node tools/hu_b676_checked_routes.cjs > "$RUNNER_TEMP/b679-routes.json"
+          python tools/hu_b679_publish.py --solver ../solver \
+            --receipts "$RUNNER_TEMP/b679-originals" --output "$RUNNER_TEMP/b679-replayed" \
+            --routes "$RUNNER_TEMP/b679-routes.json" > "$RUNNER_TEMP/b679-summary.json"
+          cat "$RUNNER_TEMP/b679-summary.json"
+      - name: Keep partial evidence separate and require three flops per promoted model
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b679-replayed/data" <<'PY'
+          import json,sys
+          from pathlib import Path
+          data=Path(sys.argv[1]);summary=json.loads((data/'nl2_hu_b679_summary.json').read_bytes())
+          models={229:'ln-3bp-3b_r_model-16dlc3j',230:'ln-3bp-3b_r_model-jaiium'}
+          for rank,mid in models.items():
+              count=summary['positive_boards_by_rank'][str(rank)]
+              certified=rank in summary['cert_eligible_ranks']
+              assert certified==(count>=3)
+              path=data/'solver_evidence'/('reverified' if certified else 'partial')/('rank'+str(rank)+'.json')
+              group=json.loads(path.read_bytes())
+              assert group['rank']==rank and group['model_id']==mid
+              assert len(group['boards'])==count==len({b['flop'] for b in group['boards']})
+              assert not certified or 3<=count<=5
+              assert all(p['GTO_compatible_hole_card_pairs']>=p['GTO_strict_combos']>0 and
+                         p['NL2_compatible_hole_card_pairs']>=p['NL2_strict_combos']>0 and
+                         p['rendered_decision_hands'] for p in group['pins'])
+          # The pinned six workers have one positive and five real negatives.
+          assert summary==dict(cert_eligible_ranks=[],positive_boards_by_rank={'229':1,'230':0},
+              actor_locked_boards=1,half_pot_assessed=1,half_pot_candidates=0,negatives=5)
+          assert not (data/'nl2_hu_b679_locked_medium.json').exists()
+          PY
+          cp -R "$RUNNER_TEMP/b679-replayed/data/." data/
+          python tools/hu_apply_cert_extensions.py --out data/nl2_hu_multiboard_status_current.json
+          python - "$RUNNER_TEMP/b679-before.json" <<'PY'
+          import json,sys
+          old=json.load(open(sys.argv[1]));new=json.load(open('data/nl2_hu_multiboard_status_current.json'))
+          assert old['CERT_MULTIBOARD']>=147
+          assert new['records']==old['records'], 'Partial evidence must not change any current record'
+          assert (new['CERT_MULTIBOARD'],new['APPROX'],new['TOTAL'])==(old['CERT_MULTIBOARD'],old['APPROX'],392)
+          assert new['CERT_MULTIBOARD']+new['APPROX']==392
+          PY
+      - name: Run all source, lock, half-pot, rendered-policy and HU navigation audits
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b679-registry-replay.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b679-registry-replay.json"
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b679-medium-coverage.json"
+          node tools/hu_b679_policy_view.cjs data/solver_evidence/partial/rank229.json
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+      - name: Create an immutable partial-evidence candidate without moving a branch
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/b679-replayed/data" <<'PY'
+          import subprocess,sys
+          from pathlib import Path
+          stage=Path(sys.argv[1])
+          paths=['data/'+str(p.relative_to(stage)) for p in sorted(stage.rglob('*')) if p.is_file()]
+          # No registry/source-reference paths belong to this partial-only candidate.
+          assert not any(p in paths for p in (
+              'data/nl2_hu_multiboard_status_current.json','data/nl2_hu_verified_extensions.json',
+              'data/nl2_hu_model_history_crosswalk.json','data/nl2_hu_model_source_references.json'))
+          assert paths
+          if subprocess.check_output(['git','status','--porcelain','--',*paths]).strip():
+              subprocess.run([sys.executable,'tools/hu_publish_candidate.py',
+                  '--message','B679 preserve authenticated checked-river partial positive and five negatives; no CERT change',
+                  '--paths',*paths],check=True)
+          else:
+              print('All authenticated B679 evidence is already current; no candidate needed.')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B679-authenticated-checked-rivers
+          path: |
+            ${{ runner.temp }}/b679-replayed/data
+            ${{ runner.temp }}/b679-summary.json
+            ${{ runner.temp }}/b679-medium-coverage.json
+          if-no-files-found: warn
+          retention-days: 90
+

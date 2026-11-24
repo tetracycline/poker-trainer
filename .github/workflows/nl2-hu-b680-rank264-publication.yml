@@ -1,0 +1,122 @@
+name: B680 authenticate rank264 native sources and prepare an audited candidate
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b680-rank264-publication.yml'
+      - 'tools/hu_b680_rank264_collect.py'
+      - 'tools/hu_b680_publish_rank264.py'
+permissions: {contents: write, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      SOURCE_RUN: '45307742270'
+      SOURCE_HEAD: '118dee85e7410e58dc5a5fb38b272cf6529b13f6'
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Authenticate original jobs and independently replay every raw source
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/hu_b680_rank264_collect.py tools/hu_b680_publish_rank264.py tools/hu_publish_candidate.py
+          cp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b680-before.json"
+          python tools/hu_b680_rank264_collect.py --run "$SOURCE_RUN" --head "$SOURCE_HEAD" --output "$RUNNER_TEMP/b680-originals"
+          python tools/hu_b680_publish_rank264.py --solver ../solver --run "$SOURCE_RUN" --head "$SOURCE_HEAD" \
+            --receipts "$RUNNER_TEMP/b680-originals" --output "$RUNNER_TEMP/b680-replayed" > "$RUNNER_TEMP/b680-summary.json"
+          cat "$RUNNER_TEMP/b680-summary.json"
+      - name: Publish only three-flop certificates; retain smaller results as partial evidence
+        id: integrate
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          if test -f "$RUNNER_TEMP/b680-replayed/data/solver_evidence/reverified/rank264.json"; then
+            python - "$RUNNER_TEMP/b680-replayed/data/solver_evidence/reverified/rank264.json" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          assert d['rank']==264 and d['model_id']=='ln-3bp-3b_r_model-rlw959'
+          assert 3<=len(d['boards'])<=5 and len({b['flop']for b in d['boards']})==len(d['boards'])
+          assert all(p['GTO_compatible_hole_card_pairs']>=p['GTO_strict_combos']>0 and
+                     p['NL2_compatible_hole_card_pairs']>=p['NL2_strict_combos']>0 and p['rendered_decision_hands'] for p in d['pins'])
+          PY
+            cp -R "$RUNNER_TEMP/b680-replayed/data/." data/
+            python tools/hu_apply_cert_extensions.py --out data/nl2_hu_multiboard_status_current.json
+            echo 'cert_eligible=true' >> "$GITHUB_OUTPUT"
+          else
+            cp "$RUNNER_TEMP/b680-replayed/data/nl2_hu_b680_rank264_workers.json" data/
+            cp "$RUNNER_TEMP/b680-replayed/data/nl2_hu_b680_rank264_results.json" data/
+            echo 'cert_eligible=false' >> "$GITHUB_OUTPUT"
+          fi
+          python - "$RUNNER_TEMP/b680-before.json" "$RUNNER_TEMP/b680-summary.json" <<'PY'
+          import json,sys
+          old=json.load(open(sys.argv[1]));summary=json.load(open(sys.argv[2]))
+          new=json.load(open('data/nl2_hu_multiboard_status_current.json'));mid='ln-3bp-3b_r_model-rlw959'
+          changed=[k for k,r in old['records'].items() if r['label']!=new['records'][k]['label']]
+          assert changed in ([],[mid]),changed
+          assert all(new['records'][k]['label']=='CERT-MULTIBOARD' for k,r in old['records'].items() if r['label']=='CERT-MULTIBOARD')
+          assert new['records'][mid]['label']==('CERT-MULTIBOARD'if summary['cert_eligible']else old['records'][mid]['label'])
+          assert new['TOTAL']==392 and new['CERT_MULTIBOARD']+new['APPROX']==392
+          PY
+      - name: Complete all source, node-lock, medium-size and navigation gates
+        working-directory: trainer
+        env:
+          CERT_ELIGIBLE: ${{ steps.integrate.outputs.cert_eligible }}
+        run: |
+          set -euo pipefail
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b680-registry-replay.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b680-registry-replay.json"
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b680-medium-coverage.json"
+          if [ "$CERT_ELIGIBLE" = true ]; then
+            node tools/hu_b558_river_policy_view.cjs data/solver_evidence/reverified/rank264.json
+          fi
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+      - name: Create a data-only candidate without updating the branch
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CERT_ELIGIBLE: ${{ steps.integrate.outputs.cert_eligible }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain -- data)" ]; then
+            echo 'Authenticated rank264 evidence is already current.'
+            exit 0
+          fi
+          paths=('data/nl2_hu_b680_rank264_workers.json' 'data/nl2_hu_b680_rank264_results.json')
+          if [ "$CERT_ELIGIBLE" = true ]; then
+            paths+=('data/nl2_hu_b680_locked_medium.json' 'data/solver_evidence/reverified/rank264.json'
+              'data/solver_evidence/NL2_B677_R264_*.zip' 'data/solver_evidence/NL2_MULTIBOARD_B677_R264_*.json.gz'
+              'data/nl2_hu_multiboard_status_current.json' 'data/nl2_hu_verified_extensions.json'
+              'data/nl2_hu_model_history_crosswalk.json' 'data/nl2_hu_model_source_references.json')
+          fi
+          python tools/hu_publish_candidate.py --message "B680 authenticate rank264 native sources; three-flop gate=$CERT_ELIGIBLE" --paths "${paths[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B680-authenticated-rank264
+          path: |
+            ${{ runner.temp }}/b680-replayed/data
+            ${{ runner.temp }}/b680-summary.json
+            ${{ runner.temp }}/b680-medium-coverage.json
+          if-no-files-found: warn
+          retention-days: 90

@@ -1,0 +1,130 @@
+name: B678 authenticate original rank75 evidence and stage verified three-bet call prices
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b678-rank75-publication.yml'
+      - 'tools/hu_b678_publish_rank75.py'
+      - 'tools/hu_b678_collect.py'
+permissions: {contents: write, actions: read}
+jobs:
+  publish-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Preserve every existing certificate while applying the exact price source
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          cp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b678-before.json"
+          node tools/hu_b674_threebet_call_routes.cjs --snapshot "$RUNNER_TEMP/b678-before-render.json"
+          python tools/hu_b674_stage_prices.py --apply
+          node tools/hu_b674_threebet_call_routes.cjs --compare "$RUNNER_TEMP/b678-before-render.json" > "$RUNNER_TEMP/b678-routes.json"
+      - name: Authenticate the completed original workers and independently replay both seats
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/hu_b678_publish_rank75.py tools/hu_b678_collect.py
+          python tools/hu_b678_collect.py --output "$RUNNER_TEMP/b678-originals"
+          python tools/hu_b678_publish_rank75.py --solver ../solver --receipts "$RUNNER_TEMP/b678-originals" \
+            --workers "$RUNNER_TEMP/b678-originals/workers.json" --output "$RUNNER_TEMP/b678-replayed" \
+            > "$RUNNER_TEMP/b678-summary.json"
+          cat "$RUNNER_TEMP/b678-summary.json"
+      - name: Require three actual positive named flops
+        id: eligibility
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          if [ -f "$RUNNER_TEMP/b678-replayed/data/solver_evidence/reverified/rank75.json" ]; then
+            echo 'eligible=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            echo 'Fewer than three genuine shared rendered flops; preserve APPROX and publish only verified prices with original negative evidence.'
+          fi
+      - name: Rebuild the cumulative registry and keep all prior certificates intact
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          cp -R "$RUNNER_TEMP/b678-replayed/data/." data/
+          python tools/hu_apply_cert_extensions.py --out data/nl2_hu_multiboard_status_current.json
+          python - "$RUNNER_TEMP/b678-before.json" <<'PY'
+          import json,sys
+          before=json.load(open(sys.argv[1]));after=json.load(open('data/nl2_hu_multiboard_status_current.json'))
+          mid='ln-3bp-3b_t_model-10ve86c'
+          assert set(before['records'])==set(after['records']) and len(after['records'])==392
+          eligible='${{ steps.eligibility.outputs.eligible }}'=='true'
+          assert before['records'][mid]['label']=='APPROX'
+          assert after['records'][mid]['label']==('CERT-MULTIBOARD' if eligible else 'APPROX')
+          changed=[key for key,value in before['records'].items() if value['label']!=after['records'][key]['label']]
+          assert changed==([mid] if eligible else []),changed
+          prior=[key for key,value in before['records'].items() if value['label']=='CERT-MULTIBOARD']
+          assert len(prior)>=147
+          for key in prior:
+              assert before['records'][key]==after['records'][key],key
+          delta=int(eligible)
+          assert after['CERT_MULTIBOARD']==before['CERT_MULTIBOARD']+delta and after['APPROX']==before['APPROX']-delta
+          assert after['CERT_MULTIBOARD']+after['APPROX']==after['TOTAL']==392
+          print('Rank75 eligible:',eligible,'; all',len(prior),'previous certificates unchanged')
+          PY
+      - name: Run all source, legal-reach, node-lock, medium-bet and navigation audits
+        working-directory: trainer
+        run: |
+          set -euo pipefail
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/b678-replayed-registry.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/b678-replayed-registry.json"
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b678-medium-coverage.json"
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+      - name: Create one immutable price-and-evidence candidate without moving the branch
+        working-directory: trainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          paths=('nl2.js' 'nl2_hu_model.js'
+            'data/nl2_hu_b678_rank75_workers.json' 'data/nl2_hu_b678_rank75_results.json'
+            'data/solver_evidence/NL2_B678_R75_*.zip'
+            'data/nl2_hu_multiboard_status_current.json' 'data/nl2_hu_verified_extensions.json'
+            'data/nl2_hu_model_history_crosswalk.json' 'data/nl2_hu_model_source_references.json')
+          if [ '${{ steps.eligibility.outputs.eligible }}' = 'true' ]; then
+            message='B678 certify rank75 from three original GTO/NL2 boards with exact 33 percent call pricing'
+            paths+=('data/nl2_hu_b678_locked_medium.json' 'data/solver_evidence/reverified/rank75.json'
+              'data/solver_evidence/NL2_MULTIBOARD_B678_R75_*.json.gz')
+          else
+            message='B678 fix four exact three-bet call prices and preserve three authenticated rank75 negative sources'
+            paths+=('data/solver_evidence/partial/B678_rank75.json' 'data/solver_evidence/partial/B678_locked_medium.json')
+          fi
+          python tools/hu_publish_candidate.py --priced-model --message "$message" --paths "${paths[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B678-rank75-publication-audit
+          path: |
+            ${{ runner.temp }}/b678-replayed/data
+            ${{ runner.temp }}/b678-summary.json
+            ${{ runner.temp }}/b678-routes.json
+            ${{ runner.temp }}/b678-medium-coverage.json
+          if-no-files-found: warn
+          retention-days: 90
