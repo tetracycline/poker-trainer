@@ -1,0 +1,53 @@
+name: B673 solve the third distinct rank90 native flop
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b673-rank90-third.yml'
+      - 'tools/hu_b673_rank90_extra.py'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [Ad9c5h, As8d4h]
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: trainer, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the pinned native solver
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          git clone -q https://github.com/b-inary/postflop-solver.git solver/postflop/postflop-solver
+          git -C solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          cd solver/postflop/pfdriver
+          RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve only the new source and both actor strategies
+        working-directory: trainer
+        env:
+          RAYON_NUM_THREADS: 1
+        run: |
+          set -euo pipefail
+          python tools/hu_b673_rank90_extra.py --solver ../solver --flop '${{ matrix.flop }}' --output "$RUNNER_TEMP/result"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B673-rank90-${{ matrix.flop }}
+          path: |
+            ${{ runner.temp }}/result/NL2_B666_R90_*.zip
+            ${{ runner.temp }}/result/selected.json
+            ${{ runner.temp }}/result/attempts.json
+          if-no-files-found: error
+          retention-days: 90
