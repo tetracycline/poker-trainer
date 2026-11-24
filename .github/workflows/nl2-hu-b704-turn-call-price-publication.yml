@@ -6,6 +6,8 @@ on:
       - '.github/workflows/nl2-hu-b704-turn-call-price-publication.yml'
       - 'tools/hu_b704_integrate_prices.py'
       - 'tools/hu_b704_publish_candidate.py'
+      - 'tools/hu_b704_turn_price_runtime.cjs'
+      - 'tools/staged/hu_b704_nl2_cert_registry.js'
 permissions: {contents: write, actions: read}
 jobs:
   price-audit-candidate:
@@ -26,10 +28,14 @@ jobs:
         run: |
           set -euo pipefail
           python -m py_compile tools/hu_b704_integrate_prices.py tools/hu_b704_publish_candidate.py
+          node --check tools/staged/hu_b704_nl2_cert_registry.js
+          node --check tools/hu_b704_turn_price_runtime.cjs
+          cp nl2_cert_registry.js "$RUNNER_TEMP/b704-previous-loader.js"
           python tools/hu_b704_integrate_prices.py \
             --receipts "$RUNNER_TEMP/b704-price-receipts" \
             --paths "$RUNNER_TEMP/b704-paths.txt"
-          sha256sum nl2.js nl2_hu_model.js tools/hu_trainer_route_contract.cjs \
+          node tools/hu_b704_turn_price_runtime.cjs --legacy-loader "$RUNNER_TEMP/b704-previous-loader.js"
+          sha256sum nl2.js nl2_hu_model.js nl2_cert_registry.js tools/hu_trainer_route_contract.cjs \
             data/nl2_hu_multiboard_status_current.json data/nl2_hu_model_source_references.json \
             data/nl2_hu_model_history_crosswalk.json data/nl2_hu_verified_extensions.json \
             data/nl2_hu_stage2_queue.json > "$RUNNER_TEMP/b704-integrated.sha256"
@@ -53,14 +59,14 @@ jobs:
           node tools/hu_b584_optional_river_ui.cjs
           python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/b704-medium-coverage.json"
           sha256sum -c "$RUNNER_TEMP/b704-integrated.sha256"
-      - name: Create the immutable two-code-file and atomic-data candidate without moving the draft branch
+      - name: Create the immutable three-code-file and atomic-data candidate without moving the draft branch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mapfile -t paths < "$RUNNER_TEMP/b704-paths.txt"
           python tools/hu_b704_publish_candidate.py \
-            --message 'B704 fix two explicit half-pot turn-call prices and atomically rebuild the queue; preserve every certificate and all other records' \
+            --message 'B704 fix two half-pot turn-call prices and the flop-only loader guard that rejected checked-flop turn calls; atomically update the queue and preserve every certificate' \
             --paths "${paths[@]}" | tee "$RUNNER_TEMP/b704-candidate.txt"
       - uses: actions/upload-artifact@v4
         if: always()

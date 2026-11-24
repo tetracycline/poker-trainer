@@ -101,6 +101,8 @@ def integrate(args):
     if not args.existing_receipts:collect(args.receipts)
     archive,source_routes,source_price=authenticate(args.receipts)
     assert all(blob(path)==expected for path,expected in B696_PARENT_CODE.items())
+    staged_loader=Path("tools/staged/hu_b704_nl2_cert_registry.js")
+    assert blob(staged_loader)==B696_CODE["nl2_cert_registry.js"]
     assert blob("nl2.js")==B696_UI
     before_raw=Path(STATUS).read_bytes();before=json.loads(before_raw)
     assert before["TOTAL"]==len(before["records"])==392
@@ -114,6 +116,7 @@ def integrate(args):
         snapshot=Path(temporary)/"before-render.json"
         subprocess.run(["node","tools/hu_b696_turn_call_routes.cjs","--snapshot",str(snapshot)],check=True)
         subprocess.run([sys.executable,"tools/hu_b696_stage_prices.py","--apply"],check=True)
+        Path("nl2_cert_registry.js").write_bytes(staged_loader.read_bytes())
         current_routes=subprocess.check_output(["node","tools/hu_b696_turn_call_routes.cjs","--compare",str(snapshot)])
     assert current_routes==source_routes,"Reviewed current routes must reproduce the completed source price audit"
     assert all(blob(path)==expected for path,expected in B696_CODE.items()) and blob("nl2.js")==B696_UI
@@ -154,6 +157,8 @@ def integrate(args):
         CERT_MULTIBOARD=after["CERT_MULTIBOARD"],APPROX=after["APPROX"],TOTAL=392,
         new_certifications=0,new_native_solves=0,new_node_locked_boards=0,new_medium_boards=0,
         code_blobs=B696_CODE,unchanged_ui_blob=B696_UI,legacy_queue_regenerated_atomically=True,
+        runtime_loader_fix="Permit only ranks76/89 exact checked-flop 50-percent turn-call prices; retain all original flop-price checks",
+        prior_runtime_failure=dict(run=45320951008,job=138199078620,reason="FLOP_ONLY_PRICE_GUARD_REJECTED_AUTHENTICATED_TURN_CALL_ROUTES"),
         before_registry_sha256=digest(before_raw),after_registry_sha256=digest(Path(STATUS).read_bytes()),
         protected_record_sha256={mid:digest(canonical(value)) for mid,value in protected.items()})
     report_path="data/nl2_hu_b704_price_fix.json";write(report_path,report)

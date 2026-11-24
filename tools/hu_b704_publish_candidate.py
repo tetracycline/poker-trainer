@@ -25,10 +25,12 @@ def git(*arguments):
 B696_CODE = {
     "nl2_hu_model.js": "b4a308a0f65b707f43f41f0b354cec87c08d5af6",
     "tools/hu_trainer_route_contract.cjs": "3b10524228c357552bb3f1eac88e17f9b2459b32",
+    "nl2_cert_registry.js": "709f289d1c87e4b6f64cac5a4231b4c8d717991b",
 }
 B696_PARENT_CODE = {
     "nl2_hu_model.js": "a98cb80d7762b464064874de39dcff6f4bf5707d",
     "tools/hu_trainer_route_contract.cjs": "31370c779d22b7d895e76f1030504909019dbe5a",
+    "nl2_cert_registry.js": "d9b26a6018c72662a00082b5530e5f5a7742ea09",
 }
 B696_UI = "15aee97e53a156fe073c96a120638a8a3679958f"
 B696_ATOMIC_DATA = {
@@ -41,8 +43,8 @@ B696_ATOMIC_DATA = {
 
 
 def verify_turn_call_prices(head, selected):
-    """Permit exactly one reviewed code pair together with its regenerated queue."""
-    assert set(B696_CODE) | B696_ATOMIC_DATA <= set(selected), "Both frozen price files and the complete atomic data set are required"
+    """Permit exactly three reviewed price/loader sources with their regenerated queue."""
+    assert set(B696_CODE) | B696_ATOMIC_DATA <= set(selected), "All three frozen price/loader files and the complete atomic data set are required"
     assert "nl2.js" not in selected, "This upgrade does not publish a UI source file"
     for name, expected in B696_PARENT_CODE.items():
         assert git("rev-parse", head + ":" + name).decode().strip() == expected, (name, "unexpected parent price source")
