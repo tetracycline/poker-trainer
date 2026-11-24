@@ -1,0 +1,50 @@
+name: B818 inspect exact shared ancestry before exporting any unseen rank230 river
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['tools/hu_b818_rank230_unseen_rivers.py', '.github/workflows/nl2-hu-b818-rank230-unseen-rivers.yml']
+permissions: {contents: read}
+jobs:
+  missing-rivers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+      RAYON_NUM_THREADS: 2
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip -q install numpy phevaluator==0.5.3.1
+      - name: Verify archived raw SHA and both policies' identical physical turn reach before any solver call
+        id: gate
+        run: |
+          python tools/hu_b818_rank230_unseen_rivers.py --output "$RUNNER_TEMP/b818"
+          python -c 'import json,os; p=json.load(open(os.environ["RUNNER_TEMP"]+"/b818/preflight.json")); print("eligible="+str(p["eligible_turns"]))' >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.eligible != '0'
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.gate.outputs.eligible != '0'
+      - name: Build pinned solver only for new eligible river extractions
+        if: steps.gate.outputs.eligible != '0'
+        run: |
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Export only missing rivers while requiring all original nodes and strategies to remain identical
+        if: steps.gate.outputs.eligible != '0'
+        run: python tools/hu_b818_rank230_unseen_rivers.py --output "$RUNNER_TEMP/b818" --solver pinned-solver --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B818-rank230-unseen-rivers
+          path: ${{ runner.temp }}/b818
+          if-no-files-found: error
+          retention-days: 90
