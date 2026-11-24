@@ -8,6 +8,8 @@ import hashlib
 import io
 import json
 from pathlib import Path
+import subprocess
+import time
 from zipfile import ZipFile
 from hu_b679_collect import api
 
@@ -157,6 +159,20 @@ def authenticate_failure_log(raw):
         not_a_policy_negative=True,not_a_certification=True)
 
 
+def original_job_log(job_id):
+    """Capture original ANSI-bearing job bytes to a pipe, never a terminal."""
+    assert job_id in {pin["job"] for pin in WORKERS}
+    command=["gh","api","repos/tetracycline/poker-trainer/actions/jobs/"+str(job_id)+"/logs",
+        "--allow-escape-sequences"]
+    for attempt in range(4):
+        result=subprocess.run(command,capture_output=True)
+        if result.returncode==0:
+            return result.stdout
+        if attempt==3:
+            raise RuntimeError(result.stderr.decode(errors="replace")[-800:])
+        time.sleep(2*(attempt+1))
+
+
 def authenticate_root_archive(pin,archive):
     assert hashlib.sha256(archive).hexdigest()==pin["sha256"]
     with ZipFile(io.BytesIO(archive)) as z:
@@ -213,7 +229,7 @@ def collect(args):
         (args.output/(str(pin["id"])+".zip")).write_bytes(archive)
         (args.output/("job."+str(pin["job"])+".json")).write_text(json.dumps(job))
         if pin!=PRICE:
-            logs=api("actions/jobs/"+str(pin["job"])+"/logs")
+            logs=original_job_log(pin["job"])
             failure=authenticate_failure_log(logs)
             roots.append(dict(authenticate_root_archive(pin,archive),failure=failure))
             (args.output/("job."+str(pin["job"])+".log")).write_bytes(logs)
