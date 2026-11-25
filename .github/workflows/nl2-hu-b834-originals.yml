@@ -56,7 +56,7 @@ jobs:
               assert not target.exists() and not target.is_symlink()
               target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(src.read_bytes())
               paths.append(target.as_posix())
-          (Path(os.environ["RUNNER_TEMP"])/"candidate-paths.txt").write_text("\\n".join(paths)+"\\n")
+          (Path(os.environ["RUNNER_TEMP"])/"candidate-paths.txt").write_text("\n".join(paths)+"\n")
           PY
           python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/rebuilt.json"
           cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/rebuilt.json"

@@ -22,9 +22,9 @@ PINS=[
 STEPS=['Validate two seats and exact J7s three-street UI route before native work',
        'Build the pinned native driver',
        'Solve a single original and its registered checked boundaries',
-       'Upload a Build Artifact',
+       'Run actions/upload-artifact@v4',
        'Solve genuine GTO and measured partial NL2 conditional turns',
-       'Upload a Build Artifact']
+       'Run actions/upload-artifact@v4']
 def read(p):return json.loads(p.read_bytes())
 def collect(folder):
     folder.mkdir(parents=True,exist_ok=False)
