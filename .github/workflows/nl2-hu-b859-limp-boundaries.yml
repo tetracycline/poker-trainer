@@ -1,0 +1,35 @@
+name: B859 archived cancelled sources and fresh rank115-118 boundary preflight
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b859-limp-boundaries.yml'
+      - 'tools/hu_b859_limp_boundaries.py'
+      - 'data/nl2_hu_b859_b858_cancelled_receipts.json'
+permissions: {contents: read, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      NODE_OPTIONS: --max-old-space-size=1536
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify frozen frequency coverage and cancelled ZIPs, screen original boundaries
+        run: |
+          set -euo pipefail
+          python -m pip -q install numpy phevaluator==0.5.3.1
+          python tools/hu_b838_approx_coverage_priority_audit.py
+          python tools/hu_b859_limp_boundaries.py --output "$RUNNER_TEMP/b859"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B859-cancelled-receipts-and-original-boundary-screen
+          path: ${{ runner.temp }}/b859
+          if-no-files-found: error
+          retention-days: 90
