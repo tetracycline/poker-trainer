@@ -34,10 +34,10 @@ function cells(id,texture){
   if(!html)return [];
   const row=html.match(new RegExp('<tr[^>]+id="'+id+'-'+texture+'">([\\s\\S]*?)</tr>'));
   if(!row)return [];
-  return [...row[1].matchAll(/<td\\b[^>]*>([\\s\\S]*?)<\\/td>/g)].map(m=>m[1]);
+  return [...row[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)].map(m=>m[1]);
 }
 function links(cell){
-  return [...cell.matchAll(/<a\\b[^>]*href="#([^"]+)"[^>]*>([^<]*)<\\/a>/g)].map(m=>({to:m[1],action:m[2].replace(/≈$/,'').trim()}));
+  return [...cell.matchAll(/<a\b[^>]*href="#([^"]+)"[^>]*>([^<]*)<\/a>/g)].map(m=>({to:m[1],action:m[2].replace(/≈$/,'').trim()}));
 }
 const out=[];
 for(const [rankText,id] of Object.entries(TARGETS)){
