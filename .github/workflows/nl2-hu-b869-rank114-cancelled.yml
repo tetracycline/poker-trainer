@@ -1,0 +1,88 @@
+name: B869 retry only two B858 cancelled, never-finished rank114 original public flops
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b869-rank114-cancelled.yml'
+      - 'tools/hu_b858_rank114_midhigh.py'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: B869-rank114-${{ matrix.flop }}
+      cancel-in-progress: false
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        flop: [Jh6d3c, Th4d3c]
+    env:
+      FLOP: ${{ matrix.flop }}
+      RAYON_NUM_THREADS: 2
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Check the original ranges, branch prices and displayed middle pairs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('data/nl2_hu_b859_b858_cancelled_receipts.json').read_text())
+          x=json.loads(Path('data/nl2_hu_b860_results.json').read_text())
+          s=json.loads(Path('data/nl2_hu_multiboard_status_current.json').read_text())
+          p=json.loads(Path('data/nl2_hu_b838_234_approx_frequency_priority.json').read_text())
+          assert (r['source_run'],r['source_conclusion'])==(45608758981,'cancelled')
+          assert x['screened']==36 and x['native_solves']==0
+          assert {a['flop'] for a in r['archives']}=={'Jh6d3c','Th4d3c'}
+          assert all(a['size']==844 for a in r['archives'])
+          assert (s['CERT_MULTIBOARD'],s['APPROX'],s['TOTAL'])==(158,234,392)
+          row,=[q for q in p['rows'] if q['rank']==114]
+          assert row['model_id']=='ln-iso-lmp_r_model-asilzt'
+          assert s['records'][row['model_id']]['label']=='APPROX'
+          assert p['current_certified_opportunity_share_pct']<90
+          print('B869 only the two B858 cancelled flops; no completed original re-solved')
+          PY
+          python -m pip -q install numpy phevaluator==0.5.3.1
+          mkdir -p "$RUNNER_TEMP/b858-receipts"
+          artifact=14600026283
+          gh api "repos/tetracycline/poker-trainer/actions/artifacts/$artifact" > "$RUNNER_TEMP/b858-receipts/$artifact.json"
+          gh api "repos/tetracycline/poker-trainer/actions/artifacts/$artifact/zip" > "$RUNNER_TEMP/b858-receipts/$artifact.zip"
+          python tools/hu_b858_rank114_midhigh.py --flop "$FLOP" --solver pinned-solver --receipts "$RUNNER_TEMP/b858-receipts" --output "$RUNNER_TEMP/preflight" --preflight
+      - name: Compile the pinned native solver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve the missing river trees and replay both policies
+        run: |
+          set -euo pipefail
+          args=(--flop "$FLOP" --solver pinned-solver --receipts "$RUNNER_TEMP/b858-receipts" --output "$RUNNER_TEMP/b858-out")
+          python tools/hu_b858_rank114_midhigh.py "${args[@]}" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$RUNNER_TEMP/b858-out/proof.json" "$RUNNER_TEMP/b858-original-proof.json"
+          python tools/hu_b858_rank114_midhigh.py "${args[@]}"
+          cmp "$RUNNER_TEMP/b858-original-proof.json" "$RUNNER_TEMP/b858-out/proof.json"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B869-R114-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b858-out
+          if-no-files-found: error
+          retention-days: 90
