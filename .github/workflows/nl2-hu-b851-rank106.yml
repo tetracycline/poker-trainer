@@ -1,0 +1,79 @@
+name: B851 rank106 new b75 continuation on authenticated B505 b33 roots
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['tools/hu_b851_rank106.py','tools/hu_b851_rank106_routes.cjs','.github/workflows/nl2-hu-b851-rank106.yml']
+permissions: {contents: read, actions: read}
+jobs:
+  source-gated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {flop: '7s5h3d', gto: 14752561398, exp: 14752473776, gj: 137191779554, ej: 137191779861}
+          - {flop: 'QsJh4d', gto: 14755175780, exp: 14754959467, gj: 137210203349, ej: 137216250866}
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      FLOP: ${{ matrix.flop }}
+      GID: ${{ matrix.gto }}
+      EID: ${{ matrix.exp }}
+      GJOB: ${{ matrix.gj }}
+      EJOB: ${{ matrix.ej }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate original B505 source and freeze previously untested b75 route
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          mkdir "$RUNNER_TEMP/b851-receipts"
+          for id in "$GID" "$EID"; do
+            gh api "repos/tetracycline/poker-trainer/actions/artifacts/$id" > "$RUNNER_TEMP/b851-receipts/$id.json"
+            gh api "repos/tetracycline/poker-trainer/actions/artifacts/$id/zip" > "$RUNNER_TEMP/b851-receipts/$id.zip"
+          done
+          gh api "repos/tetracycline/poker-trainer/actions/jobs/$GJOB" > "$RUNNER_TEMP/b851-receipts/$GID-job.json"
+          gh api "repos/tetracycline/poker-trainer/actions/jobs/$EJOB" > "$RUNNER_TEMP/b851-receipts/$EID-job.json"
+          node tools/hu_b851_rank106_routes.cjs > "$RUNNER_TEMP/b851-route.json"
+          python tools/hu_b851_rank106.py --solver pinned-solver --receipts "$RUNNER_TEMP/b851-receipts" --routes "$RUNNER_TEMP/b851-route.json" --output "$RUNNER_TEMP/b851-out" --flop "$FLOP" --preflight
+          echo "HAS_RIVERS=$(python -c 'import json,sys; print(int(bool(json.load(open(sys.argv[1]))["preselected_rivers"])))' "$RUNNER_TEMP/b851-out/preflight.json")" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+        if: env.HAS_RIVERS == '1'
+      - name: Build native solver only after positive two-policy prior gate
+        if: env.HAS_RIVERS == '1'
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: New turn only if common physical hand survives and independent replay
+        run: |
+          set -euo pipefail
+          args=(--solver pinned-solver --receipts "$RUNNER_TEMP/b851-receipts" --routes "$RUNNER_TEMP/b851-route.json" --output "$RUNNER_TEMP/b851-out" --flop "$FLOP")
+          driver=()
+          if [ "$HAS_RIVERS" = 1 ]; then driver=(--driver pinned-solver/postflop/pfdriver/target/release/pfdriver); fi
+          PYTHONHASHSEED=19 python tools/hu_b851_rank106.py "${args[@]}" "${driver[@]}"
+          cp "$RUNNER_TEMP/b851-out/proof.json" "$RUNNER_TEMP/b851-proof.json"
+          PYTHONHASHSEED=761 python tools/hu_b851_rank106.py "${args[@]}"
+          cmp "$RUNNER_TEMP/b851-out/proof.json" "$RUNNER_TEMP/b851-proof.json"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B851-R106-${{ matrix.flop }}
+          path: |
+            ${{ runner.temp }}/b851-out
+            ${{ runner.temp }}/b851-route.json
+          if-no-files-found: warn
+          retention-days: 90
