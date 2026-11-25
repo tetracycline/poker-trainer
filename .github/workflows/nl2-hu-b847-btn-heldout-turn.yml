@@ -1,0 +1,55 @@
+name: B847 replay held-out B524 BTN exact turn policies before new native work
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b847_btn_heldout_turn.py'
+      - '.github/workflows/nl2-hu-b847-btn-heldout-turn.yml'
+permissions: {contents: read, actions: read}
+jobs:
+  original-turn-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      NODE_OPTIONS: --max-old-space-size=1536
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate both original B524 artifacts and successful source jobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          mkdir "$RUNNER_TEMP/b847-receipts"
+          for id in 14792976867 14793655339; do
+            gh api "repos/tetracycline/poker-trainer/actions/artifacts/$id" > "$RUNNER_TEMP/b847-receipts/$id.json"
+          done
+          for id in 137505625101 137505625113; do
+            gh api "repos/tetracycline/poker-trainer/actions/jobs/$id" > "$RUNNER_TEMP/b847-receipts/$id.json"
+          done
+          ln -s "$PWD/data/solver_evidence/NL2_B524_R8_6S5H4D_GTO.zip" "$RUNNER_TEMP/b847-receipts/14792976867.zip"
+          ln -s "$PWD/data/solver_evidence/NL2_B524_R8_6S5H4D_EXP_IP.zip" "$RUNNER_TEMP/b847-receipts/14793655339.zip"
+      - name: Replay held-out exact turn history twice without any native solver
+        run: |
+          set -euo pipefail
+          for seed in 19 761; do
+            PYTHONHASHSEED="$seed" python tools/hu_b847_btn_heldout_turn.py --solver pinned-solver --receipts "$RUNNER_TEMP/b847-receipts" --output "$RUNNER_TEMP/b847-$seed.json"
+          done
+          cmp "$RUNNER_TEMP/b847-19.json" "$RUNNER_TEMP/b847-761.json"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B847-B524-6s5h4d-Kd-prior-gate
+          path: ${{ runner.temp }}/b847-19.json
+          if-no-files-found: error
+          retention-days: 90
