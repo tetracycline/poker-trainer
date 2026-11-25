@@ -1,0 +1,50 @@
+name: B871 re-screen current 234 APPROX against authenticated GTO and actor lock index
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['tools/hu_b871_current_gap_rescreen.py','.github/workflows/nl2-hu-b871-current-source-gaps.yml']
+permissions: {contents: write, actions: read, pull-requests: read}
+jobs:
+  sourceblind-index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Reconstruct current frozen 234-source preliminary gap queue (no solve or promotion)
+        run: |
+          set -euo pipefail
+          python tools/hu_b871_current_gap_rescreen.py --json-out "$RUNNER_TEMP/gaps.json" --csv-out "$RUNNER_TEMP/gaps.csv"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - name: Full strict CERT and 2475 HU navigation audit before any published candidate
+        run: |
+          set -euo pipefail
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/rebuilt.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/rebuilt.json"
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Stage full audited preliminary source-gap matrix as an immutable candidate, never merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cp "$RUNNER_TEMP/gaps.json" data/nl2_hu_b871_current_234_source_gap_rescreen.json
+          cp "$RUNNER_TEMP/gaps.csv" data/nl2_hu_b871_current_234_source_gap_rescreen.csv
+          live="$(gh api repos/tetracycline/poker-trainer/pulls/2 --jq .head.sha)"
+          if [ "$live" = "$GITHUB_SHA" ]; then
+            python tools/hu_publish_candidate.py --message "B871 preserve full current 234 APPROX authentic source prefilter and missing-flop queue" --paths data/nl2_hu_b871_current_234_source_gap_rescreen.json data/nl2_hu_b871_current_234_source_gap_rescreen.csv | tee "$RUNNER_TEMP/candidate.txt"
+          else
+            echo "STALE_HEAD_SAFE_SKIP source matrix kept as artifact only, no forced write" | tee "$RUNNER_TEMP/candidate.txt"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B871-all-234-current-source-gaps
+          path: |
+            ${{ runner.temp }}/gaps.json
+            ${{ runner.temp }}/gaps.csv
+            ${{ runner.temp }}/candidate.txt
+          if-no-files-found: warn
+          retention-days: 90
