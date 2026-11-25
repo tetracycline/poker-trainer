@@ -1,0 +1,60 @@
+name: B853 all active CERT partial lock and half-pot provenance gap audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b853_cert_lock_medium_gap.py'
+      - '.github/workflows/nl2-hu-b853-cert-lock-gap.yml'
+permissions: {contents: write, actions: read, pull-requests: read}
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install numpy phevaluator==0.5.3.1
+      - name: Independently audit every current named CERT board and original lock source
+        run: |
+          set -euo pipefail
+          python tools/hu_b853_cert_lock_medium_gap.py --out "$RUNNER_TEMP/b853.json" --md "$RUNNER_TEMP/b853.md"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - name: Full CERT and navigation/UI source audit, without modifying the registry
+        run: |
+          set -euo pipefail
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/rebuilt.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/rebuilt.json"
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+          git fetch --quiet --no-tags --depth=1 origin d0fe026b3cd59b50450f99471bd27c55e7d4b522
+          python tools/hu_b491_incremental_medium.py
+          node tools/hu_b491_incremental_medium.cjs
+          node tools/hu_b483_lock_medium_ui.cjs
+          node tools/hu_b485_medium_viewers.cjs
+          node tools/hu_b492_medium_tree_ui.cjs
+          node tools/hu_b584_optional_river_ui.cjs
+          python tools/hu_current_medium_coverage.py --out "$RUNNER_TEMP/independent-current.json"
+          git diff --exit-code -- data
+      - name: Construct SHA-pinned candidate report without merging
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cp "$RUNNER_TEMP/b853.json" data/nl2_hu_b853_cert_lock_medium_gap.json
+          cp "$RUNNER_TEMP/b853.md" docs/NL2_HU_B853_CERT_LOCK_MEDIUM_GAP.md
+          python tools/hu_publish_candidate.py --message "B853 audit all existing CERT NL2 locks and nonpolarized named-board evidence" --paths data/nl2_hu_b853_cert_lock_medium_gap.json docs/NL2_HU_B853_CERT_LOCK_MEDIUM_GAP.md | tee "$RUNNER_TEMP/candidate.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B853-audited-candidate
+          path: |
+            ${{ runner.temp }}/b853.json
+            ${{ runner.temp }}/b853.md
+            ${{ runner.temp }}/candidate.txt
+          if-no-files-found: warn
+          retention-days: 90
