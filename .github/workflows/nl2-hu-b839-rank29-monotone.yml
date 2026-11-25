@@ -1,0 +1,61 @@
+name: B839 priority rank29 two new monotone originals
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b839_rank29_new_monotone.py'
+      - '.github/workflows/nl2-hu-b839-rank29-monotone.yml'
+permissions: {contents: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [AdJd7d, KdTd6d]
+    env:
+      FLOP: ${{ matrix.flop }}
+      RAYON_NUM_THREADS: 2
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: b-inary/postflop-solver
+          ref: 9d1509fe5077d019825f833eed04b16d342dfda1
+          path: pinned-solver/postflop/postflop-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Reject duplicated historical originals and wrong exact route before native work
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b839_rank29_new_monotone.py --preflight --solver pinned-solver --flop "$FLOP" --output "$RUNNER_TEMP/preflight"
+      - name: Build pinned original native driver
+        working-directory: pinned-solver/postflop/pfdriver
+        run: RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve original river-barrel path and NL2 measured partial lock once
+        run: |
+          set -euo pipefail
+          python tools/hu_b839_rank29_new_monotone.py --solver pinned-solver --flop "$FLOP" --output "$RUNNER_TEMP/b839-source" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$RUNNER_TEMP/b839-source/proof.json" "$RUNNER_TEMP/original-proof.json"
+          python tools/hu_b839_rank29_new_monotone.py --solver pinned-solver --flop "$FLOP" --output "$RUNNER_TEMP/b839-source"
+          cmp "$RUNNER_TEMP/original-proof.json" "$RUNNER_TEMP/b839-source/proof.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B839-R29-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b839-source/
+          if-no-files-found: warn
+          retention-days: 90
