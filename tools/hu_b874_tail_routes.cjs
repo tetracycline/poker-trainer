@@ -1,4 +1,5 @@
-// B874: final three >=0.2% SRP ranks, exact live route and chip-price inventory.
+// B875 fixes B874: authored turn parents are not in the synthetic model list.
+// Inventory only: actual rendered primary links; do not invent a flop parent.
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const targets=[[154,'ipfr','ln-ipfr-r_model-1ovsfhk','BTN_BB'],[157,'opfr','ln-opfr-r_model-1puypid','UTG_CO'],[158,'opfr','ln-opfr-r_model-tl6ij8','UTG_CO']];
@@ -12,8 +13,9 @@ const out=[];
 for(const [rank,spot,id,profile] of targets){
  c.__linesQA.render(spot);
  const nodes=new Map(c.__HU_MODEL_LAST.nodes.map(n=>[n.id,n]));
- const heads=[...app.innerHTML.matchAll(/<div class="sec" data-node="[^"]+" id="([^"]+)">/g)];
- const sec=new Map(heads.map((x,i)=>[x[1],app.innerHTML.slice(x.index,heads[i+1]?.index??app.innerHTML.length)]));
+ const heads=[...app.innerHTML.matchAll(/<div class="sec" data-node="([^"]+)" id="([^"]+)">/g)];
+ const sec=new Map(heads.map((x,i)=>[x[2],app.innerHTML.slice(x.index,heads[i+1]?.index??app.innerHTML.length)]));
+ const stage=new Map(heads.map(x=>{const nd=x[1].split('/')[1].replace(/^(3b_|3c_|lmp_|iso_)/,'');return [x[2],nd.startsWith('r_')?2:nd.startsWith('t_')?1:0]}));
  const n=nodes.get(id),m=reg.records[id],p=pri.rows.find(x=>x.rank===rank);
  assert(n&&m&&p&&sec.has(id));
  assert.deepEqual([m.frequency_rank,m.label,m.solver_profile,m.street],[rank,'APPROX',profile,2]);
@@ -28,12 +30,21 @@ for(const [rank,spot,id,profile] of targets){
   return a;
  }
  const turn=nodes.get(n.source);
- assert(turn&&sec.has(n.source));
- const flopIngress=ingress(turn.source,turn.id),turnIngress=ingress(turn.id,id);
+ // Original authored turn sections are in the DOM but not __HU_MODEL_LAST.nodes.
+ // Resolve every actual flop->turn primary edge, retaining its source id.
+ const turnId=n.source;
+ assert(sec.has(turnId)&&stage.get(turnId)===1,'missing rendered turn parent '+rank+': '+turnId);
+ if(turn)assert.equal(turn.id,turnId);
+ const flopSources=turn?[turn.source]:[...stage].filter(([k,s])=>s===0).map(([k])=>k);
+ const flopIngress=flopSources.flatMap(k=>ingress(k,turnId).map(edge=>({source:k,...edge})));
+ const actualFlopSources=[...new Set(flopIngress.map(e=>e.source))].sort();
+ const turnIngress=ingress(turnId,id);
+ assert(turnIngress.length>0,'no rendered turn->river primary edge '+rank);
+ const flopIngressStatus=actualFlopSources.length?'RENDERED_PRIMARY_LINKS':'NO_DIRECT_FLOP_PRIMARY_LINK_FOUND';
  const river=[];
  for(const t of txs)for(const [i,html] of cells(id,t).entries()){
   if(n.allowed.includes(t+':'+i))river.push({cell:t+':'+i,action:html.split('<small')[0].split('<a class="jmp sub"')[0].replace(/<[^>]*>/g,'').replace(/≈/g,'').trim()});
  }
- out.push({rank,id,profile,history:n.key,root:n.facts.root,pot:n.facts.pot,stack:n.facts.stack,spr:m.assumed_model_node_spr,flop_source:turn.source,turn_source:turn.id,flopIngress,turnIngress,river});
+ out.push({rank,id,profile,history:n.key,root:n.facts.root,pot:n.facts.pot,stack:n.facts.stack,spr:m.assumed_model_node_spr,flop_source:actualFlopSources.length===1?actualFlopSources[0]:null,flop_sources:actualFlopSources,turn_source:turnId,turn_source_kind:turn?'SYNTHETIC':'AUTHORED',flopIngressStatus,flopIngress,turnIngress,river});
 }
 console.log(JSON.stringify(out));

@@ -1,4 +1,4 @@
-name: B874 replay completed rank152 and inventory last eligible SRP ranks
+name: B875 fix authored turn parent and finish B874 source inventory
 on:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
@@ -64,14 +64,14 @@ jobs:
           cp "$RUNNER_TEMP/tail/routes.json" data/nl2_hu_b874_tail_rendered_routes.json
           live="$(gh api repos/tetracycline/poker-trainer/pulls/2 --jq .head.sha)"
           if [ "$live" = "$GITHUB_SHA" ]; then
-            python tools/hu_publish_candidate.py --message "B874 archive authenticated rank152 blocked sources and last three eligible exact-price source inventories" --paths data/nl2_hu_b874_b873_rank152_report.json data/nl2_hu_b874_b873_rank152_route.json data/nl2_hu_b874_b873_rank152_receipt.json data/nl2_hu_b874_tail_index_inventory.json data/nl2_hu_b874_tail_rendered_routes.json | tee "$RUNNER_TEMP/candidate.txt"
+            python tools/hu_publish_candidate.py --message "B875 archive authenticated rank152 blocked sources and repaired final three eligible exact-price source inventories" --paths data/nl2_hu_b874_b873_rank152_report.json data/nl2_hu_b874_b873_rank152_route.json data/nl2_hu_b874_b873_rank152_receipt.json data/nl2_hu_b874_tail_index_inventory.json data/nl2_hu_b874_tail_rendered_routes.json | tee "$RUNNER_TEMP/candidate.txt"
           else
             echo "STALE_HEAD_SAFE_SKIP" | tee "$RUNNER_TEMP/candidate.txt"
           fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: B874-authenticated-rank152-and-tail-inventory
+          name: B875-authenticated-rank152-and-tail-inventory
           path: |
             ${{ runner.temp }}/b873-original
             ${{ runner.temp }}/b873-replay
