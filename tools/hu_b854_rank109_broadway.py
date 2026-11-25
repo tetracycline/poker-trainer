@@ -24,18 +24,29 @@ def cards(board):return {board[i:i+2] for i in range(0,len(board),2)}
 def h169(pair):
     a,b=sorted(pair,key=lambda c:'23456789TJQKA'.index(c[0]),reverse=True)
     return a[0]+b[0]+('' if a[0]==b[0] else 's' if a[1]==b[1] else 'o')
-def preflight(template, flop, route):
+def preflight(template, flop, route, pinned_ranges):
+    # B854 failed before invoking any native job: this manifest records provenance,
+    # not oop_169/ip_169 dictionaries. Use the exact serialized native input.
     p=template['manifest']['preflop_ranges']
     assert p['source']=='PINNED_POKER_SOLVER_PREFLOP_CFR'
+    job=template['root_job']
+    assert (job['oop'],job['ip'])==pinned_ranges
+    def weights(s):
+        rows=[x.split(':') for x in s.split(',') if x]
+        assert rows and all(len(row)==2 for row in rows)
+        values={k:float(v) for k,v in rows}
+        assert len(values)==len(rows) and all(0<v<=1 for v in values.values())
+        return values
+    oop,ip=map(weights,pinned_ranges)
     assert suit_isomorphism_class(flop) not in {suit_isomorphism_class(x) for x in OLD}
     out={}
     for t in CASES[flop]:
         dead=cards(flop+t)
         pairs=[tuple(sorted(h)) for h in itertools.combinations([c for c in DECK if c not in dead],2)]
-        hero=[h for h in pairs if p['oop_169'].get(h169(h),0)>0
+        hero=[h for h in pairs if oop.get(h169(h),0)>0
               and hand_cell(''.join(h),flop)[0] in route['flop']
               and hand_cell(''.join(h),flop+t)[0] in route['turn']]
-        opp=[v for v in pairs if p['ip_169'].get(h169(v),0)>0]
+        opp=[v for v in pairs if ip.get(h169(v),0)>0]
         witness=None
         for h in hero:
             for r in DECK:
@@ -100,7 +111,9 @@ def run(a):
     reg=json.loads(Path('data/nl2_hu_multiboard_status_current.json').read_bytes())['records'][MODEL]
     assert (reg['frequency_rank'],reg['solver_profile'],reg['assumed_model_node_spr'],reg['label'])==(109,'UTG_CO',5.7,'APPROX')
     assert abs(9262/1626/5.7-1)<.05
-    template=template_jobs();flop=a.flop;pre=preflight(template,flop,route)
+    template=template_jobs();flop=a.flop
+    pinned_ranges=tuple(ranges.to_str(w) for w in ranges.ranges('UTG_CO','gto'))
+    pre=preflight(template,flop,route,pinned_ranges)
     out=a.output.resolve();out.mkdir(parents=True,exist_ok=True)
     report=dict(schema='NL2_B854_R109_NEW_BROADWAY_MONOTONE_TWO_SEAT_V1',rank=109,flop=flop,
       model_id=MODEL,actor=0,spot='UTG_CO',line=LINE,solver=SOLVER,rust=RUST,pool_sha256=POOL,
