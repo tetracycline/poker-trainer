@@ -1,4 +1,4 @@
-name: B871 re-screen current 234 APPROX against authenticated GTO and actor lock index
+name: B872 correct frozen frequency ordering and replay completed ISO source gates
 on:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
@@ -13,6 +13,20 @@ jobs:
         with: {fetch-depth: 0, persist-credentials: false}
       - uses: actions/setup-python@v5
         with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Authenticate completed B866 ISO route artifact and replay byte-for-byte (no native solve)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/tetracycline/poker-trainer/actions/runs/45684876757 --jq '[.status,.conclusion,.head_sha] | @tsv' | grep -Fx $'completed\tsuccess\t82a8ca2ffb8a6d4ffdb2de7716f3034d626432c9'
+          gh api repos/tetracycline/poker-trainer/actions/artifacts/15056610747/zip > "$RUNNER_TEMP/iso-source.zip"
+          echo "596304f34f48fdcedecc34952c345c899cd48a674357faafc96b0b057f52f594  $RUNNER_TEMP/iso-source.zip" | sha256sum -c -
+          unzip -p "$RUNNER_TEMP/iso-source.zip" b866.json > "$RUNNER_TEMP/iso-original.json"
+          node tools/hu_b866_iso_priority_rendered.cjs "$RUNNER_TEMP/iso-replay.json"
+          cmp "$RUNNER_TEMP/iso-original.json" "$RUNNER_TEMP/iso-replay.json"
+          node -e 'const fs=require("fs"),crypto=require("crypto"),assert=require("assert/strict");const raw=fs.readFileSync(process.argv[1]);const v=JSON.parse(raw);assert.deepEqual(v.selected_ranks,[122,123,139,141,142,148]);assert.deepEqual(v.models.map(x=>x.positive_ingress_cells),[6,7,1,1,4,14]);assert.equal(v.CERT_promotions,0);assert.equal(v.reran_native_solver,false);const receipt={schema:"NL2_B872_ISO_RENDERED_ONLY_REPLAY_RECEIPT",source_run:45684876757,source_job:139454714644,source_artifact:15056610747,source_head:"82a8ca2ffb8a6d4ffdb2de7716f3034d626432c9",source_zip_sha256:"596304f34f48fdcedecc34952c345c899cd48a674357faafc96b0b057f52f594",original_json_sha256:crypto.createHash("sha256").update(raw).digest("hex"),byte_equal_replay:true,certification_count_change:0,native_solves:0};fs.writeFileSync(process.argv[2],JSON.stringify(receipt,null,2)+"\n")' "$RUNNER_TEMP/iso-original.json" "$RUNNER_TEMP/iso-receipt.json"
       - name: Reconstruct current frozen 234-source preliminary gap queue (no solve or promotion)
         run: |
           set -euo pipefail
@@ -32,19 +46,24 @@ jobs:
           set -euo pipefail
           cp "$RUNNER_TEMP/gaps.json" data/nl2_hu_b871_current_234_source_gap_rescreen.json
           cp "$RUNNER_TEMP/gaps.csv" data/nl2_hu_b871_current_234_source_gap_rescreen.csv
+          cp "$RUNNER_TEMP/iso-original.json" data/nl2_hu_b872_b866_iso_rendered_only.json
+          cp "$RUNNER_TEMP/iso-receipt.json" data/nl2_hu_b872_b866_iso_replay_receipt.json
           live="$(gh api repos/tetracycline/poker-trainer/pulls/2 --jq .head.sha)"
           if [ "$live" = "$GITHUB_SHA" ]; then
-            python tools/hu_publish_candidate.py --message "B871 preserve full current 234 APPROX authentic source prefilter and missing-flop queue" --paths data/nl2_hu_b871_current_234_source_gap_rescreen.json data/nl2_hu_b871_current_234_source_gap_rescreen.csv | tee "$RUNNER_TEMP/candidate.txt"
+            python tools/hu_publish_candidate.py --message "B872 archive replayed ISO gates and frequency-only current source-gap matrix" --paths data/nl2_hu_b871_current_234_source_gap_rescreen.json data/nl2_hu_b871_current_234_source_gap_rescreen.csv data/nl2_hu_b872_b866_iso_rendered_only.json data/nl2_hu_b872_b866_iso_replay_receipt.json | tee "$RUNNER_TEMP/candidate.txt"
           else
             echo "STALE_HEAD_SAFE_SKIP source matrix kept as artifact only, no forced write" | tee "$RUNNER_TEMP/candidate.txt"
           fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: B871-all-234-current-source-gaps
+          name: B872-frequency-only-current-source-gaps-and-ISO-replay
           path: |
             ${{ runner.temp }}/gaps.json
             ${{ runner.temp }}/gaps.csv
             ${{ runner.temp }}/candidate.txt
+            ${{ runner.temp }}/iso-original.json
+            ${{ runner.temp }}/iso-replay.json
+            ${{ runner.temp }}/iso-receipt.json
           if-no-files-found: warn
           retention-days: 90
