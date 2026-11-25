@@ -1,0 +1,82 @@
+name: B874 replay completed rank152 and inventory last eligible SRP ranks
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['tools/hu_b874_tail_routes.cjs','tools/hu_b874_tail_inventory.py','.github/workflows/nl2-hu-b874-replay-tail.yml']
+permissions: {contents: write, actions: read, pull-requests: read}
+jobs:
+  replay-and-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Authenticate B873 archive and replay raw source parsing only
+        run: |
+          set -euo pipefail
+          python -m pip -q install numpy phevaluator==0.5.3.1
+          gh api repos/tetracycline/poker-trainer/actions/runs/45688975712 --jq '[.status,.conclusion,.head_sha,.head_branch] | @tsv' | grep -Fx $'completed\tsuccess\tec6b749a9380f9092c1ee17a9b5d95bb26340e3f\tfix/nl2-hu-lines-audit-20261118'
+          gh api repos/tetracycline/poker-trainer/actions/jobs/139469040164 --jq '[.run_id,.conclusion,.head_sha] | @tsv' | grep -Fx $'45688975712\tsuccess\tec6b749a9380f9092c1ee17a9b5d95bb26340e3f'
+          gh api repos/tetracycline/poker-trainer/actions/artifacts/15056784717/zip > "$RUNNER_TEMP/b873.zip"
+          echo "0bd30c16891d8888e024e4526ef63726e7ecf9a3d8f1db89eef195d0740f73c2  $RUNNER_TEMP/b873.zip" | sha256sum -c -
+          unzip -t "$RUNNER_TEMP/b873.zip"
+          mkdir "$RUNNER_TEMP/b873-original"
+          unzip -q "$RUNNER_TEMP/b873.zip" -d "$RUNNER_TEMP/b873-original"
+          python tools/hu_b873_rank152_sources.py "$RUNNER_TEMP/b873-replay"
+          cmp "$RUNNER_TEMP/b873-original/report.json" "$RUNNER_TEMP/b873-replay/report.json"
+          cmp "$RUNNER_TEMP/b873-original/rendered-route.json" "$RUNNER_TEMP/b873-replay/rendered-route.json"
+          python - "$RUNNER_TEMP" <<'PY'
+          import sys,json,hashlib
+          from pathlib import Path
+          p=Path(sys.argv[1]); raw=(p/'b873-original/report.json').read_bytes(); v=json.loads(raw)
+          assert v['rank']==152 and v['positive_distinct_flops']==v['CERT_promotions']==v['native_solves']==0
+          assert len(v['rows'])==3 and all(r['status']=='BLOCKED_NO_DUAL_EXACT_SOURCE' for r in v['rows'])
+          receipt=dict(schema='NL2_B874_B873_ORIGINAL_REPLAY_RECEIPT',run=45688975712,job=139469040164,artifact=15056784717,head='ec6b749a9380f9092c1ee17a9b5d95bb26340e3f',zip_sha256=hashlib.sha256((p/'b873.zip').read_bytes()).hexdigest(),report_sha256=hashlib.sha256(raw).hexdigest(),route_sha256=hashlib.sha256((p/'b873-original/rendered-route.json').read_bytes()).hexdigest(),byte_equal_replay=True,native_solves=0,CERT_promotions=0,scope='Blocked dual source is not a proved zero-reach negative.')
+          (p/'receipt.json').write_text(json.dumps(receipt,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(v,ensure_ascii=False))
+          PY
+      - name: Screen final three frequency-eligible SRP ranks against indexed actual chip prices and actor
+        run: |
+          set -euo pipefail
+          python tools/hu_b874_tail_inventory.py "$RUNNER_TEMP/tail"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - name: Full strict registry, static, model, board and 2475 HU route audit
+        run: |
+          set -euo pipefail
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/rebuilt.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/rebuilt.json"
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Stage verified evidence only as candidate, without moving branch
+        run: |
+          set -euo pipefail
+          cp "$RUNNER_TEMP/b873-original/report.json" data/nl2_hu_b874_b873_rank152_report.json
+          cp "$RUNNER_TEMP/b873-original/rendered-route.json" data/nl2_hu_b874_b873_rank152_route.json
+          cp "$RUNNER_TEMP/receipt.json" data/nl2_hu_b874_b873_rank152_receipt.json
+          cp "$RUNNER_TEMP/tail/report.json" data/nl2_hu_b874_tail_index_inventory.json
+          cp "$RUNNER_TEMP/tail/routes.json" data/nl2_hu_b874_tail_rendered_routes.json
+          live="$(gh api repos/tetracycline/poker-trainer/pulls/2 --jq .head.sha)"
+          if [ "$live" = "$GITHUB_SHA" ]; then
+            python tools/hu_publish_candidate.py --message "B874 archive authenticated rank152 blocked sources and last three eligible exact-price source inventories" --paths data/nl2_hu_b874_b873_rank152_report.json data/nl2_hu_b874_b873_rank152_route.json data/nl2_hu_b874_b873_rank152_receipt.json data/nl2_hu_b874_tail_index_inventory.json data/nl2_hu_b874_tail_rendered_routes.json | tee "$RUNNER_TEMP/candidate.txt"
+          else
+            echo "STALE_HEAD_SAFE_SKIP" | tee "$RUNNER_TEMP/candidate.txt"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B874-authenticated-rank152-and-tail-inventory
+          path: |
+            ${{ runner.temp }}/b873-original
+            ${{ runner.temp }}/b873-replay
+            ${{ runner.temp }}/receipt.json
+            ${{ runner.temp }}/tail
+            ${{ runner.temp }}/candidate.txt
+          if-no-files-found: error
+          retention-days: 90
