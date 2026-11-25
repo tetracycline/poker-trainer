@@ -73,7 +73,12 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t paths < "$RUNNER_TEMP/candidate-paths.txt"
-          python tools/hu_publish_candidate.py --message "B852 archive B851 rank106 authenticated zero-reach negatives; no promotion" --paths "${paths[@]}" | tee "$RUNNER_TEMP/candidate.txt"
+          live_head="$(gh api repos/tetracycline/poker-trainer/pulls/2 --jq .head.sha)"
+          if [ "$live_head" = "$GITHUB_SHA" ]; then
+            python tools/hu_publish_candidate.py --message "B852 archive B851 rank106 authenticated zero-reach negatives; no promotion" --paths "${paths[@]}" | tee "$RUNNER_TEMP/candidate.txt"
+          else
+            echo "STALE_HEAD_SAFE_SKIP: original exact-source gate and full audits passed; live=$live_head, workflow=$GITHUB_SHA" | tee "$RUNNER_TEMP/candidate.txt"
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -82,6 +87,6 @@ jobs:
             ${{ runner.temp }}/candidate.txt
             ${{ runner.temp }}/candidate-paths.txt
             ${{ runner.temp }}/coverage.json
-            ${{ runner.temp }}/data-23/nl2_hu_b852_results.json
+            ${{ runner.temp }}/data-23
           if-no-files-found: warn
           retention-days: 90

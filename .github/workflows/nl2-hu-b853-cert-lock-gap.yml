@@ -46,8 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           cp "$RUNNER_TEMP/b853.json" data/nl2_hu_b853_cert_lock_medium_gap.json
-          cp "$RUNNER_TEMP/b853.md" docs/NL2_HU_B853_CERT_LOCK_MEDIUM_GAP.md
-          python tools/hu_publish_candidate.py --message "B853 audit all existing CERT NL2 locks and nonpolarized named-board evidence" --paths data/nl2_hu_b853_cert_lock_medium_gap.json docs/NL2_HU_B853_CERT_LOCK_MEDIUM_GAP.md | tee "$RUNNER_TEMP/candidate.txt"
+          python tools/hu_publish_candidate.py --message "B853 audit all existing CERT NL2 locks and nonpolarized named-board evidence" --paths data/nl2_hu_b853_cert_lock_medium_gap.json | tee "$RUNNER_TEMP/candidate.txt"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

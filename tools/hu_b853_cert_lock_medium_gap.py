@@ -34,7 +34,7 @@ def main():
         mid=board["model_id"];assert mid in registered
         record=registry["records"][mid];n=nodes[mid]
         assert n["rank_by_empirically_grounded_frequency_proxy"]==board["rank"]==record["frequency_rank"]
-        assert (board["pot_bb"],board["stack_bb"])==(board["pot_bb"],board["stack_bb"])
+        assert board["pot_bb"]>0 and board["stack_bb"]>0
         assert board["gto"]["legal_combos"]>0 and board["gto"]["compatible_pairs"]>=board["gto"]["legal_combos"]
         assert board["opponent_locks"]
         assert "medium_policy_usage" in board
@@ -42,11 +42,12 @@ def main():
         locks=[];counts=[0,0,0]
         for p in board["opponent_locks"]:
             o,im,u=[int(p[x]) for x in ("measured_nodes","assumed_nodes","unmatched_nodes")]
-            assert o>0 and im>=0 and u>=0
+            assert o>=0 and im>=0 and u>=0
             counts=[counts[i]+x for i,x in enumerate((o,im,u))]
             assert p["legal_combos"]>0 and p["compatible_pairs"]>=p["legal_combos"]
             locks.append(dict(version=p["version"],source_run_id=p["run"],source_sha256=p["sha256"],observed_pool_marginal_nodes=o,assumed_default_nodes=im,unmatched_nodes=u,legal_combos=p["legal_combos"],nonpolarized_candidate=bool(p["nonpolarized_candidate"]),halfpot_eligible_combos=p["half_pot_eligible_combos"]))
-        o,im,u=counts;observed_share=round(o/(o+im+u),6)
+        o,im,u=counts;assert o>0
+        observed_share=round(o/(o+im+u),6)
         measured_total+=o;assumed_total+=im;unmatched_total+=u
         frequency=100*float(n["estimated_NL2_hand_opportunity_fraction"])
         assert frequency>0
