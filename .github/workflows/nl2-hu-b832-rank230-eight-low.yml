@@ -1,0 +1,74 @@
+name: B832 rank230 new eight-low originals
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b832-rank230-eight-low.yml'
+      - 'tools/hu_b832_rank230_eight_low.py'
+permissions: {contents: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [8s7h2s, 8s7h5s]
+    env:
+      FLOP: ${{ matrix.flop }}
+      RAYON_NUM_THREADS: 2
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: b-inary/postflop-solver
+          ref: 9d1509fe5077d019825f833eed04b16d342dfda1
+          path: pinned-solver/postflop/postflop-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Validate two seats and exact J7s three-street UI route before native work
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          python tools/hu_b832_rank230_eight_low.py --preflight --flop "$FLOP" --solver pinned-solver --output "$RUNNER_TEMP/preflight"
+      - name: Build the pinned native driver
+        working-directory: pinned-solver/postflop/pfdriver
+        run: RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve a single original and its registered checked boundaries
+        run: |
+          set -euo pipefail
+          python tools/hu_b832_rank230_eight_low.py --flop "$FLOP" --solver pinned-solver --output "$RUNNER_TEMP/b832-source" --root-only --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B832-root-R230-${{ matrix.flop }}
+          path: |
+            ${{ runner.temp }}/b832-source/root-checkpoint.json
+            ${{ runner.temp }}/b832-source/flop/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Solve genuine GTO and measured partial NL2 conditional turns
+        run: |
+          set -euo pipefail
+          path="$RUNNER_TEMP/b832-source"
+          python tools/hu_b832_rank230_eight_low.py --flop "$FLOP" --solver pinned-solver --output "$path" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$path/proof.json" "$RUNNER_TEMP/b832-proof"
+          python tools/hu_b832_rank230_eight_low.py --flop "$FLOP" --solver pinned-solver --output "$path"
+          cmp "$RUNNER_TEMP/b832-proof" "$path/proof.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B832-R230-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b832-source
+          if-no-files-found: error
+          retention-days: 90
