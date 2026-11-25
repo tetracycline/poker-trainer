@@ -1,0 +1,35 @@
+name: B866 read-only six priority ISO models rendered source gates
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['tools/hu_b866_iso_priority_rendered.cjs','.github/workflows/nl2-hu-b866-iso-route.yml']
+permissions: {contents: read}
+jobs:
+  source-blind-routes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Freeze real primary action links before selecting native CFR runs
+        run: |
+          set -euo pipefail
+          node tools/hu_b866_iso_priority_rendered.cjs "$RUNNER_TEMP/b866.json"
+          node -e 'const v=require(process.argv[1]);if(v.CERT_promotions||v.CERT!==158||v.APPROX!==234||v.models.length!==6)process.exit(1)' "$RUNNER_TEMP/b866.json"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - name: Full independent CERT plus navigation and UI evidence gate
+        run: |
+          set -euo pipefail
+          python tools/hu_apply_cert_extensions.py --out "$RUNNER_TEMP/rebuilt.json"
+          cmp data/nl2_hu_multiboard_status_current.json "$RUNNER_TEMP/rebuilt.json"
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B866-frozen-ISO-priority-primary-ingress
+          path: ${{ runner.temp }}/b866.json
+          if-no-files-found: warn
+          retention-days: 90
