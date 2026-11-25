@@ -49,7 +49,7 @@ for(const [rankText,id] of Object.entries(TARGETS)){
   assert.equal(model.frequency_rank,rank);
   assert.equal(model.solver_profile,'ISO_BTN_CO');
   assert(['ASSUMED_ISO_4BB','ISO_BTN_CO'].includes(n.facts.root.spot), 'Unexpected ISO root source');
-  assert.deepEqual([n.facts.root.pot,n.facts.root.stack],[9.5,96]);
+  assert([9,9.5].includes(n.facts.root.pot) && n.facts.root.stack===96, 'Unrecognized native ISO root price');
   assert.equal(n.key,r.action_history);
   assert.equal(n.id,id);
   assert.equal(model.street,rank===122||rank===123?1:2);
@@ -75,6 +75,8 @@ for(const [rankText,id] of Object.entries(TARGETS)){
     rank,model_id:id,street:model.street,original_family:'ISO_BTN_CO',original_preflop_source:n.facts.root.spot,preflop_text:n.pre,
     rendered_history:n.key,source_table:source,source_table_rendered:sourcePresent,
     assumed_root_pot_bb:n.facts.root.pot,assumed_root_stack_bb:n.facts.root.stack,
+    historical_9_5bb_source_root_exact_match:n.facts.root.pot===9.5,
+    cannot_borrow_9_5bb_source_when_model_root_9bb:n.facts.root.pot===9,
     model_node_pot_bb:n.facts.pot,model_node_stack_bb:n.facts.stack,assumed_model_node_spr:model.assumed_model_node_spr,
     estimated_per_hand_opportunity_pct:r.estimated_per_hand_frequency_pct,
     primary_ingress:sourceRows,rendered_target_actions:targetRows,
