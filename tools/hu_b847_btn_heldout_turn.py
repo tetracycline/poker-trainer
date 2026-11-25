@@ -60,8 +60,8 @@ def policy_gate(orig, route):
         counts.append(len(alive[seat]))
     for seat in (0,1):
         alive[seat]={h for h in alive[seat] if cards(b).isdisjoint(h)}
-    alive[1]={h for h in alive[1] if hand_cell("".join(h),b[:6])[0] in route["flop"]
-              and hand_cell("".join(h),b)[0] in route["turn"]}
+    alive[1]={h for h in alive[1] if hand_cell("".join(h),b[:6])[0] in route["routes"]["flop"]
+              and hand_cell("".join(h),b)[0] in route["routes"]["turn"]}
     exported=[n["board"] for n in game["nodes"] if n["line"]=="b50 c/x b50 c/x" and n["player"]==1]
     return alive,dict(status="EXACT_PRIOR_ACTIONS_REPLAYED",intersection_counts=counts,
                       two_seat_route_hands=[len(s) for s in alive],exported_target_rivers=sorted(exported),
@@ -115,7 +115,7 @@ def main(a):
             if river in cards(public):continue
             pairs=[]
             for h in sorted(both[1]):
-                if river in h or hand_cell("".join(h),public+river)[0] not in route["river"]:continue
+                if river in h or hand_cell("".join(h),public+river)[0] not in route["routes"]["river"]:continue
                 for v in sorted(both[0]):
                     if river not in v and set(h).isdisjoint(v):pairs.append(["".join(h),"".join(v)])
             if pairs:feasible[river]=dict(pair_count=len(pairs),first_pair=pairs[0])
