@@ -1,0 +1,39 @@
+name: B863 rank136 unused original chance-boundary screen
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b863-rank136-boundaries.yml'
+      - 'tools/hu_b863_rank136_boundaries.py'
+permissions: {contents: read, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Screen unseen turns without native re-solving
+        run: |
+          set -euo pipefail
+          python -m pip -q install numpy phevaluator==0.5.3.1
+          python tools/hu_b838_approx_coverage_priority_audit.py
+          python tools/hu_b863_rank136_boundaries.py "$RUNNER_TEMP/b863" pinned-solver
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B863-rank136-unused-chance-boundaries
+          path: ${{ runner.temp }}/b863
+          if-no-files-found: error
+          retention-days: 90
