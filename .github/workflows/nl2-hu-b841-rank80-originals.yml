@@ -1,0 +1,61 @@
+name: B841 prioritized rank80 two unused LMP CO river originals
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b841_rank80_new_originals.py'
+      - '.github/workflows/nl2-hu-b841-rank80-originals.yml'
+permissions: {contents: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [6c6d3h, KdJd5c]
+    env:
+      FLOP: ${{ matrix.flop }}
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+      RAYON_NUM_THREADS: 2
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: b-inary/postflop-solver
+          ref: 9d1509fe5077d019825f833eed04b16d342dfda1
+          path: pinned-solver/postflop/postflop-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Preflight preserved source and all historical flop suit-orbits
+        run: |
+          set -euo pipefail
+          pip -q install numpy phevaluator==0.5.3.1
+          python tools/hu_b841_rank80_new_originals.py --solver pinned-solver --flop "$FLOP" --output "$RUNNER_TEMP/preflight" --preflight
+      - name: Compile pinned Rust driver
+        working-directory: pinned-solver/postflop/pfdriver
+        run: RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve original b33 call and measured NL2 partial lock exactly once
+        run: |
+          set -euo pipefail
+          python tools/hu_b841_rank80_new_originals.py --solver pinned-solver --flop "$FLOP" --output "$RUNNER_TEMP/b841-original" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$RUNNER_TEMP/b841-original/proof.json" "$RUNNER_TEMP/source-proof"
+          python tools/hu_b841_rank80_new_originals.py --solver pinned-solver --flop "$FLOP" --output "$RUNNER_TEMP/b841-original"
+          cmp "$RUNNER_TEMP/source-proof" "$RUNNER_TEMP/b841-original/proof.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B841-R80-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b841-original/
+          if-no-files-found: warn
+          retention-days: 90
