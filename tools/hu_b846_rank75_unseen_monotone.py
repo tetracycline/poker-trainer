@@ -20,20 +20,25 @@ CASES = {
 def run(a):
     assert set(CASES) == {"Td9d4d", "Td8d5d"}
     assert len({suit_isomorphism_class(f) for f in CASES}) == 2
-    old = set(parent.OLD) | set(parent.CASES)
+    # B833 is a wrapper, not the native worker. Its OLD lives on B830.
+    # Pin both predecessors and retain both generations of excluded roots.
+    base = parent.parent
+    assert base.checked.blob(parent.WORKER) == "d0b92980c4aaf6e2003dc1237383563b4294517e"
+    assert base.checked.blob(base.WORKER) == parent.PARENT_BLOB
+    old = set(base.OLD) | set(base.CASES) | set(parent.CASES)
     assert not {suit_isomorphism_class(f) for f in CASES} & {suit_isomorphism_class(f) for f in old}
-    previous = parent.WORKER, parent.CASES, parent.OLD
+    previous = base.WORKER, base.CASES, base.OLD
     try:
-        parent.WORKER, parent.CASES, parent.OLD = WORKER, CASES, old
-        parent.run(a)
+        base.WORKER, base.CASES, base.OLD = WORKER, CASES, old
+        base.run(a)
     finally:
-        parent.WORKER, parent.CASES, parent.OLD = previous
+        base.WORKER, base.CASES, base.OLD = previous
     if a.preflight or a.checkpoint_only:
         return
     proof_file = a.output / "proof.json"
     proof = json.loads(proof_file.read_bytes())
     assert proof["flop"] == a.flop
-    assert proof["origin"]["worker_blob"] == parent.parent.checked.blob(WORKER)
+    assert proof["origin"]["worker_blob"] == base.checked.blob(WORKER)
     assert proof["new_flop_solve_invocations"] == 1
     assert proof["preregistered_turns"] == CASES[a.flop]
     proof.update(
