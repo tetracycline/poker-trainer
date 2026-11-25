@@ -1,0 +1,36 @@
+name: B873 rank152 authenticated historical dual-policy exact-price source screen
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b873_rank152_routes.cjs'
+      - 'tools/hu_b873_rank152_sources.py'
+      - '.github/workflows/nl2-hu-b873-rank152-sources.yml'
+permissions: {contents: read, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Read original historical sources only
+        run: |
+          set -euo pipefail
+          python -m pip -q install numpy phevaluator==0.5.3.1
+          python tools/hu_b873_rank152_sources.py "$RUNNER_TEMP/b873"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B873-rank152-original-source-screen
+          path: ${{ runner.temp }}/b873
+          if-no-files-found: error
+          retention-days: 90
