@@ -13,7 +13,6 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       PYTHONDONTWRITEBYTECODE: '1'
-      NODE_OPTIONS: --max-old-space-size:1536
     steps:
       - uses: actions/checkout@v4
         with: {persist-credentials: false}
@@ -30,7 +29,7 @@ jobs:
           set -euo pipefail
           python -m pip -q install numpy phevaluator==0.5.3.1
           python tools/hu_b838_approx_coverage_priority_audit.py
-          python tools/hu_b861_rank128_originals.py "$RUNNER_TEMP/b861" pinned-solver
+          NODE_OPTIONS=--max-old-space-size=1536 python tools/hu_b861_rank128_originals.py "$RUNNER_TEMP/b861" pinned-solver
           git diff --exit-code -- data nl2.js nl2_hu_model.js
       - uses: actions/upload-artifact@v4
         with:
