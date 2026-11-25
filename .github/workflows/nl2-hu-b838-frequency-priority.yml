@@ -1,0 +1,22 @@
+name: B838 frozen 234 APPROX NL2 frequency audit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'data/nl2_hu_b838_234_approx_frequency_priority.csv'
+      - 'data/nl2_hu_b838_234_approx_frequency_priority.json'
+      - 'docs/NL2_HU_B838_APPROX_90PCT_COVERAGE.md'
+      - 'tools/hu_b838_approx_coverage_priority_audit.py'
+      - '.github/workflows/nl2-hu-b838-frequency-priority.yml'
+permissions: {contents: read}
+jobs:
+  source-frozen-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Recheck all ranks, node weights, crossover math, and CSV against pinned NL2 pool
+        run: python tools/hu_b838_approx_coverage_priority_audit.py
