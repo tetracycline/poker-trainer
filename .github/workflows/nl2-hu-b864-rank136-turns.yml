@@ -1,0 +1,76 @@
+name: B864 solve one new rank136 chance turn per B863 root
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b864-rank136-turns.yml'
+      - 'tools/hu_b864_rank136_turns.py'
+permissions: {contents: read, actions: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - {flop: Ac7h3d, original: 14866311407}
+          - {flop: Ah7d4c, original: 14865802214}
+          - {flop: As6c3h, original: 14866286699}
+    env:
+      FLOP: ${{ matrix.flop }}
+      ORIGINAL: ${{ matrix.original }}
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Authenticate the completed B652 original and validate ten held-out range pairs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install numpy phevaluator==0.5.3.1
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45271606730" | jq -e '
+            .head_sha=="19b59d0dc6342d7f51019d7796bc1e0b2525306c" and .conclusion=="success" and .status=="completed"'
+          expected=$(jq -r --arg f "$FLOP" '.observations[] | select(.flop==$f) | .artifact_sha256' data/nl2_hu_b652_rank136_results.json)
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ORIGINAL" | jq -e --arg n "B652-R136-$FLOP" --arg sha "$expected" '
+            .name==$n and .digest==("sha256:"+$sha) and .expired==false and .workflow_run.id==45271606730 and
+            .workflow_run.head_sha=="19b59d0dc6342d7f51019d7796bc1e0b2525306c"'
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ORIGINAL/zip" > "$RUNNER_TEMP/b652.zip"
+          echo "$expected  $RUNNER_TEMP/b652.zip" | sha256sum -c -
+          python tools/hu_b864_rank136_turns.py --preflight --flop "$FLOP" --original-id "$ORIGINAL" --solver pinned-solver \
+            --archive "$RUNNER_TEMP/b652.zip" --output "$RUNNER_TEMP/preflight"
+      - name: Build the pinned native solver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve the unextracted conditional turns and verify exact two-seat decisions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          args=(--solver pinned-solver --flop "$FLOP" --original-id "$ORIGINAL" --archive "$RUNNER_TEMP/b652.zip" --output "$RUNNER_TEMP/b864-source")
+          python tools/hu_b864_rank136_turns.py "${args[@]}" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$RUNNER_TEMP/b864-source/proof.json" "$RUNNER_TEMP/b864-proof"
+          python tools/hu_b864_rank136_turns.py "${args[@]}"
+          cmp "$RUNNER_TEMP/b864-proof" "$RUNNER_TEMP/b864-source/proof.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B864-R136-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b864-source
+          if-no-files-found: warn
+          retention-days: 90
