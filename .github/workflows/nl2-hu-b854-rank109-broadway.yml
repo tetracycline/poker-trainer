@@ -1,0 +1,57 @@
+name: B854 rank109 two new broadway monotone native roots
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b854_rank109_broadway.py'
+      - '.github/workflows/nl2-hu-b854-rank109-broadway.yml'
+permissions: {contents: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [AcQcJc, KdJdTd]
+    env:
+      FLOP: ${{ matrix.flop }}
+      RAYON_NUM_THREADS: 2
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build pinned native solver
+        run: |
+          set -euo pipefail
+          python -m pip -q install numpy phevaluator==0.5.3.1
+          python -m py_compile tools/hu_b854_rank109_broadway.py
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Gate fresh original, solve and replay actual same two-seat pairs
+        run: |
+          set -euo pipefail
+          args=(--flop "$FLOP" --solver pinned-solver --output "$RUNNER_TEMP/b854-out")
+          python tools/hu_b854_rank109_broadway.py "${args[@]}" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$RUNNER_TEMP/b854-out/proof.json" "$RUNNER_TEMP/original-proof.json"
+          python tools/hu_b854_rank109_broadway.py "${args[@]}"
+          cmp "$RUNNER_TEMP/original-proof.json" "$RUNNER_TEMP/b854-out/proof.json"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B854-R109-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b854-out
+          if-no-files-found: warn
+          retention-days: 90
