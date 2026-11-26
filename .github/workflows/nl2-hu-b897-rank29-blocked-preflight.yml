@@ -1,0 +1,62 @@
+name: B897 rank29 never-executed original preflight repair
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b897_rank29_blocked_preflight.py'
+      - '.github/workflows/nl2-hu-b897-rank29-blocked-preflight.yml'
+permissions: {contents: read, actions: read}
+jobs:
+  only-unexecuted-original:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      RAYON_NUM_THREADS: 2
+      NODE_OPTIONS: --max-old-space-size=3072
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 100, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: b-inary/postflop-solver
+          ref: 9d1509fe5077d019825f833eed04b16d342dfda1
+          path: pinned-solver/postflop/postflop-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate skipped original job and preflight fixed legal physical witness and dedup
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          gh api "repos/$GITHUB_REPOSITORY/actions/jobs/139691797892" > "$RUNNER_TEMP/b897-job.json"
+          python tools/hu_b897_rank29_blocked_preflight.py --receipt "$RUNNER_TEMP/b897-job.json" --preflight --solver pinned-solver --output "$RUNNER_TEMP/b897-unused"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build pinned driver after preflight
+        working-directory: pinned-solver/postflop/pfdriver
+        run: RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve only the never-executed original and replay without driver
+        run: |
+          set -euo pipefail
+          python tools/hu_b897_rank29_blocked_preflight.py --receipt "$RUNNER_TEMP/b897-job.json" --solver pinned-solver --output "$RUNNER_TEMP/b897-source" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$RUNNER_TEMP/b897-source/proof.json" "$RUNNER_TEMP/b897-proof.json"
+          python tools/hu_b897_rank29_blocked_preflight.py --receipt "$RUNNER_TEMP/b897-job.json" --solver pinned-solver --output "$RUNNER_TEMP/b897-source"
+          cmp "$RUNNER_TEMP/b897-proof.json" "$RUNNER_TEMP/b897-source/proof.json"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B897-R29-Jd9d3c
+          path: |
+            ${{ runner.temp }}/b897-source
+            ${{ runner.temp }}/b897-job.json
+          if-no-files-found: warn
+          retention-days: 90
