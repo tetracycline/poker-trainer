@@ -1,0 +1,54 @@
+name: B881 audit exact UTG price discrepancy and archive cancelled rank114 attempts
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b881-price-cancelled.yml'
+      - 'tools/hu_b881_utg_price_boundary.py'
+      - 'tools/hu_b881_tail_price_routes.cjs'
+      - 'tools/hu_b881_r114_cancelled.py'
+permissions: {contents: read, actions: read}
+jobs:
+  source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Replay exact model prices and authenticate cancelled native receipts without solving
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          d="$RUNNER_TEMP/b881"
+          mkdir -p "$d/r114" "$d/utg"
+          gh api repos/tetracycline/poker-trainer/actions/runs/45119866932 > "$d/b538-run.json"
+          gh api repos/tetracycline/poker-trainer/actions/runs/45735534620 > "$d/r114/run.json"
+          gh api repos/tetracycline/poker-trainer/actions/runs/45735534620/jobs > "$d/r114/jobs.json"
+          for id in 15080371470 15079797499; do
+            gh api "repos/tetracycline/poker-trainer/actions/artifacts/$id" > "$d/r114/$id.json"
+            gh api "repos/tetracycline/poker-trainer/actions/artifacts/$id/zip" > "$d/r114/$id.zip"
+          done
+          python -m py_compile tools/hu_b881_utg_price_boundary.py tools/hu_b881_r114_cancelled.py
+          node --check tools/hu_b881_tail_price_routes.cjs
+          python tools/hu_b881_r114_cancelled.py "$d/r114"
+          cp "$d/r114/report.json" "$RUNNER_TEMP/b881-cancelled-report.json"
+          python tools/hu_b881_r114_cancelled.py "$d/r114"
+          cmp "$d/r114/report.json" "$RUNNER_TEMP/b881-cancelled-report.json"
+          python tools/hu_b881_utg_price_boundary.py "$d/utg" "$d/b538-run.json"
+          python tools/hu_b881_utg_price_boundary.py "$RUNNER_TEMP/b881-utg-replay" "$d/b538-run.json"
+          cmp "$d/utg/report.json" "$RUNNER_TEMP/b881-utg-replay/report.json"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B881-price-gate-and-cancelled-native-receipts
+          path: ${{ runner.temp }}/b881
+          if-no-files-found: error
+          retention-days: 90

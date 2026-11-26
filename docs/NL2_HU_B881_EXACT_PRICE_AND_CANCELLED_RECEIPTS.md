@@ -1,0 +1,9 @@
+# B881 — price-gate recovery and rank114 cancelled receipt audit
+
+No native invocation, no status change. B880 source run [45738824401](https://github.com/tetracycline/poker-trainer/actions/runs/45738824401) failed its exact price assertion before writing a report; the full batch audit [45738824367](https://github.com/tetracycline/poker-trainer/actions/runs/45738824367) passed. B879 [45735534620](https://github.com/tetracycline/poker-trainer/actions/runs/45735534620) cancelled both isolated original-root native steps. Two tiny job artifacts are present; their ZIP contents must be independently authenticated, not inferred from their sizes.
+
+B881 captures the actual synthetic turn and river pot/stack versus the B538 native source and verifies both prices with the existing 0.011 BB threshold. A mismatch excludes all downstream candidate rivers and is reported as BLOCKED_EXACT_PRICE_MISMATCH, not a zero reach result. A match merely allows static boundary screening, not solved river policy, not certification. 1/3 and 3/4 size semantics remain unchanged. No UI price is changed and no native tree is modified to fit an approximate model.
+
+B879 receipts are independently replayed from pinned ZIP digests and job/run IDs. Any unexpected result/proof member halts the cancelled-only audit for further source inspection. No repeated identical native attempt. No private-card empirical frequency claim.
+
+Authoritative current registry (blob 996fc513406c8a1207d50bc300453858909493d9), frozen weight blob 7519db4affc935040f07d455e090ce9d3bc07138: 158 CERT / 234 APPROX / 0 EST, 84.700987% model node opportunity share (not unique hands), 0 new promotions, node-locks or nonpolarized candidates. Both B881 source and full audits remain pending until completed and independently inspected. PR #2 stays open draft.
