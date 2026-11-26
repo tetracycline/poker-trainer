@@ -63,8 +63,28 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
     'ln-iso-lmp_r_model-1wo1hx8':[224, 'b50 c', 4.513],
     'ln-iso-lmp_r_model-1iqsf2n':[234, 'x x', 9.525]
   };
+  const utgPrice = {
+    'ln-opfr-t_model-19umlco':[68,1,'ln-opfr-f_vs_donk-1cci9ku','你過、對手下注、你跟|',['x b50 c',''],7.25],
+    'ln-opfr-r_model-1puypid':[157,2,'ln-opfr-t_model-19umlco','你過、對手下注、你跟|你下注、對手跟|',['x b50 c','b75 c',''],2.6],
+    'ln-opfr-r_model-tl6ij8':[158,2,'ln-opfr-t_model-19umlco','你過、對手下注、你跟|你下注、對手跟|',['x b50 c','b33 c',''],4.151],
+    'ln-opfr-r_model-8w3cpr':[205,2,'ln-opfr-t_model-19umlco','你過、對手下注、你跟|你過、對手過|',['x b50 c','x x',''],7.25]
+  };
+  for (const id of Object.keys(utgPrice)) {
+    if (!manifest.trainer_route_contract?.routes?.[id]) throw Error('Missing UTG exact route');
+  }
   for (const [id,route] of Object.entries(manifest.trainer_route_contract?.routes || {})) {
     const turnPrice=turnCallPrices[id], model=records[id];
+    if (utgPrice[id]) {
+      const [rank,street,parent,history,streets,spr]=utgPrice[id];
+      if (!model || model.model_id!==id || model.frequency_rank!==rank || model.street!==street ||
+          model.source_model_id!==parent || model.solver_profile!=='UTG_CO' || model.family!=='SRP' ||
+          model.abstract_action_history!==history || route.seat!==0 ||
+          route.priced_model_spr!==spr || !Array.isArray(route.streets) ||
+          route.streets.length!==streets.length || !streets.every((x,i)=>x===route.streets[i]))
+        throw Error('Incorrect UTG exact route geometry');
+      records[id]={...model,assumed_model_node_spr:spr};
+      continue;
+    }
     if (route.priced_model_spr === undefined) {
       if (limpRaiseCalls[id] && route.streets?.[0]!=='bet raise c')
         throw Error('BB 半池下注後跟加注的 SPR 缺失');
@@ -104,6 +124,24 @@ globalThis.nl2ApplyVerifiedExtensions = async function applyVerifiedExtensions(b
     if (!m || m.label !== 'APPROX' || e.rank !== m.frequency_rank || !Array.isArray(e.boards) ||
         e.boards.length < 3 || e.boards.length > 5 || e.pins?.length !== e.boards.length ||
         new Set(e.boards.map(b=>b.flop)).size !== e.boards.length) throw Error('具名牌面數或模型不符');
+    if (e.model_id==='ln-opfr-t_model-19umlco') {
+      const original={
+        Jh9s4c:'88e20448d6f4c5636a063b3b3e78573f6bb14af4650c17b537de6b857671245e',
+        Ac8d3h:'827626b0c4f99471a63619af0a07c90bb4a46541043ab21565c88455337d5619',
+        As9d4c:'7b4b98e42a364b8188519976f0682bc7b973b468059896693fbe31b42fb6ffb5'
+      };
+      if(e.rank!==68 || m.assumed_model_node_spr!==7.25 || e.boards.length!==3)
+        throw Error('Invalid historical rank68 price reconciliation');
+      e={...e,boards:e.boards.map(b=>{
+        if(original[b.flop]!==b.source_sha256 || b.actual_pot_bb!==13 ||
+           b.actual_effective_stack_bb!==94.25 || b.actual_spr!==7.25 ||
+           b.model_assumed_spr!==7 || b.relative_spr_error_pct!==3.571429 ||
+           b.acting_seat!==0 || b.actual_exact_action_line!=='x b50 c/')
+          throw Error('Invalid historical rank68 source');
+        return {...b,historical_model_assumed_spr:7,historical_relative_spr_error_pct:3.571429,
+                model_assumed_spr:7.25,relative_spr_error_pct:0};
+      })};
+    }
     for (const b of e.boards) {
       const pin = e.pins.find(p=>p.flop===b.flop && p.turn===b.turn && p.public_board===b.public_board);
       const lock = b.nl2_locked_variants?.[0];

@@ -209,7 +209,19 @@ function repair(html,sp,catalog){
     const limpRaiseTo = limpRaiseCall ? 3 * m.root.pot / 2 : 0;
     const limpTurnBet = s.limpRaiseCall && action === 'bet'
       ? Math.min(m.stack,Math.round(m.pot*Math.round(100*size))/100) : 0;
-    const next = limpRaiseCall
+    // B883 candidate: the UTG check-call pays only the outstanding 50% flop bet.
+    const utgCall = id === 'ln-opfr-t_model-19umlco';
+    if (utgCall && (s.modelMeta || s.id !== 'ln-opfr-f_vs_donk-1cci9ku' ||
+        s.st !== 0 || action !== 'call' || m.root.spot !== 'UTG_CO' ||
+        s.key !== '你過、對手下注' || m.root.pot !== 6.5 || m.root.stack !== 97.5))
+      throw Error('Changed exact UTG half-pot flop-call source');
+    const utgChild = s.id === 'ln-opfr-t_model-19umlco';
+    if (utgChild && (s.st !== 1 || m.pot !== 13 || m.stack !== 94.25 ||
+        !['bet','check'].includes(action))) throw Error('Changed UTG continuation');
+    const utgPaid = utgChild && action === 'bet' ? Math.round(m.pot*size*100)/100 : 0;
+    const next = utgCall ? {pot:13,stack:94.25,root:m.root}
+      : utgChild ? {pot:round(m.pot+2*utgPaid),stack:round(m.stack-utgPaid),root:m.root}
+      : limpRaiseCall
       ? {pot:round(m.root.pot+2*limpRaiseTo),stack:round(m.root.stack-limpRaiseTo),root:m.root}
       : limpTurnBet
       ? {pot:round(m.pot+2*limpTurnBet),stack:round(m.stack-limpTurnBet),root:m.root}
@@ -217,7 +229,7 @@ function repair(html,sp,catalog){
       ? {pot:round(m.root.pot+2*turnFacing),stack:round(m.root.stack-turnFacing),root:m.root}
       : priced ? {pot:round(m.root.pot+2*facing),stack:round(m.root.stack-facing),root:m.root}
       : transition(m,action,size,s.st);
-    const flopCallPct = priced ? Number(printed[2]) : s.flopCallPct;
+    const flopCallPct = utgCall ? 50 : priced ? Number(printed[2]) : s.flopCallPct;
     const turnCallPct = pricedTurn ? 50 : s.turnCallPct;
     const line=keyNext(s,action,stage);
     const x={id,sp:s.sp,nd,st:stage,pfx:s.pfx,source:s.id,action,size:round(size),flopCallPct,flopBetPct,turnCallPct,

@@ -147,6 +147,17 @@ def promote(registry, extension):
         code = p["viewer_archive_code"]
         assert b["source_sha256"] == p["original_GTO_SHA256"]
         assert b["strict_full_street_combo_reachable"] == p["GTO_strict_combos"] > 0
+        if mid == "ln-opfr-t_model-19umlco":
+            historical = {"Jh9s4c":"88e20448d6f4c5636a063b3b3e78573f6bb14af4650c17b537de6b857671245e",
+                          "Ac8d3h":"827626b0c4f99471a63619af0a07c90bb4a46541043ab21565c88455337d5619",
+                          "As9d4c":"7b4b98e42a364b8188519976f0682bc7b973b468059896693fbe31b42fb6ffb5"}
+            assert rank == 68 and model["assumed_model_node_spr"] == 7.25
+            assert historical.get(b["flop"]) == b["source_sha256"]
+            assert (b["actual_pot_bb"],b["actual_effective_stack_bb"],b["actual_spr"],
+                    b["model_assumed_spr"],b["relative_spr_error_pct"],b["acting_seat"],
+                    b["actual_exact_action_line"]) == (13,94.25,7.25,7,3.571429,0,"x b50 c/")
+            b.update(historical_model_assumed_spr=7,historical_relative_spr_error_pct=3.571429,
+                     model_assumed_spr=7.25,relative_spr_error_pct=0)
         assert b["model_assumed_spr"] == model["assumed_model_node_spr"]
         assert abs(b["actual_spr"]/b["model_assumed_spr"] - 1) <= .05
         verify_case(code, p["viewer_sha256"], b["source_run_id"], model, b, "gto", b["source_sha256"], p["GTO_strict_combos"])
