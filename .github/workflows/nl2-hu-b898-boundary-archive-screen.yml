@@ -1,0 +1,60 @@
+name: B898 retain blocked boundaries and screen new rank29 candidates
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b898_archive_boundaries.py'
+      - 'tools/hu_b898_rank29_static_cohort.py'
+      - '.github/workflows/nl2-hu-b898-boundary-archive-screen.yml'
+permissions: {contents: read, actions: read}
+jobs:
+  archive-candidate:
+    permissions: {contents: write, actions: read, pull-requests: read}
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 2, persist-credentials: false}
+      - name: Authenticate completed receipts and preserve original artifact bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/hu_b898_archive_boundaries.py prepare "$RUNNER_TEMP/b898"
+      - name: Full independent registry and browser audit
+        run: |
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Create audited detached candidate without moving ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/hu_b898_archive_boundaries.py upload "$RUNNER_TEMP/b898"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B898-detached-boundary-archive
+          path: ${{ runner.temp }}/b898
+          if-no-files-found: error
+          retention-days: 90
+  static-highest-frequency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=3072
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Freeze untouched suit classes and evaluate legal static witnesses only
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b898_rank29_static_cohort.py "$RUNNER_TEMP/b898-static"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B898-rank29-static-cohort
+          path: ${{ runner.temp }}/b898-static
+          if-no-files-found: error
+          retention-days: 90
