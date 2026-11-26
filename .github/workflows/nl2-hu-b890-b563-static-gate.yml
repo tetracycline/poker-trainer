@@ -1,0 +1,40 @@
+name: B890 archived B563 static dual-price boundary inventory
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b890_b563_static_gate.py'
+      - '.github/workflows/nl2-hu-b890-b563-static-gate.yml'
+permissions: {contents: read, actions: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=3072
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Replay archived original source boundary and scan retained exact job identities
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45127617306" > "$RUNNER_TEMP/b563-receipt.json"
+          python -m py_compile tools/hu_b890_b563_static_gate.py
+          python tools/hu_b890_b563_static_gate.py "$RUNNER_TEMP/b890-a" "$RUNNER_TEMP/b563-receipt.json"
+          python tools/hu_b890_b563_static_gate.py "$RUNNER_TEMP/b890-b" "$RUNNER_TEMP/b563-receipt.json"
+          cmp "$RUNNER_TEMP/b890-a/report.json" "$RUNNER_TEMP/b890-b/report.json"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B890-B563-static-price-inventory
+          path: |
+            ${{ runner.temp }}/b890-a/report.json
+            ${{ runner.temp }}/b563-receipt.json
+          if-no-files-found: error
+          retention-days: 90

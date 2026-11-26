@@ -122,7 +122,9 @@ def main(stage,solver):
     assert plans["gto"]==plans["exp_oop"]
     g,e=proofs["gto"],proofs["exp_oop"]
     assert g["measured_partial_lock"] is None and e["measured_partial_lock"]
-    assert set(g["rows"])==set(e["rows"])=={FLOP+TURN+r for r in plans["gto"]["rivers"]}
+    assert set(g["rows"])==set(e["rows"]) and len(g["rows"])==8
+    assert {b[-2:] for b in g["rows"]}==set(plans["gto"]["rivers"])
+    assert all(len(b)==10 and len(cards(b))==5 and cards(b[:6])==cards(FLOP) and b[6:8]==TURN for b in g["rows"])
     rows=[]
     for board in sorted(g["rows"]):
         gr,er=g["rows"][board],e["rows"][board]
