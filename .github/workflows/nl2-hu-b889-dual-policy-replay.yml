@@ -16,7 +16,7 @@ jobs:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@v4
-        with: {persist-credentials: false, fetch-depth: 3}
+        with: {persist-credentials: false, fetch-depth: 12}
       - uses: actions/checkout@v4
         with:
           repository: tetracycline/poker-solver
@@ -30,6 +30,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # The archived replay verifies the B887 and B888 tree objects, not just HEAD.
+          for pinned in $(python -c 'import json; print(json.load(open("data/nl2_hu_b888_r158_raw_dedup.json"))["b887"]["head"], json.load(open("data/nl2_hu_b889_dual_policy_pins.json"))["head"])'); do
+            git cat-file -e "$pinned^{commit}" || git fetch --no-tags --depth=1 origin "$pinned"
+            git cat-file -e "$pinned^{commit}"
+          done
           python -m pip install -q numpy phevaluator==0.5.3.1
           python -m py_compile tools/hu_b889_dual_policy_replay.py
           python tools/hu_b889_dual_policy_replay.py "$RUNNER_TEMP/b889" pinned-solver

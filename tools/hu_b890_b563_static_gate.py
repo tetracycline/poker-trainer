@@ -102,12 +102,13 @@ def main(out,receipt_path):
     for mode,digest in PINS.items():
         p=D/"solver_evidence"/("NL2_"+code_for(mode)+".zip")
         assert sha(p.read_bytes())==digest
-    routes=[r for r in json.loads(subprocess.check_output(["node","tools/hu_b874_tail_routes.cjs"])) if r["rank"] in SIZES]
+    routes=[r for r in json.loads(subprocess.check_output(["node","tools/hu_b881_tail_price_routes.cjs"])) if r["rank"] in SIZES]
     assert [r["rank"] for r in routes]==[157,158]
     priority={r["rank"]:r for r in load(D/"nl2_hu_b838_234_approx_frequency_priority.json")["rows"]}
     for r in routes:
         assert priority[r["rank"]]["model_id"]==r["id"] and r["id"] in approx and weights[r["id"]]>=.002
         assert r["profile"]=="UTG_CO" and r["root"]["pot"]==6.5 and r["root"]["stack"]==97.5
+        assert r["turn_facts"] is not None and r["turn_facts"]["root"]==r["root"]
         assert (r["turn_facts"]["pot"],r["turn_facts"]["stack"])==(13,94.25)
         paid,token=SIZES[r["rank"]]
         assert (r["pot"],r["stack"])==((1300+2*paid)/100,(9425-paid)/100)
