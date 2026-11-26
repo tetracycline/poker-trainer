@@ -1,0 +1,33 @@
+name: B883 stage exact UTG half-pot call and three descendants without changing live CERT metadata
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b883_utg_price_candidate.cjs'
+      - '.github/workflows/nl2-hu-b883-utg-price-candidate.yml'
+permissions: {contents: read}
+jobs:
+  staged-price:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Reproduce candidate twice and verify all 392 rendered nodes and original CERT records
+        run: |
+          set -euo pipefail
+          node --check tools/hu_b883_utg_price_candidate.cjs
+          node tools/hu_b883_utg_price_candidate.cjs "$RUNNER_TEMP/b883"
+          node tools/hu_b883_utg_price_candidate.cjs "$RUNNER_TEMP/b883-replay"
+          diff -r "$RUNNER_TEMP/b883" "$RUNNER_TEMP/b883-replay"
+          node --check "$RUNNER_TEMP/b883/nl2_hu_model.candidate.js"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js nl2_cert_registry.js
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: B883-staged-UTG-price-candidate
+          path: ${{ runner.temp }}/b883
+          if-no-files-found: error
+          retention-days: 90
