@@ -1,0 +1,86 @@
+name: B888 rank158 exact one-third turn from archived dual UTG roots
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b888_r158_exact_third.py'
+      - '.github/workflows/nl2-hu-b888-r158-exact-third.yml'
+      - 'data/nl2_hu_b888_r158_raw_dedup.json'
+permissions: {contents: read, actions: read}
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        mode: [gto, exp_oop]
+    env:
+      MODE: ${{ matrix.mode }}
+      NODE_OPTIONS: --max-old-space-size=3072
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false, fetch-depth: 2}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Authenticate completed B887 and original B538 raw source receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          mkdir -p "$RUNNER_TEMP/b888-input"
+          data=data/nl2_hu_b888_r158_raw_dedup.json
+          for run in 45805419617 45805419538 45119866932; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" > "$RUNNER_TEMP/b888-input/run-$run.json"
+            jq -e '.status=="completed" and .conclusion=="success" and .head_branch=="fix/nl2-hu-lines-audit-20261118"' "$RUNNER_TEMP/b888-input/run-$run.json"
+          done
+          jq -e --arg h "$(jq -r .b887.head "$data")" '.head_sha==$h' "$RUNNER_TEMP/b888-input/run-45805419617.json"
+          jq -e --arg h "$(jq -r .b887.head "$data")" '.head_sha==$h' "$RUNNER_TEMP/b888-input/run-45805419538.json"
+          jq -e --arg h "$(jq -r .source_head "$data")" '.head_sha==$h' "$RUNNER_TEMP/b888-input/run-45119866932.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15109405815/zip" > "$RUNNER_TEMP/b888-input/b887.zip"
+          echo "$(jq -r .b887.sha256 "$data")  $RUNNER_TEMP/b888-input/b887.zip" | sha256sum -c -
+          for v in gto exp_oop; do
+            id=$(jq -r --arg v "$v" '.sources[]|select(.version==$v)|.artifact' "$data")
+            n=$(jq -r --arg v "$v" '.sources[]|select(.version==$v)|.name' "$data")
+            digest=$(jq -r --arg v "$v" '.sources[]|select(.version==$v)|.sha256' "$data")
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$RUNNER_TEMP/b888-input/$id.json"
+            jq -e --arg n "$n" --arg d "sha256:$digest" '.name==$n and .digest==$d and .expired==false and .workflow_run.id==45119866932 and .workflow_run.head_sha=="44f2b5752f3cf865227c409170499365c944e166"' "$RUNNER_TEMP/b888-input/$id.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/b888-input/$n.zip"
+            echo "$digest  $RUNNER_TEMP/b888-input/$n.zip" | sha256sum -c -
+          done
+          python -m py_compile tools/hu_b888_r158_exact_third.py
+          python tools/hu_b888_r158_exact_third.py --mode "$MODE" --input "$RUNNER_TEMP/b888-input" --solver pinned-solver --output "$RUNNER_TEMP/b888-preflight" --preflight
+      - name: Build pinned native driver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve only new exact-price conditional subgame and replay without solver
+        run: |
+          set -euo pipefail
+          args=(--mode "$MODE" --input "$RUNNER_TEMP/b888-input" --solver pinned-solver --output "$RUNNER_TEMP/b888-source")
+          python tools/hu_b888_r158_exact_third.py "${args[@]}" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          python tools/hu_b888_r158_exact_third.py "${args[@]}"
+          cp "$RUNNER_TEMP/b888-input"/run-*.json "$RUNNER_TEMP/b888-input"/147*.json "$RUNNER_TEMP/b888-source/"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B888-R158-Ac8d3h-Qc-${{ matrix.mode }}
+          path: |
+            ${{ runner.temp }}/b888-source
+            ${{ runner.temp }}/b888-input/run-*.json
+            ${{ runner.temp }}/b888-input/147*.json
+          if-no-files-found: warn
+          retention-days: 90

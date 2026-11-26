@@ -1,0 +1,85 @@
+{
+  "schema": "NL2_B888_R158_RAW_DEDUP_RECEIPT_V1",
+  "b887": {
+    "head": "0a3d8169655132eab1585e30c3681fbc820fafc0",
+    "run": 45805419617,
+    "artifact": 15109405815,
+    "sha256": "059899866b1b5814a875f6ad3d886856d5cef84377c75d806fbf9fab8c78211d",
+    "full_audit_run": 45805419538
+  },
+  "rank": 158,
+  "model": "ln-opfr-r_model-tl6ij8",
+  "frequency_pct": 0.202705,
+  "flop": "Ac8d3h",
+  "turn": "Qc",
+  "target_turn_size": "33.333333%",
+  "target_turn_paid_cents": 433,
+  "target_river_pot_cents": 2166,
+  "target_river_stack_cents": 8992,
+  "source_run": 45119866932,
+  "source_head": "44f2b5752f3cf865227c409170499365c944e166",
+  "sources": [
+    {
+      "version": "gto",
+      "artifact": 14793708366,
+      "name": "NL2-B538-Ac8d3h-gto",
+      "sha256": "f2ed6bb2438d3b7c4fb84d6e3195a5798504e3e0e6f0228ba2518c918f75f1ae",
+      "root_job": "fc7423f21caf5f85ebaeb74441954112ac7e4bc5e3c44e0afb4d4190bf947728",
+      "root_result": "0290c9b01b2727f7dd564632fdc99fdacc6d5cd0dfa89258fc30f5ba30cce634",
+      "turn_jobs": {
+        "2c": [
+          "bbd58d1b73d02fad164261996a245c134c08be59446b8a7c7a22986dc4f88c95",
+          "c58b4e95188d9fce9dd0c637820d223d611bddbd3129da595db8e6dc737f8be5"
+        ],
+        "6h": [
+          "cdf3710a8f03dbf3bde12689f6207975557052cbf84d84f41c8ca96c17490438",
+          "f6310c23f9bbf6300cb08196e3d3974318087651ce5d310b7e17be1a0a15fcfe"
+        ],
+        "Qc": [
+          "8539365db38251ead6760db393e2d538d266e543f35f4048e4258106f5d7a9b1",
+          "827626b0c4f99471a63619af0a07c90bb4a46541043ab21565c88455337d5619"
+        ]
+      }
+    },
+    {
+      "version": "exp_oop",
+      "artifact": 14793159254,
+      "name": "NL2-B538-Ac8d3h-exp_oop",
+      "sha256": "400b10c2f45130e018fd93f0eb6e8341189525086ce981b88fcdfce22da3eb87",
+      "root_job": "ff3a3569270abd4b0cfa9025e8605b5923929d808c95574bd8256be3e2cf0cf2",
+      "root_result": "956216879cfc21ad3b776d94d93f6b15592189c038b2468e726bea3fd0522d8e",
+      "turn_jobs": {
+        "2c": [
+          "42b4b35c0fcb2c895205c469590f5fed0a2fde07068402a694cbf2226227d892",
+          "9af6ea04949d25834e04fd8ddb7f43336ca71404c3ce572c39db2df4896c0555"
+        ],
+        "6h": [
+          "7f51d01ca03f66ea2682ab8b917ac2d70b4cd4bc48023ff2ac27cfc654386494",
+          "2fd30ddaf3d9df16d33bb2a6dcf343db026aaafe3fe3f4be02361961cd2de9a5"
+        ],
+        "Qc": [
+          "5e2e3b3982800418567f4a3b08a02d69929e50cc293aeed9e071a5e9a477f74a",
+          "c864cd51577f53c4802f8597d2f0715f58402f2960a5c3008a1561e710754088"
+        ]
+      }
+    }
+  ],
+  "historical_raw_leads": [
+    "data/solver_evidence/NL2_B538_AC8D3H_QC_45119866932.json.gz",
+    "data/solver_evidence/NL2_MULTIBOARD_B563_R68_AC8D3H_QC.json.gz",
+    "data/solver_evidence/NL2_MULTIBOARD_REVERIFIED_R68_45119866932_Ac8d3h.json.gz"
+  ],
+  "historical_code_leads": [
+    ".github/workflows/nl2-hu-b538-utg-check-calls.yml",
+    "tools/hu_apply_cert_extensions.py",
+    "tools/hu_b538_utg_check_calls.py",
+    "tools/hu_b563_rank68_turn.py",
+    "tools/hu_b880_utg_archived_boundary.py",
+    "tools/hu_b881_utg_price_boundary.py",
+    "tools/hu_b885_utg_integrated_candidate.py"
+  ],
+  "scope": "Raw original B538 ZIP digests and all eight Ac8d3h job/result SHA256 pairs independently checked. B563 replays these roots; its sole fresh flop is As9d4c. Prior named viewer blobs are aliases, not new native work. B888 requires additional tracked-archive duplicate gate before dispatch; no claim of exhaustive expired external artifact inventory.",
+  "new_turn_menu": "33.333333%,50%,100%",
+  "river_selection": "Top 8 B887 static pair counts, tie by deck order; frozen before solving; distinct rivers never counted as distinct flops",
+  "CERT_promotions": 0
+}
