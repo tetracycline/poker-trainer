@@ -1,0 +1,40 @@
+name: B880 screen archived UTG dual roots for new priced rank157 and rank158 continuations
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b880-utg-archived-boundary.yml'
+      - 'tools/hu_b880_utg_archived_boundary.py'
+permissions: {contents: read, actions: read}
+jobs:
+  archive-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify completed B538 receipt and independently replay both archived root policies
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          gh api repos/tetracycline/poker-trainer/actions/runs/45119866932 > "$RUNNER_TEMP/b538-run.json"
+          python -m py_compile tools/hu_b880_utg_archived_boundary.py
+          python tools/hu_b880_utg_archived_boundary.py "$RUNNER_TEMP/b880" "$RUNNER_TEMP/b538-run.json"
+          python tools/hu_b880_utg_archived_boundary.py "$RUNNER_TEMP/b880-replay" "$RUNNER_TEMP/b538-run.json"
+          cmp "$RUNNER_TEMP/b880/report.json" "$RUNNER_TEMP/b880-replay/report.json"
+          cp "$RUNNER_TEMP/b538-run.json" "$RUNNER_TEMP/b880/"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B880-UTG-archived-dual-root-preflight
+          path: ${{ runner.temp }}/b880
+          if-no-files-found: warn
+          retention-days: 90
