@@ -1,0 +1,40 @@
+name: B886 replay accepted B885 price candidate and prepare detached commit
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b886_detached_price_candidate.py'
+      - '.github/workflows/nl2-hu-b886-detached-price.yml'
+permissions:
+  contents: write
+  actions: read
+  pull-requests: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Check B885 source zip and apply exactly audited patch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/hu_b886_detached_price_candidate.py prepare "$RUNNER_TEMP/b886"
+      - name: Independent browser and full registry audit
+        run: |
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Upload git objects without updating any ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/hu_b886_detached_price_candidate.py upload "$RUNNER_TEMP/b886"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B886-detached-price-candidate
+          path: ${{ runner.temp }}/b886
+          if-no-files-found: error
+          retention-days: 90
