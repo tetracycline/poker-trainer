@@ -1,0 +1,75 @@
+name: B893 rank158 exact one-third continuation from archived B563 dual roots
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b893_r158_b563_exact_third.py'
+      - '.github/workflows/nl2-hu-b893-r158-b563.yml'
+      - 'data/nl2_hu_b893_r158_b563_dispatch.json'
+permissions: {contents: read, actions: read}
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        mode: [gto, exp_oop]
+    env:
+      MODE: ${{ matrix.mode }}
+      NODE_OPTIONS: --max-old-space-size=3072
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Authenticate completed sources and fail closed on retained duplicate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          mkdir -p "$RUNNER_TEMP/b893-input"
+          for run in 45833752230 45833752310 45833752301 45834355813 45834355794 45127617306; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" > "$RUNNER_TEMP/b893-input/run-$run.json"
+            jq -e '.status=="completed" and .conclusion=="success" and .head_branch=="fix/nl2-hu-lines-audit-20261118"' "$RUNNER_TEMP/b893-input/run-$run.json"
+          done
+          cp "$RUNNER_TEMP/b893-input/run-45833752230.json" "$RUNNER_TEMP/b893-input/b890-receipt.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15125015449" > "$RUNNER_TEMP/b893-input/artifact.json"
+          jq -e '.name=="B890-B563-static-price-inventory" and .digest=="sha256:c5cf666d392fa0b33d5a7f2c0e6beb0e331e2d025460ea34db08c6466e562fa6" and .expired==false and .workflow_run.id==45833752230 and .workflow_run.head_sha=="0e9ff66cbcb33e43bf9496427ec7717675ce5869"' "$RUNNER_TEMP/b893-input/artifact.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15125015449/zip" > "$RUNNER_TEMP/b893-input/b890.zip"
+          echo "c5cf666d392fa0b33d5a7f2c0e6beb0e331e2d025460ea34db08c6466e562fa6  $RUNNER_TEMP/b893-input/b890.zip" | sha256sum -c -
+          python -m py_compile tools/hu_b893_r158_b563_exact_third.py
+          python tools/hu_b893_r158_b563_exact_third.py --mode "$MODE" --input "$RUNNER_TEMP/b893-input" --solver pinned-solver --output "$RUNNER_TEMP/b893-preflight" --preflight
+      - name: Build pinned native driver
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve only new conditional turn menu and replay raw result without solver
+        run: |
+          set -euo pipefail
+          args=(--mode "$MODE" --input "$RUNNER_TEMP/b893-input" --solver pinned-solver --output "$RUNNER_TEMP/b893-source")
+          python tools/hu_b893_r158_b563_exact_third.py "${args[@]}" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          python tools/hu_b893_r158_b563_exact_third.py "${args[@]}"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B893-R158-As9d4c-Jc-${{ matrix.mode }}
+          path: |
+            ${{ runner.temp }}/b893-source
+            ${{ runner.temp }}/b893-input/run-*.json
+            ${{ runner.temp }}/b893-input/artifact.json
+          if-no-files-found: warn
+          retention-days: 90
