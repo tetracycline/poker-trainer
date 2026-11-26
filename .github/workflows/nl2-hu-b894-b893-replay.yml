@@ -1,0 +1,70 @@
+name: B894 completed B893 native source replay and independent deal intersection
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b894_b893_raw_witness.py'
+      - 'data/nl2_hu_b894_b893_replay_pins.json'
+      - '.github/workflows/nl2-hu-b894-b893-replay.yml'
+permissions: {contents: read, actions: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false, fetch-depth: 2}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate and replay original completed files without native driver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          out="$RUNNER_TEMP/b894"
+          mkdir -p "$out/input"
+          for run in 45843986179 45843986029; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" > "$out/run-$run.json"
+            jq -e '.status=="completed" and .conclusion=="success" and .head_sha=="be434c0e0a9b63906823060b09f5987190b007f5" and .head_branch=="fix/nl2-hu-lines-audit-20261118"' "$out/run-$run.json"
+          done
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45833752230" > "$out/input/b890-receipt.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15125015449/zip" > "$out/input/b890.zip"
+          echo "c5cf666d392fa0b33d5a7f2c0e6beb0e331e2d025460ea34db08c6466e562fa6  $out/input/b890.zip" | sha256sum -c -
+          for mode in gto exp_oop; do
+            id=$(jq -r ".artifacts.$mode.id" data/nl2_hu_b894_b893_replay_pins.json)
+            digest=$(jq -r ".artifacts.$mode.sha256" data/nl2_hu_b894_b893_replay_pins.json)
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$out/$mode-metadata.json"
+            jq -e --arg digest "sha256:$digest" --arg name "B893-R158-As9d4c-Jc-$mode" '.digest==$digest and .name==$name and .expired==false and .workflow_run.id==45843986179 and .workflow_run.head_sha=="be434c0e0a9b63906823060b09f5987190b007f5"' "$out/$mode-metadata.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$out/$mode.zip"
+            echo "$digest  $out/$mode.zip" | sha256sum -c -
+            unzip -q "$out/$mode.zip" -d "$out/$mode"
+          done
+          git worktree add --detach "$RUNNER_TEMP/b893-original" be434c0e0a9b63906823060b09f5987190b007f5
+          for mode in gto exp_oop; do
+            (cd "$RUNNER_TEMP/b893-original"; PYTHONHASHSEED=23 python tools/hu_b893_r158_b563_exact_third.py --mode "$mode" --input "$out/input" --solver "$GITHUB_WORKSPACE/pinned-solver" --output "$out/$mode/b893-source")
+            (cd "$RUNNER_TEMP/b893-original"; PYTHONHASHSEED=867 python tools/hu_b893_r158_b563_exact_third.py --mode "$mode" --input "$out/input" --solver "$GITHUB_WORKSPACE/pinned-solver" --output "$out/$mode/b893-source")
+          done
+          for seed in 23 867; do
+            PYTHONHASHSEED=$seed python tools/hu_b894_b893_raw_witness.py "$out" > "$out/report-$seed.json"
+          done
+          cmp "$out/report-23.json" "$out/report-867.json"
+          jq '{rank,cert,approx,coverage_pct,rows:[.rows[]|{board,gto_pairs,nl2_pairs,shared_pairs,shared_hero_combos}]}' "$out/report-23.json"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B894-B893-raw-replay-and-archive-candidate
+          path: |
+            ${{ runner.temp }}/b894/report-23.json
+            ${{ runner.temp }}/b894/gto.zip
+            ${{ runner.temp }}/b894/exp_oop.zip
+            ${{ runner.temp }}/b894/*-metadata.json
+            ${{ runner.temp }}/b894/run-*.json
+          if-no-files-found: error
+          retention-days: 90
