@@ -1,0 +1,26 @@
+name: B885 stage atomic UTG price registry and browser reconciliation
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b885_utg_integrated_candidate.py'
+      - '.github/workflows/nl2-hu-b885-utg-integrated-candidate.yml'
+permissions: {contents: read}
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Build staged price fix and regenerate full registry in disposable checkout
+        run: python3 tools/hu_b885_utg_integrated_candidate.py "$RUNNER_TEMP/b885"
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: B885-atomic-price-candidate
+          path: ${{ runner.temp }}/b885
+          if-no-files-found: error
+          retention-days: 90

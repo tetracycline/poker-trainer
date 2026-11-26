@@ -1,0 +1,5 @@
+# B885 — atomic UTG price candidate, not live publication
+
+B883 verified four exact geometry changes and B884 archived its evidence. B885 stages the corrected model, explicit half-pot source route, Python registry builder and browser registry reconciler in a disposable checkout. The three rank68 original proofs remain immutable, and only their derived active model assumptions change from 7.0 to 7.25, preserving the historical assumption and error. The original proof SHA, actor, exact line and original price are pinned. No new native work, no new lock evidence, no certification change.
+
+The candidate must regenerate the current registry and manifest, crosswalk and references; preserve all other 388 records and all certification counts and source pins; verify browser/runtime parity and full batch audit; and recompute the modeled opportunity coverage. The job has read-only permissions and publishes only the checked candidate diff and receipts. A failed candidate must not be applied. Future publication requires inspection and a fresh expected-head lease. B838 remains historical and is verified before changing the candidate registry.
