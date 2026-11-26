@@ -1,0 +1,67 @@
+name: B901 preserve rank57 sources and screen saved rank75 root
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b901_rank57_archive_rank75_screen.py'
+      - '.github/workflows/nl2-hu-b901-rank57-archive-rank75-screen.yml'
+permissions: {contents: read, actions: read, pull-requests: read}
+jobs:
+  archive-rank57:
+    permissions: {contents: write, actions: read, pull-requests: read}
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 2, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate completed B900 diagnostic and all four raw source archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b901_rank57_archive_rank75_screen.py archive "$RUNNER_TEMP/b901"
+      - name: Full independent registry and browser audit
+        run: |
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Create audited detached candidate only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/hu_b901_rank57_archive_rank75_screen.py upload "$RUNNER_TEMP/b901"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B901-detached-rank57-archive
+          path: ${{ runner.temp }}/b901
+          if-no-files-found: error
+          retention-days: 90
+  rank75-saved-root-screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      NODE_OPTIONS: --max-old-space-size=3072
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 2, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Reconstruct existing source boundary masks and screen untested turns only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b901_rank57_archive_rank75_screen.py screen "$RUNNER_TEMP/b901-r75"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B901-rank75-saved-root-screen
+          path: ${{ runner.temp }}/b901-r75
+          if-no-files-found: error
+          retention-days: 90
