@@ -1,0 +1,49 @@
+name: B896 archived Jh9s4c unused exact-price boundaries
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b896_jh9_unused_boundaries.py'
+      - '.github/workflows/nl2-hu-b896-jh9-boundaries.yml'
+permissions: {contents: read, actions: read}
+jobs:
+  authenticated-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_OPTIONS: --max-old-space-size=3072
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate original completed artifacts; never invoke native driver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          mkdir -p "$RUNNER_TEMP/b896-input"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45119866932" > "$RUNNER_TEMP/b896-input/run.json"
+          for spec in gto:14793064321 exp_oop:14793179237; do
+            mode="${spec%%:*}"; id="${spec##*:}"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" > "$RUNNER_TEMP/b896-input/$mode.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/b896-input/$mode.zip"
+          done
+          python -m py_compile tools/hu_b896_jh9_unused_boundaries.py
+          python tools/hu_b896_jh9_unused_boundaries.py "$RUNNER_TEMP/b896-input" "$RUNNER_TEMP/b896-a"
+          python tools/hu_b896_jh9_unused_boundaries.py "$RUNNER_TEMP/b896-input" "$RUNNER_TEMP/b896-b"
+          cmp "$RUNNER_TEMP/b896-a/report.json" "$RUNNER_TEMP/b896-b/report.json"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B896-Jh9s4c-unused-boundaries
+          path: |
+            ${{ runner.temp }}/b896-a/report.json
+            ${{ runner.temp }}/b896-b/report.json
+            ${{ runner.temp }}/b896-input/*.json
+            ${{ runner.temp }}/b896-input/*.zip
+          if-no-files-found: warn
+          retention-days: 90
