@@ -1,0 +1,38 @@
+name: B895 archive two accepted rank158 native evidence families
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b895_archive_r158.py'
+      - '.github/workflows/nl2-hu-b895-archive-r158.yml'
+permissions:
+  contents: write
+  actions: read
+  pull-requests: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 2, persist-credentials: false}
+      - name: Verify completed source receipts and retain original bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/hu_b895_archive_r158.py prepare "$RUNNER_TEMP/b895"
+      - name: Independent browser and full registry audit
+        run: |
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Create detached candidate without moving any ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/hu_b895_archive_r158.py upload "$RUNNER_TEMP/b895"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B895-detached-rank158-archive-candidate
+          path: ${{ runner.temp }}/b895
+          if-no-files-found: error
+          retention-days: 90
