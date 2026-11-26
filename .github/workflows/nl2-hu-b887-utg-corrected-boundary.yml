@@ -1,0 +1,44 @@
+name: B887 corrected UTG boundary and historical job dedup preflight
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b887_utg_corrected_boundary.py'
+      - '.github/workflows/nl2-hu-b887-utg-corrected-boundary.yml'
+permissions: {contents: read, actions: read}
+jobs:
+  corrected-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate historical completed B538 and replay corrected original prices
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          gh api repos/tetracycline/poker-trainer/actions/runs/45119866932 > "$RUNNER_TEMP/b538-run.json"
+          python -m py_compile tools/hu_b887_utg_corrected_boundary.py
+          python tools/hu_b887_utg_corrected_boundary.py "$RUNNER_TEMP/b887" "$RUNNER_TEMP/b538-run.json"
+          python tools/hu_b887_utg_corrected_boundary.py "$RUNNER_TEMP/b887-replay" "$RUNNER_TEMP/b538-run.json"
+          cmp "$RUNNER_TEMP/b887/report.json" "$RUNNER_TEMP/b887-replay/report.json"
+          cp "$RUNNER_TEMP/b538-run.json" "$RUNNER_TEMP/b887/"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - name: Full static, registry, model and route audit
+        run: |
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B887-corrected-UTG-boundary-dedup
+          path: ${{ runner.temp }}/b887
+          if-no-files-found: warn
+          retention-days: 90
