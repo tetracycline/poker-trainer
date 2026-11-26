@@ -1,0 +1,67 @@
+name: B879 isolate two cancelled rank114 original flop GTO roots
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - '.github/workflows/nl2-hu-b879-r114-roots.yml'
+      - 'tools/hu_b879_r114_root_checkpoint.py'
+permissions: {contents: read, actions: read}
+jobs:
+  original-root:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        flop: [Jh9d5c, Ts8d4c]
+    env:
+      FLOP: ${{ matrix.flop }}
+      RAYON_NUM_THREADS: 2
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Authenticate cancelled B876 original receipts and current actual route
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          mkdir -p "$RUNNER_TEMP/b879-receipts"
+          artifact=14600026283
+          gh api "repos/tetracycline/poker-trainer/actions/artifacts/$artifact" > "$RUNNER_TEMP/b879-receipts/$artifact.json"
+          gh api "repos/tetracycline/poker-trainer/actions/artifacts/$artifact/zip" > "$RUNNER_TEMP/b879-receipts/$artifact.zip"
+          python tools/hu_b879_r114_root_checkpoint.py --preflight --flop "$FLOP" --solver pinned-solver --receipts "$RUNNER_TEMP/b879-receipts" --output "$RUNNER_TEMP/preflight"
+      - name: Build frozen original GTO driver (no turn work)
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/b-inary/postflop-solver.git pinned-solver/postflop/postflop-solver
+          git -C pinned-solver/postflop/postflop-solver checkout -q 9d1509fe5077d019825f833eed04b16d342dfda1
+          (cd pinned-solver/postflop/pfdriver; RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked)
+      - name: Solve only one original root and verify exact byte-replay without solver rerun
+        run: |
+          set -euo pipefail
+          args=(--flop "$FLOP" --solver pinned-solver --receipts "$RUNNER_TEMP/b879-receipts" --output "$RUNNER_TEMP/b879-root")
+          python tools/hu_b879_r114_root_checkpoint.py "${args[@]}" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$RUNNER_TEMP/b879-root/proof.json" "$RUNNER_TEMP/original-proof.json"
+          python tools/hu_b879_r114_root_checkpoint.py "${args[@]}"
+          cmp "$RUNNER_TEMP/original-proof.json" "$RUNNER_TEMP/b879-root/proof.json"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B879-R114-root-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b879-root
+          if-no-files-found: warn
+          retention-days: 90
