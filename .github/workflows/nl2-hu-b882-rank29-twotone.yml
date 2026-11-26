@@ -1,0 +1,62 @@
+name: B882 rank29 frozen three original two-tone GTO and actor NL2 sources
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b882_rank29_new_twotone.py'
+      - '.github/workflows/nl2-hu-b882-rank29-twotone.yml'
+permissions: {contents: read}
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [Jd9d3c, Qh8h4s, KcTc6h]
+    env:
+      FLOP: ${{ matrix.flop }}
+      RAYON_NUM_THREADS: 2
+      NODE_OPTIONS: --max-old-space-size=1536
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: b-inary/postflop-solver
+          ref: 9d1509fe5077d019825f833eed04b16d342dfda1
+          path: pinned-solver/postflop/postflop-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Preflight distinct frozen rank29 textures, exact rendered sizes, original SHA and physical cards
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b882_rank29_new_twotone.py --preflight --solver pinned-solver --flop "$FLOP" --output "$RUNNER_TEMP/b882-preflight"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build pinned Rust postflop driver only after source preflight
+        working-directory: pinned-solver/postflop/pfdriver
+        run: RUSTFLAGS='-A dangerous_implicit_autorefs' CARGO_BUILD_JOBS=2 cargo build --release --locked
+      - name: Solve original GTO and authentic matched NL2 partial lock, independent file replay
+        run: |
+          set -euo pipefail
+          python tools/hu_b882_rank29_new_twotone.py --solver pinned-solver --flop "$FLOP" --output "$RUNNER_TEMP/b882-source" --driver pinned-solver/postflop/pfdriver/target/release/pfdriver
+          cp "$RUNNER_TEMP/b882-source/proof.json" "$RUNNER_TEMP/b882-original-proof.json"
+          python tools/hu_b882_rank29_new_twotone.py --solver pinned-solver --flop "$FLOP" --output "$RUNNER_TEMP/b882-source"
+          cmp "$RUNNER_TEMP/b882-original-proof.json" "$RUNNER_TEMP/b882-source/proof.json"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B882-R29-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b882-source
+          if-no-files-found: warn
+          retention-days: 90
