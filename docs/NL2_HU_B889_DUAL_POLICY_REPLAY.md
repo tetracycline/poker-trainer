@@ -1,0 +1,7 @@
+# B889 — independent acceptance gate for B888 rank158
+
+B888 native [45815112958](https://github.com/tetracycline/poker-trainer/actions/runs/45815112958) and [full audit 45815112802](https://github.com/tetracycline/poker-trainer/actions/runs/45815112802) both completed successfully at the pinned head. Both native jobs replayed successfully; GTO has 8/8 rendered-positive river nodes and NL2 has 1/8. This does **not** yet establish a common physical deal, and all eight rivers use the same flop. The native preflight examined 2,053 retained raw archives; expired external artifacts remain outside that dedup scope.
+
+B889 pins original ZIP/job IDs and digests, verifies completed run/audit metadata, checks original root and previous turn receipts, repeats the B888 replay without a driver twice per policy, and intersects identical physical hero AND villain hands at every exact river. Existing source proof and half-pot evidence are retained separately. A positive intersection can support review of at most one distinct flop, not eight certificates. A zero intersection is a tested boundary negative only. No native solve or registry edit; no formal promotion or formal lock/medium change. The authenticated raw ZIPs and report are staged for permanent archival only after this workflow and the full audit pass. Actual weighted model opportunity coverage is recomputed from all 392 frozen weights and the active registry; it is not unique-hand coverage.
+
+PR #2 stays open draft, no merge or force push. No polling. This batch does not dispatch further native work.
