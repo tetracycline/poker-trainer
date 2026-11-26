@@ -1,0 +1,38 @@
+name: B892 independent direct raw action witness
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b892_independent_raw_witness.py'
+      - 'data/nl2_hu_b892_r158_raw_witness_candidate.json'
+      - '.github/workflows/nl2-hu-b892-raw-witness.yml'
+permissions: {contents: read, actions: read}
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify pinned completed sources and byte replay, no native driver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/b892"
+          for id in 14793708366 14793159254 15114867243 15115576330; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/b892/github-actions-artifact-$id.zip"
+          done
+          for seed in 23 867; do
+            PYTHONHASHSEED=$seed python tools/hu_b892_independent_raw_witness.py "$RUNNER_TEMP/b892" > "$RUNNER_TEMP/b892/report-$seed.json"
+            cmp "$RUNNER_TEMP/b892/report-$seed.json" data/nl2_hu_b892_r158_raw_witness_candidate.json
+          done
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B892-independent-raw-witness
+          path: ${{ runner.temp }}/b892/report-23.json
+          if-no-files-found: error
+          retention-days: 90
