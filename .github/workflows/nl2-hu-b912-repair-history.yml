@@ -1,0 +1,41 @@
+name: B912 archive repaired source and exact duplicate history records
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['tools/hu_b912_repair_history.py', '.github/workflows/nl2-hu-b912-repair-history.yml']
+permissions: {contents: read, actions: read, pull-requests: read}
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    permissions: {contents: write, actions: read, pull-requests: read}
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 2, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate completed B911 repair and triage artifacts and B904 duplicates
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b912_repair_history.py prepare "$RUNNER_TEMP/b912"
+      - name: Full static model route and exact board audit
+        run: |
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Create detached archive candidate only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/hu_b912_repair_history.py publish "$RUNNER_TEMP/b912"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B912-detached-archive
+          path: ${{ runner.temp }}/b912
+          if-no-files-found: warn
+          retention-days: 90
