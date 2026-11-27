@@ -1,0 +1,78 @@
+name: B905 archive B904 and freeze rank92 saved root continuation jobs
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b905_bb_archive_plan.py'
+      - '.github/workflows/nl2-hu-b905-bb-archive-plan.yml'
+permissions: {contents: read, actions: read, pull-requests: read}
+jobs:
+  archive:
+    permissions: {contents: write, actions: read, pull-requests: read}
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 2, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate and independently replay B904 screens
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b905_bb_archive_plan.py prepare "$RUNNER_TEMP/b905"
+      - name: Full independent audit before candidate
+        run: |
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Create detached archive candidate only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/hu_b905_bb_archive_plan.py upload "$RUNNER_TEMP/b905"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B905-detached-B904-archive
+          path: ${{ runner.temp }}/b905
+          if-no-files-found: error
+          retention-days: 90
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [9d7h4c, 7h6h2c, 8h7h3c]
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Reproduce original job bytes and inventory historical dispatches before new native work
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b905_bb_archive_plan.py plan "$RUNNER_TEMP/b905-plan" pinned-solver "$FLOP"
+          git diff --exit-code
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B905-rank92-plan-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b905-plan
+          if-no-files-found: error
+          retention-days: 90
