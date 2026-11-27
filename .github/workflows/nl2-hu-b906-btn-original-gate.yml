@@ -1,0 +1,96 @@
+name: B906 B905 receipt recovery and preserved BTN prior route gates
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b906_btn_original_gate.py'
+      - '.github/workflows/nl2-hu-b906-btn-original-gate.yml'
+permissions: {contents: read, actions: read, pull-requests: read}
+jobs:
+  recover:
+    permissions: {contents: write, actions: read, pull-requests: read}
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 2, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Read completed B905 sources once and verify candidate bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b906_btn_original_gate.py recover "$RUNNER_TEMP/b906-recovery"
+      - name: Full static model route and exact board audit
+        run: |
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Reanchor authenticated archive only as detached candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/hu_b906_btn_original_gate.py reanchor "$RUNNER_TEMP/b906-recovery"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B906-B905-recovery
+          path: ${{ runner.temp }}/b906-recovery
+          if-no-files-found: warn
+          retention-days: 90
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [7d5c4c, 5h4h3s, 8h7h5c]
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate both preserved policies and screen fixed turns
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b906_btn_original_gate.py screen "$RUNNER_TEMP/b906-screen" pinned-solver "$FLOP"
+          git diff --exit-code
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B906-BTN-screen-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b906-screen/report.json
+          if-no-files-found: error
+          retention-days: 90
+  receipt:
+    needs: [recover, screen]
+    if: always()
+    permissions: {actions: read, pull-requests: write, contents: read}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Record run identifier on authorized PR for source retrieval (no ref change)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECOVER: ${{ needs.recover.result }}
+          SCREEN: ${{ needs.screen.result }}
+        run: |
+          set -euo pipefail
+          state=$(gh api repos/tetracycline/poker-trainer/pulls/2 --jq '[.state,.draft,.merged,.head.ref,.head.repo.full_name]|@tsv')
+          test "$state" = "$(printf 'open\ttrue\tfalse\tfix/nl2-hu-lines-audit-20261118\ttetracycline/poker-trainer')"
+          gh api repos/tetracycline/poker-trainer/issues/2/comments -f body="B906 source receipt: head $GITHUB_SHA; run $GITHUB_RUN_ID; recovery=$RECOVER; screen=$SCREEN. No certification or ref update. Read source artifacts before use."
