@@ -1,0 +1,101 @@
+name: B907 repair failed read-only gates and archive accepted receipts
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b907_readonly_gate.py'
+      - '.github/workflows/nl2-hu-b907-readonly-gate.yml'
+permissions: {contents: read, actions: read, pull-requests: read}
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {kind: bb, flop: 7h6h2c}
+          - {kind: bb, flop: 9d7h4c}
+          - {kind: btn, flop: 5h4h3s}
+          - {kind: btn, flop: 8h7h5c}
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Repair only previously failed non-native readers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KIND: ${{ matrix.kind }}
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b907_readonly_gate.py "$KIND" "$RUNNER_TEMP/b907-gate" pinned-solver "$FLOP"
+          git diff --exit-code
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B907-${{ matrix.kind }}-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b907-gate
+          if-no-files-found: error
+          retention-days: 90
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    permissions: {contents: write, actions: read, pull-requests: read}
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 2, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate individual successful receipts and original ZIP hashes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b907_readonly_gate.py prepare "$RUNNER_TEMP/b907-archive"
+      - name: Full static model route and exact board audit
+        run: |
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Create detached archive candidate only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/hu_b907_readonly_gate.py publish "$RUNNER_TEMP/b907-archive"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B907-detached-archive
+          path: ${{ runner.temp }}/b907-archive
+          if-no-files-found: warn
+          retention-days: 90
+  receipt:
+    needs: [repair, archive]
+    if: always()
+    permissions: {actions: read, pull-requests: write, contents: read}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Record source run once (no ref mutation)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPAIR: ${{ needs.repair.result }}
+          ARCHIVE: ${{ needs.archive.result }}
+        run: |
+          set -euo pipefail
+          state=$(gh api repos/tetracycline/poker-trainer/pulls/2 --jq '[.state,.draft,.merged,.head.ref,.head.repo.full_name]|@tsv')
+          test "$state" = "$(printf 'open\ttrue\tfalse\tfix/nl2-hu-lines-audit-20261118\ttetracycline/poker-trainer')"
+          gh api repos/tetracycline/poker-trainer/issues/2/comments -f body="B907 source receipt: head $GITHUB_SHA; run $GITHUB_RUN_ID; repair=$REPAIR; archive=$ARCHIVE. No certification or ref update. Read source artifacts before use."
