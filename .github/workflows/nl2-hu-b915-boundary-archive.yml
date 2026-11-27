@@ -1,0 +1,66 @@
+name: B915 archive B914 and inspect remaining historical job inventory
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['tools/hu_b915_boundary_archive.py', '.github/workflows/nl2-hu-b915-boundary-archive.yml']
+permissions: {contents: read, actions: read, pull-requests: read}
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    permissions: {contents: write, actions: read, pull-requests: read}
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 2, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify source ZIP digests and all held-out reports
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b915_boundary_archive.py prepare "$RUNNER_TEMP/b915"
+      - name: Full static model route and exact named-board audit
+        run: |
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Create detached archive candidate only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/hu_b915_boundary_archive.py publish "$RUNNER_TEMP/b915"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B915-detached-archive
+          path: ${{ runner.temp }}/b915
+          if-no-files-found: warn
+          retention-days: 90
+  history-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Read complete historical source listings and actual job geometries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b915_boundary_archive.py inventory "$RUNNER_TEMP/b915-history"
+          git diff --exit-code
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B915-history-inventory
+          path: ${{ runner.temp }}/b915-history
+          if-no-files-found: warn
+          retention-days: 90
