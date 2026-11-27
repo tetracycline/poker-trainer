@@ -5,7 +5,7 @@ import base64, hashlib, io, json, os, sys, zipfile
 from pathlib import Path
 from hu_b886_detached_price_candidate import api, git, sha, REPO, BRANCH
 from hu_b895_archive_r158 import coverage
-BASE="35678c11e98c8389b7652b55e64ced842d8a1e93"
+BASE="79673c29773bb3bb8a300ec0d78315f8b29e7971"
 SOURCE="499b8c38545d911e2fa437c515fcffa4d8009cae"
 RUN=46028303360
 AUDIT=46028303252
@@ -58,21 +58,30 @@ def pin(head,path,expected):
     got=git("rev-parse",head+":"+path)
     assert got==expected,(head,path,got,expected)
     return dict(path=path,blob=got)
+def index_runs(inv):
+    # The persisted inventory schema stores an array, not a dict.
+    rows=inv["runs"]
+    assert isinstance(rows,list) and all(isinstance(x,dict) and isinstance(x.get("run"),int) for x in rows)
+    byid={x["run"]:x for x in rows}
+    assert len(byid)==len(rows)
+    assert {x["run"] for x in inv["remaining_input"] if x.get("run") is not None}==set(byid)
+    return byid
+
 def prepare(out):
     h=guard();cov=coverage();b,raw,p,inv,receipt=source_receipt()
     assert rank_signature("9d7h4c")==rank_signature("4s9c7d")
     assert rank_signature("9d7h4c")!=rank_signature("9d7h5c")
     target_signatures={rank_signature(x["candidate"]["flop"]) for x in p["targets"].values()}
     assert len(target_signatures)==3
-    byid={x["run"]:x for x in inv["runs"].values()}
+    byid=index_runs(inv)
     closed=[];remaining=[];groups={}
     for item in p["remaining"]:
         rid=item.get("run")
         if rid is None:
             remaining.append(item);continue
         row=byid[rid]
-        groups.setdefault(row["workflow_blob"],dict(path=row["workflow"],runs=[]))["runs"].append(rid)
         if rid not in STATIC and rid not in MATRICES:
+            groups.setdefault(row["workflow_blob"],dict(path=row["workflow"],runs=[]))["runs"].append(rid)
             remaining.append(item);continue
         head=row["head"]
         run=api("/actions/runs/"+str(rid))
@@ -104,6 +113,7 @@ def prepare(out):
             original_artifacts=[inv["artifact_metadata"][str(a)] for a in row["artifacts"]],job_ids=[j["id"] for j in row["jobs"]]))
     assert len(closed)==7 and {x["run"] for x in closed}==STATIC|set(MATRICES)
     assert len(closed)+len(remaining)==68 and len(remaining)==61
+    assert sorted(r for g in groups.values() for r in g["runs"])==sorted(x["run"] for x in remaining if x.get("run") is not None)
     assert not PREFIX.exists();PREFIX.mkdir(parents=True)
     out.mkdir(parents=True,exist_ok=False)
     (PREFIX/"b917-legacy.zip").write_bytes(b);(PREFIX/"b917-legacy.json").write_bytes(raw)
@@ -130,7 +140,7 @@ def publish(out):
         assert actual==expected
         entries.append(dict(path=path,mode="100644",type="blob",sha=actual))
     tree=api("/git/trees",dict(base_tree=api("/git/commits/"+h)["tree"]["sha"],tree=entries))["sha"]
-    c=api("/git/commits",dict(message="B918 archive audited legacy identities and pinned disjoint run scopes; zero promotions",tree=tree,parents=[h]))
+    c=api("/git/commits",dict(message="B919 archive B917 legacy identities and pinned disjoint run scopes after B918 schema fix; zero promotions",tree=tree,parents=[h]))
     assert c["tree"]["sha"]==tree and [x["sha"] for x in c["parents"]]==[h]
     rec=dict(p,candidate_commit=c["sha"],candidate_tree=tree,expected_sha=h,ref_updated=False,candidate_only=True,full_audit_completed=True,blobs=entries)
     dump(out/"detached-candidate.json",rec);print(json.dumps(rec))

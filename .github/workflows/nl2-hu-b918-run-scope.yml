@@ -1,4 +1,4 @@
-name: B918 archive B917 and prove disjoint run scopes
+name: B919 repair B918 inventory schema and prove disjoint run scopes
 on:
   push:
     branches: [fix/nl2-hu-lines-audit-20261118]
@@ -23,6 +23,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install -q numpy phevaluator==0.5.3.1
+          PYTHONPATH=tools python -c 'from hu_b918_run_scope import index_runs,read,INV; assert len(index_runs(read(INV))) == 61'
           python tools/hu_b918_run_scope.py prepare "$RUNNER_TEMP/b918"
       - name: Full static model route and exact board audit
         run: |
@@ -35,6 +36,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: B918-audited-legacy-and-run-scope
+          name: B919-audited-legacy-and-run-scope
           path: ${{ runner.temp }}/b918
           retention-days: 90
