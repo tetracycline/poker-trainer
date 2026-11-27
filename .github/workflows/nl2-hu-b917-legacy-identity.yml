@@ -1,0 +1,64 @@
+name: B917 archive B916 and normalize legacy source identities
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['tools/hu_b917_legacy_identity.py', '.github/workflows/nl2-hu-b917-legacy-identity.yml']
+permissions: {contents: read, actions: read, pull-requests: read}
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    permissions: {contents: write, actions: read, pull-requests: read}
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 2, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify original B916 scan and receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b917_legacy_identity.py prepare "$RUNNER_TEMP/b917"
+      - name: Full static model route and exact named-board audit
+        run: |
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Create detached archive candidate only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/hu_b917_legacy_identity.py publish "$RUNNER_TEMP/b917"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B917-detached-archive
+          path: ${{ runner.temp }}/b917
+          retention-days: 90
+  legacy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 2, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Normalize explicitly unresolved legacy archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b917_legacy_identity.py classify "$RUNNER_TEMP/b917-legacy"
+          git diff --exit-code
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B917-legacy-identity
+          path: ${{ runner.temp }}/b917-legacy
+          retention-days: 90
