@@ -1,0 +1,352 @@
+{
+  "cert_promotions": 0,
+  "coverage": {
+    "approx": 234,
+    "cert": 158,
+    "coverage_pct": "84.700987",
+    "high_approx": 30
+  },
+  "flop": "7h6h2c",
+  "formal_lock_additions": 0,
+  "formal_nonpolarized_additions": 0,
+  "history": {
+    "candidate_observations": [
+      {
+        "candidate_turn": "3c",
+        "flop": "7h6h2c",
+        "job_sha256": "a4e27a37cbb5f3571207fbb5649aee1d12ed9b273097712a2c5fe18e17b37b1b",
+        "line0": [
+          "x",
+          "b50",
+          "c",
+          "/"
+        ],
+        "member": "3c-gto-job.json",
+        "native_result_present": false,
+        "pot": 1100,
+        "same_job_sha": true,
+        "same_target_geometry": true,
+        "source": "artifact:15175752660",
+        "stack": 9475,
+        "turn": "3c"
+      },
+      {
+        "candidate_turn": "4c",
+        "flop": "7h6h2c",
+        "job_sha256": "5e4f44f9d2f91e8425153efe018c64ecf38aad8b7b80025fd11226e36cb163f6",
+        "line0": [
+          "x",
+          "b50",
+          "c",
+          "/"
+        ],
+        "member": "4c-gto-job.json",
+        "native_result_present": false,
+        "pot": 1100,
+        "same_job_sha": true,
+        "same_target_geometry": true,
+        "source": "artifact:15175752660",
+        "stack": 9475,
+        "turn": "4c"
+      }
+    ],
+    "candidate_turns": {
+      "3c": {
+        "native_same_geometry_seen": false,
+        "same_job_native_seen": false
+      },
+      "4c": {
+        "native_same_geometry_seen": false,
+        "same_job_native_seen": false
+      }
+    },
+    "clearance": false,
+    "commits": [
+      {
+        "commit": "778afa98de3bab6eba25d763c112b453f18c0fc8",
+        "matching_patch_lines": [
+          "+          - {kind: bb, flop: 7h6h2c}",
+          "+        assert sys.argv[4] in (\"7h6h2c\",\"9d7h4c\")"
+        ],
+        "runs": [
+          {
+            "conclusion": "success",
+            "id": 45948668066,
+            "name": "B907 repair failed read-only gates and archive accepted receipts",
+            "path": ".github/workflows/nl2-hu-b907-readonly-gate.yml",
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "id": 45948668010,
+            "name": "NL2 full batch audit",
+            "path": ".github/workflows/nl2-hu-full-batch-audit.yml",
+            "status": "completed"
+          }
+        ],
+        "subject": "B907 repair failed read-only source gates and archive verified individual receipts"
+      },
+      {
+        "commit": "af5e067d61a1b2a1344aaa87fdd89545c30c3fff",
+        "matching_patch_lines": [
+          "+        flop: [9d7h4c, 7h6h2c, 8h7h3c]",
+          "+\"7h6h2c\":(15168961837,\"9e7d5f308a0aca1c212e4ab89af3d476bc5e5f3db67be841c566c80c2f4a9f07\",140283778293,125,1,23,(16,15,7)),"
+        ],
+        "runs": [
+          {
+            "conclusion": "success",
+            "id": 45936923609,
+            "name": "NL2 full batch audit",
+            "path": ".github/workflows/nl2-hu-full-batch-audit.yml",
+            "status": "completed"
+          },
+          {
+            "conclusion": "failure",
+            "id": 45936923715,
+            "name": "B905 archive B904 and freeze rank92 saved root continuation jobs",
+            "path": ".github/workflows/nl2-hu-b905-bb-archive-plan.yml",
+            "status": "completed"
+          }
+        ],
+        "subject": "B905 archive B904 screens and freeze rank92 saved-root continuation jobs for historical review"
+      },
+      {
+        "commit": "dc4bf172fef6dc383859d614807a2bccc044cbb8",
+        "matching_patch_lines": [
+          "+        flop: [9d7h4c, 8s6d2c, 7c5d3h, 7h6h2c, 8h7h3c, 9h8h2c]",
+          "+ \"7h6h2c\":(\"B844\",\"790ef957e607ee6b5e78a770a58a1d98b4b15e5ce7d9a7acd918565be601b129\"),"
+        ],
+        "runs": [
+          {
+            "conclusion": "success",
+            "id": 45931138296,
+            "name": "B904 six saved CO BB roots untested turn screen",
+            "path": ".github/workflows/nl2-hu-b904-bb-saved-root-screen.yml",
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "id": 45931138200,
+            "name": "NL2 full batch audit",
+            "path": ".github/workflows/nl2-hu-full-batch-audit.yml",
+            "status": "completed"
+          }
+        ],
+        "subject": "B904 screen untested turn boundaries of six authenticated CO-BB roots without native reruns"
+      },
+      {
+        "commit": "da7915dbc0c176ffe7c7267e980b123bae3c6121",
+        "matching_patch_lines": [
+          "+ ('7h6h2c',138941981103,14987535334,'790ef957e607ee6b5e78a770a58a1d98b4b15e5ce7d9a7acd918565be601b129'),"
+        ],
+        "runs": [
+          {
+            "conclusion": "success",
+            "id": 45542907477,
+            "name": "B845 archive three receipt-pinned B844 sources",
+            "path": ".github/workflows/nl2-hu-b845-originals.yml",
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "id": 45542907393,
+            "name": "NL2 full batch audit",
+            "path": ".github/workflows/nl2-hu-full-batch-audit.yml",
+            "status": "completed"
+          }
+        ],
+        "subject": "B845 independently replay three completed B844 priority originals and audit archive candidate; no native rerun"
+      },
+      {
+        "commit": "3adcd4ccbf81e2f7946f7ddbb9ea88436ecd2a4f",
+        "matching_patch_lines": [
+          "+        flop: [9h8h2c, 8h7h3c, 7h6h2c]",
+          "+    \"7h6h2c\": [\"3d\", \"5s\", \"6s\"],",
+          "+    \"7h6h2c\": {92: (\"Td7d\", \"3d\", \"4c\"), 93: (\"Jd7d\", \"3d\", \"4c\"), 94: (\"Jd7d\", \"6s\", \"3c\")},"
+        ],
+        "runs": [
+          {
+            "conclusion": "success",
+            "id": 45535807868,
+            "name": "NL2 full batch audit",
+            "path": ".github/workflows/nl2-hu-full-batch-audit.yml",
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "id": 45535807925,
+            "name": "B844 solve three new two-tone CO-BB turn-lead river series for ranks92-94",
+            "path": ".github/workflows/nl2-hu-b844-co-bb-two-tone.yml",
+            "status": "completed"
+          }
+        ],
+        "subject": "B844 dispatch three unused two-tone CO-BB original sources for priority ranks 92-94"
+      }
+    ],
+    "limitations": "Source-level review of named ancestor dispatches and named archives, not global proof of absence from unnamed/expired sources; no new solve permitted.",
+    "sources": [
+      {
+        "candidate_matches": 0,
+        "id": 14987535334,
+        "name": "B844-CO-BB-7h6h2c",
+        "native_job_result_pairs": 4,
+        "sha256": "790ef957e607ee6b5e78a770a58a1d98b4b15e5ce7d9a7acd918565be601b129"
+      },
+      {
+        "candidate_matches": 0,
+        "id": 15168961837,
+        "name": "B904-CO-BB-screen-7h6h2c",
+        "native_job_result_pairs": 0,
+        "sha256": "9e7d5f308a0aca1c212e4ab89af3d476bc5e5f3db67be841c566c80c2f4a9f07"
+      },
+      {
+        "candidate_matches": 2,
+        "id": 15175752660,
+        "name": "B907-bb-7h6h2c",
+        "native_job_result_pairs": 0,
+        "sha256": "d1cf5121ecd07f9d2dfee20e4c4cce10ec1c594bafdd290ff7b1fbfe54134215"
+      },
+      {
+        "candidate_matches": 0,
+        "native_job_result_pairs": 4,
+        "path": "data/solver_evidence/NL2_B844_CO_BB_7H6H2C.zip",
+        "sha256": "790ef957e607ee6b5e78a770a58a1d98b4b15e5ce7d9a7acd918565be601b129"
+      },
+      {
+        "candidate_matches": 0,
+        "native_job_result_pairs": 0,
+        "path": "data/solver_evidence/b905_bb_saved_root_screens/7h6h2c.zip",
+        "sha256": "9e7d5f308a0aca1c212e4ab89af3d476bc5e5f3db67be841c566c80c2f4a9f07"
+      }
+    ],
+    "unresolved": [
+      {
+        "reason": "no matching named artifact; inspect immutable dispatch diff",
+        "run": 45948668010
+      },
+      {
+        "reason": "no matching named artifact; inspect immutable dispatch diff",
+        "run": 45936923609
+      },
+      {
+        "reason": "no matching named artifact; inspect immutable dispatch diff",
+        "run": 45936923715
+      },
+      {
+        "reason": "no matching named artifact; inspect immutable dispatch diff",
+        "run": 45931138200
+      },
+      {
+        "reason": "no matching named artifact; inspect immutable dispatch diff",
+        "run": 45542907477
+      },
+      {
+        "reason": "no matching named artifact; inspect immutable dispatch diff",
+        "run": 45542907393
+      },
+      {
+        "reason": "no matching named artifact; inspect immutable dispatch diff",
+        "run": 45535807868
+      },
+      {
+        "artifact": 15168961837,
+        "reason": "no inspectable native job/result pair (may be read-only or different archive schema)"
+      },
+      {
+        "path": "data/solver_evidence/b905_bb_saved_root_screens/7h6h2c.zip",
+        "reason": "no inspectable native job/result pair"
+      }
+    ]
+  },
+  "native_solves": 0,
+  "replay": [
+    {
+      "all_three_observations_exact": true,
+      "exact_two_observation_count": 2,
+      "independent_two_observation_replays": [
+        {
+          "exact_job_bytes": false,
+          "heldout": "3d",
+          "remaining": [
+            "5s",
+            "6s"
+          ],
+          "unobserved_unblocked": [
+            [
+              0,
+              95
+            ],
+            [
+              1,
+              31
+            ]
+          ]
+        },
+        {
+          "exact_job_bytes": true,
+          "heldout": "5s",
+          "remaining": [
+            "3d",
+            "6s"
+          ],
+          "unobserved_unblocked": []
+        },
+        {
+          "exact_job_bytes": true,
+          "heldout": "6s",
+          "remaining": [
+            "3d",
+            "5s"
+          ],
+          "unobserved_unblocked": []
+        }
+      ],
+      "sha256": "a4e27a37cbb5f3571207fbb5649aee1d12ed9b273097712a2c5fe18e17b37b1b",
+      "turn": "3c"
+    },
+    {
+      "all_three_observations_exact": true,
+      "exact_two_observation_count": 2,
+      "independent_two_observation_replays": [
+        {
+          "exact_job_bytes": false,
+          "heldout": "3d",
+          "remaining": [
+            "5s",
+            "6s"
+          ],
+          "unobserved_unblocked": [
+            [
+              0,
+              95
+            ],
+            [
+              1,
+              31
+            ]
+          ]
+        },
+        {
+          "exact_job_bytes": true,
+          "heldout": "5s",
+          "remaining": [
+            "3d",
+            "6s"
+          ],
+          "unobserved_unblocked": []
+        },
+        {
+          "exact_job_bytes": true,
+          "heldout": "6s",
+          "remaining": [
+            "3d",
+            "5s"
+          ],
+          "unobserved_unblocked": []
+        }
+      ],
+      "sha256": "5e4f44f9d2f91e8425153efe018c64ecf38aad8b7b80025fd11226e36cb163f6",
+      "turn": "4c"
+    }
+  ]
+}
