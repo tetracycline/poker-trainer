@@ -1,0 +1,67 @@
+name: B903 archive rank80 root negatives and preflight next high frequency ranks
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths:
+      - 'tools/hu_b903_rank80_archive_rank83_92_preflight.py'
+      - '.github/workflows/nl2-hu-b903-rank80-archive-rank83-92.yml'
+permissions: {contents: read, actions: read, pull-requests: read}
+jobs:
+  archive-rank80:
+    permissions: {contents: write, actions: read, pull-requests: read}
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 2, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate and independently replay B902
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b903_rank80_archive_rank83_92_preflight.py prepare "$RUNNER_TEMP/b903"
+      - name: Full independent audit before candidate
+        run: |
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Create detached archive candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/hu_b903_rank80_archive_rank83_92_preflight.py upload "$RUNNER_TEMP/b903"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B903-detached-rank80-archive
+          path: ${{ runner.temp }}/b903
+          if-no-files-found: error
+          retention-days: 90
+  next-priority-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Recheck rank83 price conflict and inventory rank92-94 actual routes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b903_rank80_archive_rank83_92_preflight.py preflight "$RUNNER_TEMP/b903-next"
+          git diff --exit-code -- data nl2.js nl2_hu_model.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B903-next-priority-preflight
+          path: ${{ runner.temp }}/b903-next
+          if-no-files-found: error
+          retention-days: 90
