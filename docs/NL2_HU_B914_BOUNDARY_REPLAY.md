@@ -1,0 +1,7 @@
+# B914 — Rank92/93 held-out boundary verification
+
+B913 archived at 0a6324667b4c7e9cbbd6995b968a1028bd7bcdd9; source run 45993786058 and full audit 45993785997 both completed successfully. The narrowed history is now 0 / 0 / 75 across 7h6h2c / 8h7h3c / 9d7h4c, respectively. Original native jobs remain excluded. Registry 158 CERT / 234 APPROX; model opportunity coverage 84.700987% from 392 frozen weights. No certification, lock or nonpolarized additions.
+
+Test the four frozen, distinct-orbit continuations for the two roots with zero local wrapper records. Two retained observations failed to expose a small number of private-card weights in B908. The free-suit transposition that fixes each flop is a hypothesis, not a substitute for actual weights: reconstruct using only the retained observations, compare every raw weight and entire serialized job against withheld original observations and the previously frozen complete job. Check all directly observable symmetry pairs; any inequality or missing partner blocks boundary acceptance. Retain original job identities, geometry and canonical flop-turn exclusions. Never run native CFR in this batch.
+
+The remaining 75 historical records for 9d7h4c include workflows and archive schemas requiring separate source-level review. Local zero does not imply global history clearance. B914 has not yet been accepted; no new native dispatch, CERT promotion or formal lock/medium additions. PR #2 remains open draft.
