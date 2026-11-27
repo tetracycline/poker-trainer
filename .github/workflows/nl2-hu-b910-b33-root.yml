@@ -1,0 +1,43 @@
+name: B910 actual b33 BTN route and saved-root screen
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['tools/hu_b910_btn_exact_routes.cjs', 'tools/hu_b910_b33_root_screen.py', '.github/workflows/nl2-hu-b910-b33-root.yml']
+permissions: {contents: read, actions: read, pull-requests: read}
+jobs:
+  root-screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    strategy:
+      fail-fast: false
+      matrix:
+        flop: [7d5c4c, 5h4h3s, 8h7h5c]
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Authenticate full-menu flop masks and actual b33 class routes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLOP: ${{ matrix.flop }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b910_b33_root_screen.py "$RUNNER_TEMP/b910" pinned-solver "$FLOP"
+          git diff --exit-code
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B910-b33-root-${{ matrix.flop }}
+          path: ${{ runner.temp }}/b910
+          if-no-files-found: error
+          retention-days: 90
