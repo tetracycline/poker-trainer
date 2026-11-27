@@ -1,0 +1,92 @@
+name: B911 B910 source archive, failed pin repair and historical audit triage
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['tools/hu_b911_b33_archive.py', '.github/workflows/nl2-hu-b911-b33-archive.yml']
+permissions: {contents: read, actions: read, pull-requests: read}
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with:
+          repository: tetracycline/poker-solver
+          ref: abe310c3aad02dd4a7c77fb2831801fd490cf51b
+          path: pinned-solver
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Repair only the failed B910 pin, replay existing arrays
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b911_b33_archive.py repair "$RUNNER_TEMP/b911-repair" pinned-solver
+          git diff --exit-code
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B911-repair-5h4h3s
+          path: ${{ runner.temp }}/b911-repair
+          if-no-files-found: error
+          retention-days: 90
+  history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Narrow B908 history blockers by immutable static workflow identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/hu_b911_b33_archive.py history "$RUNNER_TEMP/b911-history"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B911-history-triage
+          path: ${{ runner.temp }}/b911-history
+          if-no-files-found: error
+          retention-days: 90
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    permissions: {contents: write, actions: read, pull-requests: read}
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 2, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify two successful B910 ZIPs and quarantine failed sibling
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b911_b33_archive.py prepare "$RUNNER_TEMP/b911-archive"
+      - name: Full static model route and exact board audit
+        run: |
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Create detached archive candidate only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/hu_b911_b33_archive.py publish "$RUNNER_TEMP/b911-archive"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B911-detached-archive
+          path: ${{ runner.temp }}/b911-archive
+          if-no-files-found: warn
+          retention-days: 90
