@@ -1,0 +1,40 @@
+name: B920 fixed historical native replay scope proof
+on:
+  push:
+    branches: [fix/nl2-hu-lines-audit-20261118]
+    paths: ['tools/hu_b920_fixed_replay_scope.py', '.github/workflows/nl2-hu-b920-fixed-replay-scope.yml']
+permissions: {contents: read, actions: read, pull-requests: read}
+jobs:
+  fixed-scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    permissions: {contents: write, actions: read, pull-requests: read}
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Prove only immutable fixed native replay scopes; no solver execution
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q numpy phevaluator==0.5.3.1
+          python tools/hu_b920_fixed_replay_scope.py prepare "$RUNNER_TEMP/b920"
+      - name: Full static model route and exact board audit
+        run: |
+          node tools/hu_extension_runtime_test.cjs data/nl2_hu_multiboard_status_current.json
+          bash tools/hu_exact_batch_audit.sh data/nl2_hu_multiboard_status_current.json
+      - name: Create detached archive candidate only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/hu_b920_fixed_replay_scope.py publish "$RUNNER_TEMP/b920"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B920-fixed-replay-scope
+          path: ${{ runner.temp }}/b920
+          retention-days: 90
