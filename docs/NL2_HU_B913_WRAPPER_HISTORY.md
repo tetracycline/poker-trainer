@@ -1,0 +1,5 @@
+# B913 — Distinguish duplicate wrapper runs from original native jobs
+
+B912 archive commit 46ccb70844ef89a241d0d4669bfa1126d05e5374: source run 45985356756 and full audit 45985356599 both succeeded. Six source files archived; historical unresolved ledger counts 2/2/77 (81 overlapping rows). Current registry 158 CERT / 234 APPROX; modeled opportunity coverage 84.700987%, 30 high-frequency APPROX. No certification, lock or medium additions.
+
+For priority ranks 92/93, B913 pins four immutable historical wrapper runs and their actual workflows/scripts. B905 and B907 are preflight/replay only. B845 and B715 replay B844 and B711 originals respectively; the original ZIP and all job SHA identities must remain on the denylist. The target is six wrapper-record rows (two per root), not six native jobs. No new native dispatch, no re-run of successful native work, no global history clearance. Even a zero local wrapper ledger is insufficient without exact original turn/orbit exclusion and held-out boundary validation. B913 source and audit not yet verified. Detached candidate only; PR #2 open draft, no ref mutation by workflow.
