@@ -1,0 +1,3 @@
+# B934 — derived publications and mixed native archive scope
+
+B933 source and independent full audits completed successfully: 4 exact archived scopes excluded, 16 → 12 remaining. Candidate 7fa910892780e2265e5d7530f5bd05736c5ce5ff was independently checked and safely fast-forwarded. B934 tests the two B323/B325 derived publications against the original B933 raw worker records and the B539 ISO archive including its compressed native lock. No native solves, no changes to registry or frequency weights, no dispatch until all blockers resolved. Fail closed for any missing/mismatched source. The output is a detached candidate only after full static audit.
