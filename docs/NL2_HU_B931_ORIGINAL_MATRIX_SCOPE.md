@@ -1,0 +1,3 @@
+# B931 — original B592 and B598 native matrix scopes
+
+B930 source audit 46113957018 and full audit 46113957028 passed. Archive 326101418cc0270803acac3249ab8fd94f11f1f3 leaves 18 historical blockers. B931 addresses the two original aggregate failures left open by B925, not the five already cleared publication replays. Their eight successful native matrix jobs reproduced three jobs each. Verify original historical workflow, exact checkout, archive bytes, all 24 job/result pairs and flop-rank disjointness from the six candidates, preserving the failed verify log and original identities. No native invocation, no promotion, no dispatch permission. Other uncertain scopes remain blocked. Candidate created only after full static audit; never moves PR branch automatically.
