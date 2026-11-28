@@ -1,0 +1,3 @@
+# B935 — historical B484 registry reconciliation scope
+
+B934 passed source audit 46132196917 and full batch audit 46132196906; all three selected archival scopes closed (12 → 9). Detached candidate e1869b5d4ed83c1d764b2fc6cea0e6337423c033 was verified and fast-forwarded. B935 pins four historical registry-reconciliation workflows, both the original and fetched live-publish revisions, successful job logs, and unchanged registry-only tools. It does not execute any native solve or remove native identities from the denylist. Any pin mismatch remains blocked. B619 and other replay/publication workflows remain unresolved. No CERT, lock, or half-pot additions; no dispatch before clearance.
