@@ -1,0 +1,9 @@
+# B939 — last import dispatch identity, not cancelled source certification
+
+B938 source audit 46151952298 and full audit 46151952150 both succeeded. The detached evidence-only commit bbb3147bd36d96644a896af4eefd7b1df7c74ac1 was accepted by expected SHA; historical scope blockers 4 → 1. No CERT, lock or medium-bet addition.
+
+The last B937 importer scope 45195896854 itself completed three read-only replays. Direct API inspection on 2026-11-28 showed the precise original-source gate failure: original workflows 45118153398 and 45112310600 were **cancelled**, not successful. Their existing artifacts 14792312789 and 14790353462 remain ineligible to certify a new board. Original 44654973894 and all three worker workflows completed successfully. Do not rerun any of them.
+
+The new audit does not weaken the original success gate: it independently checks immutable archive bytes, every native job identity in the three original and four worker ZIPs, plus the four published native witness archives. Even cancelled archives are examined only as negative duplicate fingerprints, not as positive certification evidence. The six frozen target job hashes and rank multisets must be disjoint, including suit-isomorphic duplicates. The original denylist, prior boundary failures and target dispatch flags are unchanged. No new native job. If successful, the last dispatch-inventory scope is closed separately from source certification; final target clearance still requires acceptance and review of the frozen exact source/boundary evidence. If the proof fails, retain the precise blocker, do not repeatedly rescan the same negative.
+
+158 CERT / 234 APPROX; 84.700987% modeled node opportunity coverage, not distinct dealt-hand coverage. Full static/model/route/board audit before detached candidate creation. PR #2 remains open draft.
