@@ -1,0 +1,3 @@
+# B932 — flat native worker archives
+
+B931 archive 1b304b3507961463167add7425a588eb9b474ad8 leaves 16 historical blockers. Verify four original flat job/result archives (B323/B325 CO_BB and B520 UTG_CO). Their flop ranks overlap 974, but the explicit child turns differ from all six candidate canonical continuations. Check original digest, exact ZIP inventory, workflow/job pins, solver/Rust pins, geometry and native job SHA, preserve root receipts. No native execution. The two derivative receipts, B539 compressed lock and unresolved run scopes remain separate. No registry changes, no dispatch or certification; create detached archive only after static audits.
